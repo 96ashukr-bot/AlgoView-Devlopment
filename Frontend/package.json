@@ -1,20 +1,148 @@
 {
-  "name": "frontend",
+  "name": "algo-react",
   "version": "0.1.0",
   "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
-  },
+  "homepage": "https://react.pixelstrap.com/algo-view/",
   "dependencies": {
-    "react": "^18",
-    "react-dom": "^18",
-    "next": "14.2.6"
+    "@auth0/auth0-react": "^2.0.1",
+    "@fullcalendar/core": "^6.1.4",
+    "@fullcalendar/daygrid": "^6.1.4",
+    "@fullcalendar/interaction": "^6.1.4",
+    "@fullcalendar/react": "^6.1.4",
+    "@fullcalendar/timegrid": "^6.1.4",
+    "@mobiscroll/react-lite": "^4.10.9",
+    "@react-google-maps/api": "^2.18.1",
+    "@reactour/tour": "^3.4.0",
+    "apexcharts": "^3.39.0",
+    "axios": "^1.3.6",
+    "body-scroll-lock": "^3.1.5",
+    "bootstrap-scss": "^5.2.3",
+    "chart.js": "^4.2.1",
+    "chartjs-plugin-datalabels": "^2.2.0",
+    "concurrently": "^8.0.1",
+    "date-fns": "^2.29.3",
+    "deni-react-treeview": "^1.1.11",
+    "easymde": "^2.18.0",
+    "emoji-mart": "^5.5.2",
+    "feather-icons": "^4.29.0",
+    "i18next-browser-languagedetector": "^7.0.1",
+    "i18next-http-backend": "^2.2.0",
+    "json-server": "^0.17.3",
+    "knob": "^1.1.0",
+    "leaflet": "^1.9.3",
+    "node-sass": "^8.0.0",
+    "pigeon-maps": "^0.21.3",
+    "react-18-image-lightbox": "^5.1.4",
+    "react-ace": "^10.1.0",
+    "react-apexcharts": "^1.4.0",
+    "react-big-calendar": "^1.6.9",
+    "react-bootstrap": "^2.7.4",
+    "react-bootstrap-typeahead": "^6.1.2",
+    "react-chartjs-2": "^5.2.0",
+    "react-ckeditor-component": "^1.1.0",
+    "react-clock": "^4.2.0",
+    "react-copy-to-clipboard": "^5.1.0",
+    "react-countdown": "^2.3.5",
+    "react-countup": "^6.4.2",
+    "react-custom-scrollbars-2": "^4.5.0",
+    "react-data-table-component": "^7.5.3",
+    "react-datepicker": "^4.11.0",
+    "react-day-picker": "^8.7.1",
+    "react-dnd": "^16.0.1",
+    "react-dnd-html5-backend": "^16.0.1",
+    "react-dragula": "^1.1.17",
+    "react-dropzone-uploader": "^2.11.0",
+    "react-equal-height": "^1.2.2",
+    "react-feather": "^2.0.10",
+    "react-files": "^3.0.0",
+    "react-google-charts": "^4.0.0",
+    "react-gradient-timepicker": "^0.0.3",
+    "react-hook-form": "^7.43.9",
+    "react-i18next": "^12.2.0",
+    "react-icons": "^4.8.0",
+    "react-image-crop": "^10.0.9",
+    "react-leaflet": "^4.2.1",
+    "react-masonry-css": "^1.0.16",
+    "react-perfect-scrollbar": "^1.5.8",
+    "react-range": "^1.8.14",
+    "react-rating": "^2.0.5",
+    "react-ratings-declarative": "^3.4.1",
+    "react-redux": "^8.0.5",
+    "react-router": "^6.10.0",
+    "react-router-dom": "^6.10.0",
+    "react-scripts": "^5.0.1",
+    "react-select": "^5.7.2",
+    "react-simplemde-editor": "^5.2.0",
+    "react-slick": "^0.29.0",
+    "react-sparklines": "^1.7.0",
+    "react-to-print": "^2.14.12",
+    "react-toastify": "^9.1.2",
+    "react-transition-group": "^4.4.5",
+    "react-use-file-upload": "^0.9.5",
+    "react-uuid": "^2.0.0",
+    "react-vertical-timeline-component": "^3.6.0",
+    "reactour": "^1.19.0",
+    "reactstrap": "^9.1.9",
+    "redux": "^4.2.1",
+    "redux-saga": "^1.2.3",
+    "sass": "^1.62.0",
+    "slick-carousel": "^1.8.1",
+    "styled-components": "^5.3.10",
+    "sweetalert2": "^11.7.3",
+    "web-vitals": "^3.3.1",
+    "world-map-geojson": "^1.0.2"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts --max_old_space_size=8096 build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject",
+    "lint": "eslint --fix --ext .js,.jsx .",
+    "json-serve": "node public/server.js",
+    "start-developer": "concurrently \"react-scripts start\" \"node public/server.js\""
+  },
+  "resolutions": {
+    "react-dev-utils": "10.0.0"
+  },
+  "eslintConfig": {
+    "extends": "react-app",
+    "plugins": [
+      "jsx-a11y"
+    ],
+    "rules": {
+      "no-whitespace-before-property": "off",
+      "react-hooks/rules-of-hooks": "error",
+      "react-hooks/exhaustive-deps": "off"
+    },
+    "overrides": [
+      {
+        "files": [
+          "*-index.js"
+        ],
+        "rules": {
+          "no-unused-expressions": "off"
+        }
+      }
+    ],
+    "reportUnusedDisableDirectives": true,
+    "noInlineConfig": false
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
   },
   "devDependencies": {
-    "postcss": "^8",
-    "tailwindcss": "^3.4.1"
+    "moment": "^2.29.4",
+    "moment-timezone": "^0.5.43",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
   }
 }
