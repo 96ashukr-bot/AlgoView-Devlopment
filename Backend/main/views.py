@@ -10,7 +10,7 @@ from django.conf import settings
 
 from .models import KYC, User, Role
 from .serializers import (
-    CustomLoginSerializer, KYCSerializer, OTPVerifySerializer, PasswordResetRequestSerializer, UserSerializer, RoleSerializer, UserRegistrationSerializer, 
+    ChangePasswordSerializer, CustomLoginSerializer, KYCSerializer, OTPVerifySerializer, PasswordResetRequestSerializer, UserSerializer, RoleSerializer, UserRegistrationSerializer, 
     UserCreateSerializer, 
     UserAssignRoleSerializer,PasswordResetConfirmSerializer
 )
@@ -47,11 +47,10 @@ class UserRegistrationView(generics.CreateAPIView):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        role = serializer.validated_data.get('role')
-
-        if role.status != Role.ACTIVE:
-            return Response({'detail': 'The selected role is not active.'}, status=status.HTTP_400_BAD_REQUEST)
-
+        # Check if the role is provided in the validated data
+        # role = serializer.validated_data.get('role', None)
+        # if role and role.status != Role.ACTIVE:
+        #     return Response({'detail': 'The selected role is not active.'}, status=status.HTTP_400_BAD_REQUEST)
         user = self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
@@ -59,7 +58,6 @@ class UserRegistrationView(generics.CreateAPIView):
 #login
 class CustomLoginView(generics.GenericAPIView):
     serializer_class = CustomLoginSerializer
-
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -74,8 +72,41 @@ class OTPVerifyView(generics.GenericAPIView):
         serializer.is_valid(raise_exception=True)
         return Response(serializer.validated_data, status=status.HTTP_200_OK)
 
-# Password Reset Views
+#change password
+class ChangePasswordView(generics.GenericAPIView):
+    serializer_class = ChangePasswordSerializer
+    permission_classes = [permissions.IsAuthenticated]  # Ensure only authenticated users can access this view
 
+    def post(self, request, *args, **kwargs):
+        try:
+            user = request.user
+            if user.is_anonymous:
+                return Response({'error': 'You must be logged in to change your password.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+            serializer = self.get_serializer(data=request.data, context={'request': request})
+            serializer.is_valid(raise_exception=True)
+
+            # Save the new password
+            serializer.save()
+
+            return Response({
+                'message': 'Password successfully changed please login with new password.'
+            }, status=status.HTTP_200_OK)
+
+        except ValidationError as e:
+            return Response({
+                'error': 'Validation error',
+                'details': e.detail
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        except Exception as e:
+            return Response({
+                'error': 'Something went wrong while changing the password.',
+                'details': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# Password Reset Views
 class PasswordResetRequestView(generics.GenericAPIView):
     serializer_class = PasswordResetRequestSerializer
     # permission_classes = [AllowAny]

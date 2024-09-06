@@ -6,21 +6,21 @@ from .models import  OTP, User, Role, KYC
 
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
-    list_display = ['email', 'username', 'phone_number', 'role', 'is_active', 'is_staff', 'is_superuser']
+    list_display = ['email', 'fullName', 'phoneNumber', 'role', 'is_active', 'is_staff', 'is_superuser']
     list_filter = ['role', 'is_active', 'is_staff']
-    search_fields = ['email', 'username', 'phone_number']
+    search_fields = ['email', 'firstName', 'lastName', 'phoneNumber']
     ordering = ['email']
 
     # Optionally, you can add additional configurations for form fields and fieldsets if needed
     fieldsets = (
         (None, {'fields': ('email', 'password')}),
-        ('Personal info', {'fields': ('username', 'phone_number', 'role')}),
+        ('Personal info', {'fields': ('firstName', 'lastName', 'phoneNumber', 'profilePicture', 'role','is_password_temporary','is_new_password')}),
         ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser')}),
     )
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('email', 'username', 'phone_number', 'role', 'password1', 'password2'),
+            'fields': ('email', 'firstName', 'lastName', 'phoneNumber', 'profilePicture', 'role', 'password1', 'password2'),
         }),
     )
     filter_horizontal = ()

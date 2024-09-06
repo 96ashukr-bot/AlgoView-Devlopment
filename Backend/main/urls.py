@@ -1,13 +1,12 @@
+from django.conf import settings
 from django.urls import path
-from .views import (
-    CustomLoginView, KYCDetailView, KYCListCreateView, OTPVerifyView, PasswordResetConfirmView, PasswordResetRequestView, RoleListCreateView, RoleDetailView, UserListCreateView, UserDetailView,
-    UserManagementView, UserRegistrationView, UserAssignRoleView,UserCreateView
-)
-
+from .views import *
+from django.conf.urls.static import static
 urlpatterns = [
     path('signup/', UserRegistrationView.as_view(), name='user-registration'),
     path('login/', CustomLoginView.as_view(), name='login'),
     path('verify-otp/', OTPVerifyView.as_view(), name='otp_verify'),
+    path('change-password/', ChangePasswordView.as_view(), name='change-password'),
     path('password-reset-request/', PasswordResetRequestView.as_view(), name='password-reset-request'),
     path('password-reset-confirm/', PasswordResetConfirmView.as_view(), name='password-reset-confirm'),
     path('create-roles/', RoleListCreateView.as_view(), name='role-list-create'),
@@ -21,4 +20,8 @@ urlpatterns = [
     path('kyc/<int:pk>/', KYCDetailView.as_view(), name='kyc-detail'),
 
 ]
+
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
