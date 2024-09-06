@@ -7,6 +7,22 @@ import logoDark from '../../../assets/images/logo/logo_dark.png';
 
 const ForgetPwd = ({ logoClassMain }) => {
   const [togglePassword, setTogglePassword] = useState(false);
+  const [mobilePrefix, setMobilePrefix] = useState('+91');
+  const [mobileNumber, setMobileNumber] = useState('');
+  const [otp, setOtp] = useState(['00', '00', '00']);
+  const [newPassword, setNewPassword] = useState('');
+  const [retypePassword, setRetypePassword] = useState('');
+
+  const handleMobilePrefixChange = (e) => setMobilePrefix(e.target.value);
+  const handleMobileNumberChange = (e) => setMobileNumber(e.target.value);
+  const handleOtpChange = (index, value) => {
+    const newOtp = [...otp];
+    newOtp[index] = value;
+    setOtp(newOtp);
+  };
+  const handleNewPasswordChange = (e) => setNewPassword(e.target.value);
+  const handleRetypePasswordChange = (e) => setRetypePassword(e.target.value);
+
   return (
     <Fragment>
       <section>
@@ -17,8 +33,8 @@ const ForgetPwd = ({ logoClassMain }) => {
                 <div>
                   <div>
                     <Link className={`logo ${logoClassMain ? logoClassMain : ''}`} to={process.env.PUBLIC_URL}>
-                      <Image attrImage={{ className: 'img-fluids for-light', src: logoWhite, alt: 'looginpage' }} />
-                      <Image attrImage={{ className: 'img-fluid for-dark', src: logoDark, alt: 'looginpage' }} />
+                      <Image attrImage={{ className: 'img-fluids for-light', src: logoWhite, alt: 'loginpage' }} />
+                      <Image attrImage={{ className: 'img-fluid for-dark', src: logoDark, alt: 'loginpage' }} />
                     </Link>
                   </div>
                   <div className='login-main'>
@@ -28,10 +44,20 @@ const ForgetPwd = ({ logoClassMain }) => {
                         <Label className='m-0 col-form-label'>Enter Your Mobile Number</Label>
                         <Row>
                           <Col xs='4' sm='3'>
-                            <Input className='form-control' type='text' value='+ 91' />
+                            <Input
+                              className='form-control'
+                              type='text'
+                              value={mobilePrefix}
+                              onChange={handleMobilePrefixChange}
+                            />
                           </Col>
                           <Col xs='8' sm='9'>
-                            <Input className='form-control' type='tel' value='000-000-0000' />
+                            <Input
+                              className='form-control'
+                              type='text'
+                              value={mobileNumber}
+                              onChange={handleMobileNumberChange}
+                            />
                           </Col>
                         </Row>
                       </FormGroup>
@@ -40,8 +66,8 @@ const ForgetPwd = ({ logoClassMain }) => {
                       </FormGroup>
                       <FormGroup className='mb-4 mt-4'>
                         <span className='reset-password-link'>
-                          If don't receive OTP?  
-                          <a className='btn-link text-danger' href='#javascript'>
+                          If you don't receive OTP?  
+                          <a className='btn-link text-danger' href=''>
                             Resend
                           </a>
                         </span>
@@ -49,22 +75,32 @@ const ForgetPwd = ({ logoClassMain }) => {
                       {/* <FormGroup>
                         <Label>Enter OTP</Label>
                         <Row>
-                          <Col>
-                            <Input className='form-control text-center opt-text' type='text' value='00' maxlength='2' />
-                          </Col>
-                          <Col>
-                            <Input className='form-control text-center opt-text' type='text' value='00' maxlength='2' />
-                          </Col>
-                          <Col>
-                            <Input className='form-control text-center opt-text' type='text' value='00' maxlength='2' />
-                          </Col>
+                          {otp.map((value, index) => (
+                            <Col key={index}>
+                              <Input
+                                className='form-control text-center opt-text'
+                                type='text'
+                                value={value}
+                                maxlength='2'
+                                onChange={(e) => handleOtpChange(index, e.target.value)}
+                              />
+                            </Col>
+                          ))}
                         </Row>
                       </FormGroup> */}
                       {/* <H6 attrH6={{ className: 'mt-4' }}>Create Your Password</H6> */}
                       {/* <FormGroup className='position-relative'>
                         <Label className='col-form-label m-0'>New Password</Label>
                         <div className='position-relative'>
-                          <Input className='form-control' type={togglePassword ? 'text' : 'password'} name='login[password]' required placeholder='*********' />
+                          <Input
+                            className='form-control'
+                            type={togglePassword ? 'text' : 'password'}
+                            name='login[password]'
+                            required
+                            placeholder='*********'
+                            value={newPassword}
+                            onChange={handleNewPasswordChange}
+                          />
                           <div className='show-hide' onClick={() => setTogglePassword(!togglePassword)}>
                             <span className={togglePassword ? '' : 'show'}></span>
                           </div>
@@ -72,7 +108,15 @@ const ForgetPwd = ({ logoClassMain }) => {
                       </FormGroup> */}
                       {/* <FormGroup>
                         <Label className='col-form-label m-0'>Retype Password</Label>
-                        <Input className='form-control' type='password' name='login[password]' required='' placeholder='*********' />
+                        <Input
+                          className='form-control'
+                          type='password'
+                          name='login[password]'
+                          required
+                          placeholder='*********'
+                          value={retypePassword}
+                          onChange={handleRetypePasswordChange}
+                        />
                       </FormGroup> */}
                       {/* <FormGroup>
                         <div className='checkbox'>
@@ -86,7 +130,7 @@ const ForgetPwd = ({ logoClassMain }) => {
                         <Btn attrBtn={{ className: 'btn d-block w-100 btn-clr', type: 'submit' }}>Done</Btn>
                       </FormGroup> */}
                       <P attrPara={{ className: 'text-start' }}>
-                        Already have an password?
+                        Already have a password?
                         <a className='ms-2' href='/login'>
                           Sign in
                         </a>

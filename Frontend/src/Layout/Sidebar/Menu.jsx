@@ -8,27 +8,27 @@ export const MENUITEMS = [
         icon: "home",
         type: "sub",
         badge: "badge badge-light-primary",
-        badgetxt: "5",
+        badgetxt: "",
         active: false,
         children: [
           { path: `/dashboard/default`, title: "Default", type: "link" },
-          { path: `/dashboard/e-commerce`, title: "E-commerce", type: "link" },
-          { path: `/dashboard/online-course`, title: "Online Course", type: "link" },
-          { path: `/dashboard/crypto`, title: "Crypto", type: "link" },
-          { path: `/dashboard/social`, title: "Social", type: "link" },
+          // { path: `/dashboard/e-commerce`, title: "E-commerce", type: "link" },
+          // { path: `/dashboard/online-course`, title: "Online Course", type: "link" },
+          // { path: `/dashboard/crypto`, title: "Crypto", type: "link" },
+          // { path: `/dashboard/social`, title: "Social", type: "link" },
         ],
       },
 
-      {
-        title: "Widgets",
-        icon: "widget",
-        type: "sub",
-        active: false,
-        children: [
-          { path: `/widgets/general`, title: "General", type: "link" },
-          { path: `/widgets/chart`, title: "Chart", type: "link" },
-        ],
-      },
+      // {
+      //   title: "Widgets",
+      //   icon: "widget",
+      //   type: "sub",
+      //   active: false,
+      //   children: [
+      //     { path: `/widgets/general`, title: "General", type: "link" },
+      //     { path: `/widgets/chart`, title: "Chart", type: "link" },
+      //   ],
+      // },
     ],
   },
 

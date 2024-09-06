@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FileText, LogIn, Mail, User } from "react-feather";
-import man from "../../../assets/images/dashboard/profile.png";
+import man from "../../../assets/images/dashboard/Algologo.png";
 
 import { LI, UL, Image, P } from "../../../AbstractElements";
 import CustomizerContext from "../../../_helper/Customizer";
@@ -58,20 +58,20 @@ const UserHeader = () => {
           <User />
           <span>{Account} </span>
         </LI>
-        <LI
+        {/* <LI
           attrLI={{
             onClick: () => UserMenuRedirect(`/app/email-app/${layoutURL}`),
           }}>
           <Mail />
           <span>{Inbox}</span>
-        </LI>
-        <LI
+        </LI> */}
+        {/* <LI
           attrLI={{
             onClick: () => UserMenuRedirect(`/app/todo-app/todo/${layoutURL}`),
           }}>
           <FileText />
           <span>{Taskboard}</span>
-        </LI>
+        </LI> */}
         <LI attrLI={{ onClick: Logout }}>
           <LogIn />
           <span>{LogOut}</span>
