@@ -7,7 +7,7 @@ from django.utils.crypto import get_random_string
 from django.core.mail import send_mail
 from django.conf import settings
 from django.db import transaction
-
+from rest_framework.validators import UniqueValidator
 class RoleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Role
@@ -28,7 +28,8 @@ class UserCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'email', 'username', 'phone_number', 'role', 'password']
+        fields = ['id', 'email', 'firstName', 'lastName', 'phoneNumber', 'profilePicture', 'password']
+
     def validate_role(self, value):
         if value.status != Role.ACTIVE:
             raise serializers.ValidationError('The selected role is not active.')
@@ -38,25 +39,32 @@ class UserCreateSerializer(serializers.ModelSerializer):
         password = validated_data.pop('password')
         user = User.objects.create_user(**validated_data, password=password)
         return user
-
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'email', 'username', 'phone_number', 'role']
+        fields = ['id', 'email', 'firstName', 'lastName', 'phoneNumber', 'profilePicture', 'role', 'is_active', 'is_staff']
 
     def update(self, instance, validated_data):
         instance.email = validated_data.get('email', instance.email)
-        instance.username = validated_data.get('username', instance.username)
-        instance.phone_number = validated_data.get('phone_number', instance.phone_number)
+        instance.firstName = validated_data.get('firstName', instance.firstName)
+        instance.lastName = validated_data.get('lastName', instance.lastName)
+        instance.phoneNumber = validated_data.get('phoneNumber', instance.phoneNumber)
+        instance.profilePicture = validated_data.get('profilePicture', instance.profilePicture)
         instance.role = validated_data.get('role', instance.role)
         instance.is_active = validated_data.get('is_active', instance.is_active)
+        instance.is_staff = validated_data.get('is_staff', instance.is_staff)
         instance.save()
         return instance
         
 class UserRegistrationSerializer(serializers.ModelSerializer):
+    phoneNumber = serializers.CharField(
+        required=True,
+        validators=[UniqueValidator(queryset=User.objects.all(), message="Phone number already exists.")]
+    )
     class Meta:
         model = User
-        fields = ['email', 'username', 'phone_number', 'role']
+        fields = ['email', 'firstName', 'lastName', 'phoneNumber', 'profilePicture', 'role']
+
 
     def create(self, validated_data):
         # Generate a random password
@@ -69,6 +77,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             
             # Try to send the password to the user's email
             try:
+                print("pass...",password)
                 self.send_password_email(user.email, password)
             except Exception as e:
                 # If email sending fails, delete the user and raise an exception
@@ -83,9 +92,6 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         from_email = settings.DEFAULT_FROM_EMAIL
         send_mail(subject, message, from_email, [email])
 
-
-
-
 class CustomLoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField()
@@ -94,20 +100,32 @@ class CustomLoginSerializer(serializers.Serializer):
         email = data.get('email')
         password = data.get('password')
         user = authenticate(email=email, password=password)
-
         if user is None:
             raise serializers.ValidationError('Invalid credentials')
-
-        # Generate OTP for email
-        otp_instance, created = OTP.objects.get_or_create(user=user, is_verified=False)
-        otp_instance.generate_otp()
-
+        # Check if the user is logging in with a temporary password
+        if  user.is_password_temporary:
+            # Generate OTP for email
+            otp_instance, created = OTP.objects.get_or_create(user=user, is_verified=False)
+            otp_instance.generate_otp()
         # Send OTP to email
-        self.send_email_otp(user.email, otp_instance.otp_code)
+            self.send_email_otp(user.email, otp_instance.otp_code)
 
-        return {
-            'message': f"OTP sent to your email : {email}. Please verify"
-        }
+            return {
+                'message': f"OTP sent to your email : {email}. Please verify "
+            }
+        else:
+            if not user.is_new_password:
+                return {
+                    'message': 'Please change your password as this is a one-time temporary password.'
+                }
+            else:
+                if user.is_new_password:
+                    otp_instance, created = OTP.objects.get_or_create(user=user, is_verified=False)
+                    otp_instance.generate_otp()
+                    self.send_email_otp(user.email, otp_instance.otp_code)
+                    return {
+                        'message': f"OTP sent to your email: {email}. Please verify."
+                    }
 
     def send_email_otp(self, email, otp_code):
         subject = 'Your OTP Code'
@@ -115,6 +133,28 @@ class CustomLoginSerializer(serializers.Serializer):
         from_email = settings.DEFAULT_FROM_EMAIL
         send_mail(subject, message, from_email, [email])
 
+
+class ChangePasswordSerializer(serializers.Serializer):
+    OldPassword = serializers.CharField(required=True, write_only=True)
+    NewPassword = serializers.CharField(required=True, write_only=True)
+    
+    def validate_old_password(self, value):
+        user = self.context['request'].user
+        if not user.check_password(value):
+            raise serializers.ValidationError('Old password is not correct.')
+        return value
+    def validate_new_password(self, value):
+        # Add any custom password validation logic here if needed
+        if len(value) < 8:
+            raise serializers.ValidationError('New password must be at least 8 characters long.')
+        return value
+
+    def save(self):
+        user = self.context['request'].user
+        user.set_password(self.validated_data['NewPassword'])
+        user.is_new_password=True
+        user.save()
+        return user
 
 class OTPVerifySerializer(serializers.Serializer):
     email = serializers.EmailField()
@@ -138,6 +178,8 @@ class OTPVerifySerializer(serializers.Serializer):
             raise serializers.ValidationError('Invalid OTP')
 
         # If OTP is verified, issue JWT tokens
+        user.is_password_temporary = False
+        user.save()
         refresh = RefreshToken.for_user(user)
         return {
             'access': str(refresh.access_token),
@@ -156,8 +198,7 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
     uidb64 = serializers.CharField()
     token = serializers.CharField()
     new_password = serializers.CharField()
-from rest_framework import serializers
-from .models import KYC
+
 
 class KYCSerializer(serializers.ModelSerializer):
     class Meta:
