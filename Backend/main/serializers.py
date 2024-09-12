@@ -137,7 +137,7 @@ class CustomLoginSerializer(serializers.Serializer):
 class ChangePasswordSerializer(serializers.Serializer):
     OldPassword = serializers.CharField(required=True, write_only=True)
     NewPassword = serializers.CharField(required=True, write_only=True)
-    
+    ConfirmNewPassword = serializers.CharField(required=True, write_only=True)
     def validate_old_password(self, value):
         user = self.context['request'].user
         if not user.check_password(value):
@@ -148,13 +148,21 @@ class ChangePasswordSerializer(serializers.Serializer):
         if len(value) < 8:
             raise serializers.ValidationError('New password must be at least 8 characters long.')
         return value
+    def validate(self, data):
+        new_password = data.get('NewPassword')
+        confirm_password = data.get('ConfirmNewPassword')
 
+        if new_password != confirm_password:
+            raise serializers.ValidationError({'ConfirmNewPassword': 'New password and confirm password do not match.'})
+
+        return data
     def save(self):
         user = self.context['request'].user
         user.set_password(self.validated_data['NewPassword'])
         user.is_new_password=True
         user.save()
         return user
+
 
 class OTPVerifySerializer(serializers.Serializer):
     email = serializers.EmailField()
@@ -193,12 +201,20 @@ class TokenSerializer(serializers.Serializer):
 class PasswordResetRequestSerializer(serializers.Serializer):
     email = serializers.EmailField()
 
-
 class PasswordResetConfirmSerializer(serializers.Serializer):
     uidb64 = serializers.CharField()
     token = serializers.CharField()
-    new_password = serializers.CharField()
+    NewPassword = serializers.CharField()
+    ConfirmPassword = serializers.CharField()
 
+    def validate(self, data):
+        NewPassword = data.get('NewPassword')
+        ConfirmPassword = data.get('ConfirmPassword')
+
+        if NewPassword != ConfirmPassword:
+            raise serializers.ValidationError({'confirm_password': 'New password and confirm password do not match.'})
+
+        return data
 
 class KYCSerializer(serializers.ModelSerializer):
     class Meta:

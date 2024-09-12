@@ -2,6 +2,13 @@ import React, { Fragment, useState, useEffect, useContext } from "react";
 import { Col, Container, Form, FormGroup, Input, Label, Row } from "reactstrap";
 import { Btn, H4, P } from "../AbstractElements";
 import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import man from "../assets/images/dashboard/profile.png";
+import logoWhite from "../assets/images/logo/Algotradelogo.png";
+import CustomizerContext from "../_helper/Customizer";
+import OtherWay from "./OtherWay";
+import { ToastContainer, toast } from "react-toastify";
+import { login } from "../Services/Authentication";
 
 import {
   EmailAddress,
@@ -11,18 +18,9 @@ import {
   SignIn,
 } from "../Constant";
 
-import { useNavigate } from "react-router-dom";
-import man from "../assets/images/dashboard/profile.png";
-import logoWhite from "../assets/images/logo/Algotradelogo.png";
-// import logoDark from "../assets/images/logo/logoDark.png"; // Assuming you have this image as well.
-
-import CustomizerContext from "../_helper/Customizer";
-import OtherWay from "./OtherWay";
-import { ToastContainer, toast } from "react-toastify";
-
 const Signin = ({ selected }) => {
-  const [email, setEmail] = useState("test@gmail.com");
-  const [password, setPassword] = useState("test123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [togglePassword, setTogglePassword] = useState(false);
   const history = useNavigate();
   const { layoutURL } = useContext(CustomizerContext);
@@ -39,12 +37,22 @@ const Signin = ({ selected }) => {
     e.preventDefault();
     setValue(man);
     setName("Emay Walter");
-    if (email === "test@gmail.com" && password === "test123") {
+
+    try {
+      // Call the login API and get the response
+      const response = await login(email, password);
+      
       localStorage.setItem("login", JSON.stringify(true));
       history(`/dashboard/default/${layoutURL}`);
-      toast.success("Successfully logged in!..");
-    } else {
-      toast.error("You entered the wrong password or username!..");
+      toast.success("Login successful!"); 
+    } catch (error) {
+      if (error.message.includes("email")) {
+        toast.error("You Entered The Wrong Email!");
+      } else if (error.message.includes("password")) {
+        toast.error("You Entered The Wrong Password!");
+      } else {
+        toast.error("You Entered The Wrong Email or Password!");
+      }
     }
   };
 
@@ -54,18 +62,16 @@ const Signin = ({ selected }) => {
         <Row>
           <Col xs="12">
             <div className="login-card">
-            <div>
-                  <Link className="logo" to={process.env.PUBLIC_URL}>
-                    <img
-                      className="img-fluids for-light"
-                      src={logoWhite}
-                      alt="loginpage"
-                    />
-                    {/* <img className="img-fluid for-dark" src={logoDark} alt="loginpage" /> */}
-                  </Link>
-                </div>
+              <div>
+                <Link className="logo" to={process.env}>
+                  <img
+                    className="img-fluids for-light"
+                    src={logoWhite}
+                    alt="loginpage"
+                  />
+                </Link>
+              </div>
               <div className="login-main login-tab">
-                
                 <Form className="theme-form">
                   <H4>
                     {selected === "simpleLogin"
@@ -80,6 +86,7 @@ const Signin = ({ selected }) => {
                       type="email"
                       onChange={(e) => setEmail(e.target.value)}
                       value={email}
+                      placeholder="Enter Your Email"
                     />
                   </FormGroup>
                   <FormGroup className="position-relative">
@@ -90,6 +97,7 @@ const Signin = ({ selected }) => {
                         type={togglePassword ? "text" : "password"}
                         onChange={(e) => setPassword(e.target.value)}
                         value={password}
+                        placeholder="Enter Your Password"
                       />
                       <div
                         className="show-hide"

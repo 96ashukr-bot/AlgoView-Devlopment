@@ -1,13 +1,60 @@
 import React, { Fragment, useState } from 'react';
-// import { Facebook, Linkedin, Twitter } from 'react-feather';
 import { Form, FormGroup, Input, Label, Row, Col } from 'reactstrap';
 import { Btn, H4, P, H6, Image } from '../../../AbstractElements';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import logoWhite from '../../../assets/images/logo/Algotradelogo.png';
 import logoDark from '../../../assets/images/logo/logo_dark.png';
+import { signupUser } from '../../../Services/Authentication';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const RegisterFrom = ({ logoClassMain }) => {
-  const [togglePassword, setTogglePassword] = useState(false);
+  const [formValues, setFormValues] = useState({
+    firstName: '',
+    lastName: '',
+    phoneNumber: '',
+    email: '',
+  });
+  // const [togglePassword, setTogglePassword] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const navigate = useNavigate();
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormValues({
+      ...formValues,
+      [name]: value,
+    });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await signupUser(formValues);
+      if (response.status === 201) {
+        setFormValues({
+          firstName: '',
+          lastName: '',
+          phoneNumber: '',
+          email: '',
+        }); 
+        toast.success('Your account is created successfully!', {
+          position: toast.POSITION.TOP_RIGHT,
+          autoClose: 3000,
+        });
+        // setTimeout(() => {
+        //   navigate('/login');
+        // }, 3000); 
+      }
+    } catch (error) {
+      setErrorMessage('Error creating account. Please try again.');
+      toast.error('Error creating account. Please try again.', {
+        position: toast.POSITION.TOP_RIGHT,
+        autoClose: 3000,
+      });
+    }
+  };
+
   return (
     <Fragment>
       <div className='login-card'>
@@ -19,45 +66,93 @@ const RegisterFrom = ({ logoClassMain }) => {
             </Link>
           </div>
           <div className='login-main'>
-            <Form className='theme-form login-form'>
+            <Form className='theme-form login-form' onSubmit={handleSubmit}>
               <H4>Create your account</H4>
               <P>Enter your personal details to create account</P>
+
               <FormGroup>
-                <Label className='col-form-label m-0 pt-0'>Your Name</Label>
+                <Label className='col-form-label m-0 pt-0'>Your Name <span className='text-danger'>*</span></Label>
                 <Row className='g-2'>
                   <Col xs='6'>
-                    <Input className='form-control' type='text' required='' placeholder='First Name' />
+                    <Input
+                      className='form-control'
+                      type='text'
+                      name='firstName'
+                      value={formValues.firstName}
+                      onChange={handleInputChange}
+                      required
+                      placeholder='First Name'
+                    />
                   </Col>
                   <Col xs='6'>
-                    <Input className='form-control' type='text' required='' placeholder='Last Name' />
+                    <Input
+                      className='form-control'
+                      type='text'
+                      name='lastName'
+                      value={formValues.lastName}
+                      onChange={handleInputChange}
+                      required
+                      placeholder='Last Name'
+                    />
                   </Col>
                 </Row>
               </FormGroup>
+
               <FormGroup>
-                <Label className='col-form-label m-0 pt-0'>Phone Number</Label>
-                <Input className='form-control' type='number' required='' placeholder='Enter Your Number' />
+                <Label className='col-form-label m-0 pt-0'>Phone Number <span className='text-danger'>*</span></Label>
+                <Input
+                  className='form-control'
+                  type='number'
+                  name='phoneNumber'
+                  value={formValues.phoneNumber}
+                  onChange={handleInputChange}
+                  required
+                  placeholder='Enter Your Number'
+                />
               </FormGroup>
+
               <FormGroup>
-                <Label className='col-form-label m-0 pt-0'>Email Address</Label>
-                <Input className='form-control' type='email' required='' placeholder='Enter Your Email' />
+                <Label className='col-form-label m-0 pt-0'>Email Address <span className='text-danger'>*</span></Label>
+                <Input
+                  className='form-control'
+                  type='email'
+                  name='email'
+                  value={formValues.email}
+                  onChange={handleInputChange}
+                  required
+                  placeholder='Enter Your Email'
+                />
               </FormGroup>
-              <FormGroup className='position-relative'>
+
+              {/* <FormGroup className='position-relative'>
                 <Label className='col-form-label m-0 pt-0'>Password</Label>
                 <div className='position-relative'>
-                  <Input className='form-control' type={togglePassword ? 'text' : 'password'} name='login[password]' required placeholder='*********' />
+                  <Input
+                    className='form-control'
+                    type={togglePassword ? 'text' : 'password'}
+                    name='password'
+                    value={formValues.password}
+                    onChange={handleInputChange}
+                    required
+                    placeholder='*********'
+                  />
                   <div className='show-hide' onClick={() => setTogglePassword(!togglePassword)}>
                     <span className={togglePassword ? '' : 'show'}></span>
                   </div>
                 </div>
-              </FormGroup>
+              </FormGroup> */}
+
               <FormGroup className='m-0'>
                 <div className='checkbox'>
-                  <Input id='checkbox1' type='checkbox' />
+                  <Input id='checkbox1' type='checkbox' required />
                   <Label className='text-muted' for='checkbox1'>
                     Agree with <span>Privacy Policy</span>
                   </Label>
                 </div>
               </FormGroup>
+
+              {errorMessage && <P className="text-danger">{errorMessage}</P>}
+
               <FormGroup>
                 <Btn attrBtn={{ className: 'd-block w-100 btn-clr', type: 'submit' }}>Create Account</Btn>
               </FormGroup>
@@ -72,6 +167,8 @@ const RegisterFrom = ({ logoClassMain }) => {
           </div>
         </div>
       </div>
+      
+      <ToastContainer />
     </Fragment>
   );
 };

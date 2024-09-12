@@ -119,9 +119,10 @@ class PasswordResetRequestView(generics.GenericAPIView):
             user = UserModel.objects.get(email=email)
             token = default_token_generator.make_token(user)
             uid = urlsafe_base64_encode(force_bytes(user.pk))
-            reset_link = request.build_absolute_uri(
-                f'/api/password-reset-confirm/?uidb64={uid}&token={token}'
-            )
+            # reset_link = request.build_absolute_uri(
+            #     f'/password-reset-confirm/?uidb64={uid}&token={token}'
+            # )
+            reset_link = f'http://localhost:3000/pages/authentication/reset-password/:{uid}/:{token}/:layout'
             subject = "Password Reset Request"
             message = (
                 f"Hello,\n\n"
@@ -148,7 +149,7 @@ class PasswordResetConfirmView(generics.GenericAPIView):
         
         uidb64 = serializer.validated_data['uidb64']
         token = serializer.validated_data['token']
-        new_password = serializer.validated_data['new_password']
+        NewPassword = serializer.validated_data['NewPassword']
         
         try:
             uid = force_bytes(urlsafe_base64_decode(uidb64))
@@ -159,7 +160,7 @@ class PasswordResetConfirmView(generics.GenericAPIView):
         if not default_token_generator.check_token(user, token):
             return Response({'detail': 'Invalid or expired token.'}, status=status.HTTP_400_BAD_REQUEST)
         
-        user.set_password(new_password)
+        user.set_password(NewPassword)
         user.save()
         
         return Response({'detail': 'Password has been reset successfully.'}, status=status.HTTP_200_OK)

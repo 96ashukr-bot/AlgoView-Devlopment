@@ -21,7 +21,9 @@ import ComingBgImg from '../Components/Pages/ComingSoon/ComingBgImg';
 import ComingBgVideo from '../Components/Pages/ComingSoon/ComingBgVideo';
 import Error500 from '../Components/Pages/ErrorPages/ErrorPage500';
 import Error503 from '../Components/Pages/ErrorPages/ErrorPage503';
-
+import PasswordResetPage from '../Components/Pages/Auth/PasswordResetPage';
+import KycUpdate from '../Components/Pages/Auth/KycUpdate';
+ 
 export const authRoutes = [
   { path: `/login`, Component: <Logins /> },
   { path: `/pages/authentication/login-simple/:layout`, Component: <LoginForm /> },
@@ -50,4 +52,10 @@ export const authRoutes = [
   { path: `/pages/errors/error404/:layout`, Component: <ErrorPage4 /> },
   { path: `/pages/errors/error500/:layout`, Component: <Error500 /> },
   { path: `/pages/errors/error503/:layout`, Component: <Error503 /> },
+
+  // Password Reset
+  { path: `/pages/authentication/reset-password/:uid/:token/:layout`, Component: <PasswordResetPage /> }, 
+
+  // { path: `/pages/authentication/kyc-update/:layout`, Component: <KycUpdate /> }, 
+
 ];
