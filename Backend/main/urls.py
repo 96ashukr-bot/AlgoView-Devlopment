@@ -1,5 +1,7 @@
 from django.conf import settings
 from django.urls import path
+
+from main.permissions import UpdateRolePermissionsView
 from .views import *
 from django.conf.urls.static import static
 urlpatterns = [
@@ -18,6 +20,8 @@ urlpatterns = [
     path('user-management/<int:pk>/', UserManagementView.as_view(), name='user-detail-management'),
     path('kyc/', KYCListCreateView.as_view(), name='kyc-list-create'),
     path('kyc/<int:pk>/', KYCDetailView.as_view(), name='kyc-detail'),
+    path('rolepermissions/<int:role_id>/', UpdateRolePermissionsView.as_view(), name='update-role-permissions'),
+
 
 ]
 

@@ -13,7 +13,7 @@ const VerifyOTP = ({ logoClassMain }) => {
   const [error, setError] = useState('');
   const navigate = useNavigate(); 
 
-  const email = 'chouhanprathviraj650@gmail.com'; // Hardcoded email for testing, replace with actual email source
+  const email = 'suhail9589.sfw@gmail.com'; // Hardcoded email for testing, replace with actual email source
 
   const handleResend = () => {
     // Logic to resend OTP

@@ -111,3 +111,24 @@ class OTP(models.Model):
     def __str__(self):
         return f"{self.user.email} OTP"
 
+
+# Custom Permission Model
+class Permission(models.Model):
+    group = models.CharField(max_length=100, default=None, null=True, blank=True)  # Permission Group (optional)
+    permission = models.CharField(max_length=100, default=None, null=True, blank=True)  # Permission Name
+    description = models.TextField(null=True, blank=True)  # Optional Description of Permission
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.group} - {self.permission}" if self.group else self.permission
+    
+# RolePermission Model: Links Role to Permissions
+class RolePermission(models.Model):
+    role = models.ForeignKey(Role, on_delete=models.CASCADE)
+    permissions = models.ManyToManyField(Permission, related_name="role_permissions", blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.role.name} - Permissions"    
