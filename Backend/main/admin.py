@@ -2,7 +2,7 @@ from django.contrib import admin
 
 # Register your models here.
 from django.contrib import admin
-from .models import  OTP, User, Role, KYC
+from .models import *
 
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
@@ -33,9 +33,9 @@ class RoleAdmin(admin.ModelAdmin):
 
 @admin.register(KYC)
 class KycAdmin(admin.ModelAdmin):
-    list_display = ['user','document_type','document_file']
-    search_fields = ['user','document_type']
-    ordering = ['user','document_type']
+    list_display = ['UserName','email','document_type','phone']
+    search_fields = ['UserName','email','document_type']
+    ordering = ['UserName','email','document_type']
     
 @admin.register(OTP)
 class OtpAdmin(admin.ModelAdmin):

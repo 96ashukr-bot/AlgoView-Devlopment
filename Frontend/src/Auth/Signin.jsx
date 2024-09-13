@@ -22,6 +22,7 @@ const Signin = ({ selected }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [togglePassword, setTogglePassword] = useState(false);
+  const [loading, setLoading] = useState(false); // Add loading state
   const history = useNavigate();
   const { layoutURL } = useContext(CustomizerContext);
 
@@ -35,16 +36,17 @@ const Signin = ({ selected }) => {
 
   const loginAuth = async (e) => {
     e.preventDefault();
-    setValue(man);
-    setName("Emay Walter");
+    setLoading(true); 
 
     try {
-      // Call the login API and get the response
       const response = await login(email, password);
       
+      // Set local storage after successful login
       localStorage.setItem("login", JSON.stringify(true));
-      history(`/dashboard/default/${layoutURL}`);
-      toast.success("Login successful!"); 
+      
+      // Redirect to the desired page
+      history(`/pages/authentication/verify-otp/${layoutURL}`);
+      toast.success("OTP sent on your email.!");
     } catch (error) {
       if (error.message.includes("email")) {
         toast.error("You Entered The Wrong Email!");
@@ -53,6 +55,8 @@ const Signin = ({ selected }) => {
       } else {
         toast.error("You Entered The Wrong Email or Password!");
       }
+    } finally {
+      setLoading(false); // Reset loading to false after request is complete
     }
   };
 
@@ -124,9 +128,16 @@ const Signin = ({ selected }) => {
                       attrBtn={{
                         className: "d-block w-100 mt-2 btn-clr",
                         onClick: (e) => loginAuth(e),
+                        disabled: loading, // Disable button while loading
                       }}
                     >
-                      {SignIn}
+                      {loading ? (
+                        <div className="spinner-border spinner-border-sm" role="status">
+                          <span className="visually-hidden">Loading...</span>
+                        </div>
+                      ) : (
+                        SignIn
+                      )}
                     </Btn>
                   </div>
                   <OtherWay />

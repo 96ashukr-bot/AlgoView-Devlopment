@@ -8,13 +8,8 @@ from django.utils.encoding import force_bytes, force_str
 from django.core.mail import send_mail
 from django.conf import settings
 
-from .models import KYC, User, Role
-from .serializers import (
-    ChangePasswordSerializer, CustomLoginSerializer, KYCSerializer, OTPVerifySerializer, PasswordResetRequestSerializer, UserSerializer, RoleSerializer, UserRegistrationSerializer, 
-    UserCreateSerializer, 
-    UserAssignRoleSerializer,PasswordResetConfirmSerializer
-)
-
+from .models import *
+from .serializers import *
 UserModel = get_user_model()
 
 # Role Views
@@ -262,10 +257,20 @@ class UserManagementView(generics.GenericAPIView):
 class KYCListCreateView(generics.ListCreateAPIView):
     queryset = KYC.objects.all()
     serializer_class = KYCSerializer
-    # permission_classes = [IsAuthenticated]
+    # permission_classes = [IsAuthenticated]  # Optional: ensure only logged-in users can access
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        # If you're using a user relationship, pass the user here
+        # serializer.save(user=self.request.user)
+        serializer.save()
+        
+class KYCUpdateView(generics.UpdateAPIView):
+    queryset = KYC.objects.all()
+    serializer_class = KYCSerializer
+    # permission_classes = [IsAuthenticated]  # Optional
+
+    def perform_update(self, serializer):
+        serializer.save()
 
 class KYCDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = KYC.objects.all()

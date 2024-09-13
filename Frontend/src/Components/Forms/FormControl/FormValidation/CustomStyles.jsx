@@ -1,6 +1,6 @@
 import React, { Fragment } from 'react';
 import { Col, Card, CardHeader, CardBody, Form, Label, Input, InputGroup, InputGroupText, Row } from 'reactstrap';
-import { CustomStyles, Username } from '../../../../Constant';
+import { AddressProof, Username } from '../../../../Constant';
 import { useForm } from 'react-hook-form';
 import { Btn, H5 } from '../../../../AbstractElements';
 
@@ -22,7 +22,7 @@ const CustomStylesClass = () => {
     <Fragment>
       <Card>
         <CardHeader>
-          <H5>{CustomStyles}</H5>
+          <H5>{AddressProof}</H5>
           <span>
             For custom Bootstrap form validation messages, you’ll need to add the <code className='text-danger'>novalidate</code> boolean attribute to your <code className='text-danger'>&lt;form&gt;</code>. This disables the browser default feedback tooltips, but still provides access to the form validation APIs in JavaScript. Try to submit the form below; our JavaScript will intercept the submit
             button and relay feedback to you.

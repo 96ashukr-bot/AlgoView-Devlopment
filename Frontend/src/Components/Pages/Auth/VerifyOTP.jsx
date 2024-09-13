@@ -1,0 +1,111 @@
+import React, { Fragment, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Col, Container, Form, FormGroup, Input, Label, Row } from 'reactstrap';
+import { Btn, H4, P, Image } from '../../../AbstractElements';
+import logoWhite from '../../../assets/images/logo/Algologo.png';
+import logoDark from '../../../assets/images/logo/logo_dark.png';
+import { verifyOtp } from '../../../Services/Authentication';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css'; 
+
+const VerifyOTP = ({ logoClassMain }) => {
+  const [otp, setOtp] = useState('');
+  const [error, setError] = useState('');
+  const navigate = useNavigate(); 
+
+  const email = 'chouhanprathviraj650@gmail.com'; // Hardcoded email for testing, replace with actual email source
+
+  const handleResend = () => {
+    // Logic to resend OTP
+    console.log('Resend OTP clicked');
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    try {
+      if (otp.length < 6) {
+        setError('Please enter a valid OTP');
+        return;
+      }
+
+      // Call the verifyOtp API function with email and OTP
+      const response = await verifyOtp(email, otp);
+      
+      // Show success notification
+      toast.success('Account verified successfully');
+      
+      // Assuming successful response leads to a redirection
+      console.log('OTP verified successfully:', response);
+      navigate('/dashboard/default/Admin'); 
+    } catch (err) {
+      // Show error notification
+      toast.error('OTP IS INVALID');
+      
+      // Handle errors
+      setError(err.message || 'OTP verification failed');
+    }
+  };
+
+  return (
+    <Fragment>
+      <section>
+        <Container className='p-0 login-page' fluid>
+          <Row className='m-0'>
+            <Col className='p-0'>
+              <div className='login-card'>
+                <div>
+                  <div>
+                    <Link className={`logo ${logoClassMain ? logoClassMain : ''}`} to={process.env.PUBLIC_URL}>
+                      <Image attrImage={{ className: 'img-fluids for-light', src: logoWhite, alt: 'Logo' }} />
+                      <Image attrImage={{ className: 'img-fluid for-dark', src: logoDark, alt: 'Logo' }} />
+                    </Link>
+                  </div>
+                  <div className='login-main'>
+                    <Form className='theme-form login-form' onSubmit={handleSubmit}>
+                      <H4>Verify Your OTP</H4>
+                      <FormGroup>
+                        <Label for='otp' className='m-0'>Enter OTP</Label>
+                        <Row>
+                          <Col>
+                            <Input
+                              id='otp'
+                              className='form-control text-center otp-text'
+                              type='text'
+                              placeholder='000000'
+                              maxLength='6'
+                              value={otp}
+                              onChange={(e) => setOtp(e.target.value)}
+                              required
+                            />
+                          </Col>
+                        </Row>
+                        {error && <P className='text-danger'>{error}</P>}
+                      </FormGroup>
+                      <FormGroup className='text-end'>
+                        <Btn attrBtn={{ className: 'btn-block btn-clr', color: 'primary', type: 'submit' }}>Verify</Btn>
+                      </FormGroup>
+                      {/* <FormGroup className='text-center'>
+                        <Btn attrBtn={{ className: 'btn-block btn-secondary', color: 'secondary', type: 'button' }} onClick={handleResend}>
+                          Resend OTP
+                        </Btn>
+                      </FormGroup> */}
+                      <P attrPara={{ className: 'text-start' }}>
+                        Already have a password?
+                        <a className='ms-2' href='/login'>
+                          Sign in
+                        </a>
+                      </P>
+                    </Form>
+                  </div>
+                </div>
+              </div>
+            </Col>
+          </Row>
+        </Container>
+      </section>
+      <ToastContainer />
+    </Fragment>
+  );
+};
+
+export default VerifyOTP;

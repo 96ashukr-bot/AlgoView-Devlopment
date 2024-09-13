@@ -1097,7 +1097,7 @@ export const DisplayPreviousValue = "Display Previous Value";
 export const AngleOffsetArc = "Angle Offset & Arc";
 
 // forms
-export const CustomStyles = "Custom styles";
+export const AddressProof = "Address Proof";
 export const BrowserDefaults = "Browser defaults";
 export const SupportedElements = "Supported elements";
 export const Tooltips = "Tooltips";
@@ -1142,6 +1142,7 @@ export const Checked = "Checked";
 export const RadioStates = "Radio states";
 export const InlineCheckbox = "Inline checkbox";
 export const InlineRadio = "Inline radio";
+export const SelectAnyId = "SelectAnyId";
 export const CustomCheckbox = "Custom checkbox";
 export const CheckboxStates = "Checkbox states";
 export const SuccessState = "Success state";

@@ -15,8 +15,9 @@ const RegisterFrom = ({ logoClassMain }) => {
     phoneNumber: '',
     email: '',
   });
-  // const [togglePassword, setTogglePassword] = useState(false);
+
   const [errorMessage, setErrorMessage] = useState('');
+  const [loading, setLoading] = useState(false); // Add loading state
   const navigate = useNavigate();
 
   const handleInputChange = (e) => {
@@ -29,6 +30,8 @@ const RegisterFrom = ({ logoClassMain }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true); // Set loading to true when form submission starts
+
     try {
       const response = await signupUser(formValues);
       if (response.status === 201) {
@@ -42,9 +45,8 @@ const RegisterFrom = ({ logoClassMain }) => {
           position: toast.POSITION.TOP_RIGHT,
           autoClose: 3000,
         });
-        // setTimeout(() => {
-        //   navigate('/login');
-        // }, 3000); 
+        // Redirect after successful signup if needed
+        // navigate('/login'); 
       }
     } catch (error) {
       setErrorMessage('Error creating account. Please try again.');
@@ -52,6 +54,8 @@ const RegisterFrom = ({ logoClassMain }) => {
         position: toast.POSITION.TOP_RIGHT,
         autoClose: 3000,
       });
+    } finally {
+      setLoading(false); 
     }
   };
 
@@ -123,25 +127,6 @@ const RegisterFrom = ({ logoClassMain }) => {
                   placeholder='Enter Your Email'
                 />
               </FormGroup>
-
-              {/* <FormGroup className='position-relative'>
-                <Label className='col-form-label m-0 pt-0'>Password</Label>
-                <div className='position-relative'>
-                  <Input
-                    className='form-control'
-                    type={togglePassword ? 'text' : 'password'}
-                    name='password'
-                    value={formValues.password}
-                    onChange={handleInputChange}
-                    required
-                    placeholder='*********'
-                  />
-                  <div className='show-hide' onClick={() => setTogglePassword(!togglePassword)}>
-                    <span className={togglePassword ? '' : 'show'}></span>
-                  </div>
-                </div>
-              </FormGroup> */}
-
               <FormGroup className='m-0'>
                 <div className='checkbox'>
                   <Input id='checkbox1' type='checkbox' required />
@@ -154,7 +139,15 @@ const RegisterFrom = ({ logoClassMain }) => {
               {errorMessage && <P className="text-danger">{errorMessage}</P>}
 
               <FormGroup>
-                <Btn attrBtn={{ className: 'd-block w-100 btn-clr', type: 'submit' }}>Create Account</Btn>
+                <Btn attrBtn={{ className: 'd-block w-100 btn-clr', type: 'submit', disabled: loading }}>
+                  {loading ? (
+                    <div className="spinner-border spinner-border-sm" role="status">
+                      <span className="visually-hidden">Loading...</span>
+                    </div>
+                  ) : (
+                    'Create Account'
+                  )}
+                </Btn>
               </FormGroup>
 
               <P attrPara={{ className: 'mb-0 text-start' }}>

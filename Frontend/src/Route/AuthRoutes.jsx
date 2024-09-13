@@ -22,11 +22,13 @@ import ComingBgVideo from '../Components/Pages/ComingSoon/ComingBgVideo';
 import Error500 from '../Components/Pages/ErrorPages/ErrorPage500';
 import Error503 from '../Components/Pages/ErrorPages/ErrorPage503';
 import PasswordResetPage from '../Components/Pages/Auth/PasswordResetPage';
-import KycUpdate from '../Components/Pages/Auth/KycUpdate';
+import KycUpdate from '../Components/Application/Users/UsersProfile/KycUpdate';
+import VerifyOTP from '../Components/Pages/Auth/VerifyOTP';
  
 export const authRoutes = [
   { path: `/login`, Component: <Logins /> },
   { path: `/pages/authentication/login-simple/:layout`, Component: <LoginForm /> },
+  { path: `/pages/authentication/verify-otp/:layout`, Component: <VerifyOTP />},
   { path: `/pages/authentication/login-img/:layout`, Component: <LoginOne /> },
   { path: `/pages/authentication/login-bg-img/:layout`, Component: <LoginTwo /> },
   { path: `/pages/authentication/login-validation/:layout`, Component: <LoginValidation /> },

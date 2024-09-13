@@ -8,11 +8,13 @@ import { requestPasswordReset } from '../../../Services/Authentication';
 
 const ForgetPwd = ({ logoClassMain }) => {
   const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleEmailChange = (e) => setEmail(e.target.value);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
 
     try {
       await requestPasswordReset(email);
@@ -20,6 +22,8 @@ const ForgetPwd = ({ logoClassMain }) => {
       setEmail(''); 
     } catch (error) {
       toast.error(error.message || 'An error occurred. Please try again later.');
+    }finally {
+      setLoading(false); 
     }
   };
 
@@ -50,16 +54,24 @@ const ForgetPwd = ({ logoClassMain }) => {
                         />
                       </FormGroup>
                       <FormGroup className='text-end'>
-                        <Btn attrBtn={{ className: 'btn-block btn-clr', type: 'submit' }}>Send</Btn>
+                        <Btn attrBtn={{ className: 'btn-block btn-clr', type: 'submit', disabled: loading }}>
+                          {loading ? (
+                            <div className="spinner-border spinner-border-sm" role="status">
+                              <span className="visually-hidden">Loading...</span>
+                            </div>
+                          ) : (
+                            'Send'
+                          )}
+                        </Btn>
                       </FormGroup>
-                      <FormGroup className='mb-4 mt-4'>
+                      {/* <FormGroup className='mb-4 mt-4'>
                         <span className='reset-password-link'>
                           If you don't receive link?  
                           <a className='btn-link text-danger' href=''>
                             Resend
                           </a>
                         </span>
-                      </FormGroup>
+                      </FormGroup> */}
                       <P attrPara={{ className: 'text-start' }}>
                         Already have a password?
                         <a className='ms-2' href='/login'>

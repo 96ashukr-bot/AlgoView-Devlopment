@@ -83,18 +83,48 @@ export const resetPassword = async (
   }
 };
 
+export const updateKYC = async (formValues) => {
+  try {
+    const formData = new FormData();
+    
+    formData.append('UserName', formValues.name);
+    formData.append('Date_Of_Birth', formValues.dateOfBirth);
+    formData.append('email', formValues.email || '');
+    formData.append('phone', formValues.phoneNumber);
+    formData.append('document_type', formValues.idType.toLowerCase().replace(/\s+/g, '_'));
+    
+    if (formValues.idFront instanceof File) {
+      formData.append('document_file_front', formValues.idFront);
+    }
+    
+    if (formValues.idBack instanceof File) {
+      formData.append('document_file_back', formValues.idBack);
+    }
 
-// export const updateKYC = async (formData) => {
-//   try {
-//     const response = await axios.post(`${baseUrl}/api/kyc/`, formData, {
-//       headers: {
-//         "Content-Type": "multipart/form-data",
-//       },
-//     });
-//     return response.data;
-//   } catch (error) {
-//     throw new Error(
-//       error.response?.data?.message || "Failed to upload KYC document."
-//     );
-//   }
-// };
+    formData.append('is_verified', false);
+
+    const response = await axios.post(`${baseUrl}/kyc/`, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+
+    return response.data;
+  } catch (error) {
+    throw new Error(
+      error.response?.data?.message || "Failed to update KYC"
+    );
+  }
+};
+
+export const verifyOtp = async (email, otp) => {
+  try {
+    const response = await axios.post(`${baseUrl}/verify-otp/`, { 
+      email: email,
+      otp_code: otp 
+    });
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || "OTP verification failed");
+  }
+};

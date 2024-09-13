@@ -1,3 +1,4 @@
+import datetime
 import random
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
@@ -81,15 +82,21 @@ class User(AbstractBaseUser, PermissionsMixin):
         super().save(*args, **kwargs)
 
 class KYC(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    # user = models.ForeignKey(User, on_delete=models.CASCADE)
+    UserName = models.CharField(max_length=150, null=True, blank=True)
+    Date_Of_Birth = models.DateField(default=datetime.date(2000, 1, 1))
+    email = models.EmailField(blank=True)
+    phone = models.CharField(max_length=15)
     document_type = models.CharField(max_length=50)
-    document_file = models.FileField(upload_to='kyc_documents/', null=True, blank=True)
-    confirmation = models.BooleanField(default=False)
+    document_file_front = models.FileField(upload_to='kyc_documents/front/', blank=True)
+    document_file_back = models.FileField(upload_to='kyc_documents/back/', blank=True)
+    # confirmation = models.BooleanField(default=False)
+    is_verified = models.BooleanField(default=False)
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(default=timezone.now)
-
+    
     def __str__(self):
-        return f"KYC for {self.user.email} - {self.document_type}"
+        return f"KYC for {self.email} - {self.document_type}"    
     
 class OTP(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)

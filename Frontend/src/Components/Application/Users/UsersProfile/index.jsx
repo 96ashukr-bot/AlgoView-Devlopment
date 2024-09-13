@@ -6,6 +6,7 @@ import UserDetails from "./UserDetail";
 import UserDetails2 from "./UserDetail2";
 import UserDetails3 from "./UserDetails3";
 import UserDetails4 from "./UserDetail4";
+import KycUpdate from "./KycUpdate";
 
 const UsersProfileContain = () => {
   return (
@@ -14,6 +15,7 @@ const UsersProfileContain = () => {
       <Container fluid={true}>
         <div className="user-profile">
           <Row>
+            <KycUpdate />
             <UserProfile />
             <UserDetails />
             <UserDetails2 />

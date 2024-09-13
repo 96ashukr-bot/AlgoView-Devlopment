@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import KYC, OTP, User, Role
+from .models import *
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -216,9 +216,13 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
 
         return data
 
+
+
 class KYCSerializer(serializers.ModelSerializer):
     class Meta:
         model = KYC
-        fields = ['user', 'document_type', 'document_file', 'confirmation', 'created_at', 'updated_at']
-
-
+        fields = ['UserName', 'Date_Of_Birth', 'email', 'phone', 'document_type', 'document_file_front', 'document_file_back', 'is_verified']
+        
+    def validate(self, data):
+        # Add any custom validation logic if needed
+        return data
