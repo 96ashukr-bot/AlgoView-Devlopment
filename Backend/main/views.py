@@ -7,9 +7,11 @@ from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from django.core.mail import send_mail
 from django.conf import settings
-
+import time
 from .models import *
 from .serializers import *
+import logging
+logger = logging.getLogger(__name__)
 UserModel = get_user_model()
 
 # Role Views
@@ -40,6 +42,7 @@ class UserRegistrationView(generics.CreateAPIView):
     serializer_class = UserRegistrationSerializer
     
     def create(self, request, *args, **kwargs):
+        start_time=time.time()
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         # Check if the role is provided in the validated data
@@ -48,14 +51,21 @@ class UserRegistrationView(generics.CreateAPIView):
         #     return Response({'detail': 'The selected role is not active.'}, status=status.HTTP_400_BAD_REQUEST)
         user = self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)
+        end_time = time.time()  # Record the end time
+        execution_time = end_time - start_time  # Calculate the total time
+        print(f"signup  API executed in {execution_time:.4f} seconds")
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
     
 #login
 class CustomLoginView(generics.GenericAPIView):
     serializer_class = CustomLoginSerializer
     def post(self, request, *args, **kwargs):
+        start_time=time.time()
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        end_time = time.time()  # Record the end time
+        execution_time = end_time - start_time  # Calculate the total time
+        print(f"Login API executed in {execution_time:.4f} seconds")  # Log the execution timee
         return Response(serializer.validated_data, status=status.HTTP_200_OK)
 
 #verify-otp via email
@@ -63,8 +73,13 @@ class OTPVerifyView(generics.GenericAPIView):
     serializer_class = OTPVerifySerializer
 
     def post(self, request, *args, **kwargs):
+        start_time=time.time()
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        end_time = time.time()  # Record the end time
+        execution_time = end_time - start_time  # Calculate the total time
+        print(f"verify otp API executed in {execution_time:.4f} seconds")
+        logger.info(f"verify otp API executed in {execution_time:.4f} seconds")  # Log the execution timee
         return Response(serializer.validated_data, status=status.HTTP_200_OK)
 
 #change password
@@ -119,6 +134,7 @@ class PasswordResetRequestView(generics.GenericAPIView):
             # )
             reset_link = f'http://localhost:3000/pages/authentication/reset-password/:{uid}/:{token}/:layout'
             subject = "Password Reset Request"
+            print("reset_link",reset_link)
             message = (
                 f"Hello,\n\n"
                 f"You've requested a password reset. Click the link below to reset your password:\n"

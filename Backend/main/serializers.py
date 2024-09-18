@@ -1,4 +1,7 @@
+from django.forms import ValidationError
 from rest_framework import serializers
+
+from main.tasks import send_email_async
 from .models import *
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
@@ -56,7 +59,7 @@ class UserSerializer(serializers.ModelSerializer):
         instance.save()
         return instance
         
-class UserRegistrationSerializer(serializers.ModelSerializer):
+class UserRegistrationSerializer_sync(serializers.ModelSerializer):
     phoneNumber = serializers.CharField(
         required=True,
         validators=[UniqueValidator(queryset=User.objects.all(), message="Phone number already exists.")]
@@ -92,7 +95,87 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         from_email = settings.DEFAULT_FROM_EMAIL
         send_mail(subject, message, from_email, [email])
 
+
+class UserRegistrationSerializer(serializers.ModelSerializer):
+    phoneNumber = serializers.CharField(
+        required=True,
+        validators=[UniqueValidator(queryset=User.objects.all(), message="Phone number already exists.")]
+    )
+
+    class Meta:
+        model = User
+        fields = ['email', 'firstName', 'lastName', 'phoneNumber', 'profilePicture', 'role']
+
+    def create(self, validated_data):
+        password = get_random_string(length=8)
+        with transaction.atomic():
+            user = User.objects.create_user(**validated_data, password=password)
+
+            try:
+                print("pass...",password)
+                # Call the async task to send the email
+                send_email_async.delay(
+                    subject='Your account has been created',
+                    message=f'Your account has been created. Your password is: {password}',
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[user.email]
+                )
+            except Exception as e:
+                user.delete()
+                raise serializers.ValidationError(f"Error sending email: {str(e)}")
+        
+        return user
+
 class CustomLoginSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    password = serializers.CharField()
+
+    def validate(self, data):
+        print("kk")
+        email = data.get('email')
+        password = data.get('password')
+        user = authenticate(email=email, password=password)
+        
+        if user is None:
+            raise ValidationError('Invalid credentials email or password')
+        
+        # Check if the user is logging in with a temporary password
+        if user.is_password_temporary:
+            otp_instance, created = OTP.objects.get_or_create(user=user, is_verified=False)
+            otp_instance.generate_otp()
+            
+            # Use Celery to send OTP asynchronously
+            send_email_async.delay(
+                subject='Your OTP Code',
+                message=f'Your OTP code is {otp_instance.otp_code}.',
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user.email]
+            )
+
+            return {
+                'message': f"OTP sent to your email: {email}. Please verify."
+            }
+        
+        # Check if the user needs to change the temporary password
+        if not user.is_new_password:
+            return {
+                'message': 'Please change your password as this is a one-time temporary password.'
+            }
+        else:
+            otp_instance, created = OTP.objects.get_or_create(user=user, is_verified=False)
+            otp_instance.generate_otp()
+            
+            # Use Celery to send OTP asynchronously
+            send_email_async.delay(
+                subject='Your OTP Code',
+                message=f'Your OTP code is {otp_instance.otp_code}.',
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user.email]
+            )
+            return {
+                'message': f"OTP sent to your email: {email}. Please verify."
+            }
+class CustomLoginSerializer_sync(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField()
 
@@ -103,7 +186,7 @@ class CustomLoginSerializer(serializers.Serializer):
         if user is None:
             raise serializers.ValidationError('Invalid credentials')
         # Check if the user is logging in with a temporary password
-        if  user.is_password_temporary:
+        if  user.is_password_temporary:#password is not temporary
             # Generate OTP for email
             otp_instance, created = OTP.objects.get_or_create(user=user, is_verified=False)
             otp_instance.generate_otp()
@@ -189,9 +272,15 @@ class OTPVerifySerializer(serializers.Serializer):
         user.is_password_temporary = False
         user.save()
         refresh = RefreshToken.for_user(user)
+        if not user.is_new_password:
+            message= 'Please change your password as this is a one-time temporary password.'
+        else:
+            message="login successfully"
         return {
+            'message':message,
             'access': str(refresh.access_token),
             'refresh': str(refresh),
+            
         }
 
 class TokenSerializer(serializers.Serializer):

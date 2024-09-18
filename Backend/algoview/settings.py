@@ -95,16 +95,16 @@ DATABASES = {
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': 'algodb',
-#         'USER': 'psql',
-#         'PASSWORD': 'mypsql',
-#         'HOST': 'localhost',
-#         'PORT': '5432',
-#     }
-# }
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'algodb',
+        'USER': 'algo1user',
+        'PASSWORD': 'algo12345',
+        'HOST': 'localhost',
+        'PORT': '5432',
+    }
+}
 
 AUTH_USER_MODEL = 'main.User'
 
@@ -182,3 +182,9 @@ AUTHENTICATION_BACKENDS = (
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',  # React frontend
 ]
+CELERY_BROKER_URL = 'redis://localhost:6379/0'  # URL for Redis
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'  # Backend for results
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'

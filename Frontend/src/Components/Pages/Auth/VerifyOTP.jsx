@@ -6,19 +6,12 @@ import logoWhite from '../../../assets/images/logo/Algologo.png';
 import logoDark from '../../../assets/images/logo/logo_dark.png';
 import { verifyOtp } from '../../../Services/Authentication';
 import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css'; 
+import 'react-toastify/dist/ReactToastify.css';
 
-const VerifyOTP = ({ logoClassMain }) => {
+const VerifyOTP = ({ email }) => {  
   const [otp, setOtp] = useState('');
   const [error, setError] = useState('');
-  const navigate = useNavigate(); 
-
-  const email = 'suhail9589.sfw@gmail.com'; // Hardcoded email for testing, replace with actual email source
-
-  const handleResend = () => {
-    // Logic to resend OTP
-    console.log('Resend OTP clicked');
-  };
+  const navigate = useNavigate();
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -28,20 +21,15 @@ const VerifyOTP = ({ logoClassMain }) => {
         return;
       }
 
-      // Call the verifyOtp API function with email and OTP
       const response = await verifyOtp(email, otp);
       
-      // Show success notification
       toast.success('Account verified successfully');
       
-      // Assuming successful response leads to a redirection
       console.log('OTP verified successfully:', response);
       navigate('/dashboard/default/Admin'); 
     } catch (err) {
-      // Show error notification
       toast.error('OTP IS INVALID');
       
-      // Handle errors
       setError(err.message || 'OTP verification failed');
     }
   };
@@ -55,7 +43,7 @@ const VerifyOTP = ({ logoClassMain }) => {
               <div className='login-card'>
                 <div>
                   <div>
-                    <Link className={`logo ${logoClassMain ? logoClassMain : ''}`} to={process.env.PUBLIC_URL}>
+                    <Link className={`logo`} to={process.env.PUBLIC_URL}>
                       <Image attrImage={{ className: 'img-fluids for-light', src: logoWhite, alt: 'Logo' }} />
                       <Image attrImage={{ className: 'img-fluid for-dark', src: logoDark, alt: 'Logo' }} />
                     </Link>
@@ -79,16 +67,11 @@ const VerifyOTP = ({ logoClassMain }) => {
                             />
                           </Col>
                         </Row>
-                        {error && <P className='text-danger'>{error}</P>}
+                        {error && <P style={{ color: 'red' }}>{error}</P>}
                       </FormGroup>
                       <FormGroup className='text-end'>
                         <Btn attrBtn={{ className: 'btn-block btn-clr', color: 'primary', type: 'submit' }}>Verify</Btn>
                       </FormGroup>
-                      {/* <FormGroup className='text-center'>
-                        <Btn attrBtn={{ className: 'btn-block btn-secondary', color: 'secondary', type: 'button' }} onClick={handleResend}>
-                          Resend OTP
-                        </Btn>
-                      </FormGroup> */}
                       <P attrPara={{ className: 'text-start' }}>
                         Already have a password?
                         <a className='ms-2' href='/login'>
