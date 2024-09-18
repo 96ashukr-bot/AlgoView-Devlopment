@@ -42,23 +42,10 @@ class UserCreateSerializer(serializers.ModelSerializer):
         password = validated_data.pop('password')
         user = User.objects.create_user(**validated_data, password=password)
         return user
-class UserSerializer(serializers.ModelSerializer):
+class UsergetSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'email', 'firstName', 'lastName', 'phoneNumber', 'profilePicture', 'role', 'is_active', 'is_staff']
-
-    def update(self, instance, validated_data):
-        instance.email = validated_data.get('email', instance.email)
-        instance.firstName = validated_data.get('firstName', instance.firstName)
-        instance.lastName = validated_data.get('lastName', instance.lastName)
-        instance.phoneNumber = validated_data.get('phoneNumber', instance.phoneNumber)
-        instance.profilePicture = validated_data.get('profilePicture', instance.profilePicture)
-        instance.role = validated_data.get('role', instance.role)
-        instance.is_active = validated_data.get('is_active', instance.is_active)
-        instance.is_staff = validated_data.get('is_staff', instance.is_staff)
-        instance.save()
-        return instance
-        
+        fields = ['id','email', 'fullName','firstName', 'lastName', 'phoneNumber', 'role']        
 class UserRegistrationSerializer_sync(serializers.ModelSerializer):
     phoneNumber = serializers.CharField(
         required=True,
@@ -105,7 +92,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['email', 'firstName', 'lastName', 'phoneNumber', 'profilePicture', 'role']
-
+    
     def create(self, validated_data):
         password = get_random_string(length=8)
         with transaction.atomic():
@@ -131,7 +118,6 @@ class CustomLoginSerializer(serializers.Serializer):
     password = serializers.CharField()
 
     def validate(self, data):
-        print("kk")
         email = data.get('email')
         password = data.get('password')
         user = authenticate(email=email, password=password)
@@ -349,3 +335,46 @@ class KYCSerializer(serializers.ModelSerializer):
     def validate(self, data):
         # Add any custom validation logic if needed
         return data
+
+
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'email', 'firstName', 'lastName', 'phoneNumber', 'role']
+
+    def validate_phoneNumber(self, value):
+        # Check if the phone number is in a valid format
+        if not value.isdigit() or len(value) != 10:  # Example validation for a 10-digit number
+            raise serializers.ValidationError("Phone number must be a 10-digit number.")
+        return value
+
+    def validate(self, data):
+        phone_number = data.get('phoneNumber')
+        email = data.get('email')
+
+        # Determine if we are updating an existing user or creating a new one
+        if self.instance is not None:
+            # Update scenario: Exclude the current instance when checking for duplicates
+            if User.objects.exclude(id=self.instance.id).filter(phoneNumber=phone_number).exists():
+                raise serializers.ValidationError({'phoneNumber': 'A user with this phone number already exists.'})
+            if User.objects.exclude(id=self.instance.id).filter(email=email).exists():
+                raise serializers.ValidationError({'email': 'A user with this email already exists.'})
+        else:
+            # Create scenario: Check for duplicates including the new data
+            if User.objects.filter(phoneNumber=phone_number).exists():
+                raise serializers.ValidationError({'phoneNumber': 'A user with this phone number already exists.'})
+            if User.objects.filter(email=email).exists():
+                raise serializers.ValidationError({'email': 'A user with this email already exists.'})
+
+        return data
+
+    def update(self, instance, validated_data):
+        instance.email = validated_data.get('email', instance.email)
+        instance.firstName = validated_data.get('firstName', instance.firstName)
+        instance.lastName = validated_data.get('lastName', instance.lastName)
+        instance.phoneNumber = validated_data.get('phoneNumber', instance.phoneNumber)
+        instance.role = validated_data.get('role', instance.role)
+        instance.save()
+        return instance
+    
