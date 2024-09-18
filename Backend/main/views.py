@@ -11,6 +11,8 @@ import time
 from .models import *
 from .serializers import *
 import logging
+from django.core.exceptions import ObjectDoesNotExist
+from rest_framework.views import APIView
 logger = logging.getLogger(__name__)
 UserModel = get_user_model()
 
@@ -269,7 +271,37 @@ class UserManagementView(generics.GenericAPIView):
         if not self.request.user.is_superuser:
             raise PermissionDenied("You do not have permission to perform this action.")
         serializer.save()
+class UserProfileView(APIView):
+    def get(self, request, *args, **kwargs):
+        try:
+            user = request.user
+            serializer = UserProfileRetrieveSerializer(user)
+            return Response(serializer.data)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+    def patch(self, request, *args, **kwargs):
+        user = request.user
+        try:
+            # Start transaction in case of complex updates (optional)
+            with transaction.atomic():
+                serializer = UserProfileUpdateSerializer(user, data=request.data, partial=True)
+                if serializer.is_valid():
+                    serializer.save()
+                    return Response(serializer.data, status=status.HTTP_200_OK)
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except ValidationError as ve:
+            return Response({"validation_error": ve.detail}, status=status.HTTP_400_BAD_REQUEST)
+        except ObjectDoesNotExist:
+            return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+class UserProfileView22(generics.UpdateAPIView):
+    serializer_class = UserProfileUpdateSerializer
+    queryset = User.objects.all()
+
+    def get_object(self):
+        return self.request.user    
 class KYCListCreateView(generics.ListCreateAPIView):
     queryset = KYC.objects.all()
     serializer_class = KYCSerializer

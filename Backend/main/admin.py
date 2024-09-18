@@ -3,19 +3,18 @@ from django.contrib import admin
 # Register your models here.
 from django.contrib import admin
 from .models import *
-
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
-    list_display = ['email', 'fullName', 'phoneNumber', 'role', 'is_active', 'is_staff', 'is_superuser']
+    list_display = ['email', 'fullName', 'phoneNumber', 'role', 'is_active', 'is_staff', 'is_superuser', 'created_at', 'updated_at']
     list_filter = ['role', 'is_active', 'is_staff']
     search_fields = ['email', 'firstName', 'lastName', 'phoneNumber']
     ordering = ['email']
 
-    # Optionally, you can add additional configurations for form fields and fieldsets if needed
     fieldsets = (
         (None, {'fields': ('email', 'password')}),
-        ('Personal info', {'fields': ('firstName', 'lastName', 'phoneNumber', 'profilePicture', 'role','is_password_temporary','is_new_password')}),
+        ('Personal info', {'fields': ('firstName', 'lastName','phoneNumber', 'profilePicture', 'role',  'PANEL_CLIENT_KEY', 'start_date', 'end_date', 'client_type', 'is_password_temporary', 'is_new_password')}),
         ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser')}),
+        # ('Metadata', {'fields': ('created_at', 'updated_at')}),  # Add 'created_at' and 'updated_at' here
     )
     add_fieldsets = (
         (None, {
@@ -24,6 +23,7 @@ class UserAdmin(admin.ModelAdmin):
         }),
     )
     filter_horizontal = ()
+
 
 @admin.register(Role)
 class RoleAdmin(admin.ModelAdmin):
