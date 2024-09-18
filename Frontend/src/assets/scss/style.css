@@ -10,7 +10,35 @@
 -----------------------------------------------------------------------------------
 
 
+
  */
+
+ .is-invalid {
+  border: 1px solid red;
+}
+
+.text-danger {
+  color: red;
+}
+
+.toggle-icon.show::before {
+  content: '👁️'; /* Icon for showing password */
+}
+
+.toggle-icon.hide::before {
+  content: '🙈'; /* Icon for hiding password */
+}
+
+.show-hide {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+
+
 :root {
   --theme-default: #7366ff;
   --theme-secondary: #f73164;

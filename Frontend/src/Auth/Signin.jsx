@@ -35,8 +35,31 @@ const Signin = ({ selected }) => {
     localStorage.setItem("Name", "Emay Walter");
   }, [value, name]);
 
+  const validateEmail = (email) => {
+    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return regex.test(email);
+  };
+
+  const validateForm = () => {
+    if (!email) {
+      toast.error("Email is required!");
+      return false;
+    }
+    if (!validateEmail(email)) {
+      toast.error("Invalid email format!");
+      return false;
+    }
+    if (!password) {
+      toast.error("Password is required");
+      return false;
+    }
+    return true;
+  };
+
   const loginAuth = async (e) => {
     e.preventDefault();
+    if (!validateForm()) return;
+
     setLoading(true); 
 
     try {
@@ -44,7 +67,7 @@ const Signin = ({ selected }) => {
       
       localStorage.setItem("login", JSON.stringify(true));
       
-      setSubmitted(true); // Show VerifyOTP component after successful login
+      setSubmitted(true);
       toast.success("OTP sent to your email. Please verify.");
     } catch (error) {
       if (error.message.includes("email")) {

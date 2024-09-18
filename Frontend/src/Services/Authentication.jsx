@@ -2,6 +2,13 @@ import axios from "axios";
 
 const baseUrl = "http://127.0.0.1:8000";
 
+const getAuthToken = () => {
+  const token = localStorage.getItem('authToken');
+  console.log('Retrieved token:', token); // Debugging line
+  return token; 
+};
+
+
 const login = async (email, password) => {
   try {
     const response = await axios.post(`${baseUrl}/login/`, {
@@ -123,8 +130,37 @@ export const verifyOtp = async (email, otp) => {
       email: email,
       otp_code: otp 
     });
+
+    if (response.data.access) {
+      localStorage.setItem('authToken', response.data.access); 
+      localStorage.setItem('refreshToken', response.data.refresh);
+
+      console.log('Access Token stored:', response.data.access);
+      console.log('Refresh Token stored:', response.data.refresh);
+    }
+
     return response.data;
   } catch (error) {
     throw new Error(error.response?.data?.message || "OTP verification failed");
   }
 };
+
+export const changePassword = async (oldPassword, newPassword, confirmNewPassword) => {
+  try {
+    const response = await axios.post(`${baseUrl}/change-password/`, {
+      OldPassword: oldPassword,
+      NewPassword: newPassword,
+      ConfirmNewPassword: confirmNewPassword
+    }, {
+      headers: {
+        'Authorization': `Bearer ${getAuthToken()}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    return response.data;
+  } catch (error) {
+    const errorMessage = error.response?.data?.detail || "Failed to change password";
+    throw new Error(errorMessage);
+  }
+};
+

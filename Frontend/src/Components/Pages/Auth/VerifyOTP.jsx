@@ -26,11 +26,11 @@ const VerifyOTP = ({ email }) => {
       toast.success('Account verified successfully');
       
       console.log('OTP verified successfully:', response);
-      navigate('/dashboard/default/Admin'); 
+      navigate('/pages/authentication/create-pwd/:layout'); 
     } catch (err) {
       toast.error('OTP IS INVALID');
       
-      setError(err.message || 'OTP verification failed');
+      // setError(err.message || 'OTP verification failed');
     }
   };
 

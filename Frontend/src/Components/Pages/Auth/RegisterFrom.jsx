@@ -30,34 +30,57 @@ const RegisterFrom = ({ logoClassMain }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true); // Set loading to true when form submission starts
-
+    setLoading(true);
+  
     try {
       const response = await signupUser(formValues);
+  
       if (response.status === 201) {
         setFormValues({
           firstName: '',
           lastName: '',
           phoneNumber: '',
           email: '',
-        }); 
+        });
         toast.success('Your account is created successfully!', {
           position: toast.POSITION.TOP_RIGHT,
           autoClose: 3000,
         });
-        // Redirect after successful signup if needed
-        // navigate('/login'); 
+        setTimeout(() => {
+          navigate('/login');
+        }, 3000);
       }
     } catch (error) {
-      setErrorMessage('Error creating account. Please try again.');
-      toast.error('Error creating account. Please try again.', {
-        position: toast.POSITION.TOP_RIGHT,
-        autoClose: 3000,
-      });
+      if (error.response && error.response.data) {
+        const errorData = error.response.data;
+  
+        // Assuming the errorData is an object with the errors
+        const errorMessages = Object.values(errorData).flat();
+  
+        if (errorMessages.length > 0) {
+          toast.error(errorMessages[0], {
+            position: toast.POSITION.TOP_RIGHT,
+            autoClose: 3000,
+          });
+        } else {
+          toast.error('Error creating account. Please try again.', {
+            position: toast.POSITION.TOP_RIGHT,
+            autoClose: 3000,
+          });
+        }
+      } else {
+        toast.error('Error creating account. Please try again.', {
+          position: toast.POSITION.TOP_RIGHT,
+          autoClose: 3000,
+        });
+      }
     } finally {
-      setLoading(false); 
+      setLoading(false);
     }
   };
+  
+  
+  
 
   return (
     <Fragment>
