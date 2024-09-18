@@ -306,6 +306,40 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
         return data
 
 
+# Serializer for viewing the user profile
+class UserProfileRetrieveSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['email','firstName', 'lastName', 'phoneNumber', 'profilePicture', 'PANEL_CLIENT_KEY', 'start_date', 'end_date', 'client_type']
+        read_only_fields = ['email']  # Ensure email is read-only
+
+# Serializer for updating the user profile
+class UserProfileUpdateSerializer(serializers.ModelSerializer):
+    fullName = serializers.CharField(read_only=True)  # FullName is read-only, derived from first_name and last_name.
+
+    class Meta:
+        model = User
+        fields = ['email','firstName', 'lastName', 'fullName', 'phoneNumber', 'profilePicture', 'PANEL_CLIENT_KEY', 'start_date', 'end_date', 'client_type']
+
+    def update(self, instance, validated_data):
+        # Update first_name and last_name
+        instance.firstName = validated_data.get('firstName', instance.firstName)
+        instance.lastName = validated_data.get('lastName', instance.lastName)
+        
+        # Update other fields
+        instance.email = validated_data.get('email', instance.email)
+        instance.phoneNumber = validated_data.get('phoneNumber', instance.phoneNumber)
+        instance.profilePicture = validated_data.get('profilePicture', instance.profilePicture)
+        instance.PANEL_CLIENT_KEY = validated_data.get('PANEL_CLIENT_KEY', instance.PANEL_CLIENT_KEY)
+        instance.start_date = validated_data.get('start_date', instance.start_date)
+        instance.end_date = validated_data.get('end_date', instance.end_date)
+        instance.client_type = validated_data.get('client_type', instance.client_type)
+        
+        # Save the updated instance
+        instance.save()
+        
+        return instance
+
 
 class KYCSerializer(serializers.ModelSerializer):
     class Meta:

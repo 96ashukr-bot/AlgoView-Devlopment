@@ -60,6 +60,13 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(default=False)
     is_password_temporary = models.BooleanField(default=True)  # New field to check if password is temporary
     is_new_password = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)  
+    updated_at = models.DateTimeField(auto_now=True)      
+        # New fields for user profile
+    PANEL_CLIENT_KEY = models.CharField(max_length=255, blank=True, null=True)
+    start_date = models.DateField(null=True, blank=True)
+    end_date = models.DateField(null=True, blank=True)
+    client_type = models.CharField(max_length=50, blank=True, null=True) 
     objects = UserManager()
     
     USERNAME_FIELD = 'email'
