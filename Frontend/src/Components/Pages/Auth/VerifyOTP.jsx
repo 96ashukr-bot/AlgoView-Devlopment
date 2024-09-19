@@ -11,28 +11,41 @@ import 'react-toastify/dist/ReactToastify.css';
 const VerifyOTP = ({ email }) => {  
   const [otp, setOtp] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    setLoading(true); 
     try {
       if (otp.length < 6) {
-        setError('Please enter a valid OTP');
+        setError('Please enter a valid 6-digit OTP');
+        setLoading(false);
         return;
       }
-
+  
+      // Assuming verifyOtp returns a response with a message
       const response = await verifyOtp(email, otp);
-      
-      toast.success('Account verified successfully');
-      
-      console.log('OTP verified successfully:', response);
-      navigate('/pages/authentication/create-pwd/:layout'); 
+  
+      if (response.message === "Please change your password as this is a one-time temporary password.") {
+        // First-time login: redirect to create password page
+        toast.success('Account verified! Please change your password.');
+        navigate('/pages/authentication/create-pwd/:layout');
+      } else if (response.message === "login successfully") {
+        // Regular login: redirect to Admin Dashboard
+        toast.success('Login successful! Redirecting to dashboard.');
+        navigate('/dashboard/default/Admin');
+      } else {
+        setError('Unexpected response from server.');
+      }
     } catch (err) {
-      toast.error('OTP IS INVALID');
-      
-      // setError(err.message || 'OTP verification failed');
+      toast.error(err.message || 'OTP verification failed');
+      setError(err.message || 'OTP verification failed');
+    } finally {
+      setLoading(false); 
     }
   };
+  
 
   return (
     <Fragment>
