@@ -1,8 +1,11 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+
+from main.serializers import RolePermissionSerializer
 from .models import Role, Permission, RolePermission
 
+from rest_framework.permissions import IsAdminUser,IsAuthenticated
 class UpdateRolePermissionsView(APIView):
     def post(self, request, role_id):
         try:
@@ -30,3 +33,9 @@ class UpdateRolePermissionsView(APIView):
                     role_permission.permissions.remove(permission)
 
         return Response({"success": "Permissions updated successfully"}, status=status.HTTP_200_OK)
+class RolePermissionListView(APIView):
+    # permission_classes = [IsAdminUser]  
+    def get(self, request, *args, **kwargs):
+        queryset = RolePermission.objects.all()
+        serializer = RolePermissionSerializer(queryset, many=True)  # Create a serializer instance with the queryset
+        return Response(serializer.data, status=status.HTTP_200_OK)

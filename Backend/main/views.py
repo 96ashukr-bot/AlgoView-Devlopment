@@ -1,5 +1,5 @@
 from rest_framework import generics, status, permissions
-from rest_framework.permissions import IsAdminUser
+from rest_framework.permissions import IsAdminUser,IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from django.contrib.auth import authenticate, get_user_model
@@ -14,6 +14,7 @@ from .serializers import *
 import logging
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework.views import APIView
+from django.contrib import messages
 logger = logging.getLogger(__name__)
 UserModel = get_user_model()
 
@@ -32,12 +33,7 @@ class RoleDetailView(generics.RetrieveUpdateDestroyAPIView):
 class UserListCreateView(generics.ListCreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    # permission_classes = [permissions.IsAuthenticated]
 
 #signup
 class UserRegistrationView(generics.CreateAPIView):
@@ -199,19 +195,42 @@ class UserAssignRoleView(generics.UpdateAPIView):
         except Exception as e:
             return Response({'detail': 'An unexpected error occurred.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 class UserManagementView(APIView):
-    permission_classes = [IsAdminUser]  # Ensure only admins can create users
+    # permission_classes = [IsAdminUser]  # Ensure only admins can create users
     def get(self, request, *args, **kwargs):
-        # Retrieve all users
-        users = User.objects.all()
+        users = User.objects.filter(is_superuser=False).order_by('id')
         serializer = UsergetSerializer(users, many=True)
         return Response(serializer.data)
+    
     def post(self, request, *args, **kwargs):
         serializer = UserSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
+            messages.success(request, 'User created successfully.')
             return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def put(self, request, *args, **kwargs):
+        try:
+            user = User.objects.get(pk=kwargs.get('pk'))
+        except User.DoesNotExist:
+            return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
 
+        serializer = UserSerializer(user, data=request.data, partial=True)  # partial=True allows updating only some fields
+        if serializer.is_valid():
+            serializer.save()
+            messages.success(request, 'User updated successfully.')
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, *args, **kwargs):
+        try:
+            user = User.objects.get(pk=kwargs.get('pk'))
+        except User.DoesNotExist:
+            return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        user.delete()
+        print(messages.success(request, 'User deleted successfully.'))
+        return Response(status=status.HTTP_204_NO_CONTENT)
 class UserProfileView(APIView):
     def get(self, request, *args, **kwargs):
         try:
@@ -241,7 +260,7 @@ class UserProfileView(APIView):
 class KYCListCreateView(generics.ListCreateAPIView):
     queryset = KYC.objects.all()
     serializer_class = KYCSerializer
-    # permission_classes = [IsAuthenticated]  # Optional: ensure only logged-in users can access
+    permission_classes = [IsAuthenticated]  # Optional: ensure only logged-in users can access
 
     def perform_create(self, serializer):
         # If you're using a user relationship, pass the user here
@@ -252,7 +271,6 @@ class KYCUpdateView(generics.UpdateAPIView):
     queryset = KYC.objects.all()
     serializer_class = KYCSerializer
     # permission_classes = [IsAuthenticated]  # Optional
-
     def perform_update(self, serializer):
         serializer.save()
 
@@ -263,3 +281,51 @@ class KYCDetailView(generics.RetrieveUpdateDestroyAPIView):
 
     def get_queryset(self):
         return KYC.objects.filter(user=self.request.user)
+    
+class PendingKYCListView(APIView):# Get all pending KYC requests
+    def get(self, request, *args, **kwargs):
+        pending_kycs = KYC.objects.filter(status='pending', is_verified=False)
+
+        if pending_kycs.exists():
+            serializer = KYCSerializer(pending_kycs, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response({"message": "No pending KYC requests"}, status=status.HTTP_200_OK)
+
+class KYCVerificationView(APIView):
+    permission_classes = [IsAdminUser]  # Only admins can access KYC requests
+
+    def post(self, request, kyc_id, *args, **kwargs):
+        try:
+            kyc = KYC.objects.get(id=kyc_id)
+        except KYC.DoesNotExist:
+            return Response({"detail": "KYC request not found."}, status=status.HTTP_404_NOT_FOUND)
+        
+        action = request.data.get('action')
+        if not action:
+            return Response({"detail": "Action is required (approve/reject)."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if action.lower() == 'approve':
+            kyc.status = 'approved'
+            kyc.is_verified = True  
+            kyc.verified_by = request.user 
+            kyc.save()
+            return Response({
+                "message": "KYC approved successfully.",
+                "kyc_data": KYCSerializer(kyc).data
+            }, status=status.HTTP_200_OK)
+            
+        elif action.lower() == 'reject':
+            kyc.status = 'rejected'
+            kyc.is_verified = False  
+            kyc.save()  
+            return Response({
+                "message": "KYC rejected.",
+                "kyc_data": KYCSerializer(kyc).data
+            }, status=status.HTTP_200_OK)
+
+        else:
+            return Response({"detail": "Invalid action. Use 'approve' or 'reject'."}, status=status.HTTP_400_BAD_REQUEST)
+
+  
+    

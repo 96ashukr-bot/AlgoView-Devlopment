@@ -47,19 +47,19 @@ class UsergetSerializer(serializers.ModelSerializer):
         model = User
         fields = ['id', 'email', 'firstName', 'lastName', 'phoneNumber', 'profilePicture', 'role', 'is_active', 'is_staff']
 
-    def update(self, instance, validated_data):
-        instance.email = validated_data.get('email', instance.email)
-        instance.firstName = validated_data.get('firstName', instance.firstName)
-        instance.lastName = validated_data.get('lastName', instance.lastName)
-        instance.phoneNumber = validated_data.get('phoneNumber', instance.phoneNumber)
-        instance.profilePicture = validated_data.get('profilePicture', instance.profilePicture)
-        instance.role = validated_data.get('role', instance.role)
-        instance.is_active = validated_data.get('is_active', instance.is_active)
-        instance.is_staff = validated_data.get('is_staff', instance.is_staff)
-        instance.save()
-        return instance
+    # def update(self, instance, validated_data):
+    #     instance.email = validated_data.get('email', instance.email)
+    #     instance.firstName = validated_data.get('firstName', instance.firstName)
+    #     instance.lastName = validated_data.get('lastName', instance.lastName)
+    #     instance.phoneNumber = validated_data.get('phoneNumber', instance.phoneNumber)
+    #     instance.profilePicture = validated_data.get('profilePicture', instance.profilePicture)
+    #     instance.role = validated_data.get('role', instance.role)
+    #     instance.is_active = validated_data.get('is_active', instance.is_active)
+    #     instance.is_staff = validated_data.get('is_staff', instance.is_staff)
+    #     instance.save()
+    #     return instance
         
-class UserRegistrationSerializer(serializers.ModelSerializer):
+class UserRegistrationSerializer_sync(serializers.ModelSerializer):
     phoneNumber = serializers.CharField(
         required=True,
         validators=[UniqueValidator(queryset=User.objects.all(), message="Phone number already exists.")]
@@ -96,7 +96,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         send_mail(subject, message, from_email, [email])
 
 
-class UserRegistrationSerializer___12(serializers.ModelSerializer):
+class UserRegistrationSerializer(serializers.ModelSerializer):
     phoneNumber = serializers.CharField(
         required=True,
         validators=[UniqueValidator(queryset=User.objects.all(), message="Phone number already exists.")]
@@ -126,7 +126,7 @@ class UserRegistrationSerializer___12(serializers.ModelSerializer):
         
         return user
 
-class CustomLoginSerializer_12(serializers.Serializer):
+class CustomLoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField()
 
@@ -174,7 +174,7 @@ class CustomLoginSerializer_12(serializers.Serializer):
             return {
                 'message': f"OTP sent to your email: {email}. Please verify."
             }
-class CustomLoginSerializer(serializers.Serializer):
+class CustomLoginSerializer_sync(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField()
 
@@ -339,18 +339,6 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
         
         return instance
 
-
-class KYCSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = KYC
-        fields = ['UserName', 'Date_Of_Birth', 'email', 'phone', 'document_type', 'document_file_front', 'document_file_back', 'is_verified']
-        
-    def validate(self, data):
-        # Add any custom validation logic if needed
-        return data
-
-
-
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
@@ -390,4 +378,23 @@ class UserSerializer(serializers.ModelSerializer):
         instance.role = validated_data.get('role', instance.role)
         instance.save()
         return instance
-    
+
+class KYCSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = KYC
+        fields = ['id','UserName', 'Date_Of_Birth', 'email', 'phone', 'document_type', 'is_verified','is_verified', 'status','document_file_front', 'document_file_back','verified_by' ]
+        
+    def validate(self, data):
+        # Add any custom validation logic if needed
+        return data
+
+class PermissionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Permission
+        fields = ['permission','group']  
+class RolePermissionSerializer(serializers.ModelSerializer):
+    role = RoleSerializer()
+    permissions = PermissionSerializer(many=True)
+    class Meta:
+        model = RolePermission
+        fields = ['role', 'permissions']  
