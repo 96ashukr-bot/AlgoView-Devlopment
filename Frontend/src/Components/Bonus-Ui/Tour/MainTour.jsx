@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import UserDetails from "../../Application/Users/UsersProfile/UserDetail";
-import UserDetails2 from "../../Application/Users/UsersProfile/UserDetail2";
+import UserProfiles from "../../Application/Users/UsersProfile/UserProfiles";
 import UserDetails4 from "../../Application/Users/UsersProfile/UserDetail4";
 import UserDetails3 from "../../Application/Users/UsersProfile/UserDetails3";
 import UserProfile from "./UserProfile";
@@ -27,7 +27,7 @@ const TourMain = () => {
           <Row>
             <UserProfile />
             <UserDetails />
-            <UserDetails2 />
+            <UserProfiles />
             <UserDetails3 />
             <UserDetails4 />
           </Row>

@@ -4,7 +4,7 @@ from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
-from main.permissions import UpdateRolePermissionsView
+from main.permissions import RolePermissionListView, UpdateRolePermissionsView
 from .views import *
 from django.conf.urls.static import static
 urlpatterns = [
@@ -18,14 +18,16 @@ urlpatterns = [
     path('create-roles/', RoleListCreateView.as_view(), name='role-list-create'),
     path('roles/<int:pk>/', RoleDetailView.as_view(), name='role-detail'),
     path('users/', UserListCreateView.as_view(), name='user-list-create'),
-    path('users/<int:pk>/', UserDetailView.as_view(), name='user-detail'),
     path('user-assign-role/', UserAssignRoleView.as_view(), name='user-assign-role'),
     path('user-management/', UserManagementView.as_view(), name='user-management'),
     path('user-management/<int:pk>/', UserManagementView.as_view(), name='user-detail-management'),
     path('user-profile/', UserProfileView.as_view(), name='user-profile'),
     path('kyc/', KYCListCreateView.as_view(), name='kyc-list-create'),
     path('kyc/<int:pk>/', KYCDetailView.as_view(), name='kyc-detail'),
-    path('rolepermissions/<int:role_id>/', UpdateRolePermissionsView.as_view(), name='update-role-permissions'),
+    path('pending-kyc-list/', PendingKYCListView.as_view(), name='kyc-pending-list'),
+    path('kyc/verify/<int:kyc_id>/', KYCVerificationView.as_view(), name='kyc-verification'),
+    path('update-role-permissions/<int:role_id>/', UpdateRolePermissionsView.as_view(), name='update-role-permissions'),
+    path('role-permissions/', RolePermissionListView.as_view(), name='role-permissions-list'),
 
 
 ]

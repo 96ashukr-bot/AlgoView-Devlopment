@@ -16,7 +16,7 @@ const VerifyOTP = ({ email }) => {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    setLoading(true);
+    setLoading(true); 
     try {
       if (otp.length < 6) {
         setError('Please enter a valid 6-digit OTP');
@@ -36,14 +36,13 @@ const VerifyOTP = ({ email }) => {
         toast.success('Login successful! Redirecting to dashboard.');
         navigate('/dashboard/default/Admin');
       } else {
-        // Handle any other unexpected responses
         setError('Unexpected response from server.');
       }
     } catch (err) {
       toast.error(err.message || 'OTP verification failed');
       setError(err.message || 'OTP verification failed');
     } finally {
-      setLoading(false);
+      setLoading(false); 
     }
   };
   

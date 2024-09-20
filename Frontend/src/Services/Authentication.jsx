@@ -4,7 +4,7 @@ const baseUrl = "http://127.0.0.1:8000";
 
 const getAuthToken = () => {
   const token = localStorage.getItem('authToken');
-  console.log('Retrieved token:', token); // Debugging line
+  console.log('Retrieved token:', token);
   return token; 
 };
 
