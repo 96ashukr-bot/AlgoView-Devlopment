@@ -1,60 +1,107 @@
-import React, { useState } from 'react';
-import { Container, Row, Col, Card, CardBody, Form, FormGroup, Label, Input, Nav, NavItem, NavLink, TabContent, TabPane } from 'reactstrap';
-import { Eye, EyeOff, Target, Info, CheckCircle } from 'react-feather';
+import React, { useState, useEffect } from 'react';
+import { fetchUserProfile, updateUserProfile, changePassword } from '../../../../Services/Authentication';
+import { Container, Row, Col, Card, CardBody, Form, FormGroup, Label, Input, Nav, NavItem, NavLink, TabContent, TabPane, Button } from 'reactstrap';
 import DatePicker from 'react-datepicker';
+import { Eye, EyeOff, Target, Info, CheckCircle } from 'react-feather';
 import 'react-datepicker/dist/react-datepicker.css';
 
 const UserProfiles = () => {
   const [startDate, setStartDate] = useState(new Date());
-  const [endDate, setEndDate] = useState(new Date());
+  const [endDate, setEndDate] = useState(null);
   const [activeTab, setActiveTab] = useState('1');
 
-  // Password state
+  // State to store user profile data
+  const [userProfile, setUserProfile] = useState({
+    email: '',
+    firstName: '',
+    lastName: '',
+    fullName: '',
+    phoneNumber: '',
+    PANEL_CLIENT_KEY: '',
+    start_date: null,
+    end_date: null,
+    client_type: ''
+  });
+
+  // States for handling password change
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
-  // Toggle visibility state
   const [showOldPassword, setShowOldPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // Error state
-  const [errors, setErrors] = useState({
-    oldPassword: '',
-    newPassword: '',
-    confirmPassword: '',
-  });
-
-  const handlePasswordChange = (e) => {
-    e.preventDefault();
-    const newErrors = {
-      oldPassword: '',
-      newPassword: '',
-      confirmPassword: '',
+  // Fetch user profile from API
+  useEffect(() => {
+    const getUserProfile = async () => {
+      try {
+        const data = await fetchUserProfile();
+        setUserProfile(data);
+        setStartDate(new Date(data.start_date));
+        setEndDate(data.end_date ? new Date(data.end_date) : null);
+      } catch (error) {
+        console.error("Error fetching user profile:", error);
+      }
     };
 
-    if (oldPassword.length < 8) newErrors.oldPassword = 'Password must be at least 8 characters long.';
-    if (newPassword.length < 8) newErrors.newPassword = 'Must contain at least 8 characters.';
-    if (newPassword !== confirmPassword) newErrors.confirmPassword = 'New passwords do not match.';
-
-    setErrors(newErrors);
-  };
+    getUserProfile();
+  }, []);
 
   // Function to toggle password visibility
-  const togglePasswordVisibility = (setter) => {
-    setter((prevState) => !prevState);
+  const togglePasswordVisibility = (passwordType) => {
+    if (passwordType === 'old') {
+      setShowOldPassword(!showOldPassword);
+    } else if (passwordType === 'new') {
+      setShowNewPassword(!showNewPassword);
+    } else if (passwordType === 'confirm') {
+      setShowConfirmPassword(!showConfirmPassword);
+    }
   };
+
+  // Function to handle password change
+  const handlePasswordChange = async (e) => {
+    e.preventDefault();
+    if (newPassword !== confirmPassword) {
+      alert("New Password and Confirm Password do not match!");
+      return;
+    }
+    try {
+      await changePassword(oldPassword, newPassword, confirmPassword);
+      alert("Password changed successfully!");
+      setOldPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (error) {
+      alert(error.message);
+    }
+  };
+
+  // Function to update user profile
+  const handleUserProfileUpdate = async (e) => {
+    e.preventDefault();
+    try {
+      const updatedProfile = {
+        ...userProfile,
+        start_date: startDate.toISOString().split('T')[0],
+        end_date: endDate ? endDate.toISOString().split('T')[0] : null
+      };
+      await updateUserProfile(updatedProfile);
+      alert("Profile updated successfully!");
+    } catch (error) {
+      alert("Error updating profile: " + error.message);
+    }
+  };
+
 
   return (
     <Container fluid>
       <Row className="justify-content-center">
-        {/* Single Card containing both Profile and Tabs */}
         <Col md="10" style={{ width: '100%' }}>
           <Card>
             <CardBody>
               <Row style={{ minHeight: '400px' }}>
-                {/* Left Section: Profile Details */}
+                {/* Left Section: Profile Picture */}
                 <Col md="4" className="border-right">
                   <div className="text-center">
                     <h5 style={{ marginTop: '16px', marginBottom: '50px' }}>User Profile</h5>
@@ -98,30 +145,61 @@ const UserProfiles = () => {
                   <TabContent activeTab={activeTab}>
                     {/* Tab 1: About Me */}
                     <TabPane tabId="1">
-                      <p style={{ fontSize: '18px', fontWeight: '500', fontStyle: 'bold' }}>Personal Information</p>
-                      <Form className="theme-form">
+                      <p style={{ fontSize: '18px', fontWeight: '500' }}>Personal Information</p>
+                      <Form className="theme-form" onSubmit={handleUserProfileUpdate}>
                         <FormGroup className="row">
-                          <Label className="col-sm-4 col-form-label">Name</Label>
+                          <Label className="col-sm-4 col-form-label">First Name</Label>
                           <Col sm="8">
-                            <Input type="text" placeholder="Enter Your Name" />
+                            <Input
+                              type="text"
+                              value={userProfile.firstName}
+                              onChange={(e) => setUserProfile({ ...userProfile, firstName: e.target.value })}
+                              placeholder="First Name"
+                            />
+                          </Col>
+                        </FormGroup>
+                        <FormGroup className="row">
+                          <Label className="col-sm-4 col-form-label">Last Name</Label>
+                          <Col sm="8">
+                            <Input
+                              type="text"
+                              value={userProfile.lastName}
+                              onChange={(e) => setUserProfile({ ...userProfile, lastName: e.target.value })}
+                              placeholder="Last Name"
+                            />
                           </Col>
                         </FormGroup>
                         <FormGroup className="row">
                           <Label className="col-sm-4 col-form-label">Email</Label>
                           <Col sm="8">
-                            <Input type="email" placeholder="Enter Your Email" />
+                            <Input
+                              type="email"
+                              value={userProfile.email}
+                              onChange={(e) => setUserProfile({ ...userProfile, email: e.target.value })}
+                              placeholder="Email"
+                            />
                           </Col>
                         </FormGroup>
                         <FormGroup className="row">
                           <Label className="col-sm-4 col-form-label">Contact Number</Label>
                           <Col sm="8">
-                            <Input type="number" placeholder="Enter Contact Number" />
+                            <Input
+                              type="text"
+                              value={userProfile.phoneNumber}
+                              onChange={(e) => setUserProfile({ ...userProfile, phoneNumber: e.target.value })}
+                              placeholder="Contact Number"
+                            />
                           </Col>
                         </FormGroup>
                         <FormGroup className="row">
                           <Label className="col-sm-4 col-form-label">Panel Client Key</Label>
                           <Col sm="8">
-                            <Input type="text" placeholder="Enter Panel Client Key" />
+                            <Input
+                              type="text"
+                              value={userProfile.PANEL_CLIENT_KEY}
+                              onChange={(e) => setUserProfile({ ...userProfile, PANEL_CLIENT_KEY: e.target.value })}
+                              placeholder="Panel Client Key"
+                            />
                           </Col>
                         </FormGroup>
                         <FormGroup className="row">
@@ -141,13 +219,24 @@ const UserProfiles = () => {
                               className="form-control"
                               selected={endDate}
                               onChange={(date) => setEndDate(date)}
+                              placeholderText="No end date"
                             />
                           </Col>
                         </FormGroup>
                         <FormGroup className="row">
                           <Label className="col-sm-4 col-form-label">Client Type</Label>
                           <Col sm="8">
-                            <Input type="text" placeholder="Enter Client Type" />
+                            <Input
+                              type="text"
+                              value={userProfile.client_type || "N/A"}
+                              onChange={(e) => setUserProfile({ ...userProfile, client_type: e.target.value })}
+                              placeholder="Client Type"
+                            />
+                          </Col>
+                        </FormGroup>
+                        <FormGroup className="row">
+                          <Col sm="8" className="ml-auto">
+                            <button type="submit" className="btn btn-primary">Update Profile</button>
                           </Col>
                         </FormGroup>
                       </Form>
@@ -155,7 +244,7 @@ const UserProfiles = () => {
 
                     {/* Tab 2: Change Password */}
                     <TabPane tabId="2">
-                      <p style={{ fontSize: '18px', fontWeight: '500', fontStyle: 'bold' }}>Change Password</p>
+                    <p style={{ fontSize: '18px', fontWeight: '500', fontStyle: 'bold' }}>Change Password</p>
                       <Form className="theme-form" onSubmit={handlePasswordChange}>
                         <FormGroup className="row">
                           <Label className="col-sm-4 col-form-label">Old Password</Label>
@@ -169,11 +258,10 @@ const UserProfiles = () => {
                             <div
                               className="position-absolute"
                               style={{ top: '28%', right: '22px', cursor: 'pointer' }}
-                              onClick={() => togglePasswordVisibility(setShowOldPassword)}
+                              onClick={() => togglePasswordVisibility('old')}  // Corrected here
                             >
                               {showOldPassword ? <EyeOff /> : <Eye />}
                             </div>
-                            {errors.oldPassword && <small className="text-danger">{errors.oldPassword}</small>}
                           </Col>
                         </FormGroup>
                         <FormGroup className="row">
@@ -188,11 +276,10 @@ const UserProfiles = () => {
                             <div
                               className="position-absolute"
                               style={{ top: '28%', right: '22px', cursor: 'pointer' }}
-                              onClick={() => togglePasswordVisibility(setShowNewPassword)}
+                              onClick={() => togglePasswordVisibility('new')}  // Corrected here
                             >
                               {showNewPassword ? <EyeOff /> : <Eye />}
                             </div>
-                            {errors.newPassword && <small className="text-danger">{errors.newPassword}</small>}
                           </Col>
                         </FormGroup>
                         <FormGroup className="row">
@@ -207,11 +294,10 @@ const UserProfiles = () => {
                             <div
                               className="position-absolute"
                               style={{ top: '28%', right: '22px', cursor: 'pointer' }}
-                              onClick={() => togglePasswordVisibility(setShowConfirmPassword)}
+                              onClick={() => togglePasswordVisibility('confirm')}  // Corrected here
                             >
                               {showConfirmPassword ? <EyeOff /> : <Eye />}
                             </div>
-                            {errors.confirmPassword && <small className="text-danger">{errors.confirmPassword}</small>}
                           </Col>
                         </FormGroup>
                         <FormGroup className="row">
@@ -221,6 +307,7 @@ const UserProfiles = () => {
                         </FormGroup>
                       </Form>
                     </TabPane>
+
 
                     {/* Tab 3: Modify Updates */}
                     <TabPane tabId="3">
@@ -258,9 +345,13 @@ const UserProfiles = () => {
                             </div>
                           </Col>
                         </Row>
+                        <FormGroup className="row">
+                          <Col sm="8" className="ml-auto">
+                            <button type="submit" className="btn btn-primary">Continue</button>
+                          </Col>
+                        </FormGroup>
                       </Form>
                     </TabPane>
-
                   </TabContent>
                 </Col>
               </Row>

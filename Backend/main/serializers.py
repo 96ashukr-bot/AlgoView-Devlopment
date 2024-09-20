@@ -59,7 +59,7 @@ class UsergetSerializer(serializers.ModelSerializer):
     #     instance.save()
     #     return instance
         
-class UserRegistrationSerializer_sync(serializers.ModelSerializer):
+class UserRegistrationSerializer(serializers.ModelSerializer):
     phoneNumber = serializers.CharField(
         required=True,
         validators=[UniqueValidator(queryset=User.objects.all(), message="Phone number already exists.")]
@@ -96,7 +96,7 @@ class UserRegistrationSerializer_sync(serializers.ModelSerializer):
         send_mail(subject, message, from_email, [email])
 
 
-class UserRegistrationSerializer(serializers.ModelSerializer):
+class UserRegistrationSerializer_sync(serializers.ModelSerializer):
     phoneNumber = serializers.CharField(
         required=True,
         validators=[UniqueValidator(queryset=User.objects.all(), message="Phone number already exists.")]
@@ -126,7 +126,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         
         return user
 
-class CustomLoginSerializer(serializers.Serializer):
+class CustomLoginSerializer_sync(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField()
 
@@ -174,7 +174,7 @@ class CustomLoginSerializer(serializers.Serializer):
             return {
                 'message': f"OTP sent to your email: {email}. Please verify."
             }
-class CustomLoginSerializer_sync(serializers.Serializer):
+class CustomLoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField()
 
@@ -310,7 +310,7 @@ class UserProfileRetrieveSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['email','firstName', 'lastName', 'phoneNumber', 'profilePicture', 'PANEL_CLIENT_KEY', 'start_date', 'end_date', 'client_type']
-        read_only_fields = ['email']  # Ensure email is read-only
+        # read_only_fields = ['email']  # Ensure email is read-only
 
 # Serializer for updating the user profile
 class UserProfileUpdateSerializer(serializers.ModelSerializer):

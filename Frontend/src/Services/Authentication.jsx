@@ -146,6 +146,10 @@ export const verifyOtp = async (email, otp) => {
 };
 
 export const changePassword = async (oldPassword, newPassword, confirmNewPassword) => {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error("No authentication token found.");
+  }
   try {
     const response = await axios.post(`${baseUrl}/change-password/`, {
       OldPassword: oldPassword,
@@ -153,14 +157,64 @@ export const changePassword = async (oldPassword, newPassword, confirmNewPasswor
       ConfirmNewPassword: confirmNewPassword
     }, {
       headers: {
-        'Authorization': `Bearer ${getAuthToken()}`,
+        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       }
     });
     return response.data;
   } catch (error) {
     const errorMessage = error.response?.data?.detail || "Failed to change password";
+    if (error.response?.data?.code === "token_not_valid") {
+      // Handle token refresh or logout
+      alert("Your session has expired. Please log in again.");
+      // Optionally redirect to login page
+    }
     throw new Error(errorMessage);
   }
 };
 
+
+export const fetchUserProfile = async () => {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error("No authentication token found.");
+  }
+  try {
+    const response = await axios.get(`${baseUrl}/user-profile/`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching user profile:", error);
+    if (error.response?.data?.code === "token_not_valid") {
+      // Handle token refresh or logout
+      alert("Your session has expired. Please log in again.");
+      // Optionally redirect to login page
+    }
+    throw new Error(error.response?.data?.detail || "Failed to fetch user profile");
+  }
+};
+
+export const updateUserProfile = async (formValues) => {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error("No authentication token found.");
+  }
+  try {
+    const response = await axios.patch(`${baseUrl}/user-profile/`, formValues, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    return response.data;
+  } catch (error) {
+    const errorMessage = error.response?.data?.detail || "Failed to update user profile";
+    if (error.response?.data?.code === "token_not_valid") {
+      alert("Your session has expired. Please log in again.");
+    }
+    throw new Error(errorMessage);
+  }
+};
