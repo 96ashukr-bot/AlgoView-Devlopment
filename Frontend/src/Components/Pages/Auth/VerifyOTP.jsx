@@ -1,22 +1,39 @@
-import React, { Fragment, useState } from 'react';
+import React, { Fragment, useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Col, Container, Form, FormGroup, Input, Label, Row } from 'reactstrap';
 import { Btn, H4, P, Image } from '../../../AbstractElements';
 import logoWhite from '../../../assets/images/logo/Algologo.png';
 import logoDark from '../../../assets/images/logo/logo_dark.png';
-import { verifyOtp } from '../../../Services/Authentication';
+import { verifyOtp, resendOtp } from '../../../Services/Authentication';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-const VerifyOTP = ({ email }) => {  
+const VerifyOTP = ({ email }) => {
   const [otp, setOtp] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [timer, setTimer] = useState(120);
+  const [isResendDisabled, setIsResendDisabled] = useState(true);
   const navigate = useNavigate();
 
+  useEffect(() => {
+    let countdown;
+    if (timer > 0) {
+      countdown = setInterval(() => {
+        setTimer((prevTimer) => prevTimer - 1);
+      }, 1000);
+    } else {
+      setIsResendDisabled(false);
+      clearInterval(countdown);
+    }
+
+    return () => clearInterval(countdown);
+  }, [timer]);
+
+  // OTP Submission Handler
   const handleSubmit = async (event) => {
     event.preventDefault();
-    setLoading(true); 
+    setLoading(true);
 
     if (otp.length !== 6) {
       setError('Please enter a valid 6-digit OTP');
@@ -26,7 +43,7 @@ const VerifyOTP = ({ email }) => {
 
     try {
       const response = await verifyOtp(email, otp);
-  
+
       if (response.message === "Please change your password as this is a one-time temporary password.") {
         toast.success('Account verified! Please change your password.');
         navigate('/pages/authentication/create-pwd/:layout');
@@ -40,10 +57,11 @@ const VerifyOTP = ({ email }) => {
       toast.error(err.message || 'OTP verification failed');
       setError(err.message || 'OTP verification failed');
     } finally {
-      setLoading(false); 
+      setLoading(false);
     }
   };
 
+  // OTP Input Change Handler
   const handleOtpChange = (e) => {
     const value = e.target.value;
     setOtp(value);
@@ -54,6 +72,31 @@ const VerifyOTP = ({ email }) => {
     } else {
       setError('');
     }
+  };
+
+  // Resend OTP Handler
+  const handleResendOtp = async () => {
+    setLoading(true);
+    try {
+      const response = await resendOtp(email);
+      if (response.success) {
+        toast.success('OTP has been resent to your email.');
+        setTimer(120);
+        setIsResendDisabled(true);
+      } else {
+        toast.error('Failed to resend OTP.');
+      }
+    } catch (error) {
+      toast.error(error.message || 'Failed to resend OTP. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatTime = (seconds) => {
+    const minutes = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${minutes}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
   return (
@@ -95,7 +138,35 @@ const VerifyOTP = ({ email }) => {
                         </Row>
                       </FormGroup>
                       <FormGroup className='text-end'>
-                        <Btn attrBtn={{ className: 'btn-block btn-clr', color: 'primary', type: 'submit' }}>Verify</Btn>
+                        <Btn attrBtn={{ className: 'd-block  btn-clr', type: 'submit', disabled: loading }}>
+                          {loading ? (
+                            <div className="spinner-border spinner-border-sm" role="status">
+                              <span className="visually-hidden">Loading...</span>
+                            </div>
+                          ) : (
+                            'Verify'  
+                          )}
+                        </Btn>
+                      </FormGroup>
+                      <FormGroup className='mb-4 mt-4'>
+                        <span className='reset-password-link'>
+                          {isResendDisabled ? (
+                            <>
+                              Resend OTP available in <strong>{formatTime(timer)}</strong>
+                            </>
+                          ) : (
+                            <>
+                              Didn't receive OTP?{' '}
+                              <a
+                                className='btn-link text-danger'
+                                href='#resend-otp'
+                                onClick={handleResendOtp}
+                              >
+                                Resend
+                              </a>
+                            </>
+                          )}
+                        </span>
                       </FormGroup>
                       <P attrPara={{ className: 'text-start' }}>
                         Already have a password?

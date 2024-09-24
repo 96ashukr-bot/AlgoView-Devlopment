@@ -142,7 +142,18 @@ export const verifyOtp = async (email, otp) => {
 
     return response.data;
   } catch (error) {
-    throw new Error(error.response?.data?.message || "OTP verification failed");
+    throw new Error(error.response?.data?.message || "OTP is expired! Please resend the OTP.");
+  }
+};
+
+export const resendOtp = async (email) => {
+  try {
+    const response = await axios.post(`${baseUrl}/resend-otp/`, { 
+      email: email
+    });
+    return response.data;
+  } catch (error) {
+    throw error.response ? error.response.data : new Error('Server Error');
   }
 };
 
