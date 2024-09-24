@@ -258,15 +258,23 @@ class OTPVerifySerializer(serializers.Serializer):
             user = User.objects.get(email=email)
         except User.DoesNotExist:
             raise serializers.ValidationError('Invalid user')
-
-        # Verify OTP
+        # Get the latest unverified OTP for the user
         otp_instance = OTP.objects.filter(user=user, is_verified=False).last()
-        if otp_instance and otp_instance.otp_code == otp_code:
-            otp_instance.is_verified = True
-            otp_instance.save()
-        else:
-            raise serializers.ValidationError('Invalid OTP')
 
+        if not otp_instance:
+            raise serializers.ValidationError('No OTP found. Please request a new one.')
+
+        # Check if the OTP has expired
+        if otp_instance.is_expired():
+            raise serializers.ValidationError('OTP has expired. Please request a new one.')
+
+        # Verify the OTP code
+        if otp_instance.otp_code != otp_code:
+            raise serializers.ValidationError('Invalid OTP.')
+
+        # Mark OTP as verified
+        otp_instance.is_verified = True
+        otp_instance.save()
         # If OTP is verified, issue JWT tokens
         user.is_password_temporary = False
         user.save()
