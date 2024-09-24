@@ -1,3 +1,4 @@
+from django.shortcuts import get_object_or_404
 from rest_framework import generics, status, permissions
 from rest_framework.permissions import IsAdminUser,IsAuthenticated
 from rest_framework.response import Response
@@ -80,7 +81,43 @@ class OTPVerifyView(generics.GenericAPIView):
         print(f"verify otp API executed in {execution_time:.4f} seconds")
         logger.info(f"verify otp API executed in {execution_time:.4f} seconds")  # Log the execution timee
         return Response(serializer.validated_data, status=status.HTTP_200_OK)
+#resend otp
+class ResendOTPView(APIView):
+    def post(self, request, *args, **kwargs):
+        email = request.data.get('email')
 
+        if not email:
+            return Response({"error": "Email is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Get the user by email
+            user = get_object_or_404(User, email=email)
+
+            # Check if the last OTP is still valid and unverified
+            otp_instance = OTP.objects.filter(user=user, is_verified=False).last()
+            if otp_instance and not otp_instance.is_expired():
+                return Response(
+                    {"error": "A valid OTP already exists. Please check your email."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            # Generate and send a new OTP
+            otp = OTP.objects.create(user=user)
+            otp.generate_otp()
+            # Send OTP via email
+            self.send_email_otp(user.email, otp.otp_code)
+
+            return Response(
+                {"success": "A new OTP has been sent to your email."},
+                status=status.HTTP_200_OK
+            )
+        except User.DoesNotExist:
+            return Response({"error": "User does not exist."}, status=status.HTTP_404_NOT_FOUND)
+
+    def send_email_otp(self, email, otp_code):
+        subject = 'Your OTP Code'
+        message = f'Your OTP code is {otp_code}.'
+        from_email = settings.DEFAULT_FROM_EMAIL
+        send_mail(subject, message, from_email, [email]) 
 #change password
 class ChangePasswordView(generics.GenericAPIView):
     serializer_class = ChangePasswordSerializer

@@ -117,11 +117,16 @@ class OTP(models.Model):
     otp_code = models.CharField(max_length=6)
     created_at = models.DateTimeField(default=timezone.now)
     is_verified = models.BooleanField(default=False)
+    expires_at = models.DateTimeField(null=True, blank=True)
 
     def generate_otp(self):
         self.otp_code = random.randint(100000, 999999)
+        self.expires_at = timezone.now() + datetime.timedelta(seconds=120)  # Set expiration to 120 seconds from now
+        self.is_verified = False
         self.save()
-    
+        
+    def is_expired(self):
+        return timezone.now() > self.expires_at if self.expires_at else True
     def __str__(self):
         return f"{self.user.email} OTP"
 
