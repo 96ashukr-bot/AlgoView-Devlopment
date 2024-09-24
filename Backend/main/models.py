@@ -67,6 +67,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     start_date = models.DateField(null=True, blank=True)
     end_date = models.DateField(null=True, blank=True)
     client_type = models.CharField(max_length=50, blank=True, null=True) 
+    is_enable = models.BooleanField(default=False)
     objects = UserManager()
     
     USERNAME_FIELD = 'email'
@@ -95,10 +96,10 @@ class KYC(models.Model):
         ('rejected', 'Rejected'),
     ]
     # user = models.ForeignKey(User, on_delete=models.CASCADE)
-    UserName = models.CharField(max_length=150, null=True, blank=True)
-    Date_Of_Birth = models.DateField(default=datetime.date(2000, 1, 1))
-    email = models.EmailField(blank=True)
-    phone = models.CharField(max_length=15)
+    # UserName = models.CharField(max_length=150, null=True, blank=True)
+    # Date_Of_Birth = models.DateField(default=datetime.date(2000, 1, 1))
+    # email = models.EmailField(blank=True)
+    # phone = models.CharField(max_length=15)
     document_type = models.CharField(max_length=50)
     document_file_front = models.FileField(upload_to='kyc_documents/front/', blank=True)
     document_file_back = models.FileField(upload_to='kyc_documents/back/', blank=True)
