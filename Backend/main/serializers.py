@@ -382,7 +382,8 @@ class UserSerializer(serializers.ModelSerializer):
 class KYCSerializer(serializers.ModelSerializer):
     class Meta:
         model = KYC
-        fields = ['id','UserName', 'Date_Of_Birth', 'email', 'phone', 'document_type', 'is_verified','is_verified', 'status','document_file_front', 'document_file_back','verified_by' ]
+        fields=['id','document_type', 'is_verified','is_verified', 'status','document_file_front', 'document_file_back','verified_by' ]
+        # fields = ['id','UserName', 'Date_Of_Birth', 'email', 'phone', 'document_type', 'is_verified','is_verified', 'status','document_file_front', 'document_file_back','verified_by' ]
         
     def validate(self, data):
         # Add any custom validation logic if needed

@@ -261,7 +261,7 @@ class UserProfileView(APIView):
 class KYCListCreateView(generics.ListCreateAPIView):
     queryset = KYC.objects.all()
     serializer_class = KYCSerializer
-    permission_classes = [IsAuthenticated]  # Optional: ensure only logged-in users can access
+    # permission_classes = [IsAuthenticated]  # Optional: ensure only logged-in users can access
 
     def perform_create(self, serializer):
         # If you're using a user relationship, pass the user here
