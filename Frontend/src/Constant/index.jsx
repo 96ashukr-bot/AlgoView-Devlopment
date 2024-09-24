@@ -1527,6 +1527,7 @@ export const AinChavez = "Ain Chavez";
 export const ViewAll = "View All";
 export const Admin = "Admin";
 export const Account = "Account";
+export const KycUpdate = "KYC Update";
 export const Taskboard = "Taskboard";
 
 export const QuickOption = "Quick option";

@@ -91,13 +91,14 @@ export const resetPassword = async (
 };
 
 export const updateKYC = async (formValues) => {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error("No authentication token found.");
+  }
+  
   try {
     const formData = new FormData();
     
-    formData.append('UserName', formValues.name);
-    formData.append('Date_Of_Birth', formValues.dateOfBirth);
-    formData.append('email', formValues.email || '');
-    formData.append('phone', formValues.phoneNumber);
     formData.append('document_type', formValues.idType.toLowerCase().replace(/\s+/g, '_'));
     
     if (formValues.idFront instanceof File) {
@@ -112,7 +113,7 @@ export const updateKYC = async (formValues) => {
 
     const response = await axios.post(`${baseUrl}/kyc/`, formData, {
       headers: {
-        "Content-Type": "multipart/form-data",
+        'Authorization': `Bearer ${token}`,
       },
     });
 

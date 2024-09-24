@@ -5,7 +5,7 @@ import man from "../../../assets/images/dashboard/Algologo.png";
 
 import { LI, UL, Image, P } from "../../../AbstractElements";
 import CustomizerContext from "../../../_helper/Customizer";
-import { Account, Admin, Inbox, LogOut, Taskboard } from "../../../Constant";
+import { Account, Admin, KycUpdate, LogOut, } from "../../../Constant";
 
 const UserHeader = () => {
   const history = useNavigate();
@@ -57,6 +57,13 @@ const UserHeader = () => {
           }}>
           <User />
           <span>{Account} </span>
+        </LI>
+        <LI
+          attrLI={{
+            onClick: () => UserMenuRedirect(`/app/kyc-update/${layoutURL}`),
+          }}>
+          <User />
+          <span>{KycUpdate} </span>
         </LI>
         {/* <LI
           attrLI={{

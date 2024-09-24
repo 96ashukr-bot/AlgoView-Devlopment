@@ -9,11 +9,28 @@ import { requestPasswordReset } from '../../../Services/Authentication';
 const ForgetPwd = ({ logoClassMain }) => {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
+  const [emailError, setEmailError] = useState('');
 
-  const handleEmailChange = (e) => setEmail(e.target.value);
+  const handleEmailChange = (e) => {
+    setEmail(e.target.value);
+    if (e.target.value.trim()) setEmailError('');
+  };
+
+  const validateEmail = (email) => {
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email) return 'Email is required.';
+    if (!emailPattern.test(email)) return 'Email is not formatted correctly.';
+    return '';
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const error = validateEmail(email);
+    if (error) {
+      setEmailError(error);
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -22,7 +39,7 @@ const ForgetPwd = ({ logoClassMain }) => {
       setEmail(''); 
     } catch (error) {
       toast.error(error.message || 'An error occurred. Please try again later.');
-    }finally {
+    } finally {
       setLoading(false); 
     }
   };
@@ -46,12 +63,17 @@ const ForgetPwd = ({ logoClassMain }) => {
                       <FormGroup>
                         <Label className='m-0 col-form-label'>Enter Your Email</Label>
                         <Input
-                          className='form-control'
+                          className={`form-control ${emailError ? '' : ''}`}
                           type='email'
                           value={email}
                           onChange={handleEmailChange}
                           placeholder='Enter Email'
+                          style={{
+                            marginBottom: '6px',
+                            borderColor: emailError ? 'red' : '',
+                          }}
                         />
+                        {emailError && <div style={{ color: 'red' }}>{emailError}</div>}
                       </FormGroup>
                       <FormGroup className='text-end'>
                         <Btn attrBtn={{ className: 'btn-block btn-clr', type: 'submit', disabled: loading }}>
@@ -64,14 +86,7 @@ const ForgetPwd = ({ logoClassMain }) => {
                           )}
                         </Btn>
                       </FormGroup>
-                      {/* <FormGroup className='mb-4 mt-4'>
-                        <span className='reset-password-link'>
-                          If you don't receive link?  
-                          <a className='btn-link text-danger' href=''>
-                            Resend
-                          </a>
-                        </span>
-                      </FormGroup> */}
+
                       <P attrPara={{ className: 'text-start' }}>
                         Already have a password?
                         <a className='ms-2' href='/login'>

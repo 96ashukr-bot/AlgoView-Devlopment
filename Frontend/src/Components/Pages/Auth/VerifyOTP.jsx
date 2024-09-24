@@ -17,22 +17,20 @@ const VerifyOTP = ({ email }) => {
   const handleSubmit = async (event) => {
     event.preventDefault();
     setLoading(true); 
+
+    if (otp.length !== 6) {
+      setError('Please enter a valid 6-digit OTP');
+      setLoading(false);
+      return;
+    }
+
     try {
-      if (otp.length < 6) {
-        setError('Please enter a valid 6-digit OTP');
-        setLoading(false);
-        return;
-      }
-  
-      // Assuming verifyOtp returns a response with a message
       const response = await verifyOtp(email, otp);
   
       if (response.message === "Please change your password as this is a one-time temporary password.") {
-        // First-time login: redirect to create password page
         toast.success('Account verified! Please change your password.');
         navigate('/pages/authentication/create-pwd/:layout');
       } else if (response.message === "login successfully") {
-        // Regular login: redirect to Admin Dashboard
         toast.success('Login successful! Redirecting to dashboard.');
         navigate('/dashboard/default/Admin');
       } else {
@@ -45,7 +43,18 @@ const VerifyOTP = ({ email }) => {
       setLoading(false); 
     }
   };
-  
+
+  const handleOtpChange = (e) => {
+    const value = e.target.value;
+    setOtp(value);
+    if (value.length === 6) {
+      setError('');
+    } else if (value.length > 6) {
+      setError('OTP cannot exceed 6 digits.');
+    } else {
+      setError('');
+    }
+  };
 
   return (
     <Fragment>
@@ -70,17 +79,20 @@ const VerifyOTP = ({ email }) => {
                           <Col>
                             <Input
                               id='otp'
-                              className='form-control text-center otp-text'
+                              className={`form-control text-center otp-text ${error ? '' : ''}`}
                               type='text'
                               placeholder='000000'
                               maxLength='6'
                               value={otp}
-                              onChange={(e) => setOtp(e.target.value)}
+                              onChange={handleOtpChange}
                               required
+                              style={{
+                                borderColor: error ? 'red' : '',
+                              }}
                             />
+                            {error && <P className="error-clr">{error}</P>}
                           </Col>
                         </Row>
-                        {error && <P style={{ color: 'red' }}>{error}</P>}
                       </FormGroup>
                       <FormGroup className='text-end'>
                         <Btn attrBtn={{ className: 'btn-block btn-clr', color: 'primary', type: 'submit' }}>Verify</Btn>

@@ -179,6 +179,7 @@ import FormSwitchContain from "../Components/Forms/FormWidget/FormSwitch";
 import FormTouchspinContain from "../Components/Forms/FormWidget/FormTouchspin";
 import FormClipboardContain from "../Components/Forms/FormWidget/FormClipboard";
 import FAQContent from "../Components/FAQ";
+import KycUpdate from "../Components/Application/Users/UsersProfile/KycUpdate";
 
 export const routes = [
   { path: `/dashboard/default/:layout`, Component: <Default /> },
@@ -287,6 +288,7 @@ export const routes = [
 
   { path: `/app/calendar/draggable-calendar/:layout`, Component: <DraggableContain /> },
 
+  { path: `/app/kyc-update/:layout`, Component: <KycUpdate />},
   { path: `/app/email-app/:layout`, Component: <MailInboxContain /> },
   { path: `/app/file-manager/:layout`, Component: <FileManagerContain /> },
   { path: `/app/search/:layout`, Component: <SearchResultContain /> },

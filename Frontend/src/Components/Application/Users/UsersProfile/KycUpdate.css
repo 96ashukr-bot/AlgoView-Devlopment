@@ -6,11 +6,23 @@
     margin-bottom: 20px;
   }
   
+  .government-id-section {
+    margin-top: 30px; 
+  }
+  
   .image-preview {
     position: relative;
     display: inline-block;
     margin-bottom: 20px;
   }
+  
+  .section-divider {
+    border: 0;
+    border-top: 3px solid #7e7d7d8f;
+    margin: 20px 0; 
+    width: 100%;
+  }
+
   
   .gov-id-head{
     font-size: 20px !important;
@@ -21,7 +33,12 @@
   }
 
   .kyc-main-head{
-    margin-bottom: 30px;
+    margin-bottom: 40px;
+  }
+
+  .submit-button-group {
+    display: flex;
+    justify-content: center;
   }
 
   .update-btn{

@@ -6,7 +6,7 @@ import { Breadcrumbs } from "../../../../AbstractElements";
 import UserProfiles from "./UserProfiles";
 // import UserDetails3 from "./UserDetails3";
 // import UserDetails4 from "./UserDetail4";
-import KycUpdate from "./KycUpdate";
+// import KycUpdate from "./KycUpdate";
 
 const UsersProfileContain = () => {
   return (
@@ -15,7 +15,7 @@ const UsersProfileContain = () => {
       <Container fluid={true}>
         <div className="user-profile">
           <Row>
-            <KycUpdate />
+            {/* <KycUpdate /> */}
             {/* <UserProfile /> */}
             <UserProfiles />
             {/* <UserDetails /> */}

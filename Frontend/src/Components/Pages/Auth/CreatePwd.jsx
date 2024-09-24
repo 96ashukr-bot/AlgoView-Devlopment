@@ -20,54 +20,81 @@ const CreatePwd = ({ logoClassMain }) => {
     confirmPassword: '',
   });
 
-  const navigate = useNavigate(); 
+  const navigate = useNavigate();
 
-  const getAuthToken = () => {
-    return localStorage.getItem('authToken'); 
+  const validateOldPassword = () => {
+    if (!oldPassword) return 'Old Password is required.';
+    if (oldPassword.length < 8) return 'Password must be at least 8 characters long.';
+    return '';
+  };
+
+  const validateNewPassword = () => {
+    if (!newPassword) return 'New Password is required.';
+    if (newPassword.length < 8) return 'Must contain at least 8 characters.';
+    return '';
+  };
+
+  const validateConfirmPassword = () => {
+    if (!confirmPassword) return 'Confirm New Password is required.';
+    if (newPassword !== confirmPassword) return 'New passwords do not match.';
+    return '';
   };
 
   const handlePasswordChange = async (e) => {
     e.preventDefault();
 
-    let valid = true;
     const newErrors = {
-      oldPassword: '',
-      newPassword: '',
-      confirmPassword: '',
+      oldPassword: validateOldPassword(),
+      newPassword: validateNewPassword(),
+      confirmPassword: validateConfirmPassword(),
     };
-
-    if (oldPassword.length < 8) {
-      newErrors.oldPassword = 'Password must be at least 8 characters long.';
-      valid = false;
-    }
-    if (newPassword.length < 8) {
-      newErrors.newPassword = 'Must contain at least 8 characters.';
-      valid = false;
-    }
-    if (newPassword !== confirmPassword) {
-      newErrors.confirmPassword = 'New passwords do not match.';
-      valid = false;
-    }
 
     setErrors(newErrors);
 
-    if (!valid) {
-      return;
-    }
+    const isValid = Object.values(newErrors).every((error) => error === '');
+
+    if (!isValid) return;
 
     try {
       const response = await changePassword(oldPassword, newPassword, confirmPassword);
-      // setMessage(response.message || "Password successfully changed, please login with the new password.");
-      
       toast.success('New Password Created Successfully!');
 
       setTimeout(() => {
         navigate('/dashboard/default/Admin');
       }, 2000);
-      
     } catch (error) {
       setMessage(error.message || "Failed to change password.");
       toast.error(error.message || "Failed to change password.");
+    }
+  };
+
+  const handleOldPasswordChange = (e) => {
+    setOldPassword(e.target.value);
+    if (errors.oldPassword) {
+      setErrors((prevErrors) => ({
+        ...prevErrors,
+        oldPassword: validateOldPassword(),
+      }));
+    }
+  };
+
+  const handleNewPasswordChange = (e) => {
+    setNewPassword(e.target.value);
+    if (errors.newPassword) {
+      setErrors((prevErrors) => ({
+        ...prevErrors,
+        newPassword: validateNewPassword(),
+      }));
+    }
+  };
+
+  const handleConfirmPasswordChange = (e) => {
+    setConfirmPassword(e.target.value);
+    if (errors.confirmPassword) {
+      setErrors((prevErrors) => ({
+        ...prevErrors,
+        confirmPassword: validateConfirmPassword(),
+      }));
     }
   };
 
@@ -93,13 +120,13 @@ const CreatePwd = ({ logoClassMain }) => {
                         <Label className='m-0 col-form-label'>Old Password</Label>
                         <div className='position-relative'>
                           <Input
-                            className={`form-control ${errors.oldPassword ? 'is-invalid' : ''}`}
+                            className={`form-control ${errors.oldPassword ? '' : ''}`}
+                            style={{ borderColor: errors.oldPassword ? 'red' : '' }}
                             type={toggleOldPassword ? 'text' : 'password'}
                             name='old_password'
-                            required
                             placeholder='Enter Old Password'
                             value={oldPassword}
-                            onChange={(e) => setOldPassword(e.target.value)}
+                            onChange={handleOldPasswordChange}
                           />
                           <div className='show-hide' onClick={() => setToggleOldPassword(!toggleOldPassword)}>
                             <span className={`toggle-icon ${toggleOldPassword ? 'show' : 'hide'}`}></span>
@@ -113,13 +140,13 @@ const CreatePwd = ({ logoClassMain }) => {
                         <Label className='m-0 col-form-label'>New Password</Label>
                         <div className='position-relative'>
                           <Input
-                            className={`form-control ${errors.newPassword ? 'is-invalid' : ''}`}
+                            className={`form-control ${errors.newPassword ? '' : ''}`}
+                            style={{ borderColor: errors.newPassword ? 'red' : '' }}
                             type={toggleNewPassword ? 'text' : 'password'}
                             name='new_password'
-                            required
                             placeholder='Enter New Password'
                             value={newPassword}
-                            onChange={(e) => setNewPassword(e.target.value)}
+                            onChange={handleNewPasswordChange}
                           />
                           <div className='show-hide' onClick={() => setToggleNewPassword(!toggleNewPassword)}>
                             <span className={`toggle-icon ${toggleNewPassword ? 'show' : 'hide'}`}></span>
@@ -132,13 +159,13 @@ const CreatePwd = ({ logoClassMain }) => {
                       <FormGroup>
                         <Label className='m-0 col-form-label'>Confirm New Password</Label>
                         <Input
-                          className={`form-control ${errors.confirmPassword ? 'is-invalid' : ''}`}
+                          className={`form-control ${errors.confirmPassword ? '' : ''}`}
+                          style={{ borderColor: errors.confirmPassword ? 'red' : '' }}
                           type='password'
                           name='confirm_password'
-                          required
                           placeholder='Enter Confirm New Password'
                           value={confirmPassword}
-                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          onChange={handleConfirmPasswordChange}
                         />
                         {errors.confirmPassword && <small className='text-danger'>{errors.confirmPassword}</small>}
                       </FormGroup>

@@ -16,25 +16,88 @@ const RegisterFrom = ({ logoClassMain }) => {
     email: '',
   });
 
-  const [errorMessage, setErrorMessage] = useState('');
-  const [loading, setLoading] = useState(false); // Add loading state
+  const [formErrors, setFormErrors] = useState({
+    firstName: '',
+    lastName: '',
+    phoneNumber: '',
+    email: '',
+  });
+
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  const validate = () => {
+    let errors = {};
+    let valid = true;
+
+    if (!formValues.firstName.trim()) {
+      errors.firstName = 'First name is required';
+      valid = false;
+    }
+
+    if (!formValues.lastName.trim()) {
+      errors.lastName = 'Last name is required';
+      valid = false;
+    }
+
+    if (!formValues.phoneNumber || formValues.phoneNumber.length < 10) {
+      errors.phoneNumber = 'Phone Number required & must be at least 10 digits';
+      valid = false;
+    }
+
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!formValues.email.trim() || !emailPattern.test(formValues.email)) {
+      errors.email = 'Valid email address is required';
+      valid = false;
+    }
+
+    setFormErrors(errors);
+    return valid;
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+
+    let newErrors = { ...formErrors };
+
+    switch (name) {
+      case 'firstName':
+        if (value.trim()) newErrors.firstName = '';
+        break;
+      case 'lastName':
+        if (value.trim()) newErrors.lastName = '';
+        break;
+      case 'phoneNumber':
+        if (value.length >= 10) newErrors.phoneNumber = '';
+        break;
+      case 'email':
+        const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (emailPattern.test(value)) newErrors.email = '';
+        break;
+      default:
+        break;
+    }
+
     setFormValues({
       ...formValues,
       [name]: value,
     });
+
+    setFormErrors(newErrors);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!validate()) {
+      return;
+    }
+
     setLoading(true);
-  
+
     try {
       const response = await signupUser(formValues);
-  
+
       if (response.status === 201) {
         setFormValues({
           firstName: '',
@@ -51,51 +114,27 @@ const RegisterFrom = ({ logoClassMain }) => {
         }, 3000);
       }
     } catch (error) {
-      if (error.response && error.response.data) {
-        const errorData = error.response.data;
-  
-        // Assuming the errorData is an object with the errors
-        const errorMessages = Object.values(errorData).flat();
-  
-        if (errorMessages.length > 0) {
-          toast.error(errorMessages[0], {
-            position: toast.POSITION.TOP_RIGHT,
-            autoClose: 3000,
-          });
-        } else {
-          toast.error('Error creating account. Please try again.', {
-            position: toast.POSITION.TOP_RIGHT,
-            autoClose: 3000,
-          });
-        }
-      } else {
-        toast.error('Error creating account. Please try again.', {
-          position: toast.POSITION.TOP_RIGHT,
-          autoClose: 3000,
-        });
-      }
+      toast.error('Error creating account. Please try again.', {
+        position: toast.POSITION.TOP_RIGHT,
+        autoClose: 3000,
+      });
     } finally {
       setLoading(false);
     }
   };
-  
-  
-  
 
   return (
     <Fragment>
       <div className='login-card'>
         <div>
-          <div>
-            <Link className={`logo ${logoClassMain ? logoClassMain : ''}`} to={process.env.PUBLIC_URL}>
-              <Image attrImage={{ className: 'img-fluids for-light', src: logoWhite, alt: 'looginpage' }} />
-              <Image attrImage={{ className: 'img-fluid for-dark', src: logoDark, alt: 'looginpage' }} />
-            </Link>
-          </div>
+          <Link className={`logo ${logoClassMain ? logoClassMain : ''}`} to={process.env.PUBLIC_URL}>
+            <Image attrImage={{ className: 'img-fluids for-light', src: logoWhite, alt: 'loginpage' }} />
+            <Image attrImage={{ className: 'img-fluid for-dark', src: logoDark, alt: 'loginpage' }} />
+          </Link>
           <div className='login-main'>
             <Form className='theme-form login-form' onSubmit={handleSubmit}>
               <H4>Create your account</H4>
-              <P>Enter your personal details to create account</P>
+              <P>Enter your personal details to create an account</P>
 
               <FormGroup>
                 <Label className='col-form-label m-0 pt-0'>Your Name <span className='text-danger'>*</span></Label>
@@ -107,9 +146,15 @@ const RegisterFrom = ({ logoClassMain }) => {
                       name='firstName'
                       value={formValues.firstName}
                       onChange={handleInputChange}
-                      required
                       placeholder='First Name'
+                      style={{
+                        marginBottom: '6px',
+                        borderColor: formErrors.firstName ? 'red' : '',
+                      }}
                     />
+                    {formErrors.firstName && (
+                      <span style={{ color: 'red' }}>{formErrors.firstName}</span>
+                    )}
                   </Col>
                   <Col xs='6'>
                     <Input
@@ -118,9 +163,15 @@ const RegisterFrom = ({ logoClassMain }) => {
                       name='lastName'
                       value={formValues.lastName}
                       onChange={handleInputChange}
-                      required
                       placeholder='Last Name'
+                      style={{
+                        marginBottom: '6px',
+                        borderColor: formErrors.lastName ? 'red' : '',
+                      }}
                     />
+                    {formErrors.lastName && (
+                      <span style={{ color: 'red' }}>{formErrors.lastName}</span>
+                    )}
                   </Col>
                 </Row>
               </FormGroup>
@@ -133,9 +184,15 @@ const RegisterFrom = ({ logoClassMain }) => {
                   name='phoneNumber'
                   value={formValues.phoneNumber}
                   onChange={handleInputChange}
-                  required
                   placeholder='Enter Your Number'
+                  style={{
+                    marginBottom: '6px',
+                    borderColor: formErrors.phoneNumber ? 'red' : '', 
+                  }}
                 />
+                {formErrors.phoneNumber && (
+                  <span style={{ color: 'red' }}>{formErrors.phoneNumber}</span>
+                )}
               </FormGroup>
 
               <FormGroup>
@@ -146,20 +203,16 @@ const RegisterFrom = ({ logoClassMain }) => {
                   name='email'
                   value={formValues.email}
                   onChange={handleInputChange}
-                  required
                   placeholder='Enter Your Email'
+                  style={{
+                    marginBottom: '6px',
+                    borderColor: formErrors.email ? 'red' : '', 
+                  }}
                 />
+                {formErrors.email && (
+                  <span style={{ color: 'red' }}>{formErrors.email}</span>
+                )}
               </FormGroup>
-              <FormGroup className='m-0'>
-                <div className='checkbox'>
-                  <Input id='checkbox1' type='checkbox' required />
-                  <Label className='text-muted' for='checkbox1'>
-                    Agree with <span>Privacy Policy</span>
-                  </Label>
-                </div>
-              </FormGroup>
-
-              {errorMessage && <P className="text-danger">{errorMessage}</P>}
 
               <FormGroup>
                 <Btn attrBtn={{ className: 'd-block w-100 btn-clr', type: 'submit', disabled: loading }}>
@@ -182,9 +235,8 @@ const RegisterFrom = ({ logoClassMain }) => {
             </Form>
           </div>
         </div>
+        <ToastContainer />
       </div>
-      
-      <ToastContainer />
     </Fragment>
   );
 };

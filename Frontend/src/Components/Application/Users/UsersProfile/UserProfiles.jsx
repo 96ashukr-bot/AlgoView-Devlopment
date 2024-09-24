@@ -4,9 +4,11 @@ import { Container, Row, Col, Card, CardBody, Form, FormGroup, Label, Input, Nav
 import DatePicker from 'react-datepicker';
 import { Eye, EyeOff, Target, Info, CheckCircle } from 'react-feather';
 import 'react-datepicker/dist/react-datepicker.css';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const UserProfiles = () => {
-  const [startDate, setStartDate] = useState(new Date());
+  const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
   const [activeTab, setActiveTab] = useState('1');
 
@@ -31,6 +33,10 @@ const UserProfiles = () => {
   const [showOldPassword, setShowOldPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const handleChange = date => {
+    setStartDate(date);
+  };
 
   // Fetch user profile from API
   useEffect(() => {
@@ -63,17 +69,17 @@ const UserProfiles = () => {
   const handlePasswordChange = async (e) => {
     e.preventDefault();
     if (newPassword !== confirmPassword) {
-      alert("New Password and Confirm Password do not match!");
+      toast.error("New Password and Confirm Password do not match!");
       return;
     }
     try {
       await changePassword(oldPassword, newPassword, confirmPassword);
-      alert("Password changed successfully!");
+      toast.success("Password changed successfully!");
       setOldPassword('');
       setNewPassword('');
       setConfirmPassword('');
     } catch (error) {
-      alert(error.message);
+      toast.error(error.message);
     }
   };
 
@@ -87,15 +93,16 @@ const UserProfiles = () => {
         end_date: endDate ? endDate.toISOString().split('T')[0] : null
       };
       await updateUserProfile(updatedProfile);
-      alert("Profile updated successfully!");
+      toast.success("Profile updated successfully!");
     } catch (error) {
-      alert("Error updating profile: " + error.message);
+      toast.error("Error updating profile: " + error.message);
     }
   };
 
 
   return (
     <Container fluid>
+      <ToastContainer />
       <Row className="justify-content-center">
         <Col md="10" style={{ width: '100%' }}>
           <Card>
@@ -204,12 +211,8 @@ const UserProfiles = () => {
                         </FormGroup>
                         <FormGroup className="row">
                           <Label className="col-sm-4 col-form-label">Start Date</Label>
-                          <Col sm="8">
-                            <DatePicker
-                              className="form-control"
-                              selected={startDate}
-                              onChange={(date) => setStartDate(date)}
-                            />
+                          <Col xl='5' sm='9'>
+                            <DatePicker className="form-control digits" todayButton="" selected={startDate} onChange={handleChange} />
                           </Col>
                         </FormGroup>
                         <FormGroup className="row">
@@ -331,7 +334,7 @@ const UserProfiles = () => {
                       </Form>
                       <p style={{ fontSize: '18px', fontWeight: '300', fontStyle: 'bold', marginTop: '15px' }}>Signals Execution Type</p>
                       <Form className="theme-form">
-                        <Row>
+                        <Row style={{marginBottom: '15px'}}>
                           <Col sm="9">
                             <div className="d-flex flex-row">
                               <div className="radio radio-primary ms-2 d-flex align-items-center">
