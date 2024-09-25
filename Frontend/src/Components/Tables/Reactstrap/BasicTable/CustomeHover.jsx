@@ -2,7 +2,7 @@ import React, { Fragment } from 'react';
 import { Row, Col, Card, CardHeader, Table } from 'reactstrap';
 import { H3 } from '../../../../AbstractElements';
 import { Budget, CustomTableColorHoverStripped, DomesticGross, FilmTitle, Id, Released, Studio } from '../../../../Constant';
-import { customtablecolor } from '../../../../Data/Table/bootstraptabledata';
+// import { customtablecolor } from '../../../../Data/Table/bootstraptabledata';
 
 const CustomHoverClass = () => {
     return (
@@ -27,20 +27,6 @@ const CustomHoverClass = () => {
                                             <th scope="col">{DomesticGross}</th>
                                         </tr>
                                     </thead>
-                                    <tbody>
-                                        {
-                                            customtablecolor.map((item) =>
-                                                <tr key={item.id}>
-                                                    <th scope="row">{item.id}</th>
-                                                    <td>{item.title}</td>
-                                                    <td>{item.releaseddate}</td>
-                                                    <td>{item.studio}</td>
-                                                    <td>{item.budget}</td>
-                                                    <td>{item.gross}</td>
-                                                </tr>
-                                            )
-                                        }
-                                    </tbody>
                                 </Table>
                             </div>
                         </Col>

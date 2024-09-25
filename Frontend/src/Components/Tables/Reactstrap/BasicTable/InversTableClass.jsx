@@ -2,7 +2,7 @@ import React, { Fragment } from 'react';
 import { Col, Card, CardHeader, Table } from 'reactstrap';
 import { Company, Country, CreditVolume, Email, FirstName, Id, InverseTablePrimaryBackground, inverstablecode, inverstabletext, inverstabletext2, LastName, Role, Useclass } from '../../../../Constant';
 import { H3 } from '../../../../AbstractElements';
-import { Inversetabaledata } from '../../../../Data/Table/bootstraptabledata';
+// import { Inversetabaledata } from '../../../../Data/Table/bootstraptabledata';
 
 const InversePrimaryClass = () => {
   return (
@@ -30,20 +30,6 @@ const InversePrimaryClass = () => {
                   <th scope='col'>{Country}</th>
                 </tr>
               </thead>
-              <tbody>
-                {Inversetabaledata.map((item) => (
-                  <tr key={item.id}>
-                    <th scope='row'>{item.id}</th>
-                    <td>{item.firstname}</td>
-                    <td>{item.lastname}</td>
-                    <td>{item.company}</td>
-                    <td>{item.credit}</td>
-                    <td>{item.email}</td>
-                    <td>{item.role}</td>
-                    <td>{item.country}</td>
-                  </tr>
-                ))}
-              </tbody>
             </Table>
           </div>
         </Card>

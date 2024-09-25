@@ -2,7 +2,7 @@ import React, { Fragment } from 'react';
 import { Col, Card, CardHeader, Table } from 'reactstrap';
 import { Calories, Dessert, DessertType, Fat, Id, Price, StripedRowInverseTable, tablestriped, tablestripedspan, tablestripedspan1, Use, Weigth } from '../../../../Constant';
 import { H3 } from '../../../../AbstractElements';
-import { stripedwithinverse } from '../../../../Data/Table/bootstraptabledata';
+// import { stripedwithinverse } from '../../../../Data/Table/bootstraptabledata';
 
 const StripeInverseClass = () => {
     return (
@@ -28,21 +28,6 @@ const StripeInverseClass = () => {
                                             <th scope="col">{Price}</th>
                                         </tr>
                                     </thead>
-                                    <tbody className='text-white'>
-                                        {
-                                            stripedwithinverse.map((item) =>
-                                                <tr key={item.id}>
-                                                    <th scope="row">{item.id}</th>
-                                                    <td>{item.dessert}</td>
-                                                    <td>{item.type}</td>
-                                                    <td>{item.calories}</td>
-                                                    <td>{item.weigth}</td>
-                                                    <td>{item.fat}</td>
-                                                    <td>{item.price}</td>
-                                                </tr>
-                                            )
-                                        }
-                                    </tbody>
                                 </Table>
                             </div>
                         </Col>

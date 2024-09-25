@@ -1,4 +1,4 @@
-import ComingSimple from '../Components/Pages/ComingSoon/ComingSimple';
+// import ComingSimple from '../Components/Pages/ComingSoon/ComingSimple';
 import CreatePwd from '../Components/Pages/Auth/CreatePwd';
 import ForgetPwd from '../Components/Pages/Auth/ForgetPwd';
 import LoginOne from '../Components/Pages/Auth/LoginOne';
@@ -17,12 +17,12 @@ import ErrorPage3 from '../Components/Pages/ErrorPages/ErrorPage403';
 import ErrorPage4 from '../Components/Pages/ErrorPages/ErrorPage404';
 import Logins from '../Auth/Signin';
 import LoginForm from '../Components/Pages/Auth/LoginForm';
-import ComingBgImg from '../Components/Pages/ComingSoon/ComingBgImg';
-import ComingBgVideo from '../Components/Pages/ComingSoon/ComingBgVideo';
+// import ComingBgImg from '../Components/Pages/ComingSoon/ComingBgImg';
+// import ComingBgVideo from '../Components/Pages/ComingSoon/ComingBgVideo';
 import Error500 from '../Components/Pages/ErrorPages/ErrorPage500';
 import Error503 from '../Components/Pages/ErrorPages/ErrorPage503';
 import PasswordResetPage from '../Components/Pages/Auth/PasswordResetPage';
-import KycUpdate from '../Components/Application/Users/UsersProfile/KycUpdate';
+// import KycUpdate from '../Components/Application/Users/UsersProfile/KycUpdate';
 import VerifyOTP from '../Components/Pages/Auth/VerifyOTP';
  
 export const authRoutes = [
@@ -43,9 +43,9 @@ export const authRoutes = [
   { path: `/pages/authentication/maintenance/:layout`, Component: <Maintenance /> },
 
   //Coming-soon
-  { path: `/pages/comingsoon/comingsoon/:layout`, Component: <ComingSimple /> },
-  { path: `/pages/comingsoon/coming-bg-img/:layout`, Component: <ComingBgImg /> },
-  { path: `/pages/comingsoon/coming-bg-video/:layout`, Component: <ComingBgVideo /> },
+  // { path: `/pages/comingsoon/comingsoon/:layout`, Component: <ComingSimple /> },
+  // { path: `/pages/comingsoon/coming-bg-img/:layout`, Component: <ComingBgImg /> },
+  // { path: `/pages/comingsoon/coming-bg-video/:layout`, Component: <ComingBgVideo /> },
 
   //Error
   { path: `/pages/errors/error400/:layout`, Component: <ErrorPage1 /> },

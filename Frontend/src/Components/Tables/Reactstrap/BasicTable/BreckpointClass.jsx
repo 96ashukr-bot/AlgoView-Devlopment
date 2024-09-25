@@ -2,7 +2,7 @@ import React, { Fragment } from 'react';
 import { Col, Card, Table, CardHeader } from 'reactstrap';
 import { H3 } from '../../../../AbstractElements';
 import { BreckpointSpecific, Id, Name, OrderId, Price, Quantity, Total } from '../../../../Constant';
-import { breckpointSpecific } from '../../../../Data/Table/bootstraptabledata';
+// import { breckpointSpecific } from '../../../../Data/Table/bootstraptabledata';
 
 const BreckpointClass = () => {
     return (
@@ -27,20 +27,6 @@ const BreckpointClass = () => {
                                             <th>{Total}</th>
                                         </tr>
                                     </thead>
-                                    <tbody>
-                                        {
-                                            breckpointSpecific.map((item) =>
-                                                <tr key={item.id}>
-                                                    <th scope="row">{item.id}</th>
-                                                    <td>{item.name}</td>
-                                                    <td>{item.oderid}</td>
-                                                    <td>{item.price}</td>
-                                                    <td>{item.qty}</td>
-                                                    <td>{item.total}</td>
-                                                </tr>
-                                            )
-                                        }
-                                    </tbody>
                                 </Table>
                             </div>
                         </Col>

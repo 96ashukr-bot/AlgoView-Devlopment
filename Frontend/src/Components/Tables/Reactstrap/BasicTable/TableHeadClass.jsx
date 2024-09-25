@@ -2,7 +2,7 @@ import React, { Fragment } from 'react';
 import { Col, Card, CardHeader, Table } from 'reactstrap';
 import { FirstName, Id, LastName, TableHeadOptions, TableHeadspan, thead, theadlight, theadtext, tomake, Username } from '../../../../Constant';
 import { H3 } from '../../../../AbstractElements';
-import { Captiontabledata } from '../../../../Data/Table/bootstraptabledata';
+// import { Captiontabledata } from '../../../../Data/Table/bootstraptabledata';
 
 const TableHeadClass = () => {
     return (
@@ -25,18 +25,6 @@ const TableHeadClass = () => {
                                             <th scope="col">{Username}</th>
                                         </tr>
                                     </thead>
-                                    <tbody>
-                                        {
-                                            Captiontabledata.slice(0, 3).map((item) =>
-                                                <tr key={item.id}>
-                                                    <th scope="row">{item.id}</th>
-                                                    <td>{item.firstName}</td>
-                                                    <td>{item.lastName}</td>
-                                                    <td>{item.userName}</td>
-                                                </tr>
-                                            )
-                                        }
-                                    </tbody>
                                 </Table>
                             </div>
                         </Col>

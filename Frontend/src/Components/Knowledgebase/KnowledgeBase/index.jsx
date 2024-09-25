@@ -1,5 +1,5 @@
 import { Breadcrumbs, H5 } from '../../../AbstractElements';
-import Articals from './Articals';
+// import Articals from './Articals';
 import FeaturesTutorial from './FeaturesTutorial';
 import HeaderPart from './HeaderPart';
 import { Col, Container, Row } from 'reactstrap';
@@ -14,7 +14,7 @@ const KnowledgeBaseContain = () => {
       <Container fluid={true} className='faq-section'>
         <Row>
           <HeaderPart />
-          <Articals />
+          {/* <Articals /> */}
           <BrowseArticlesClass />
           <Col lg='12' className='featured-tutorial'>
             <div className='header-faq'>

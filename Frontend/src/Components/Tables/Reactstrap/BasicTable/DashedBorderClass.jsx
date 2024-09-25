@@ -2,7 +2,7 @@ import React, { Fragment } from 'react';
 import { Col, Card, CardHeader, Table } from 'reactstrap';
 import { H3 } from '../../../../AbstractElements';
 import { classname, DashedBorder, Hours, Id, Spots, Trainer, Type } from '../../../../Constant';
-import { dashedborderdata } from '../../../../Data/Table/bootstraptabledata';
+// import { dashedborderdata } from '../../../../Data/Table/bootstraptabledata';
 
 const DashedBorderClass = () => {
     return (
@@ -25,20 +25,6 @@ const DashedBorderClass = () => {
                                     <th scope="col">{Spots}</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                {
-                                    dashedborderdata.map((item) =>
-                                        <tr className="dashed" key={item.id}>
-                                            <th scope="row">{item.id}</th>
-                                            <td>{item.name}</td>
-                                            <td>{item.type}</td>
-                                            <td>{item.time}</td>
-                                            <td>{item.trainer}</td>
-                                            <td>{item.spots}</td>
-                                        </tr>
-                                    )
-                                }
-                            </tbody>
                         </Table>
                     </div>
                 </Card>
