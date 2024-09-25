@@ -90,10 +90,10 @@ import BasicTables from "../Components/Tables/Reactstrap/BasicTable";
 import DataTables from "../Components/Tables/DataTable";
 
 // //Application
-import Newproject from "../Components/Application/Project/Newproject";
-import Project from "../Components/Application/Project/Project";
-import Chat from "../Components/Application/Chat/ChatApp";
-import VideoChat from "../Components/Application/Chat/VideoChat";
+// import Newproject from "../Components/Application/Project/Newproject";
+// import Project from "../Components/Application/Project/Project";
+// import Chat from "../Components/Application/Chat/ChatApp";
+// import VideoChat from "../Components/Application/Chat/VideoChat";
 
 // import Contact from "../Components/Application/Contact/ContactApp";
 // import Task from "../Components/Application/Task";
@@ -107,8 +107,8 @@ import ImageWithDesc from "../Components/Gallery/ImageWithDesc";
 import ImageHover from "../Components/Gallery/ImageHover";
 
 // //Blog
-import BlogDetail from "../Components/Blog/BlogDetail";
-import BlogPost from "../Components/Blog/BlogPost";
+// import BlogDetail from "../Components/Blog/BlogDetail";
+// import BlogPost from "../Components/Blog/BlogPost";
 // import BlogSingle from "../Components/Blog/BlogSingle";
 
 // //Pages
@@ -137,27 +137,27 @@ import MailInboxContain from "../Components/Application/Email/MailInbox";
 import SearchResultContain from "../Components/Application/SearchResult";
 
 // //E-commerce
-import Products from "../Components/Application/Ecommerce/Products";
-import ProductCart from "../Components/Application/Ecommerce/ProductCart";
-import WishList from "../Components/Application/Ecommerce/Wishlist";
-import CheckOut from "../Components/Application/Ecommerce/CheckOut";
-import Invoice from "../Components/Application/Ecommerce/Invoice";
+// import Products from "../Components/Application/Ecommerce/Products";
+// import ProductCart from "../Components/Application/Ecommerce/ProductCart";
+// import WishList from "../Components/Application/Ecommerce/Wishlist";
+// import CheckOut from "../Components/Application/Ecommerce/CheckOut";
+// import Invoice from "../Components/Application/Ecommerce/Invoice";
 // import OrderHistory from "../Components/Application/Ecommerce/OrderHistory";
-import ProductPage from "../Components/Application/Ecommerce/ProductPage";
-import PricingMemberShip from "../Components/Application/Ecommerce/PricingMemberShip";
-import PaymentDetails from "../Components/Application/Ecommerce/PaymentDetails";
+// import ProductPage from "../Components/Application/Ecommerce/ProductPage";
+// import PricingMemberShip from "../Components/Application/Ecommerce/PricingMemberShip";
+// import PaymentDetails from "../Components/Application/Ecommerce/PaymentDetails";
 // import ProductListContain from "../Components/Application/Ecommerce/ProductList";
-import DraggableContain from "../Components/Application/Calender/DraggableCalender";
+// import DraggableContain from "../Components/Application/Calender/DraggableCalender";
 
 // //Job Search
-import JobCards from "../Components/JobSearch/JobCardView";
-import ListView from "../Components/JobSearch/ListView";
-import JobDetails from "../Components/JobSearch/JobDetail";
-import Apply from "../Components/JobSearch/Apply";
+// import JobCards from "../Components/JobSearch/JobCardView";
+// import ListView from "../Components/JobSearch/ListView";
+// import JobDetails from "../Components/JobSearch/JobDetail";
+// import Apply from "../Components/JobSearch/Apply";
 
 // //Learning
-import LearningList from "../Components/Learning/LearningList";
-import DetailCourse from "../Components/Learning/DetailCourse";
+// import LearningList from "../Components/Learning/LearningList";
+// import DetailCourse from "../Components/Learning/DetailCourse";
 
 // //Map
 import GoogleMaps from "../Components/Map/GoogleMap";
@@ -271,10 +271,10 @@ export const routes = [
   { path: `/table/datatable/:layout`, Component: <DataTables /> },
 
   // //Applicatiion
-  { path: `/app/project/project-list/:layout`, Component: <Project /> },
-  { path: `/app/project/new-project/:layout`, Component: <Newproject /> },
-  { path: `/app/chat-app/chats/:layout`, Component: <Chat /> },
-  { path: `/app/chat-app/chat-video-app/:layout`, Component: <VideoChat /> },
+  // { path: `/app/project/project-list/:layout`, Component: <Project /> },
+  // { path: `/app/project/new-project/:layout`, Component: <Newproject /> },
+  // { path: `/app/chat-app/chats/:layout`, Component: <Chat /> },
+  // { path: `/app/chat-app/chat-video-app/:layout`, Component: <VideoChat /> },
   // { path: `/app/contact-app/contacts/:layout`, Component: <Contact /> },
 
   // { path: `/app/task/:layout`, Component: <Task /> },
@@ -286,21 +286,21 @@ export const routes = [
   { path: `/app/users/cards/:layout`, Component: <UsersCardssContain /> },
   { path: `/app/social-app/:layout`, Component: <SocialAppContain /> },
 
-  { path: `/app/calendar/draggable-calendar/:layout`, Component: <DraggableContain /> },
+  // { path: `/app/calendar/draggable-calendar/:layout`, Component: <DraggableContain /> },
 
   { path: `/app/kyc-update/:layout`, Component: <KycUpdate />},
   { path: `/app/email-app/:layout`, Component: <MailInboxContain /> },
   // { path: `/app/file-manager/:layout`, Component: <FileManagerContain /> },
   { path: `/app/search/:layout`, Component: <SearchResultContain /> },
-  { path: `/app/ecommerce/product/:layout`, Component: <Products /> },
-  { path: `/app/ecommerce/product-page/:layout/:id`, Component: <ProductPage /> },
-  { path: `/app/ecommerce/payment-details/:layout`, Component: <PaymentDetails /> },
+  // { path: `/app/ecommerce/product/:layout`, Component: <Products /> },
+  // { path: `/app/ecommerce/product-page/:layout/:id`, Component: <ProductPage /> },
+  // { path: `/app/ecommerce/payment-details/:layout`, Component: <PaymentDetails /> },
   // { path: `/app/ecommerce/orderhistory/:layout`, Component: <OrderHistory /> },
-  { path: `/app/ecommerce/pricing/:layout`, Component: <PricingMemberShip /> },
-  { path: `/app/ecommerce/invoice/:layout`, Component: <Invoice /> },
-  { path: `/app/ecommerce/cart/:layout`, Component: <ProductCart /> },
-  { path: `/app/ecommerce/wishlist/:layout`, Component: <WishList /> },
-  { path: `/app/ecommerce/checkout/:layout`, Component: <CheckOut /> },
+  // { path: `/app/ecommerce/pricing/:layout`, Component: <PricingMemberShip /> },
+  // { path: `/app/ecommerce/invoice/:layout`, Component: <Invoice /> },
+  // { path: `/app/ecommerce/cart/:layout`, Component: <ProductCart /> },
+  // { path: `/app/ecommerce/wishlist/:layout`, Component: <WishList /> },
+  // { path: `/app/ecommerce/checkout/:layout`, Component: <CheckOut /> },
   // { path: `/app/ecommerce/product-list/:layout`, Component: <ProductListContain /> },
   // //Gallery
   { path: `/app/gallery/grids/:layout`, Component: <ImageGallery /> },
@@ -313,19 +313,19 @@ export const routes = [
   { path: `/pages/sample-page/:layout`, Component: <SamplePage /> },
 
   // //Blog
-  { path: `/app/blog/blogdetails/:layout`, Component: <BlogDetail /> },
+  // { path: `/app/blog/blogdetails/:layout`, Component: <BlogDetail /> },
   // { path: `/app/blog/blogsingle/:layout`, Component: <BlogSingle /> },
-  { path: `/app/blog/blogpost/:layout`, Component: <BlogPost /> },
+  // { path: `/app/blog/blogpost/:layout`, Component: <BlogPost /> },
 
   // //Job Search
-  { path: `/app/jobsearch/cardview/:layout`, Component: <JobCards /> },
-  { path: `/app/jobsearch/joblist/:layout`, Component: <ListView /> },
-  { path: `/app/jobsearch/jobdetail/:layout`, Component: <JobDetails /> },
-  { path: `/app/jobsearch/jobapply/:layout`, Component: <Apply /> },
+  // { path: `/app/jobsearch/cardview/:layout`, Component: <JobCards /> },
+  // { path: `/app/jobsearch/joblist/:layout`, Component: <ListView /> },
+  // { path: `/app/jobsearch/jobdetail/:layout`, Component: <JobDetails /> },
+  // { path: `/app/jobsearch/jobapply/:layout`, Component: <Apply /> },
 
   // //Learning
-  { path: `/app/learning/learninglist/:layout`, Component: <LearningList /> },
-  { path: `/app/learning/learningdetail/:layout`, Component: <DetailCourse /> },
+  // { path: `/app/learning/learninglist/:layout`, Component: <LearningList /> },
+  // { path: `/app/learning/learningdetail/:layout`, Component: <DetailCourse /> },
 
   // //Map
   { path: `/app/map/googlemap/:layout`, Component: <GoogleMaps /> },
