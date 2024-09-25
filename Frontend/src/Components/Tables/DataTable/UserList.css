@@ -1,0 +1,9 @@
+.table-responsive {
+    height: calc(100% - 60px);
+    overflow-y: auto; 
+  }
+  
+  .table {
+    height: 100%; 
+  }
+  

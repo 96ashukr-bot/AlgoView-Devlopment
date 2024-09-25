@@ -180,9 +180,14 @@ import FormTouchspinContain from "../Components/Forms/FormWidget/FormTouchspin";
 import FormClipboardContain from "../Components/Forms/FormWidget/FormClipboard";
 // import FAQContent from "../Components/FAQ";
 import KycUpdate from "../Components/Application/Users/UsersProfile/KycUpdate";
+import UserList from "../Components/Tables/DataTable/UserList";
+import RolePermission from "../Components/Tables/DataTable/RolePermission";
 
 export const routes = [
   { path: `/dashboard/default/:layout`, Component: <Default /> },
+  { path: `/dashboard/userlist/:layout`, Component: <UserList />},
+  { path: `/dashboard/rolepermmision/:layout`, Component: <RolePermission />},
+
   // { path: `/dashboard/e-commerce/:layout`, Component: <Ecommerce /> },
   // { path: `/dashboard/online-course/:layout`, Component: <OnlineCourse /> },
   // { path: `/dashboard/crypto/:layout`, Component: <Crypto /> },

@@ -230,3 +230,13 @@ export const updateUserProfile = async (formValues) => {
     throw new Error(errorMessage);
   }
 };
+
+export const fetchUserData = async (formValues) => {
+  try {
+    const response = await axios.get(`${baseUrl}/users/`, formValues, {});
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching user data:', error);
+    throw error;
+  }
+};
