@@ -1,4 +1,4 @@
-import Articals from '../KnowledgeBase/Articals';
+// import Articals from '../KnowledgeBase/Articals';
 import HeaderPart from '../KnowledgeBase/HeaderPart';
 import { Breadcrumbs } from '../../../AbstractElements';
 import CategoryData from './CategoryData';
@@ -12,7 +12,7 @@ const KnowledgeCategoryContain = () => {
             <Container fluid={true} className="faq-section">
                 <Row>
                     <HeaderPart />
-                    <Articals />
+                    {/* <Articals /> */}
                     <CategoryData />
                 </Row>
             </Container>

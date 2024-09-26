@@ -2,7 +2,7 @@ import React, { Fragment } from 'react';
 import { Col, Card, CardHeader, Table } from 'reactstrap';
 import { FirstName, Game, Id, LastName, Point, StripedRow, tablestriped, tablestripedspan, tablestripedspan1, Use } from '../../../../Constant';
 import { H3 } from '../../../../AbstractElements';
-import { stripedrowtabledata } from '../../../../Data/Table/bootstraptabledata';
+// import { stripedrowtabledata } from '../../../../Data/Table/bootstraptabledata';
 
 const StripedRowClass = () => {
 
@@ -27,19 +27,6 @@ const StripedRowClass = () => {
                                             <th scope="col">{Point}</th>
                                         </tr>
                                     </thead>
-                                    <tbody>
-                                        {
-                                            stripedrowtabledata.map((item) =>
-                                                <tr key={item.id}>
-                                                    <th scope="row">{item.id}</th>
-                                                    <td>{item.firstname}</td>
-                                                    <td>{item.lastname}</td>
-                                                    <td>{item.game}</td>
-                                                    <td>{item.points}</td>
-                                                </tr>
-                                            )
-                                        }
-                                    </tbody>
                                 </Table>
                             </div>
                         </Col>

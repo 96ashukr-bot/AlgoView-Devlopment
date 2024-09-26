@@ -3,7 +3,7 @@ import ReactApexChart from 'react-apexcharts';
 import { Card, CardBody, CardHeader } from 'reactstrap';
 import { H5 } from '../../../AbstractElements';
 import { DailyDropdown, Visitors } from '../../../Constant';
-import { OptionsVisitorChartWidget } from '../../../Data/Ecommerce/Chart';
+// import { OptionsVisitorChartWidget } from '../../../Data/Ecommerce/Chart';
 import SvgIcon from '../../Common/Component/SvgIcon';
 import DropdownCommon from '../../Common/Dropdown';
 
@@ -24,11 +24,11 @@ const VisitorsCard = () => {
           </div>
         </div>
       </CardHeader>
-      <CardBody className='pt-3'>
+      {/* <CardBody className='pt-3'>
         <div className='visitors-container'>
           <ReactApexChart height={270} type='bar' options={OptionsVisitorChartWidget.options} series={OptionsVisitorChartWidget.series} />
         </div>
-      </CardBody>
+      </CardBody> */}
     </Card>
   );
 };

@@ -3,7 +3,7 @@ import { TrendingUp } from 'react-feather';
 import { Card, CardBody } from 'reactstrap';
 import { H6, H5 } from '../../../AbstractElements';
 import SvgIcon from '../Component/SvgIcon';
-import CurrencyWidgetChart from '../../Dashboard/Crypto/CurrencyWidgetChart';
+// import CurrencyWidgetChart from '../../Dashboard/Crypto/CurrencyWidgetChart';
 
 const CurrencyWidget = ({ data, mainClass }) => {
   return (
@@ -20,9 +20,9 @@ const CurrencyWidget = ({ data, mainClass }) => {
       </div>
       <Card>
         <CardBody className='d-flex'>
-          <div className='currency-chart-wrap'>
+          {/* <div className='currency-chart-wrap'>
             <CurrencyWidgetChart chartData={data.chart} />
-          </div>
+          </div> */}
           <div className={`bg-light-${data.color} text-center`}>
             <H5 attrH5={{ className: 'mb-0' }}>${data.price}</H5>
             <span className={`f-12 f-w-500 font-${data.color}`}>

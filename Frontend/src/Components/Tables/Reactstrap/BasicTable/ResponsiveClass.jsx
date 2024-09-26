@@ -2,7 +2,7 @@ import React, { Fragment } from 'react';
 import { Col, Card, CardHeader, Table } from "reactstrap";
 import { H3 } from '../../../../AbstractElements';
 import { Assign, Date, Email, Id, Phone, Price, Progress, ResponsiveTables, Status, Task } from '../../../../Constant';
-import { responsivetabledata } from '../../../../Data/Table/bootstraptabledata';
+// import { responsivetabledata } from '../../../../Data/Table/bootstraptabledata';
 
 const ResponsiveClass = () => {
     return (
@@ -30,25 +30,6 @@ const ResponsiveClass = () => {
                                             <th scope="col">{Progress}</th>
                                         </tr>
                                     </thead>
-                                    <tbody>
-                                        {
-                                            responsivetabledata.map((item) => {
-                                                return (
-                                                    <tr key={item.id}>
-                                                        <th scope='row'>{item.id}</th>
-                                                        <td>{item.task}</td>
-                                                        <td>{item.email}</td>
-                                                        <td>{item.phone}</td>
-                                                        <td>{item.assign}</td>
-                                                        <td>{item.date}</td>
-                                                        <td>{item.price}</td>
-                                                        <td className={`${item.status === 'Pending' ? 'text-danger' : 'text-success'}`} >{item.status}</td>
-                                                        <td>{item.progress}</td>
-                                                    </tr>
-                                                )
-                                            })
-                                        }
-                                    </tbody>
                                 </Table>
                             </div>
                         </Col>

@@ -2,7 +2,7 @@ import React, { Fragment } from 'react';
 import { Col, Card, CardHeader, Table } from 'reactstrap';
 import { Age, Caption, ContactNo, Email, EmployeeName, Experience, Id, Sex } from '../../../../Constant';
 import { H3 } from '../../../../AbstractElements';
-import { Captiontabledata } from '../../../../Data/Table/bootstraptabledata';
+// import { Captiontabledata } from '../../../../Data/Table/bootstraptabledata';
 
 const CaptionClass = () => {
     return (
@@ -29,22 +29,6 @@ const CaptionClass = () => {
                                             <th scope="col">{Age}</th>
                                         </tr>
                                     </thead>
-                                    <tbody>
-                                        {
-                                            Captiontabledata.map((item) =>
-                                                <tr key={item.id}>
-                                                    <th>{item.id}</th>
-                                                    <td>{item.name}</td>
-                                                    <td>{item.email}</td>
-                                                    <td>{item.exp}</td>
-                                                    <td>{item.sex}</td>
-                                                    <td>{item.contact}</td>
-                                                    <td>{item.age}</td>
-                                                </tr>
-                                            )
-                                        }
-
-                                    </tbody>
                                 </Table>
                             </div>
                         </Col>

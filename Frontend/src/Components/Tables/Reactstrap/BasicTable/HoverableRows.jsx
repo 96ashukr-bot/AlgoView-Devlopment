@@ -2,7 +2,7 @@ import React, { Fragment } from 'react';
 import { Col, Card, CardHeader, Table } from 'reactstrap';
 import { HoverableRows, Id, Schedule, Security, SignalName, Stage, Status, TeamLead } from '../../../../Constant';
 import { H3 } from '../../../../AbstractElements';
-import { Hovertabledata } from '../../../../Data/Table/bootstraptabledata';
+// import { Hovertabledata } from '../../../../Data/Table/bootstraptabledata';
 
 const HoverableRowsClass = () => {
   return (
@@ -28,22 +28,6 @@ const HoverableRowsClass = () => {
                   <th scope='col'>{TeamLead}</th>
                 </tr>
               </thead>
-              <tbody>
-                {Hovertabledata.map((item) => (
-                  <tr key={item.id}>
-                    <th scope='row'>{item.id}</th>
-                    <td className='d-flex align-items-center'>
-                      <span className={`${item.bgClass} rounded-1 p-1 me-2 d-flex align-items-center`}>{item.icon}</span>
-                      {item.status}
-                    </td>
-                    <td>{item.signalName}</td>
-                    <td>{item.security}</td>
-                    <td>{item.stage}</td>
-                    <td>{item.schedule}</td>
-                    <td>{item.teamLead}</td>
-                  </tr>
-                ))}
-              </tbody>
             </Table>
           </div>
         </Card>

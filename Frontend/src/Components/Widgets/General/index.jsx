@@ -1,32 +1,32 @@
 import React, { Fragment } from 'react';
 import { Col, Container, Row } from 'reactstrap';
 import { Breadcrumbs } from '../../../AbstractElements';
-import { CurrenciesWidgets, RadialProgressWidgetDataWidgetPage } from '../../../Data/Crypto';
-import { Widgets2Data2Widgets, Widgets2DataWidgets, WidgetsData1WidgetsPage } from '../../../Data/DefaultDashboard';
-import { SmallWidgetsData } from '../../../Data/Ecommerce';
-import { CourseBoxData } from '../../../Data/OnlineCourse';
-import { SocialWidgetDataWidgetPage } from '../../../Data/Social';
+// import { CurrenciesWidgets, RadialProgressWidgetDataWidgetPage } from '../../../Data/Crypto';
+// import { Widgets2Data2Widgets, Widgets2DataWidgets, WidgetsData1WidgetsPage } from '../../../Data/DefaultDashboard';
+// import { SmallWidgetsData } from '../../../Data/Ecommerce';
+// import { CourseBoxData } from '../../../Data/OnlineCourse';
+// import { SocialWidgetDataWidgetPage } from '../../../Data/Social';
 
-import CourseBox from '../../Common/CommonWidgets/CourseBox';
-import CurrencyWidget from '../../Common/CommonWidgets/CurrencyWidget';
-import RadialProgressWidget from '../../Common/CommonWidgets/RadialProgressWidget';
-import SmallWidgets from '../../Common/CommonWidgets/SmallWidgets';
-import SocialWidget from '../../Common/CommonWidgets/SocialWidget';
-import Widgets1 from '../../Common/CommonWidgets/Widgets1';
-import Widgets2 from '../../Common/CommonWidgets/Widgets2';
-import YourBalanceCard from '../../Common/CommonWidgets/YourBalanceCard';
+// import CourseBox from '../../Common/CommonWidgets/CourseBox';
+// import CurrencyWidget from '../../Common/CommonWidgets/CurrencyWidget';
+// import RadialProgressWidget from '../../Common/CommonWidgets/RadialProgressWidget';
+// import SmallWidgets from '../../Common/CommonWidgets/SmallWidgets';
+// import SocialWidget from '../../Common/CommonWidgets/SocialWidget';
+// import Widgets1 from '../../Common/CommonWidgets/Widgets1';
+// import Widgets2 from '../../Common/CommonWidgets/Widgets2';
+// import YourBalanceCard from '../../Common/CommonWidgets/YourBalanceCard';
 
-import FollowerGrowth from './FollowerGrowth';
-import TotalUser from './TotalUser';
-import VisitorsCard from './VisitorsCard';
-import Calender from '../../Common/CommonWidgets/Calender';
+// import FollowerGrowth from './FollowerGrowth';
+// import TotalUser from './TotalUser';
+// import VisitorsCard from './VisitorsCard';
+// import Calender from '../../Common/CommonWidgets/Calender';
 
 const GeneralComponent = () => {
   return (
     <Fragment>
       <Breadcrumbs mainTitle='General' parent='Widgets' title='General' />
       <Container fluid={true} className='general-widget'>
-        <Row>
+        {/* <Row>
           {CurrenciesWidgets.map((item, i) => (
             <Col key={i} sm='4' xxl='2'>
               <CurrencyWidget mainClass='widget-currency' data={item} />
@@ -43,13 +43,6 @@ const GeneralComponent = () => {
             </Col>
           ))}
           <Col xxl='3' xl='4' md='6' className='box-col-6'>
-            <Row>
-              {CourseBoxData.map((item, i) => (
-                <Col sm='12' key={i}>
-                  <CourseBox mainClass='widget-course' data={item} />
-                </Col>
-              ))}
-            </Row>
           </Col>
           <Col xxl='4' xl='5' md='6' className='box-col-6'>
             <Row>
@@ -90,7 +83,7 @@ const GeneralComponent = () => {
           <Col xl='4' sm='6' className='d-xxl-block d-xl-none box-col-6'>
             <Calender />
           </Col>
-        </Row>
+        </Row> */}
       </Container>
     </Fragment>
   );

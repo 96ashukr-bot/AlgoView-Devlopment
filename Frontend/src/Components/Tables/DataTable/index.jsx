@@ -2,7 +2,8 @@ import React, { Fragment } from 'react';
 import { Container, Row, Col, Card, CardBody } from 'reactstrap';
 import { Breadcrumbs } from '../../../AbstractElements';
 import HeaderCard from '../../Common/Component/HeaderCard';
-import DataTableComponent from './DataTableComponent';
+// import DataTableComponent from './DataTableComponent';
+import UserList from './UserList';
 
 const DataTables = () => {
 
@@ -15,7 +16,8 @@ const DataTables = () => {
             <Card>
               <HeaderCard title="Select Multiple and Delete Single Data" />
               <CardBody>
-                <DataTableComponent />
+                {/* <DataTableComponent /> */}
+                <UserList />
               </CardBody>
             </Card>
           </Col>

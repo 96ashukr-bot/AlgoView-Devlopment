@@ -12,28 +12,42 @@ export const MENUITEMS = [
         active: false,
         children: [
           { path: `/dashboard/default`, title: "Default", type: "link" },
+          // { path: `/dashboard/userlist`, title: "User List", type: "link" },
           // { path: `/dashboard/e-commerce`, title: "E-commerce", type: "link" },
           // { path: `/dashboard/online-course`, title: "Online Course", type: "link" },
           // { path: `/dashboard/crypto`, title: "Crypto", type: "link" },
           // { path: `/dashboard/social`, title: "Social", type: "link" },
         ],
       },
+      {
+        title: "Users",
+        icon: "user",
+        path: `/app/users/profile`,
+        type: "sub",
+        bookmark: true,
+        active: false,
+        children: [
+          { path: `/dashboard/userlist`, title: "User List", type: "link" },
+        ],
+      },
 
-      // {
-      //   title: "Widgets",
-      //   icon: "widget",
-      //   type: "sub",
-      //   active: false,
-      //   children: [
-      //     { path: `/widgets/general`, title: "General", type: "link" },
-      //     { path: `/widgets/chart`, title: "Chart", type: "link" },
-      //   ],
-      // },
+      {
+        title: "Roles & Permissions",
+        icon: "blog",
+        path: `/app/users/profile`,
+        type: "sub",
+        bookmark: true,
+        active: false,
+        children: [
+          { path: `/dashboard/rolepermmision`, title: "Role & Permission", type: "link" },
+        ],
+      },
+
     ],
   },
 
   // {
-  //   menutitle: "Applications",
+  //   menutitle: "",
   //   menucontent: "Ready to use Apps",
   //   Items: [
   //     {
@@ -78,19 +92,19 @@ export const MENUITEMS = [
   //         { path: `/app/chat-app/chat-video-app`, type: "link", title: "Video-app" },
   //       ],
   //     },
-  //     {
-  //       title: "Users",
-  //       icon: "user",
-  //       path: `/app/users/profile`,
-  //       type: "sub",
-  //       bookmark: true,
-  //       active: false,
-  //       children: [
-  //         { path: `/app/users/profile`, type: "link", title: "User Profile" },
-  //         { path: `/app/users/edit`, type: "link", title: "User Edit" },
-  //         { path: `/app/users/cards`, type: "link", title: "User Cards" },
-  //       ],
-  //     },
+      // {
+      //   title: "Users",
+      //   icon: "user",
+      //   path: `/app/users/profile`,
+      //   type: "sub",
+      //   bookmark: true,
+      //   active: false,
+      //   children: [
+      //     { path: `/app/users/profile`, type: "link", title: "User Profile" },
+      //     { path: `/app/users/edit`, type: "link", title: "User Edit" },
+      //     { path: `/app/users/cards`, type: "link", title: "User Cards" },
+      //   ],
+      // },
   //     { path: `/app/bookmark`, icon: "bookmark", type: "link", title: "Bookmark" },
   //     {
   //       title: "Contact",
