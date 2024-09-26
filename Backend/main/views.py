@@ -1,4 +1,7 @@
+import json
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
+import requests
 from rest_framework import generics, status, permissions
 from rest_framework.permissions import IsAdminUser,IsAuthenticated
 from rest_framework.response import Response
@@ -16,6 +19,13 @@ import logging
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework.views import APIView
 from django.contrib import messages
+from pya3 import *
+from decouple import config
+from main.Alice_Blue_Api import ALICE_ORDER_URL,GET_ORDER_BOOK_URL,GET_TREAD_BOOK_URL
+
+ALICE_API_KEY=config('ALICE_API_KEY')
+USER_ID=config('USER_ID')
+
 logger = logging.getLogger(__name__)
 UserModel = get_user_model()
 
@@ -365,5 +375,188 @@ class KYCVerificationView(APIView):
         else:
             return Response({"detail": "Invalid action. Use 'approve' or 'reject'."}, status=status.HTTP_400_BAD_REQUEST)
 
-  
+# Global variables to store session ID and expiration time
+SESSION_ID = None
+SESSION_EXPIRATION = None
+
+# Place an order using Alice Blue API
+def place_order(alert_data, session_id):
+    """Place an order using Alice Blue API"""
+    order_payload = {
+        "complexty": "regular",
+        "discqty": "0",
+        "exch": "NSE",
+        "pCode": alert_data.get("productType", "MIS"),
+        "prctyp": "MKT",
+        "price": alert_data.get("strikePrice", "0"),
+        "qty": alert_data.get("Lot", 1),
+        "ret": "DAY",
+        "symbol_id": alert_data.get("symbol_id"),
+        "trading_symbol": alert_data.get("trading_symbol"),
+        "transtype": alert_data.get("buy_sell").upper(),
+        "trigPrice": alert_data.get("triggerPrice", ""),
+        "orderTag": alert_data.get("orderTag", "order1")
+    }
+    sessionID = session_id.get('sessionID')
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': f'Bearer {USER_ID} {sessionID}'  # Use Bearer token for authentication
+    }
+
+    try:
+        response = requests.post(ALICE_ORDER_URL, headers=headers, data=json.dumps([order_payload]))
+        response.raise_for_status()
+        # After successfully placing the order, save the order details in the log
+        save_order_log(alert_data)
+        return response  # Return the response as JSON
+    except requests.RequestException as req_err:
+        return {"status": "error", "message": f"Request exception: {str(req_err)}"}
+    except Exception as e:
+        return {"status": "error", "message": f"An error occurred: {str(e)}"}
+
+from django.utils import timezone  # Django's timezone utilities
+from datetime import datetime
+def save_order_log(alert_data):
+    """Save order details into the log table"""
+    try:
+        # Save the order log to the database
+        OrderLog.objects.create(
+            signal_time=timezone.now(),  # You can change this to the actual signal time
+            order_type=alert_data.get('Type').upper(),  # 'LX' or 'LE'
+            symbol=alert_data.get('trading_symbol'),  # Symbol
+            price=alert_data.get('strikePrice'),  # Order price
+            strategy=alert_data.get('strategy', 'Unknown')  # Strategy used
+        )
+    except Exception as e:
+        print(f"Failed to save order log: {str(e)}")
+
+from datetime import datetime, timedelta  # For getting current date and time
+# Get or regenerate Alice Blue session ID
+def get_or_regenerate_session_id(USER_ID, ALICE_API_KEY):
+    global SESSION_ID, SESSION_EXPIRATION
+    # Check if the session ID is expired or not set
+    current_time = datetime.now()
     
+    # Check if the session ID is expired or not set
+    if SESSION_ID is None or SESSION_EXPIRATION is None or current_time >= SESSION_EXPIRATION:
+        print("Session ID expired or not found. Regenerating...")
+        alice = Aliceblue(user_id=USER_ID, api_key=ALICE_API_KEY)
+        SESSION_ID = alice.get_session_id(alice)
+        
+        # Assume the session expires in 24 hours (86400 seconds)
+        SESSION_EXPIRATION = current_time + timedelta(seconds=86400)
+        print(f"New session ID generated: {SESSION_ID}")
+    else:
+        print("Using existing session ID........")
+    
+    return SESSION_ID
+
+# Webhook 
+class TradingViewWebhook(APIView):
+    def post(self, request, *args, **kwargs):
+        try:
+            alert_data = request.data
+            print(f"Received alert: {alert_data}")
+            # Get or regenerate session ID
+            session_id = get_or_regenerate_session_id(USER_ID, ALICE_API_KEY)
+            print(f"Session ID:")
+
+            # Place the order using the session ID
+            order_response = place_order(alert_data, session_id)
+            return Response({
+                'order_resp': order_response.json()
+            },order_response.status_code )
+
+        except json.JSONDecodeError:
+            return Response({
+                "status": "error",
+                "message": "Invalid JSON received."
+            }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({
+                "status": "error",
+                "message": str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+# Get Alice-Blue orders  GET_ORDER_BOOK_URL
+class GetAliceOrderBook(APIView):
+    def get(self, request, *args, **kwargs):
+        # Get or regenerate the session ID
+        session_id_response = get_or_regenerate_session_id(USER_ID, ALICE_API_KEY)
+        # Extract sessionID from the response
+        sessionID = session_id_response.get('sessionID') if isinstance(session_id_response, dict) else None  
+        if not sessionID:
+            return Response({
+                "status": "error",
+                "message": "Failed to obtain a valid session ID."
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        # Prepare headers
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': f'Bearer {USER_ID} {sessionID}'  # Assuming session ID is used this way
+        }
+        try:
+            # Send a GET request to the order book endpoint
+            response = requests.get(GET_ORDER_BOOK_URL, headers=headers)
+            response.raise_for_status()  # Raise an error for bad responses (4xx or 5xx)
+
+            # Return the successful response data
+            return Response({
+                "status": "success",
+                "data": response.json()
+            }, status=status.HTTP_200_OK)
+
+        except requests.RequestException as req_err:
+            # Handle request exceptions such as timeouts, bad responses, etc.
+            return Response({
+                "status": "error",
+                "message": f"Request error: {str(req_err)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        except Exception as e:
+            # Handle any other exceptions
+            return Response({
+                "status": "error",
+                "message": f"An error occurred: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+#Get trad history data GET_TREAD_BOOK_URL
+class GetAliceTreadBook(APIView):
+    def get(self, request, *args, **kwargs):
+        # Get or regenerate the session ID
+        session_id_response = get_or_regenerate_session_id(USER_ID, ALICE_API_KEY)
+        # Extract sessionID from the response
+        sessionID = session_id_response.get('sessionID') if isinstance(session_id_response, dict) else None  
+        if not sessionID:
+            return Response({
+                "status": "error",
+                "message": "Failed to obtain a valid session ID."
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        # Prepare headers
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': f'Bearer {USER_ID} {sessionID}'  # Assuming session ID is used this way
+        }
+        try:
+            # Send a GET request to the order book endpoint
+            response = requests.get(GET_TREAD_BOOK_URL, headers=headers)
+            response.raise_for_status()  # Raise an error for bad responses (4xx or 5xx)
+
+            # Return the successful response data
+            return Response({
+                "status": "success",
+                "data": response.json()
+            }, status=response.status_code)
+
+        except requests.RequestException as req_err:
+            # Handle request exceptions such as timeouts, bad responses, etc.
+            return Response({
+                "status": "error",
+                "message": f"Request error: {str(req_err)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        except Exception as e:
+            # Handle any other exceptions
+            return Response({
+                "status": "error",
+                "message": f"An error occurred: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

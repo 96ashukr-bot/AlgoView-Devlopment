@@ -29,8 +29,10 @@ urlpatterns = [
     path('kyc/verify/<int:kyc_id>/', KYCVerificationView.as_view(), name='kyc-verification'),
     path('update-role-permissions/<int:role_id>/', UpdateRolePermissionsView.as_view(), name='update-role-permissions'),
     path('role-permissions/', RolePermissionListView.as_view(), name='role-permissions-list'),
-
-
+    path('v1/algo/webhook/', TradingViewWebhook.as_view(), name='webhook'),
+    path('get-alice-orders/', GetAliceOrderBook.as_view(), name='get-order-book'),
+    path('get-alice-tread-history/', GetAliceTreadBook.as_view(), name='get-tread-book'),
+    
 ]
 
 

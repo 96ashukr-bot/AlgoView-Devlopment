@@ -403,7 +403,30 @@ class PermissionSerializer(serializers.ModelSerializer):
         fields = ['permission','group']  
 class RolePermissionSerializer(serializers.ModelSerializer):
     role = RoleSerializer()
-    permissions = PermissionSerializer(many=True)
+    permissions = serializers.SerializerMethodField()  # Custom field to handle permissions
+
     class Meta:
         model = RolePermission
-        fields = ['role', 'permissions']  
+        fields = ['role', 'permissions']
+
+    def get_permissions(self, obj):
+        # Use a dictionary to group permissions by "group"
+        permission_dict = {}
+        for perm in obj.permissions.all():
+            group = perm.group
+            if group not in permission_dict:
+                permission_dict[group] = {
+                    "permission": [],
+                    "group": group
+                }
+            permission_dict[group]["permission"].append(perm.permission)
+
+        # Format the permissions list in the required structure
+        formatted_permissions = [
+            {
+                "permission": ", ".join(permissions["permission"]),  # Merge permissions into one string
+                "group": group
+            }
+            for group, permissions in permission_dict.items()
+        ]
+        return formatted_permissions
