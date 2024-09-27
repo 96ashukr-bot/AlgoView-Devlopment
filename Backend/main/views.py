@@ -1,4 +1,5 @@
 import json
+from amqp import NotFound
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 import requests
@@ -54,13 +55,11 @@ class RoleDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = RoleSerializer
     # permission_classes = [permissions.IsAuthenticated, permissions.IsAdminUser]
 
-# User Views
+# User Views create
 class UserListCreateView(generics.ListCreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     # permission_classes = [permissions.IsAuthenticated]
-
-#signup
 class UserRegistrationView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserRegistrationSerializer
@@ -257,9 +256,10 @@ class UserAssignRoleView(generics.UpdateAPIView):
             return Response({'detail': 'An unexpected error occurred.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 class UserManagementView(APIView):
     # permission_classes = [IsAdminUser]  # Ensure only admins can create users
+    permission_classes = [permissions.IsAuthenticated]
     def get(self, request, *args, **kwargs):
-        users = User.objects.filter(is_superuser=False).order_by('id')
-        serializer = UsergetSerializer(users, many=True)
+        users = User.objects.all().order_by('id')
+        serializer = UserSerializer(users, many=True)
         return Response(serializer.data)
     
     def post(self, request, *args, **kwargs):
@@ -291,7 +291,7 @@ class UserManagementView(APIView):
 
         user.delete()
         print(messages.success(request, 'User deleted successfully.'))
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response({"msg": "User deleted successfully."},status=status.HTTP_204_NO_CONTENT)
 class UserProfileView(APIView):
     def get(self, request, *args, **kwargs):
 
@@ -319,35 +319,37 @@ class UserProfileView(APIView):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-class KYCListCreateView(generics.ListCreateAPIView):
-    queryset = KYC.objects.all()
-    serializer_class = KYCSerializer
-    # permission_classes = [IsAuthenticated]  # Optional: ensure only logged-in users can access
+class GetKYCView(APIView):
+    permission_classes = [IsAuthenticated]
 
-    def perform_create(self, serializer):
-        # If you're using a user relationship, pass the user here
-        # serializer.save(user=self.request.user)
-        serializer.save()
-        
-class KYCUpdateView(generics.UpdateAPIView):
-    queryset = KYC.objects.all()
-    serializer_class = KYCSerializer
-    # permission_classes = [IsAuthenticated]  # Optional
-    def perform_update(self, serializer):
-        serializer.save()
+    def get(self, request, *args, **kwargs):
+        user = request.user
+        kyc = get_object_or_404(KYC, user=user)
+        serializer = KYCSerializer(kyc)
+        return Response(serializer.data, status=status.HTTP_200_OK)   
+class CreateOrUpdateKYCView(APIView):
+    permission_classes = [IsAuthenticated]
 
-class KYCDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = KYC.objects.all()
-    serializer_class = KYCSerializer
-    # permission_classes = [permissions.IsAuthenticated]
+    def post(self, request, *args, **kwargs):
+        user = request.user
+        kyc, created = KYC.objects.get_or_create(user=user)
 
-    def get_queryset(self):
-        return KYC.objects.filter(user=self.request.user)
-    
+        # If it's an existing KYC, update it with the provided data
+        serializer = KYCSerializer(kyc, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+            message = "KYC created" if created else "KYC updated"
+            return Response({
+                "status": "success",
+                "message": message,
+                "data": serializer.data
+            }, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 class PendingKYCListView(APIView):# Get all pending KYC requests
+    permission_classes = [IsAdminUser] 
     def get(self, request, *args, **kwargs):
         pending_kycs = KYC.objects.filter(status='pending', is_verified=False)
-
         if pending_kycs.exists():
             serializer = KYCSerializer(pending_kycs, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)

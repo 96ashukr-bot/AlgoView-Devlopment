@@ -61,7 +61,11 @@ const RolePermissionUpdate = () => {
     };
 
     const handleSave = async () => {
+        console.log('handlesave',handleSave);
+        
         if (selectedRole) {
+            console.log('selectedRole',selectedRole);
+
             try {
                 const roleId = selectedRole.role.id;
                 console.log("Saving permissions for role:", roleId, permissions);

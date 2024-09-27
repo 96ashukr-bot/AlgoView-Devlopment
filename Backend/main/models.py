@@ -95,12 +95,8 @@ class KYC(models.Model):
         ('approved', 'Approved'),
         ('rejected', 'Rejected'),
     ]
-    # user = models.ForeignKey(User, on_delete=models.CASCADE)
-    # UserName = models.CharField(max_length=150, null=True, blank=True)
-    # Date_Of_Birth = models.DateField(default=datetime.date(2000, 1, 1))
-    # email = models.EmailField(blank=True)
-    # phone = models.CharField(max_length=15)
-    document_type = models.CharField(max_length=50)
+    user = models.ForeignKey(User, on_delete=models.CASCADE,blank=True)
+    id_proof = models.CharField(max_length=50)
     document_file_front = models.FileField(upload_to='kyc_documents/front/', blank=True)
     document_file_back = models.FileField(upload_to='kyc_documents/back/', blank=True)
     is_verified = models.BooleanField(default=False)
@@ -108,9 +104,11 @@ class KYC(models.Model):
     verified_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name='verified_kyc')  # Admin who verified
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(default=timezone.now)
-    
-    def __str__(self):
-        return f"KYC for {self.email} - {self.document_type}"    
+    # New fields
+    address_proof_id = models.CharField(max_length=100, blank=True)  # To store address ID or code
+    address_prof_front = models.FileField(upload_to='kyc_documents/address_front/', blank=True)  # Address proof front
+    address_prof_back = models.FileField(upload_to='kyc_documents/address_back/', blank=True)  # Address proof back
+  
     
 class OTP(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -120,6 +118,7 @@ class OTP(models.Model):
     expires_at = models.DateTimeField(null=True, blank=True)
 
     def generate_otp(self):
+        print("otp..............")
         self.otp_code = random.randint(100000, 999999)
         self.expires_at = timezone.now() + datetime.timedelta(seconds=120)  # Set expiration to 120 seconds from now
         self.is_verified = False

@@ -33,9 +33,9 @@ class RoleAdmin(admin.ModelAdmin):
 
 @admin.register(KYC)
 class KycAdmin(admin.ModelAdmin):
-    list_display = ['document_type','is_verified','status','verified_by']
-    search_fields = ['document_type','is_verified','status']
-    ordering = ['document_type','is_verified','status']
+    list_display = ['user','id_proof','is_verified','address_proof_id','status','verified_by']
+    search_fields = ['id_proof','is_verified','status']
+    ordering = ['id_proof','is_verified','status']
     
 @admin.register(OTP)
 class OtpAdmin(admin.ModelAdmin):
