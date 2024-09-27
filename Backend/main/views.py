@@ -24,11 +24,10 @@ class RoleListCreateView(generics.ListCreateAPIView):
     queryset = Role.objects.all()
     serializer_class = RoleSerializer
     # permission_classes = [permissions.IsAuthenticated]
-
 class RoleDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Role.objects.all()
     serializer_class = RoleSerializer
-    permission_classes = [permissions.IsAuthenticated, permissions.IsAdminUser]
+    # permission_classes = [permissions.IsAuthenticated, permissions.IsAdminUser]
 
 # User Views
 class UserListCreateView(generics.ListCreateAPIView):

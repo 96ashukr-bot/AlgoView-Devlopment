@@ -17,6 +17,7 @@ urlpatterns = [
     path('password-reset-request/', PasswordResetRequestView.as_view(), name='password-reset-request'),
     path('password-reset-confirm/', PasswordResetConfirmView.as_view(), name='password-reset-confirm'),
     path('create-roles/', RoleListCreateView.as_view(), name='role-list-create'),
+    path('get-roles-list/', RoleListCreateView.as_view(), name='role-list'),
     path('roles/<int:pk>/', RoleDetailView.as_view(), name='role-detail'),
     path('users/', UserListCreateView.as_view(), name='user-list-create'),
     path('user-assign-role/', UserAssignRoleView.as_view(), name='user-assign-role'),

@@ -5,7 +5,7 @@ const baseUrl = "http://127.0.0.1:8000";
 const getAuthToken = () => {
   const token = localStorage.getItem('authToken');
   console.log('Retrieved token:', token);
-  return token; 
+  return token;
 };
 
 
@@ -68,7 +68,7 @@ export const resetPassword = async (
       `${baseUrl}/password-reset-confirm/?uidb64=${uidb64}&token=${token}`,
       {
         uidb64: uidb64,
-        token: token, 
+        token: token,
         NewPassword: NewPassword,
         ConfirmPassword: ConfirmPassword,
       },
@@ -95,16 +95,16 @@ export const updateKYC = async (formValues) => {
   if (!token) {
     throw new Error("No authentication token found.");
   }
-  
+
   try {
     const formData = new FormData();
-    
+
     formData.append('document_type', formValues.idType.toLowerCase().replace(/\s+/g, '_'));
-    
+
     if (formValues.idFront instanceof File) {
       formData.append('document_file_front', formValues.idFront);
     }
-    
+
     if (formValues.idBack instanceof File) {
       formData.append('document_file_back', formValues.idBack);
     }
@@ -127,13 +127,13 @@ export const updateKYC = async (formValues) => {
 
 export const verifyOtp = async (email, otp) => {
   try {
-    const response = await axios.post(`${baseUrl}/verify-otp/`, { 
+    const response = await axios.post(`${baseUrl}/verify-otp/`, {
       email: email,
-      otp_code: otp 
+      otp_code: otp
     });
 
     if (response.data.access) {
-      localStorage.setItem('authToken', response.data.access); 
+      localStorage.setItem('authToken', response.data.access);
       localStorage.setItem('refreshToken', response.data.refresh);
 
       console.log('Access Token stored:', response.data.access);
@@ -148,7 +148,7 @@ export const verifyOtp = async (email, otp) => {
 
 export const resendOtp = async (email) => {
   try {
-    const response = await axios.post(`${baseUrl}/resend-otp/`, { 
+    const response = await axios.post(`${baseUrl}/resend-otp/`, {
       email: email
     });
     return response.data;
@@ -238,5 +238,45 @@ export const fetchUserData = async (formValues) => {
   } catch (error) {
     console.error('Error fetching user data:', error);
     throw error;
+  }
+};
+
+export const fetchRolesList = async (formValues) => {
+  try {
+    const response = await axios.get(`${baseUrl}/get-roles-list/`, formValues, {});
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching roles:', error);
+    throw error;
+  }
+};
+
+export const fetchRolePermissions = async (formValues) => {
+  try {
+    const response = await axios.get(`${baseUrl}/role-permissions/`, formValues, {});
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching role permissions:', error);
+    throw error;
+  }
+};
+
+export const updateRolePermissions = async (roleId, permissions) => {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error("No authentication token found.");
+  }
+
+  try {
+    const response = await axios.post(`${baseUrl}/update-role-permissions/${roleId}/`, permissions, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error updating role permissions:", error);
+    throw new Error(error.response?.data?.detail || "Failed to update role permissions.");
   }
 };

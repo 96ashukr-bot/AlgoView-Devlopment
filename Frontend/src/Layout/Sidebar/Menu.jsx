@@ -39,10 +39,12 @@ export const MENUITEMS = [
         bookmark: true,
         active: false,
         children: [
-          { path: `/dashboard/rolepermmision`, title: "Role & Permission", type: "link" },
+          { path: `/dashboard/rolepermmision`, title: "Role List", type: "link" },
+          { path: `/dashboard/rolepermmisionupdate`, title: "Add Role", type: "link" },
+          // { path: `/dashboard/rolepermmision`, title: "Role & Permission", type: "link" },
         ],
       },
-
+     
     ],
   },
 
