@@ -430,3 +430,7 @@ class RolePermissionSerializer(serializers.ModelSerializer):
             for group, permissions in permission_dict.items()
         ]
         return formatted_permissions
+class OrderLogSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OrderLog
+        fields = ['signal_time', 'order_type', 'symbol', 'price', 'strategy', 'created_at']

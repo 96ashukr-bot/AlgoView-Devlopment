@@ -20,3 +20,7 @@
 input[type='checkbox'] {
     cursor: pointer;
 }
+
+.color{
+    background-color: orangered;
+}

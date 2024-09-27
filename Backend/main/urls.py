@@ -18,6 +18,7 @@ urlpatterns = [
     path('password-reset-confirm/', PasswordResetConfirmView.as_view(), name='password-reset-confirm'),
     path('create-roles/', RoleListCreateView.as_view(), name='role-list-create'),
     path('get-roles-list/', RoleListCreateView.as_view(), name='role-list'),
+    path('delete-roles/<int:id>/', RoleDeleteView.as_view(), name='role-delete'),
     path('roles/<int:pk>/', RoleDetailView.as_view(), name='role-detail'),
     path('users/', UserListCreateView.as_view(), name='user-list-create'),
     path('user-assign-role/', UserAssignRoleView.as_view(), name='user-assign-role'),
@@ -33,6 +34,7 @@ urlpatterns = [
     path('v1/algo/webhook/', TradingViewWebhook.as_view(), name='webhook'),
     path('get-alice-orders/', GetAliceOrderBook.as_view(), name='get-order-book'),
     path('get-alice-tread-history/', GetAliceTreadBook.as_view(), name='get-tread-book'),
+    path('order-logs-list/', OrderLogListView.as_view(), name='order-log-list'),
     
 ]
 

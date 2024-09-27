@@ -40,8 +40,20 @@ export const MENUITEMS = [
         active: false,
         children: [
           { path: `/dashboard/rolepermmision`, title: "Role List", type: "link" },
-          { path: `/dashboard/rolepermmisionupdate`, title: "Add Role", type: "link" },
+          { path: `/dashboard/rolepermmisionupdate`, title: "Update Role", type: "link" },
           // { path: `/dashboard/rolepermmision`, title: "Role & Permission", type: "link" },
+        ],
+      },
+
+      {
+        title: "Signals",
+        icon: "charts",
+        path: `/app/users/profile`,
+        type: "sub",
+        bookmark: true,
+        active: false,
+        children: [
+          { path: `/dashboard/signals`, title: "Signals", type: "link" },
         ],
       },
      

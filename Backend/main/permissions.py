@@ -17,16 +17,18 @@ class UpdateRolePermissionsView(APIView):
         if not isinstance(permissions_data, dict):
             return Response({"error": "Invalid payload format. Expected a dictionary of permissions."}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Fetch the role_permission or create it if it doesn't exist
+        role_permission, _ = RolePermission.objects.get_or_create(role=role)
+
         for group, permission_actions in permissions_data.items():
             for action, allowed in permission_actions.items():
-                # Find or create the permission for the group and action
-                permission, created = Permission.objects.get_or_create(
+                # Get the permission if it exists
+                permission, _ = Permission.objects.get_or_create(
                     group=group,
                     permission=action
                 )
 
                 # If permission should be allowed, link it to the role, otherwise, remove it
-                role_permission, _ = RolePermission.objects.get_or_create(role=role)
                 if allowed:
                     role_permission.permissions.add(permission)
                 else:

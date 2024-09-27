@@ -29,11 +29,26 @@ USER_ID=config('USER_ID')
 logger = logging.getLogger(__name__)
 UserModel = get_user_model()
 
-# Role Views
+# gwt Role Views
 class RoleListCreateView(generics.ListCreateAPIView):
     queryset = Role.objects.all()
     serializer_class = RoleSerializer
     # permission_classes = [permissions.IsAuthenticated]
+
+#delete role
+class RoleDeleteView(generics.DestroyAPIView):
+    queryset = Role.objects.all()
+    serializer_class = RoleSerializer
+    lookup_field = 'id'
+
+    def delete(self, request, *args, **kwargs):
+        role_id = kwargs.get('id')
+        role = get_object_or_404(Role, id=role_id)
+        role.delete()
+        return Response({
+            "status": "success",
+            "message": f"Role with ID {role_id} has been deleted."
+        }, status=status.HTTP_200_OK)    
 class RoleDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Role.objects.all()
     serializer_class = RoleSerializer
@@ -51,7 +66,7 @@ class UserRegistrationView(generics.CreateAPIView):
     serializer_class = UserRegistrationSerializer
     
     def create(self, request, *args, **kwargs):
-        start_time=time.time()
+        # start_time=time.time()
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         # Check if the role is provided in the validated data
@@ -60,21 +75,21 @@ class UserRegistrationView(generics.CreateAPIView):
         #     return Response({'detail': 'The selected role is not active.'}, status=status.HTTP_400_BAD_REQUEST)
         user = self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)
-        end_time = time.time()  # Record the end time
-        execution_time = end_time - start_time  # Calculate the total time
-        print(f"signup  API executed in {execution_time:.4f} seconds")
+        # end_time = time.time()  # Record the end time
+        # execution_time = end_time - start_time  # Calculate the total time
+        # print(f"signup  API executed in {execution_time:.4f} seconds")
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
     
 #login
 class CustomLoginView(generics.GenericAPIView):
     serializer_class = CustomLoginSerializer
     def post(self, request, *args, **kwargs):
-        start_time=time.time()
+        # start_time=time.time()
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        end_time = time.time()  # Record the end time
-        execution_time = end_time - start_time  # Calculate the total time
-        print(f"Login API executed in {execution_time:.4f} seconds")  # Log the execution timee
+        # end_time = time.time()  # Record the end time
+        # execution_time = end_time - start_time  # Calculate the total time
+        # print(f"Login API executed in {execution_time:.4f} seconds")  # Log the execution timee
         return Response(serializer.validated_data, status=status.HTTP_200_OK)
 
 #verify-otp via email
@@ -82,13 +97,13 @@ class OTPVerifyView(generics.GenericAPIView):
     serializer_class = OTPVerifySerializer
 
     def post(self, request, *args, **kwargs):
-        start_time=time.time()
+        # start_time=time.time()
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        end_time = time.time()  # Record the end time
-        execution_time = end_time - start_time  # Calculate the total time
-        print(f"verify otp API executed in {execution_time:.4f} seconds")
-        logger.info(f"verify otp API executed in {execution_time:.4f} seconds")  # Log the execution timee
+        # end_time = time.time()  # Record the end time
+        # execution_time = end_time - start_time  # Calculate the total time
+        # print(f"verify otp API executed in {execution_time:.4f} seconds")
+        # logger.info(f"verify otp API executed in {execution_time:.4f} seconds")  # Log the execution timee
         return Response(serializer.validated_data, status=status.HTTP_200_OK)
 #resend otp
 class ResendOTPView(APIView):
@@ -559,3 +574,18 @@ class GetAliceTreadBook(APIView):
                 "status": "error",
                 "message": f"An error occurred: {str(e)}"
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class OrderLogListView(APIView):
+    def get(self, request, *args, **kwargs):
+        # Fetch all the order logs from the database
+        order_logs = OrderLog.objects.all()
+        
+        # Serialize the data
+        serializer = OrderLogSerializer(order_logs, many=True)
+        
+        # Return the serialized data as a JSON response
+        return Response({
+            "status": "success",
+            "data": serializer.data
+        }, status=status.HTTP_200_OK)
+    

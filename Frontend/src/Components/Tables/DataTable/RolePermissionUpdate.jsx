@@ -4,7 +4,7 @@ import { H3 } from '../../../AbstractElements';
 import { fetchRolePermissions, updateRolePermissions } from '../../../Services/Authentication';
 import { useParams } from 'react-router-dom';
 import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css'; 
+import 'react-toastify/dist/ReactToastify.css';
 
 const RolePermissionUpdate = () => {
     const { layout } = useParams();
@@ -16,6 +16,7 @@ const RolePermissionUpdate = () => {
         const getPermissions = async () => {
             try {
                 const data = await fetchRolePermissions();
+                console.log("Fetched permissions data:", data);
                 extractPermissions(data);
             } catch (error) {
                 console.error('Error fetching permissions:', error);
@@ -29,17 +30,25 @@ const RolePermissionUpdate = () => {
         setAllPermissions(data);
         const selectedRoleData = data.find(roleData => roleData.role.id.toString() === layout);
         setSelectedRole(selectedRoleData);
+
         if (selectedRoleData) {
             const updatedPermissions = {};
             selectedRoleData.permissions.forEach(permission => {
-                if (!updatedPermissions[permission.group]) {
-                    updatedPermissions[permission.group] = { create: false, read: false, update: false, delete: false };
-                }
-                updatedPermissions[permission.group][permission.permission] = true;
+                const permissionArray = permission.permission.split(', ').map(perm => perm.trim());
+                permissionArray.forEach(perm => {
+                    if (!updatedPermissions[permission.group]) {
+                        updatedPermissions[permission.group] = { create: false, read: false, update: false, delete: false };
+                    }
+                    updatedPermissions[permission.group][perm] = true;
+                });
             });
             setPermissions(updatedPermissions);
+        } else {
+            console.warn(`No permissions found for role ID: ${layout}`);
+            setPermissions({});
         }
     };
+
 
     const handleCheckboxChange = (group, perm) => {
         setPermissions(prevPermissions => ({
@@ -56,15 +65,13 @@ const RolePermissionUpdate = () => {
             try {
                 const roleId = selectedRole.role.id;
                 console.log("Saving permissions for role:", roleId, permissions);
-                
+
                 const response = await updateRolePermissions(roleId, permissions);
                 console.log("Permissions updated successfully:", response);
 
                 toast.success("Permissions updated successfully!");
-
             } catch (error) {
                 console.error("Error saving permissions:", error);
-
                 toast.error("Failed to update permissions. Please try again.");
             }
         }
@@ -75,14 +82,14 @@ const RolePermissionUpdate = () => {
             <Card>
                 <CardHeader>
                     <H3>Role & Permission</H3>
-                    <span>Below is the list of roles & permission along with their details.</span>
+                    <span>Below is the list of roles & permissions along with their details.</span>
                 </CardHeader>
                 <Col>
-                    {allPermissions && selectedRole && (
+                    {allPermissions && selectedRole ? (
                         <div key={selectedRole.role.id}>
                             <CardHeader>
                                 <h5>{selectedRole.role.name.charAt(0).toUpperCase() + selectedRole.role.name.slice(1)}</h5>
-                                <span>Below is the list of roles & permission of {selectedRole.role.name.charAt(0).toUpperCase() + selectedRole.role.name.slice(1)}.</span>
+                                <span>Below is the list of roles & permissions of {selectedRole.role.name.charAt(0).toUpperCase() + selectedRole.role.name.slice(1)}.</span>
                             </CardHeader>
                             <div className="table-responsive" style={{ overflow: 'visible' }}>
                                 <Table className="table-responsive-sm" style={{ width: '100%' }}>
@@ -133,16 +140,17 @@ const RolePermissionUpdate = () => {
                                 </Table>
                             </div>
                         </div>
+                    ) : (
+                        <p style={{paddingLeft:'15px', paddingTop:'10px'}}>No permissions available for this role.</p>
                     )}
-                    {/* Save Button */}
-                    <div style={{ textAlign: 'right', marginTop: '20px' }}>
-                        <Button color="primary" onClick={handleSave}>
-                            Save
-                        </Button>
-                    </div>
                 </Col>
             </Card>
-
+                {/* Save Button */}
+                <div style={{ textAlign: 'right', marginTop: '20px' }}>
+                    <Button color="primary" onClick={handleSave}>
+                        Save
+                    </Button>
+                </div>
             {/* Toast Container */}
             <ToastContainer />
         </Fragment>

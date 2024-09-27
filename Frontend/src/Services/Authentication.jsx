@@ -280,3 +280,30 @@ export const updateRolePermissions = async (roleId, permissions) => {
     throw new Error(error.response?.data?.detail || "Failed to update role permissions.");
   }
 };
+
+export const createRole = async (roleData) => {
+  const response = await fetch('http://127.0.0.1:8000/create-roles/', {
+      method: 'POST',
+      headers: {
+          'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(roleData),
+  });
+
+  if (!response.ok) {
+      throw new Error('Failed to create role');
+  }
+  
+  const data = await response.json();
+  return data;
+};
+
+export const deleteRole = async (roleId) => {
+  const response = await axios.delete(`${baseUrl}/delete-roles/${roleId}`);
+
+  if (response.status !== 200) {
+      throw new Error('Failed to delete the role');
+  }
+
+  return response.data; 
+};
