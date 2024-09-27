@@ -45,3 +45,9 @@ class OtpAdmin(admin.ModelAdmin):
 
 admin.site.register(Permission)
 admin.site.register(RolePermission)
+
+@admin.register(OrderLog)
+class OtpAdmin(admin.ModelAdmin):
+    list_display = ['symbol','order_type','strategy','price','created_at']
+    search_fields = ['order_type',]
+    ordering = ['order_type',]       

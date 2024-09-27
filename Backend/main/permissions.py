@@ -34,8 +34,8 @@ class UpdateRolePermissionsView(APIView):
 
         return Response({"success": "Permissions updated successfully"}, status=status.HTTP_200_OK)
 class RolePermissionListView(APIView):
-    # permission_classes = [IsAdminUser]  
+    # permission_classes = [IsAdminUser]
     def get(self, request, *args, **kwargs):
         queryset = RolePermission.objects.all()
-        serializer = RolePermissionSerializer(queryset, many=True)  # Create a serializer instance with the queryset
+        serializer = RolePermissionSerializer(queryset, many=True)  # Use the modified serializer
         return Response(serializer.data, status=status.HTTP_200_OK)

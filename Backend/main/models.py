@@ -150,4 +150,31 @@ class RolePermission(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.role.name} - Permissions"    
+        return f"{self.role.name} - Permissions" 
+    
+class OrderLog(models.Model):
+    signal_time = models.DateTimeField()  # Time of the signal
+    order_type = models.CharField(max_length=10)  # 'LX' or 'LE' (Type)
+    symbol = models.CharField(max_length=100)  # Symbol (e.g., BANKNIFTY)
+    price = models.DecimalField(max_digits=10, decimal_places=2)  # Price
+    strategy = models.CharField(max_length=100)  # Strategy (e.g., Support & Resistance)
+    created_at = models.DateTimeField(auto_now_add=True)
+    def __str__(self):
+        return f"{self.signal_time} - {self.order_type} - {self.symbol} - {self.price}"       
+# class TradeLog(models.Model):
+#     data_type = models.CharField(max_length=20)  # e.g., option or future
+#     alert_key = models.CharField(max_length=50)  # Unique alert key
+#     action = models.CharField(max_length=10)     # buy or sell
+#     symbol = models.CharField(max_length=20)     # e.g., NIFTY
+#     expiry = models.DateField()                  # Expiry date for the option
+#     strike_price = models.FloatField()           # Strike price of the option
+#     option_type = models.CharField(max_length=5) # CE (Call) or PE (Put)
+#     lot = models.IntegerField()                  # Number of lots
+#     order_type = models.CharField(max_length=20) # e.g., MARKET or LIMIT
+#     product_type = models.CharField(max_length=20)  # e.g., NRML
+#     strategy_tag = models.CharField(max_length=50)  # Tag for the strategy
+#     created_at = models.DateTimeField(auto_now_add=True)
+
+#     def __str__(self):
+#         return f"{self.action} {self.symbol} {self.expiry} {self.strike_price} {self.option_type}"
+    
