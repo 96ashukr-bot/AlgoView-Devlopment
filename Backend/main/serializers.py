@@ -383,6 +383,11 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'email', 'firstName', 'lastName', 'phoneNumber', 'role']
+class NewUserCreateSerializer(serializers.ModelSerializer):
+    role = serializers.PrimaryKeyRelatedField(queryset=Role.objects.all())  # Accepts role ID directly
+    class Meta:
+        model = User
+        fields = ['id', 'email', 'firstName', 'lastName', 'phoneNumber', 'role']
 
     def validate_phoneNumber(self, value):
         # Check if the phone number is in a valid format
@@ -418,7 +423,6 @@ class UserSerializer(serializers.ModelSerializer):
         instance.role = validated_data.get('role', instance.role)
         instance.save()
         return instance
-        
 
 class KYCSerializer(serializers.ModelSerializer):
     class Meta:
