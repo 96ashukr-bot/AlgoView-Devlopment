@@ -14,18 +14,23 @@ from rest_framework.validators import UniqueValidator
 class RoleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Role
-        fields = ['id', 'name']
+        fields = ['id', 'name','status']
 
 class UserAssignRoleSerializer(serializers.ModelSerializer):
+    role_id = serializers.IntegerField(write_only=True)
+    role = RoleSerializer(read_only=True)  # Use the RoleSerializer to return role details
+
     class Meta:
         model = User
-        fields = ['id', 'email', 'role']
+        fields = ['id', 'email', 'firstName', 'lastName', 'role', 'role_id']
 
     def update(self, instance, validated_data):
-        instance.role = validated_data.get('role', instance.role)
-        instance.save()
-        return instance
-
+        # Fetch role by role_id and assign it to the user
+        role_id = validated_data.pop('role_id', None)
+        if role_id:
+            role = Role.objects.get(id=role_id)
+            instance.role = role
+        return super().update(instance, validated_data)
 class UserCreateSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
 
@@ -186,7 +191,6 @@ class CustomLoginSerializer(serializers.Serializer):
             raise serializers.ValidationError('Invalid credentials')
         # Check if the user is logging in with a temporary password
         if  user.is_password_temporary:#password is not temporary
-            print("inisdetemproty pass")
             # Generate OTP for email
             otp_instance, created = OTP.objects.get_or_create(user=user, is_verified=False)
             otp_instance.generate_otp()
@@ -246,7 +250,15 @@ class ChangePasswordSerializer(serializers.Serializer):
         user.set_password(self.validated_data['NewPassword'])
         user.is_new_password=True
         user.save()
-        return user
+        return {
+            'user_id': user.id,
+            'email': user.email,
+            'role': {
+                'role_id': user.role.id if user.role else None,
+                'role_name': user.role.name if user.role else None,
+                'role_status': user.role.status if user.role else None,
+            }
+        }
 
 
 class OTPVerifySerializer(serializers.Serializer):
@@ -287,9 +299,16 @@ class OTPVerifySerializer(serializers.Serializer):
         else:
             message="login successfully"
         return {
+            'user_id': user.id,  # Use ID instead of User object
+            'email': user.email,  # You can add any other fields you nee
             'message':message,
             'access': str(refresh.access_token),
             'refresh': str(refresh),
+            'role': {
+                'role_id': user.role.id if user.role else None,
+                'role_name': user.role.name if user.role else None,
+                'role_status': user.role.status if user.role else None,
+            }
             
         }
 
@@ -318,18 +337,26 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
 
 # Serializer for viewing the user profile
 class UserProfileRetrieveSerializer(serializers.ModelSerializer):
+    role = serializers.SerializerMethodField()
     class Meta:
         model = User
-        fields = ['email','firstName', 'lastName', 'phoneNumber', 'profilePicture', 'PANEL_CLIENT_KEY', 'start_date', 'end_date', 'client_type']
-        # read_only_fields = ['email']  # Ensure email is read-only
+        fields = ['email', 'firstName', 'lastName', 'phoneNumber', 'profilePicture', 'PANEL_CLIENT_KEY', 
+                  'start_date', 'end_date', 'client_type', 'role','is_enable']
 
-# Serializer for updating the user profile
+    def get_role(self, obj):
+        if obj.role:
+            return {
+                'id': obj.role.id,
+                'name': obj.role.name,
+                'status': obj.role.status
+            }
+        return None  # Return None if the user has no role assigned
 class UserProfileUpdateSerializer(serializers.ModelSerializer):
     fullName = serializers.CharField(read_only=True)  # FullName is read-only, derived from first_name and last_name.
 
     class Meta:
         model = User
-        fields = ['email','firstName', 'lastName', 'fullName', 'phoneNumber', 'profilePicture', 'PANEL_CLIENT_KEY', 'start_date', 'end_date', 'client_type']
+        fields = ['email','firstName', 'lastName', 'fullName', 'phoneNumber', 'profilePicture', 'PANEL_CLIENT_KEY', 'start_date', 'end_date', 'client_type','is_enable']
 
     def update(self, instance, validated_data):
         # Update first_name and last_name
@@ -344,16 +371,12 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
         instance.start_date = validated_data.get('start_date', instance.start_date)
         instance.end_date = validated_data.get('end_date', instance.end_date)
         instance.client_type = validated_data.get('client_type', instance.client_type)
+        instance.is_enable=validated_data.get('is_enable',instance.is_enable)
         
         # Save the updated instance
         instance.save()
         
         return instance
-class RoleSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Role
-        fields = ['id', 'name']  # This will return both id and name of the role
-
 class UserSerializer(serializers.ModelSerializer):
     role = RoleSerializer()  # This will serialize the Role object into id and name fields
 
@@ -441,5 +464,5 @@ class RolePermissionSerializer(serializers.ModelSerializer):
 class OrderLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderLog
-        fields = ['signal_time', 'order_type', 'symbol', 'price', 'strategy', 'created_at']
+        fields = ['signal_time', 'order_type', 'symbol', 'price', 'strategy', 'created_at','user','status','failure_reason']
         

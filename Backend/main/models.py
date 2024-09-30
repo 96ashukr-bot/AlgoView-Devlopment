@@ -118,7 +118,6 @@ class OTP(models.Model):
     expires_at = models.DateTimeField(null=True, blank=True)
 
     def generate_otp(self):
-        print("otp..............")
         self.otp_code = random.randint(100000, 999999)
         self.expires_at = timezone.now() + datetime.timedelta(seconds=120)  # Set expiration to 120 seconds from now
         self.is_verified = False
@@ -158,6 +157,9 @@ class OrderLog(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2)  # Price
     strategy = models.CharField(max_length=100)  # Strategy (e.g., Support & Resistance)
     created_at = models.DateTimeField(auto_now_add=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    status = models.CharField(max_length=20, default="Pending")  # "Success", "Failed"
+    failure_reason = models.TextField(null=True, blank=True)  # Reason for failure (optional)
     def __str__(self):
         return f"{self.signal_time} - {self.order_type} - {self.symbol} - {self.price}"       
 # class TradeLog(models.Model):

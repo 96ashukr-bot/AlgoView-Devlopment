@@ -14,6 +14,8 @@ from django.utils.encoding import force_bytes, force_str
 from django.core.mail import send_mail
 from django.conf import settings
 import time
+
+from main.permissions import IsAdminRole
 from .models import *
 from .serializers import *
 import logging
@@ -90,7 +92,6 @@ class CustomLoginView(generics.GenericAPIView):
         # execution_time = end_time - start_time  # Calculate the total time
         # print(f"Login API executed in {execution_time:.4f} seconds")  # Log the execution timee
         return Response(serializer.validated_data, status=status.HTTP_200_OK)
-
 #verify-otp via email
 class OTPVerifyView(generics.GenericAPIView):
     serializer_class = OTPVerifySerializer
@@ -103,7 +104,22 @@ class OTPVerifyView(generics.GenericAPIView):
         # execution_time = end_time - start_time  # Calculate the total time
         # print(f"verify otp API executed in {execution_time:.4f} seconds")
         # logger.info(f"verify otp API executed in {execution_time:.4f} seconds")  # Log the execution timee
-        return Response(serializer.validated_data, status=status.HTTP_200_OK)
+        # return Response(serializer.validated_data, status=status.HTTP_200_OK)
+        # Get the user from the serializer
+        # Get the user ID or email from the serializer (not the full user object)
+        user_id = serializer.validated_data['user_id']
+        email = serializer.validated_data['email']
+
+        # Check if the user has completed eKYC
+        kyc_exists = KYC.objects.filter(user_id=user_id).exists()
+
+        ekyc_status = kyc_exists  # True if KYC record exists, otherwise False
+
+        # Add the eKYC status to the response
+        response_data = serializer.validated_data
+        response_data['ekyc_status'] = ekyc_status
+
+        return Response(response_data, status=status.HTTP_200_OK)
 #resend otp
 class ResendOTPView(APIView):
     def post(self, request, *args, **kwargs):
@@ -154,11 +170,21 @@ class ChangePasswordView(generics.GenericAPIView):
 
             serializer = self.get_serializer(data=request.data, context={'request': request})
             serializer.is_valid(raise_exception=True)
+            # Check if the user has completed eKYC
+            kyc_exists = KYC.objects.filter(user_id=user.id).exists()
 
+            ekyc_status = kyc_exists  # True if KYC record exists, otherwise False
             # Save the new password
             serializer.save()
-
+            role_data = {
+                'role_id': user.role.id if user.role else None,
+                'role_name': user.role.name if user.role else None,
+                'role_status': user.role.status if user.role else None
+            }
             return Response({
+                'user':user.id,
+                'role':role_data,
+                'ekyc_status':ekyc_status,
                 'message': 'Password successfully changed please login with new password.'
             }, status=status.HTTP_200_OK)
 
@@ -242,21 +268,20 @@ class UserCreateView(generics.CreateAPIView):
 class UserAssignRoleView(generics.UpdateAPIView):
     queryset = User.objects.all()
     serializer_class = UserAssignRoleSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    # permission_classes = [permissions.IsAdminUser]
 
     def update(self, request, *args, **kwargs):
         try:
-            user = self.get_object()
-            if not self.request.user.is_superuser:
-                raise PermissionDenied("You do not have permission to perform this action.")
-            return super().update(request, *args, **kwargs)
-        except PermissionDenied as e:
-            return Response({'detail': str(e)}, status=status.HTTP_403_FORBIDDEN)
+            user = self.get_object()  # Get the user by ID (provided in the URL)
+            serializer = self.get_serializer(user, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            self.perform_update(serializer)
+            return Response(serializer.data)
         except Exception as e:
-            return Response({'detail': 'An unexpected error occurred.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 class UserManagementView(APIView):
-    # permission_classes = [IsAdminUser]  # Ensure only admins can create users
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsAdminRole] 
+    # permission_classes = [permissions.IsAuthenticated]
     def get(self, request, *args, **kwargs):
         users = User.objects.all().order_by('id')
         serializer = UserSerializer(users, many=True)
@@ -293,6 +318,7 @@ class UserManagementView(APIView):
         print(messages.success(request, 'User deleted successfully.'))
         return Response({"msg": "User deleted successfully."},status=status.HTTP_204_NO_CONTENT)
 class UserProfileView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
     def get(self, request, *args, **kwargs):
 
         try:
