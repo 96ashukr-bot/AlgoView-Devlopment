@@ -1,7 +1,6 @@
 from django.forms import ValidationError
 from rest_framework import serializers
-
-from main.tasks import send_email_async
+from main.tasks import send_email_async, send_email_pass_async
 from .models import *
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
@@ -11,6 +10,12 @@ from django.core.mail import send_mail
 from django.conf import settings
 from django.db import transaction
 from rest_framework.validators import UniqueValidator
+from main.email import EmailService
+support_email=settings.DEFAULT_FROM_EMAIL
+contact_number=settings.CONTACT_NUM
+login_link=settings.LOGIN_LINK
+help_center_link=settings.HELP_CENTER_LINK
+company_website=settings.COMPANY_WEBSITE    
 class RoleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Role
@@ -63,7 +68,6 @@ class UserCreateSerializer(serializers.ModelSerializer):
     #     instance.is_staff = validated_data.get('is_staff', instance.is_staff)
     #     instance.save()
     #     return instance
-        
 class UserRegistrationSerializer(serializers.ModelSerializer):
     phoneNumber = serializers.CharField(
         required=True,
@@ -86,21 +90,13 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             # Try to send the password to the user's email
             try:
                 print("pass...",password)
-                self.send_password_email(user.email, password)
+                EmailService.send_password_email(user.email, password,user.firstName,login_link,support_email,help_center_link,company_website,contact_number)
             except Exception as e:
                 # If email sending fails, delete the user and raise an exception
                 user.delete()
                 raise serializers.ValidationError(f"Error sending email: {str(e)}")
         
         return user
-
-    def send_password_email(self, email, password):
-        subject = 'Your account has been created'
-        message = f'Your account has been created. Your password is: {password}'
-        from_email = settings.DEFAULT_FROM_EMAIL
-        send_mail(subject, message, from_email, [email])
-
-
 class UserRegistrationSerializer_sync(serializers.ModelSerializer):
     phoneNumber = serializers.CharField(
         required=True,
@@ -119,11 +115,15 @@ class UserRegistrationSerializer_sync(serializers.ModelSerializer):
             try:
                 print("pass...",password)
                 # Call the async task to send the email
-                send_email_async.delay(
-                    subject='Your account has been created',
-                    message=f'Your account has been created. Your password is: {password}',
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=[user.email]
+                send_email_pass_async.delay(
+                    user.email,
+                    password,
+                    user.firstName,
+                    login_link,
+                    support_email,
+                    help_center_link,
+                    company_website,
+                    contact_number
                 )
             except Exception as e:
                 user.delete()
@@ -195,7 +195,7 @@ class CustomLoginSerializer(serializers.Serializer):
             otp_instance, created = OTP.objects.get_or_create(user=user, is_verified=False)
             otp_instance.generate_otp()
         # Send OTP to email
-            self.send_email_otp(user.email, otp_instance.otp_code)
+            EmailService.send_login_email_otp(user.email, otp_instance.otp_code,user.firstName)
 
             return {
                 'message': f"OTP sent to your email : {email}. Please verify "
@@ -211,16 +211,16 @@ class CustomLoginSerializer(serializers.Serializer):
                 if user.is_new_password:
                     otp_instance, created = OTP.objects.get_or_create(user=user, is_verified=False)
                     otp_instance.generate_otp()
-                    self.send_email_otp(user.email, otp_instance.otp_code)
+                    EmailService.send_login_email_otp(user.email, otp_instance.otp_code,user.firstName)
                     return {
                         'message': f"OTP sent to your email: {email}. Please verify."
                     }
 
-    def send_email_otp(self, email, otp_code):
-        subject = 'Your OTP Code'
-        message = f'Your OTP code is {otp_code}.'
-        from_email = settings.DEFAULT_FROM_EMAIL
-        send_mail(subject, message, from_email, [email])
+    # def send_email_otp(self, email, otp_code):
+    #     subject = 'Your OTP Code'
+    #     message = f'Your OTP code is {otp_code}.'
+    #     from_email = settings.DEFAULT_FROM_EMAIL
+        # send_mail(subject, message, from_email, [email])
 
 
 class ChangePasswordSerializer(serializers.Serializer):
@@ -340,8 +340,8 @@ class UserProfileRetrieveSerializer(serializers.ModelSerializer):
     role = serializers.SerializerMethodField()
     class Meta:
         model = User
-        fields = ['email', 'firstName', 'lastName', 'phoneNumber', 'profilePicture', 'PANEL_CLIENT_KEY', 
-                  'start_date', 'end_date', 'client_type', 'role','is_enable']
+        fields = ['email', 'firstName', 'lastName','middleName', 'phoneNumber', 'profilePicture', 'PANEL_CLIENT_KEY', 
+                  'start_date', 'end_date', 'client_type', 'Address_line1','Address_line2','City','State','Country','Zip_code','Permanent_address','Current_address' ,'role','is_enable']
 
     def get_role(self, obj):
         if obj.role:
@@ -356,7 +356,7 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['email','firstName', 'lastName', 'fullName', 'phoneNumber', 'profilePicture', 'PANEL_CLIENT_KEY', 'start_date', 'end_date', 'client_type','is_enable']
+        fields = ['email','firstName', 'lastName', 'fullName', 'middleName','phoneNumber', 'profilePicture', 'PANEL_CLIENT_KEY', 'start_date', 'end_date', 'client_type','is_enable','Address_line1','Address_line2','City','State','Country','Zip_code','Permanent_address','Current_address' ]
 
     def update(self, instance, validated_data):
         # Update first_name and last_name
@@ -372,7 +372,13 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
         instance.end_date = validated_data.get('end_date', instance.end_date)
         instance.client_type = validated_data.get('client_type', instance.client_type)
         instance.is_enable=validated_data.get('is_enable',instance.is_enable)
-        
+        instance.middleName=validated_data.get('middleName',instance.middleName)
+        instance.City = validated_data.get('City', instance.City)
+        instance.State = validated_data.get('State', instance.State)
+        instance.Zip_code = validated_data.get('Zip_code', instance.Zip_code)
+        instance.Permanent_address = validated_data.get('Permanent_address', instance.Permanent_address)
+        instance.Current_address = validated_data.get('Current_address', instance.Current_address)
+    
         # Save the updated instance
         instance.save()
         
@@ -382,12 +388,12 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'email', 'firstName', 'lastName', 'phoneNumber', 'role']
+        fields = ['id', 'email', 'firstName', 'lastName', 'middleName','phoneNumber','Address_line1','Address_line2','City','State','Country','Zip_code','Permanent_address','Current_address' ,'role']
 class NewUserCreateSerializer(serializers.ModelSerializer):
     role = serializers.PrimaryKeyRelatedField(queryset=Role.objects.all())  # Accepts role ID directly
     class Meta:
         model = User
-        fields = ['id', 'email', 'firstName', 'lastName', 'phoneNumber', 'role']
+        fields = ['id', 'email', 'firstName', 'lastName', 'middleName','phoneNumber','role',]
 
     def validate_phoneNumber(self, value):
         # Check if the phone number is in a valid format
@@ -421,6 +427,7 @@ class NewUserCreateSerializer(serializers.ModelSerializer):
         instance.lastName = validated_data.get('lastName', instance.lastName)
         instance.phoneNumber = validated_data.get('phoneNumber', instance.phoneNumber)
         instance.role = validated_data.get('role', instance.role)
+        instance.middleName = validated_data.get('middleName', instance.middleName)
         instance.save()
         return instance
 

@@ -49,7 +49,6 @@ class IsAdminRole(permissions.BasePermission):
     """
     Custom permission to only allow users with the role 'Admin' to access the view.
     """
-
     def has_permission(self, request, view):
         # Check if the user is authenticated and has a role of 'Admin'
         return request.user.is_authenticated and request.user.role and request.user.role.name == 'Admin'

@@ -52,6 +52,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True)
     phoneNumber = models.CharField(max_length=15, null=True, blank=True)
     firstName = models.CharField(max_length=150)
+    middleName = models.CharField(max_length=150,null=True,blank=True)
     lastName = models.CharField(max_length=150,blank=True)
     fullName = models.CharField(max_length=300, blank=True, editable=False)  # Will be automatically generated
     profilePicture = models.ImageField(upload_to='profile_pictures/', null=True, blank=True)
@@ -62,14 +63,22 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_new_password = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)  
     updated_at = models.DateTimeField(auto_now=True)      
-        # New fields for user profile
+    # New fields for user profile
     PANEL_CLIENT_KEY = models.CharField(max_length=255, blank=True, null=True)
     start_date = models.DateField(null=True, blank=True)
     end_date = models.DateField(null=True, blank=True)
     client_type = models.CharField(max_length=50, blank=True, null=True) 
     is_enable = models.BooleanField(default=False)
+    # New address-related fields
+    Address_line1 = models.CharField(max_length=255, null=True, blank=True)
+    Address_line2 = models.CharField(max_length=255, null=True, blank=True)
+    City = models.CharField(max_length=100, null=True, blank=True)
+    State=models.CharField(max_length=50,null=True,blank=True)
+    Country = models.CharField(max_length=20, null=True, blank=True)
+    Zip_code = models.CharField(max_length=20, null=True, blank=True)
+    Permanent_address = models.TextField(null=True, blank=True)
+    Current_address = models.TextField(null=True, blank=True)
     objects = UserManager()
-    
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['firstName','lastName', 'phoneNumber']
 
@@ -161,7 +170,22 @@ class OrderLog(models.Model):
     status = models.CharField(max_length=20, default="Pending")  # "Success", "Failed"
     failure_reason = models.TextField(null=True, blank=True)  # Reason for failure (optional)
     def __str__(self):
-        return f"{self.signal_time} - {self.order_type} - {self.symbol} - {self.price}"       
+        return f"{self.signal_time} - {self.order_type} - {self.symbol} - {self.price}"   
+    
+class UserActivityLog(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    last_login_time = models.DateTimeField()
+    last_logout_time = models.DateTimeField(null=True, blank=True)
+    session_key = models.CharField(max_length=40, null=True, blank=True)  # Store session key for reference
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+
+    def __str__(self):
+        return f'{self.user.email} - {self.last_login_time}'
+
+    def mark_logout(self):
+        """ Marks logout time when the user logs out """
+        self.logout_time = timezone.now()
+        self.save()        
 # class TradeLog(models.Model):
 #     data_type = models.CharField(max_length=20)  # e.g., option or future
 #     alert_key = models.CharField(max_length=50)  # Unique alert key
