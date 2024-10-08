@@ -52,3 +52,8 @@ class OtpAdmin(admin.ModelAdmin):
     list_display = ['symbol','order_type','strategy','price','created_at']
     search_fields = ['order_type',]
     ordering = ['order_type',]       
+    
+@admin.register(UserActivityLog)
+class UserActivity_logs(admin.ModelAdmin):
+    list_display = ['user','action_type','last_login_time']
+       

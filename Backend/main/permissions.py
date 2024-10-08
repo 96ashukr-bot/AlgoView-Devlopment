@@ -36,6 +36,7 @@ class UpdateRolePermissionsView(APIView):
 
         return Response({"success": "Permissions updated successfully"}, status=status.HTTP_200_OK)
 class RolePermissionListView(APIView):
+    pagination_class = None
     # permission_classes = [IsAdminUser]
     def get(self, request, *args, **kwargs):
         queryset = RolePermission.objects.all()

@@ -14,7 +14,7 @@ from django.utils.encoding import force_bytes, force_str
 from django.core.mail import send_mail
 from django.conf import settings
 import time
-
+from rest_framework.generics import ListAPIView
 from main.permissions import IsAdminRole
 from .models import *
 from .serializers import *
@@ -30,9 +30,8 @@ from main.email import EmailService
 from django.contrib.auth.signals import user_logged_in, user_logged_out
 from django.dispatch import receiver
 
-ALICE_API_KEY=config('ALICE_API_KEY')
 USER_ID=config('USER_ID')
-
+ALICE_API_KEY=config('ALICE_API_KEY')
 logger = logging.getLogger(__name__)
 UserModel = get_user_model()
 #email parmas
@@ -43,12 +42,14 @@ help_center_link=settings.HELP_CENTER_LINK
 company_website=settings.COMPANY_WEBSITE    
 # gwt Role Views
 class RoleListCreateView(generics.ListCreateAPIView):
+    pagination_class = None
     queryset = Role.objects.all()
     serializer_class = RoleSerializer
     # permission_classes = [permissions.IsAuthenticated]
 
 #delete role
 class RoleDeleteView(generics.DestroyAPIView):
+    pagination_class = None
     permission_classes = [permissions.IsAuthenticated, IsAdminRole]
     queryset = Role.objects.all()
     serializer_class = RoleSerializer
@@ -63,12 +64,14 @@ class RoleDeleteView(generics.DestroyAPIView):
             "message": f"Role with ID {role_id} has been deleted."
         }, status=status.HTTP_200_OK)    
 class RoleDetailView(generics.RetrieveUpdateDestroyAPIView):
+    pagination_class = None
     queryset = Role.objects.all()
     serializer_class = RoleSerializer
     permission_classes = [permissions.IsAuthenticated, IsAdminRole]
 
 # User Views create
 class UserListCreateView(generics.ListCreateAPIView):
+    pagination_class = None
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -86,6 +89,7 @@ class UserRegistrationView(generics.CreateAPIView):
     
 #login
 class CustomLoginView(generics.GenericAPIView):
+    pagination_class = None
     serializer_class = CustomLoginSerializer
     def post(self, request, *args, **kwargs):
         # start_time=time.time()
@@ -95,10 +99,37 @@ class CustomLoginView(generics.GenericAPIView):
         # execution_time = end_time - start_time  # Calculate the total time
         # print(f"Login API executed in {execution_time:.4f} seconds")  # Log the execution timee
         return Response(serializer.validated_data, status=status.HTTP_200_OK)
+#logout api
+class LogoutView(APIView):
+    permission_classes = [IsAuthenticated]  # Ensure user is authenticated
+
+    def post(self, request):
+        # Get user's refresh token from request data (passed by frontend)
+        refresh_token = request.data.get('refresh_token')
+        
+        try:
+            # Blacklist the refresh token (if using Simple JWT Blacklisting)
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+
+            # Log the user's logout time in the UserActivityLog
+            session_key = request.session.session_key
+            try:
+                activity_log = UserActivityLog.objects.filter(user=request.user, session_key=session_key).latest('last_login_time')
+                activity_log.mark_logout()
+            except UserActivityLog.DoesNotExist:
+                pass  # If no login entry exists, skip silently
+            
+            return Response({"message": "Logout successful"}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    
 #verify-otp via email
 class OTPVerifyView(generics.GenericAPIView):
     serializer_class = OTPVerifySerializer
-
+    pagination_class = None
     def post(self, request, *args, **kwargs):
         # start_time=time.time()
         serializer = self.get_serializer(data=request.data)
@@ -125,6 +156,7 @@ class OTPVerifyView(generics.GenericAPIView):
         return Response(response_data, status=status.HTTP_200_OK)
 #resend otp
 class ResendOTPView(APIView):
+    pagination_class = None
     def post(self, request, *args, **kwargs):
         email = request.data.get('email')
 
@@ -162,6 +194,7 @@ class ResendOTPView(APIView):
         send_mail(subject, message, from_email, [email]) 
 #change password
 class ChangePasswordView(generics.GenericAPIView):
+    pagination_class = None
     serializer_class = ChangePasswordSerializer
     permission_classes = [permissions.IsAuthenticated]  # Ensure only authenticated users can access this view
 
@@ -208,6 +241,7 @@ class ChangePasswordView(generics.GenericAPIView):
 class PasswordResetRequestView(generics.GenericAPIView):
     serializer_class = PasswordResetRequestSerializer
     # permission_classes = [AllowAny]
+    pagination_class = None
 
     def post(self, request, *args, **kwargs):
         try:
@@ -263,12 +297,9 @@ class PasswordResetConfirmView(generics.GenericAPIView):
         user.save()
         
         return Response({'detail': 'Password has been reset successfully.'}, status=status.HTTP_200_OK)
-    
-class UserCreateView(generics.CreateAPIView):
-    queryset = User.objects.all()
-    serializer_class = UserCreateSerializer
-
+#user assign role api    
 class UserAssignRoleView(generics.UpdateAPIView):
+    pagination_class = None
     queryset = User.objects.all()
     permission_classes = [permissions.IsAuthenticated, IsAdminRole] 
     serializer_class = UserAssignRoleSerializer
@@ -287,17 +318,29 @@ class CustomPageNumberPagination(PageNumberPagination):
     page_size_query_param = 'page_size'  # Allows the client to set the page size dynamically
     max_page_size = 100  # Max limit for page size to avoid performance issues
     page_query_param = 'page_number'  # Allows the client to set the page number
+class GetUser(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsAdminRole]
+    def get(self, request, pk, args, *kwargs): 
+        try:
+            user = User.objects.get(pk=pk)  
+            serializer = UserSerializer(user)  
+        except User.DoesNotExist:
+            return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
 
+        return Response(serializer.data, status=status.HTTP_200_OK)
 #user crud api for admin
 class UserManagementView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsAdminRole]
-
-    def get(self, request, *args, **kwargs):
+    def get(self, request, args, *kwargs):
         users = User.objects.all().order_by('id')
-        paginator = CustomPageNumberPagination()
-        result_page = paginator.paginate_queryset(users, request)
-        serializer = UserSerializer(result_page, many=True)
-        return paginator.get_paginated_response(serializer.data)
+        serializer = UserSerializer(users, many=True)
+        return Response(serializer.data)
+    # def get(self, request, *args, **kwargs):
+    #     users = User.objects.all().order_by('id')
+    #     paginator = CustomPageNumberPagination()
+    #     result_page = paginator.paginate_queryset(users, request)
+    #     serializer = UserSerializer(result_page, many=True)
+    #     return paginator.get_paginated_response(serializer.data)
     
     def post(self, request, *args, **kwargs):
         # Generate a random password
@@ -342,6 +385,7 @@ class UserManagementView(APIView):
         
 #user profile api crud oprations        
 class UserProfileView(APIView):
+    pagination_class = None
     permission_classes = [IsAuthenticated]
     def get(self, request, *args, **kwargs):
 
@@ -372,7 +416,7 @@ class UserProfileView(APIView):
 # get kyc list 
 class GetKYCView(APIView):
     permission_classes = [IsAuthenticated]
-
+    pagination_class = None
     def get(self, request, *args, **kwargs):
         user = request.user
         
@@ -386,7 +430,7 @@ class GetKYCView(APIView):
 #kyc update create 
 class CreateOrUpdateKYCView(APIView):
     permission_classes = [IsAuthenticated]
-
+    pagination_class = None
     def post(self, request, *args, **kwargs):
         user = request.user
         kyc, created = KYC.objects.get_or_create(user=user)
@@ -406,7 +450,8 @@ class CreateOrUpdateKYCView(APIView):
     
 #pending kyc list for admin    
 class PendingKYCListView(APIView):# Get all pending KYC requests
-    # permission_classes = [permissions.IsAuthenticated,IsAdminRole] 
+    permission_classes = [permissions.IsAuthenticated,IsAdminRole] 
+    pagination_class = None
     def get(self, request, *args, **kwargs):
         pending_kycs = KYC.objects.filter(is_verified=False)
         if pending_kycs.exists():
@@ -543,6 +588,7 @@ def get_or_regenerate_session_id(USER_ID, ALICE_API_KEY):
 
 # Webhook for order trigger
 class TradingViewWebhook(APIView):
+    pagination_class = None
     def post(self, request, *args, **kwargs):
         try:
             alert_data = request.data
@@ -570,6 +616,7 @@ class TradingViewWebhook(APIView):
 
 # Get Alice-Blue orders  GET_ORDER_BOOK_URL
 class GetAliceOrderBook(APIView):
+    pagination_class = None
     def get(self, request, *args, **kwargs):
         # Get or regenerate the session ID
         session_id_response = get_or_regenerate_session_id(USER_ID, ALICE_API_KEY)
@@ -611,6 +658,7 @@ class GetAliceOrderBook(APIView):
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 #Get trad history data GET_TREAD_BOOK_URL
 class GetAliceTreadBook(APIView):
+    pagination_class = None
     def get(self, request, *args, **kwargs):
         # Get or regenerate the session ID
         session_id_response = get_or_regenerate_session_id(USER_ID, ALICE_API_KEY)
@@ -653,6 +701,7 @@ class GetAliceTreadBook(APIView):
 
 #order -logs -list
 class OrderLogListView(APIView):
+    pagination_class = None
     def get(self, request, *args, **kwargs):
         # Fetch all the order logs from the database
         order_logs = OrderLog.objects.all()
@@ -669,6 +718,7 @@ class OrderLogListView(APIView):
 
 @receiver(user_logged_in)
 def log_user_login(sender, request, user, **kwargs):
+    pagination_class = None
     ip_address = request.META.get('REMOTE_ADDR')
     session_key = request.session.session_key
     UserActivityLog.objects.create(
@@ -680,6 +730,7 @@ def log_user_login(sender, request, user, **kwargs):
 
 @receiver(user_logged_out)
 def log_user_logout(sender, request, user, **kwargs):
+    pagination_class = None
     session_key = request.session.session_key
     try:
         # Find the most recent login record for the current session
@@ -687,4 +738,44 @@ def log_user_logout(sender, request, user, **kwargs):
         activity_log.mark_logout()
     except UserActivityLog.DoesNotExist:
         pass  # In case no log entry is found, skip silently
-    
+class UserActivityLogListView(ListAPIView):
+    pagination_class = None
+    queryset = UserActivityLog.objects.all()
+    serializer_class = UserActivityLogSerializer
+    permission_classes = [IsAuthenticated]  # Change if you want different permissions
+    pagination_class = None
+    def get_queryset(self):
+        user = self.request.user
+        return UserActivityLog.objects.filter(user=user)  # Optional: filter logs by logged-in user    
+
+class UserActivityLogListView(ListAPIView):
+    pagination_class = None
+    serializer_class = UserActivityLogSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        # Return activity logs for the logged-in user
+        return UserActivityLog.objects.filter(user=self.request.user).order_by('-last_login_time')
+
+
+class LastLoginActivityView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        try:
+            # Get the most recent login activity for the logged-in user
+            last_login_activity = UserActivityLog.objects.filter(
+                user=request.user, action_type='login'
+            ).latest('last_login_time')
+
+            # Prepare the response data
+            response_data = {
+                'last_login_time': last_login_activity.last_login_time,
+                'ip_address': last_login_activity.ip_address,
+                'session_key': last_login_activity.session_key,
+                'is_logged_out': last_login_activity.logout_time is not None,
+            }
+
+            return Response(response_data)
+        except UserActivityLog.DoesNotExist:
+            return Response({"error": "No login activity found."}, status=404)

@@ -294,6 +294,20 @@ class OTPVerifySerializer(serializers.Serializer):
         user.is_password_temporary = False
         user.save()
         refresh = RefreshToken.for_user(user)
+        # Log user login activity after OTP verification
+        request = self.context.get('request')  # Get the request context
+        if request:
+            ip_address = request.META.get('REMOTE_ADDR')
+            session_key = request.session.session_key if request.session else None
+
+            # Store login time in UserActivityLog
+            UserActivityLog.objects.create(
+                user=user,
+                action_type='login',
+                last_login_time=timezone.now(),
+                ip_address=ip_address,
+                session_key=session_key
+            )
         if not user.is_new_password:
             message= 'Please change your password as this is a one-time temporary password.'
         else:
@@ -373,6 +387,8 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
         instance.client_type = validated_data.get('client_type', instance.client_type)
         instance.is_enable=validated_data.get('is_enable',instance.is_enable)
         instance.middleName=validated_data.get('middleName',instance.middleName)
+        instance.Address_line1=validated_data.get('Address_line1',instance.Address_line1)
+        instance.Address_line2=validated_data.get('Address_line2',instance.Address_line2)
         instance.City = validated_data.get('City', instance.City)
         instance.State = validated_data.get('State', instance.State)
         instance.Zip_code = validated_data.get('Zip_code', instance.Zip_code)
@@ -476,4 +492,7 @@ class OrderLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderLog
         fields = ['signal_time', 'order_type', 'symbol', 'price', 'strategy', 'created_at','user','status','failure_reason']
-        
+class UserActivityLogSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserActivityLog
+        fields = ['id', 'user', 'last_login_time', 'ip_address', 'session_key']  # Adjust fields as necessary        

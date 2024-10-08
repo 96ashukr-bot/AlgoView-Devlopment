@@ -173,7 +173,13 @@ class OrderLog(models.Model):
         return f"{self.signal_time} - {self.order_type} - {self.symbol} - {self.price}"   
     
 class UserActivityLog(models.Model):
+    ACTION_TYPES = (
+        ('login', 'Login'),
+        ('logout', 'Logout'),
+    )
+
     user = models.ForeignKey(User, on_delete=models.CASCADE)
+    action_type = models.CharField(max_length=10, choices=ACTION_TYPES)
     last_login_time = models.DateTimeField()
     last_logout_time = models.DateTimeField(null=True, blank=True)
     session_key = models.CharField(max_length=40, null=True, blank=True)  # Store session key for reference

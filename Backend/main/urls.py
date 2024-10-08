@@ -10,6 +10,7 @@ from django.conf.urls.static import static
 urlpatterns = [
     path('signup/', UserRegistrationView.as_view(), name='user-registration'),
     path('login/', CustomLoginView.as_view(), name='login'),
+    path('logout/', LogoutView.as_view(), name='logout'),
     path('verify-otp/', OTPVerifyView.as_view(), name='otp_verify'),
     path('resend-otp/', ResendOTPView.as_view(), name='resend_otp'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
@@ -20,6 +21,7 @@ urlpatterns = [
     path('get-roles-list/', RoleListCreateView.as_view(), name='role-list'),
     path('delete-roles/<int:id>/', RoleDeleteView.as_view(), name='role-delete'),
     path('roles/<int:pk>/', RoleDetailView.as_view(), name='role-detail'),
+    path('user/<int:pk>/', GetUser.as_view(), name='GetUser'),
     path('users/<int:pk>/assign-role/', UserAssignRoleView.as_view(), name='assign-role'),
     path('users-list/', UserListCreateView.as_view(), name='user-management'),
     path('create-user/', UserManagementView.as_view(), name='user-management'),
@@ -36,6 +38,8 @@ urlpatterns = [
     path('get-alice-orders/', GetAliceOrderBook.as_view(), name='get-order-book'),
     path('get-alice-tread-history/', GetAliceTreadBook.as_view(), name='get-tread-book'),
     path('order-logs-list/', OrderLogListView.as_view(), name='order-log-list'),
+    path('user-activity-logs/', UserActivityLogListView.as_view(), name='user-activity-logs'),
+    path('user-last-login/', LastLoginActivityView.as_view(), name='last-login'),
     
 ]
 
