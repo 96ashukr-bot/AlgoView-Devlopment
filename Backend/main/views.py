@@ -773,7 +773,7 @@ class LastLoginActivityView(APIView):
                 'last_login_time': last_login_activity.last_login_time,
                 'ip_address': last_login_activity.ip_address,
                 'session_key': last_login_activity.session_key,
-                'is_logged_out': last_login_activity.logout_time is not None,
+                # 'is_logged_out': last_login_activity.logout_time is not None,
             }
 
             return Response(response_data)

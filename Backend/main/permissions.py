@@ -6,7 +6,19 @@ from main.serializers import RolePermissionSerializer
 from .models import Role, Permission, RolePermission
 
 from rest_framework.permissions import IsAdminUser,IsAuthenticated
+
+from rest_framework import permissions
+
+class IsAdminRole(permissions.BasePermission):
+    """
+    Custom permission to only allow users with the role 'Admin' to access the view.
+    """
+    def has_permission(self, request, view):
+        # Check if the user is authenticated and has a role of 'Admin'
+        return request.user.is_authenticated and request.user.role and request.user.role.name == 'Admin'
+
 class UpdateRolePermissionsView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsAdminRole]
     def post(self, request, role_id):
         try:
             role = Role.objects.get(id=role_id)
@@ -38,18 +50,10 @@ class UpdateRolePermissionsView(APIView):
 class RolePermissionListView(APIView):
     pagination_class = None
     # permission_classes = [IsAdminUser]
+    permission_classes = [permissions.IsAuthenticated, IsAdminRole]
     def get(self, request, *args, **kwargs):
         queryset = RolePermission.objects.all()
         serializer = RolePermissionSerializer(queryset, many=True)  # Use the modified serializer
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-from rest_framework import permissions
-
-class IsAdminRole(permissions.BasePermission):
-    """
-    Custom permission to only allow users with the role 'Admin' to access the view.
-    """
-    def has_permission(self, request, view):
-        # Check if the user is authenticated and has a role of 'Admin'
-        return request.user.is_authenticated and request.user.role and request.user.role.name == 'Admin'

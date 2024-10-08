@@ -448,13 +448,18 @@ class NewUserCreateSerializer(serializers.ModelSerializer):
         return instance
 
 class KYCSerializer(serializers.ModelSerializer):
+    user_name = serializers.SerializerMethodField()
     class Meta:
         model = KYC
         fields = [
-            'id', 'user', 'id_proof', 'document_file_front', 'document_file_back', 'is_verified', 'status',
+            'id', 'user','user_name', 'id_proof', 'document_file_front', 'document_file_back', 'is_verified', 'status',
             'verified_by', 'created_at', 'updated_at', 'address_proof_id', 'address_prof_front', 'address_prof_back'
         ]
         read_only_fields = ['user', 'created_at', 'updated_at', 'is_verified', 'verified_by']  # Restrict updates on some fields
+    def get_user_name(self, obj):
+        if obj.user:
+            return f"{obj.user.firstName} {obj.user.lastName}"  # Get the full name of the user
+        return "NO name available"
 class PermissionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Permission
