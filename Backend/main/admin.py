@@ -13,7 +13,7 @@ class UserAdmin(admin.ModelAdmin):
     fieldsets = (
         (None, {'fields': ('email', 'password')}),
         ('Personal info', {'fields': ('firstName', 'lastName','phoneNumber', 'profilePicture', 'role',  'PANEL_CLIENT_KEY', 'start_date', 'end_date', 'client_type', 'is_password_temporary', 'is_new_password'
-                                     ,'middleName', 'Address_line1','Address_line2','City','State','Country','Zip_code','Permanent_address','Current_address' )}),
+         ,'middleName', 'Address_line1','Address_line2','City','State','Country','Zip_code','Permanent_address','Current_address','external_user' )}),
         ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser')}),
         # ('Metadata', {'fields': ('created_at', 'updated_at')}),  # Add 'created_at' and 'updated_at' here
     )

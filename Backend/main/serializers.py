@@ -1,4 +1,5 @@
 from django.forms import ValidationError
+import requests
 from rest_framework import serializers
 from main.tasks import send_email_async, send_email_pass_async
 from .models import *
@@ -85,7 +86,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         # Start an atomic transaction
         with transaction.atomic():
             # Create the user with the generated password
-            user = User.objects.create_user(**validated_data, password=password)
+            user = User.objects.create_user(**validated_data, password=password, external_user='true')
             
             # Try to send the password to the user's email
             try:
@@ -179,7 +180,69 @@ class CustomLoginSerializer_sync(serializers.Serializer):
             return {
                 'message': f"OTP sent to your email: {email}. Please verify."
             }
+            
 class CustomLoginSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    password = serializers.CharField()
+
+    def validate(self, data):
+        email = data.get('email')
+        password = data.get('password')
+        user = authenticate(email=email, password=password)
+        
+        if user is None:
+            raise serializers.ValidationError('Invalid credentials')
+        if not user.role and user.external_user == "true" or user.role.name.lower() == 'client' :
+                otp_instance, created = OTP.objects.get_or_create(user=user, is_verified=False)
+                otp_instance.generate_otp()
+
+                # Send OTP to user's email
+                EmailService.send_login_email_otp(user.email, otp_instance.otp_code, user.firstName)
+
+                return {
+                    'message': f"OTP sent to your email: {email}. Please verify."
+                }
+        else:
+            # If the user does not have the 'client' role, proceed with direct login
+            if not user.is_new_password :
+                message= 'Please change your password as this is a one-time temporary password.'
+            else:
+                message="login successfully"
+            refresh = RefreshToken.for_user(user)
+            request = self.context.get('request')  # Get the request context
+            kyc_exists = KYC.objects.filter(user_id=user.id).exists()
+
+            ekyc_status = kyc_exists  # True if KYC record exists, otherwise False
+            # Save the new password
+            if request:
+                try:
+                    public_ip = requests.get('https://api.ipify.org').text  # You can use other services like 'https://checkip.amazonaws.com/' too
+                except requests.RequestException:
+                    public_ip = None  # Handle the case when the request fails
+                session_key = request.session.session_key if request.session else None
+                # Log user's activity in the UserActivityLog model
+                UserActivityLog.objects.create(
+                    user=user,
+                    action_type='login',
+                    last_login_time=timezone.now(),
+                    ip_address=public_ip,  # Store the client's IP address
+                    session_key=session_key)
+
+                return {
+                    'user_id': user.id,
+                    'message': message,
+                    'email': user.email,
+                    'access': str(refresh.access_token),
+                    'refresh': str(refresh),
+                    'role': {
+                        'role_id': user.role.id if user.role else None,
+                        'role_name': user.role.name if user.role else None,
+                        'role_status': user.role.status if user.role else None,
+                    },
+                    'ekyc_status': ekyc_status
+                }
+
+class CustomLoginSerializer_old(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField()
 
@@ -297,7 +360,10 @@ class OTPVerifySerializer(serializers.Serializer):
         # Log user login activity after OTP verification
         request = self.context.get('request')  # Get the request context
         if request:
-            ip_address = request.META.get('REMOTE_ADDR')
+            try:
+                public_ip = requests.get('https://api.ipify.org').text  # You can use other services like 'https://checkip.amazonaws.com/' too
+            except requests.RequestException:
+                public_ip = None  # Handle the case when the request fails
             session_key = request.session.session_key if request.session else None
 
             # Store login time in UserActivityLog
@@ -305,7 +371,7 @@ class OTPVerifySerializer(serializers.Serializer):
                 user=user,
                 action_type='login',
                 last_login_time=timezone.now(),
-                ip_address=ip_address,
+                ip_address=public_ip,
                 session_key=session_key
             )
         if not user.is_new_password:

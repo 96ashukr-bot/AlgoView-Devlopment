@@ -78,6 +78,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     Zip_code = models.CharField(max_length=20, null=True, blank=True)
     Permanent_address = models.TextField(null=True, blank=True)
     Current_address = models.TextField(null=True, blank=True)
+    external_user = models.CharField(max_length=50, null=True, blank=True)
     objects = UserManager()
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['firstName','lastName', 'phoneNumber']

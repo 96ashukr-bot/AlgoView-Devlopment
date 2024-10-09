@@ -771,7 +771,7 @@ class LastLoginActivityView(APIView):
             # Prepare the response data
             response_data = {
                 'last_login_time': last_login_activity.last_login_time,
-                'ip_address': last_login_activity.ip_address,
+                'last_ip': last_login_activity.ip_address,
                 'session_key': last_login_activity.session_key,
                 # 'is_logged_out': last_login_activity.logout_time is not None,
             }
