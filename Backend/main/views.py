@@ -115,7 +115,7 @@ class LogoutView(APIView):
             # Log the user's logout time in the UserActivityLog
             session_key = request.session.session_key
             try:
-                activity_log = UserActivityLog.objects.filter(user=request.user, session_key=session_key).latest('last_login_time')
+                activity_log = UserActivityLog.objects.filter(user=request.user,session_key=session_key).latest('last_login_time')
                 activity_log.mark_logout()
             except UserActivityLog.DoesNotExist:
                 pass  # If no login entry exists, skip silently
@@ -349,8 +349,8 @@ class UserManagementView(APIView):
         serializer = NewUserCreateSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
-            user.set_password(password)  # Hash the password
-            user.save()  # Save the user with the hashed password
+            user.set_password(password)  
+            user.save() 
             
             # Send the password via email
             print("password---",password)
@@ -453,17 +453,20 @@ class PendingKYCListView(APIView):# Get all pending KYC requests
     permission_classes = [permissions.IsAuthenticated,IsAdminRole] 
     pagination_class = None
     def get(self, request, *args, **kwargs):
-        pending_kycs = KYC.objects.filter(is_verified=False)
+        pending_kycs = KYC.objects.all()
         if pending_kycs.exists():
+        #     paginator = CustomPageNumberPagination()
+        #     result_page = paginator.paginate_queryset(pending_kycs, request)
+        #     serializer = KYCSerializer(result_page, many=True)
             serializer = KYCSerializer(pending_kycs, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
+            #  return paginator.get_paginated_response(serializer.data)
         else:
             return Response({"message": "No pending KYC requests"}, status=status.HTTP_200_OK)
 
 #kyc verification by admin
 class KYCVerificationView(APIView):
-    # permission_classes = [permissions.IsAuthenticated,IsAdminRole]  # Only admins can access KYC requests
-
+    permission_classes = [permissions.IsAuthenticated,IsAdminRole]  # Only admins can access KYC requests
     def post(self, request, kyc_id, *args, **kwargs):
         try:
             kyc = KYC.objects.get(id=kyc_id)
@@ -715,7 +718,7 @@ class OrderLogListView(APIView):
             "data": serializer.data
         }, status=status.HTTP_200_OK)
 
-
+#store sssion logs last login
 @receiver(user_logged_in)
 def log_user_login(sender, request, user, **kwargs):
     pagination_class = None
@@ -727,23 +730,21 @@ def log_user_login(sender, request, user, **kwargs):
         ip_address=ip_address,
         session_key=session_key
     )
-
+#last logout time
 @receiver(user_logged_out)
 def log_user_logout(sender, request, user, **kwargs):
     pagination_class = None
     session_key = request.session.session_key
     try:
-        # Find the most recent login record for the current session
         activity_log = UserActivityLog.objects.filter(user=user, session_key=session_key).latest('last_login_time')
         activity_log.mark_logout()
     except UserActivityLog.DoesNotExist:
-        pass  # In case no log entry is found, skip silently
+        pass  
 class UserActivityLogListView(ListAPIView):
     pagination_class = None
     queryset = UserActivityLog.objects.all()
     serializer_class = UserActivityLogSerializer
     permission_classes = [IsAuthenticated]  # Change if you want different permissions
-    pagination_class = None
     def get_queryset(self):
         user = self.request.user
         return UserActivityLog.objects.filter(user=user)  # Optional: filter logs by logged-in user    
@@ -757,18 +758,16 @@ class UserActivityLogListView(ListAPIView):
         # Return activity logs for the logged-in user
         return UserActivityLog.objects.filter(user=self.request.user).order_by('-last_login_time')
 
-
+#last login api
 class LastLoginActivityView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
         try:
-            # Get the most recent login activity for the logged-in user
             last_login_activity = UserActivityLog.objects.filter(
                 user=request.user, action_type='login'
             ).latest('last_login_time')
 
-            # Prepare the response data
             response_data = {
                 'last_login_time': last_login_activity.last_login_time,
                 'last_ip': last_login_activity.ip_address,
@@ -779,3 +778,300 @@ class LastLoginActivityView(APIView):
             return Response(response_data)
         except UserActivityLog.DoesNotExist:
             return Response({"error": "No login activity found."}, status=404)
+#get all city names
+class Get_city_data(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request, *args, **kwargs): 
+        try:
+            city = cities.objects.all()[:10]
+            serializer = CitesSerializer(city, many=True)
+        except cities.DoesNotExist:
+            return Response({"error": "city not found."}, status=404)   
+        return Response({
+            "status": "success",
+            "data": serializer.data
+        }, status=status.HTTP_200_OK)
+#search city name
+class CitySearchView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        query = request.GET.get('city', '')  
+        if query:
+            city = cities.objects.filter(name__icontains=query)
+            serializer = CitesSerializer(city, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response([], status=status.HTTP_200_OK)
+#get all states name
+class GetStatesView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self,request):
+        try:
+            state=State.objects.all()    
+            ser=StatesSerializers(state,many=True)
+        except State.DoesNotExist:
+            return Response({"error": "state not found."}, status=404)  
+        return Response({
+            "status":"sucess",
+            "data":ser.data }, status=status.HTTP_200_OK)
+class SearchStatesView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        query = request.GET.get('state', '')  
+        if query:
+            city = State.objects.filter(name__icontains=query)
+            serializer = StatesSerializers(city, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response([], status=status.HTTP_200_OK)      
+class SegmentAPIView(APIView):
+    # permission_classes = [IsAuthenticated]
+    
+    # def get(self, request, *args, **kwargs):
+    #     try:
+    #         segments = Segment.objects.all()
+    #         serializer = SegmentSerializer(segments, many=True)
+    #     except Segment.DoesNotExist:
+    #         return Response({"error": "Segments not found."}, status=404)
+        
+    #     return Response(serializer.data, status=status.HTTP_200_OK)
+    def get(self, request, *args, **kwargs):
+        segments = Segment.objects.all().order_by('-id')
+        paginator = CustomPageNumberPagination()
+        result_page = paginator.paginate_queryset(segments, request)
+        serializer = SegmentSerializer(result_page, many=True)
+        return paginator.get_paginated_response(serializer.data)
+    
+    def post(self, request, *args, **kwargs):
+        serializer = SegmentSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def put(self, request, *args, **kwargs):
+        try:
+            segment = Segment.objects.get(pk=kwargs.get('pk'))
+        except Segment.DoesNotExist:
+            return Response({"detail": "Segment not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = SegmentSerializer(segment, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            messages.success(request, 'Segment updated successfully.')
+            return Response({"msg": "Segment updated successfully.", 'data': serializer.data}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, *args, **kwargs):
+        try:
+            segment = Segment.objects.get(pk=kwargs.get('pk'))
+            segment.delete()
+            return Response({"msg": "Segment deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
+        except Segment.DoesNotExist:
+            return Response({"detail": "Segment not found."}, status=status.HTTP_404_NOT_FOUND)
+
+class CategoryAPIView(APIView):
+    # permission_classes = [IsAuthenticated]
+
+    # def get(self, request, *args, **kwargs):
+    #     try:
+    #         category_list = categories.objects.all()
+    #         serializer = CategorySerializer(category_list, many=True)
+    #     except categories.DoesNotExist:
+    #         return Response({"error": "Categories not found."}, status=404)
+        
+    #     return Response(serializer.data, status=status.HTTP_200_OK)
+    def get(self, request, *args, **kwargs):
+        category_list = categories.objects.all()
+        paginator = CustomPageNumberPagination()
+        result_page = paginator.paginate_queryset(category_list, request)
+        serializer = CategorySerializer(result_page, many=True)
+        
+        return paginator.get_paginated_response(serializer.data)
+    def post(self, request, *args, **kwargs):
+        serializer = CategorySerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def put(self, request, *args, **kwargs):
+        try:
+            category = categories.objects.get(pk=kwargs.get('pk'))
+        except categories.DoesNotExist:
+            return Response({"detail": "Category not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = CategorySerializer(category, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            messages.success(request, 'Category updated successfully.')
+            return Response({"msg": "Category updated successfully.", 'data': serializer.data}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, *args, **kwargs):
+        try:
+            category = categories.objects.get(pk=kwargs.get('pk'))
+            category.delete()
+            return Response({"msg": "Category deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
+        except categories.DoesNotExist:
+            return Response({"detail": "Category not found."}, status=status.HTTP_404_NOT_FOUND)
+
+
+class LicenseAPIView(APIView):
+    # permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        try:
+            license_list = License.objects.all()
+            paginator = CustomPageNumberPagination()
+            result_page = paginator.paginate_queryset(license_list, request)
+            serializer = LicenseSerializer(result_page, many=True)
+            return paginator.get_paginated_response(serializer.data)
+        except License.DoesNotExist:
+            return Response({"error": "Licenses not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    def post(self, request, *args, **kwargs):
+        serializer = LicenseSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def put(self, request, *args, **kwargs):
+        try:
+            license_obj = License.objects.get(pk=kwargs.get('pk'))
+        except License.DoesNotExist:
+            return Response({"detail": "License not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = LicenseSerializer(license_obj, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"msg": "License updated successfully.", "data": serializer.data}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, *args, **kwargs):
+        try:
+            license_obj = License.objects.get(pk=kwargs.get('pk'))
+            license_obj.delete()
+            return Response({"msg": "License deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
+        except License.DoesNotExist:
+            return Response({"detail": "License not found."}, status=status.HTTP_404_NOT_FOUND)
+
+class ServiceAPIView(APIView):
+    # def get(self, request, *args, **kwargs):
+    #     services = Services.objects.all()
+    #     serializer = ServiceSerializer(services, many=True)
+    #     return Response(serializer.data, status=status.HTTP_200_OK)
+    def get(self, request, *args, **kwargs):
+        services = Services.objects.all()
+        paginator = CustomPageNumberPagination()  
+        result_page = paginator.paginate_queryset(services, request)  
+        serializer = ServiceSerializer(result_page, many=True)  
+        return paginator.get_paginated_response(serializer.data)  
+    
+    def post(self, request, *args, **kwargs):
+        serializer = ServiceSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"detail": "Service created successfully.", "data": serializer.data}, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def put(self, request, *args, **kwargs):
+        try:
+            service = Services.objects.get(pk=kwargs.get('pk'))
+        except Services.DoesNotExist:
+            return Response({"detail": "Service not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = ServiceSerializer(service, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"detail": "Service updated successfully.", "data": serializer.data}, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+    def delete(self, request, *args, **kwargs):
+        try:
+            service = Services.objects.get(pk=kwargs.get('pk'))
+            service.delete()
+            return Response({"msg": "Services deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
+        except Services.DoesNotExist:
+            return Response({"detail": "Services not found."}, status=status.HTTP_404_NOT_FOUND)
+
+class GroupServiceView(APIView):
+    # permission_classes = [IsAuthenticated]
+    def get(self, request,*args,**kwrgs):
+        try:
+            group_ser = GroupService.objects.all()
+            paginator = CustomPageNumberPagination()
+            result_page = paginator.paginate_queryset(group_ser, request)
+            serializer = GroupServiceSerializer(result_page, many=True)
+        except GroupService.DoesNotExist:
+            return Response({"error": "GroupService not found."}, status=404)   
+        return paginator.get_paginated_response(serializer.data)
+    
+    def post(self, request, *args, **kwargs):
+        serializer = GroupServiceSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        else:
+            # Print errors to debug
+            print(serializer.errors)  
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def put(self, request, *args, **kwargs):
+        try:
+            group_service = GroupService.objects.get(pk=kwargs.get('pk'))
+        except GroupService.DoesNotExist:
+            return Response({"detail": "GroupService not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = GroupServiceSerializer(group_service, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"msg": "GroupService updated successfully.", 'data': serializer.data}, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    def delete(self, request, *args, **kwargs):
+        try:
+            service = GroupService.objects.get(pk=kwargs.get('pk'))
+            service.delete()
+            return Response({"msg": "GroupService deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
+        except GroupService.DoesNotExist:
+            return Response({"detail": "GroupService not found."}, status=status.HTTP_404_NOT_FOUND)
+
+class StrategyAPIView(APIView):
+    def get(self, request, *args, **kwargs):
+        strategies = Strategies.objects.all()
+        paginator = CustomPageNumberPagination()
+        result_page = paginator.paginate_queryset(strategies, request)
+        serializer = StrategySerializer(result_page, many=True)
+        return paginator.get_paginated_response(serializer.data)
+
+    def post(self, request, *args, **kwargs):
+        serializer = StrategySerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"detail": "Strategy created successfully.", "data": serializer.data}, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def put(self, request, *args, **kwargs):
+        try:
+            strategy = Strategies.objects.get(pk=kwargs.get('pk'))
+        except Strategies.DoesNotExist:
+            return Response({"detail": "Strategy not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = StrategySerializer(strategy, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"detail": "Strategy updated successfully.", "data": serializer.data}, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, *args, **kwargs):
+        try:
+            strategy = Strategies.objects.get(pk=kwargs.get('pk'))
+            strategy.delete()
+            return Response({"msg": "Strategy deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
+        except Strategies.DoesNotExist:
+            return Response({"detail": "Strategy not found."}, status=status.HTTP_404_NOT_FOUND)
+        
+        

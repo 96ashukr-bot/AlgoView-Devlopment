@@ -189,10 +189,9 @@ class CustomLoginSerializer(serializers.Serializer):
         email = data.get('email')
         password = data.get('password')
         user = authenticate(email=email, password=password)
-        
         if user is None:
             raise serializers.ValidationError('Invalid credentials')
-        if not user.role and user.external_user == "true" or user.role.name.lower() == 'client' :
+        if not user.role and user.external_user == "true" or user.role.name.lower() == 'client' or user.role.name == 'Client' :
                 otp_instance, created = OTP.objects.get_or_create(user=user, is_verified=False)
                 otp_instance.generate_otp()
 
@@ -421,7 +420,13 @@ class UserProfileRetrieveSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['email', 'firstName', 'lastName','middleName', 'phoneNumber', 'profilePicture', 'PANEL_CLIENT_KEY', 
-                  'start_date', 'end_date', 'client_type', 'Address_line1','Address_line2','City','State','Country','Zip_code','Permanent_address','Current_address' ,'role','is_enable']
+                  'start_date', 'end_date', 'client_type' ,
+            # Permanent Address Fields
+            'permanent_add_line_1', 'permanent_add_line_2', 'permanent_city', 
+            'permanent_state', 'permanent_country', 'permanent_zip_code',
+            # Current Address Fields
+            'current_add_line_1', 'current_add_line_2', 'current_city', 
+            'current_state', 'current_country', 'current_zip_code','role','is_enable',]
 
     def get_role(self, obj):
         if obj.role:
@@ -436,7 +441,13 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['email','firstName', 'lastName', 'fullName', 'middleName','phoneNumber', 'profilePicture', 'PANEL_CLIENT_KEY', 'start_date', 'end_date', 'client_type','is_enable','Address_line1','Address_line2','City','State','Country','Zip_code','Permanent_address','Current_address' ]
+        fields = ['email','firstName', 'lastName', 'fullName', 'middleName','phoneNumber', 'profilePicture', 'PANEL_CLIENT_KEY', 'start_date', 'end_date', 'client_type','is_enable',
+            # Permanent Address Fields
+            'permanent_add_line_1', 'permanent_add_line_2', 'permanent_city', 
+            'permanent_state', 'permanent_country', 'permanent_zip_code',
+            # Current Address Fields
+            'current_add_line_1', 'current_add_line_2', 'current_city', 
+            'current_state', 'current_country', 'current_zip_code',]
 
     def update(self, instance, validated_data):
         # Update first_name and last_name
@@ -453,14 +464,21 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
         instance.client_type = validated_data.get('client_type', instance.client_type)
         instance.is_enable=validated_data.get('is_enable',instance.is_enable)
         instance.middleName=validated_data.get('middleName',instance.middleName)
-        instance.Address_line1=validated_data.get('Address_line1',instance.Address_line1)
-        instance.Address_line2=validated_data.get('Address_line2',instance.Address_line2)
-        instance.City = validated_data.get('City', instance.City)
-        instance.State = validated_data.get('State', instance.State)
-        instance.Zip_code = validated_data.get('Zip_code', instance.Zip_code)
-        instance.Permanent_address = validated_data.get('Permanent_address', instance.Permanent_address)
-        instance.Current_address = validated_data.get('Current_address', instance.Current_address)
-    
+        # Update the address fields with new names
+        instance.permanent_add_line_1 = validated_data.get('permanent_add_line_1', instance.permanent_add_line_1)
+        instance.permanent_add_line_2 = validated_data.get('permanent_add_line_2', instance.permanent_add_line_2)
+        instance.permanent_city = validated_data.get('permanent_city', instance.permanent_city)
+        instance.permanent_state = validated_data.get('permanent_state', instance.permanent_state)
+        instance.permanent_country = validated_data.get('permanent_country', instance.permanent_country)
+        instance.permanent_zip_code = validated_data.get('permanent_zip_code', instance.permanent_zip_code)
+
+        instance.current_add_line_1 = validated_data.get('current_add_line_1', instance.current_add_line_1)
+        instance.current_add_line_2 = validated_data.get('current_add_line_2', instance.current_add_line_2)
+        instance.current_city = validated_data.get('current_city', instance.current_city)
+        instance.current_state = validated_data.get('current_state', instance.current_state)
+        instance.current_country = validated_data.get('current_country', instance.current_country)
+        instance.current_zip_code = validated_data.get('current_zip_code', instance.current_zip_code)
+
         # Save the updated instance
         instance.save()
         
@@ -470,7 +488,13 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'email', 'firstName', 'lastName', 'middleName','phoneNumber','Address_line1','Address_line2','City','State','Country','Zip_code','Permanent_address','Current_address' ,'role']
+        fields = ['id', 'email', 'firstName', 'lastName', 'middleName','phoneNumber',   
+            # Permanent Address Fields
+            'permanent_add_line_1', 'permanent_add_line_2', 'permanent_city', 
+            'permanent_state', 'permanent_country', 'permanent_zip_code',
+            # Current Address Fields
+            'current_add_line_1', 'current_add_line_2', 'current_city', 
+            'current_state', 'current_country', 'current_zip_code','role']
 class NewUserCreateSerializer(serializers.ModelSerializer):
     role = serializers.PrimaryKeyRelatedField(queryset=Role.objects.all())  # Accepts role ID directly
     class Meta:
@@ -567,3 +591,66 @@ class UserActivityLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserActivityLog
         fields = ['id', 'user', 'last_login_time', 'ip_address', 'session_key']  # Adjust fields as necessary        
+        
+class CitesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model=cities
+        fields=['id','name','state_id','state_code']        
+        
+class StatesSerializers(serializers.ModelSerializer):
+    class Meta:
+        model=State
+        fields =['id','name','country_id','country_code','state_code']
+    
+class LicenseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = License
+        fields = '__all__'
+
+class SegmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Segment
+        fields = ['id', 'name', 'short_name','status']
+        
+class CategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = categories
+        fields = ['id', 'name', 'status']  # Add other fields if necessary
+class ServiceSerializerss(serializers.ModelSerializer):  
+    class Meta:
+        model = Services
+        fields = '__all__'
+
+class ServiceSerializer(serializers.ModelSerializer):
+    segment = serializers.PrimaryKeyRelatedField(queryset=Segment.objects.all())
+    category = serializers.PrimaryKeyRelatedField(queryset=categories.objects.all())
+
+    class Meta:
+        model = Services
+        fields = ['id', 'service_name', 'created_at', 'updated_at', 'status', 'segment', 'category']
+
+    def to_representation(self, instance):
+        """Customize the output of the serializer to include nested segment and category data."""
+        representation = super().to_representation(instance)
+        representation['segment'] = SegmentSerializer(instance.segment).data
+        representation['category'] = CategorySerializer(instance.category).data
+        return representation           
+class GroupServiceSerializer(serializers.ModelSerializer):
+    segment = serializers.PrimaryKeyRelatedField(queryset=Segment.objects.all())
+
+    class Meta:
+        model = GroupService  
+        fields = ['id', 'group_name', 'json_data', 'segment']     
+
+    def validate_group_name(self, value):
+        if GroupService.objects.filter(group_name=value).exists():
+            raise serializers.ValidationError("This group name already exists.")
+        return value
+class StrategySerializer(serializers.ModelSerializer):
+    category = serializers.PrimaryKeyRelatedField(queryset=categories.objects.all())
+    segment = serializers.PrimaryKeyRelatedField(queryset=Segment.objects.all())  # Ensure you have a queryset for segment
+
+
+    class Meta:
+        model = Strategies
+        fields = '__all__'

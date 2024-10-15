@@ -12,8 +12,14 @@ class UserAdmin(admin.ModelAdmin):
 
     fieldsets = (
         (None, {'fields': ('email', 'password')}),
-        ('Personal info', {'fields': ('firstName', 'lastName','phoneNumber', 'profilePicture', 'role',  'PANEL_CLIENT_KEY', 'start_date', 'end_date', 'client_type', 'is_password_temporary', 'is_new_password'
-         ,'middleName', 'Address_line1','Address_line2','City','State','Country','Zip_code','Permanent_address','Current_address','external_user' )}),
+        ('Personal info', {'fields': ('firstName', 'lastName','phoneNumber','middleName', 'profilePicture', 'role',  'PANEL_CLIENT_KEY', 'start_date', 'end_date', 'client_type', 'is_password_temporary', 'is_new_password'
+            , 
+            # Permanent Address Fields
+            'permanent_add_line_1', 'permanent_add_line_2', 'permanent_city', 
+            'permanent_state', 'permanent_country', 'permanent_zip_code',
+            # Current Address Fields
+            'current_add_line_1', 'current_add_line_2', 'current_city',
+            'current_state', 'current_country', 'current_zip_code','external_user' )}),
         ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser')}),
         # ('Metadata', {'fields': ('created_at', 'updated_at')}),  # Add 'created_at' and 'updated_at' here
     )
@@ -56,4 +62,38 @@ class OtpAdmin(admin.ModelAdmin):
 @admin.register(UserActivityLog)
 class UserActivity_logs(admin.ModelAdmin):
     list_display = ['user','action_type','last_login_time']
-       
+@admin.register(GroupService)
+class GroupServicelogs(admin.ModelAdmin):
+    list_display = ['group_name']       
+    
+@admin.register(State)
+class StatesAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name', 'country_id', 'country_code', 'state_code')  # Fields to display in the list view
+    search_fields = ('name', 'country_code')  # Fields to search in the admin interface
+    ordering = ('name',)  # Default ordering
+@admin.register(cities)
+class CityAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name', 'state_id', 'state_code',)  # Fields to display in the list view
+    search_fields = ('name',)  # Fields to search in the admin interface
+    list_filter = ('state_id',)  # Allows filtering by state    
+    
+@admin.register(Segment)
+class SegmentAdmin(admin.ModelAdmin):
+    list_display=('id','name')  
+
+@admin.register(License)
+class LiecensAdmin(admin.ModelAdmin):
+    list_display=('id','name',"no_of_days_month",'created_at','updated_at')          
+
+@admin.register(Strategies)
+class StrategyAdmin(admin.ModelAdmin):
+    list_display=('id','name')      
+@admin.register(Broker)
+class BrokerAdmin(admin.ModelAdmin):
+    list_display=('id','broker_name','is_active')    
+@admin.register(Services)
+class ServicesAdmin(admin.ModelAdmin):
+    list_display=('id','service_name')   
+@admin.register(categories)
+class categoriesAdmin(admin.ModelAdmin):
+    list_display=('id','name')       

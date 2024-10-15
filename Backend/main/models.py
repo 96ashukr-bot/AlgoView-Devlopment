@@ -69,15 +69,23 @@ class User(AbstractBaseUser, PermissionsMixin):
     end_date = models.DateField(null=True, blank=True)
     client_type = models.CharField(max_length=50, blank=True, null=True) 
     is_enable = models.BooleanField(default=False)
-    # New address-related fields
-    Address_line1 = models.CharField(max_length=255, null=True, blank=True)
-    Address_line2 = models.CharField(max_length=255, null=True, blank=True)
-    City = models.CharField(max_length=100, null=True, blank=True)
-    State=models.CharField(max_length=50,null=True,blank=True)
-    Country = models.CharField(max_length=20, null=True, blank=True)
-    Zip_code = models.CharField(max_length=20, null=True, blank=True)
-    Permanent_address = models.TextField(null=True, blank=True)
-    Current_address = models.TextField(null=True, blank=True)
+
+    # Permanent Address Fields
+    permanent_add_line_1 = models.CharField(max_length=255, null=True, blank=True)
+    permanent_add_line_2 = models.CharField(max_length=255, null=True, blank=True)
+    permanent_city = models.CharField(max_length=100, null=True, blank=True)
+    permanent_state = models.CharField(max_length=50, null=True, blank=True)
+    permanent_country = models.CharField(max_length=20, null=True, blank=True)
+    permanent_zip_code = models.CharField(max_length=20, null=True, blank=True)
+    
+    # Current Address Fields
+    current_add_line_1 = models.CharField(max_length=255, null=True, blank=True)
+    current_add_line_2 = models.CharField(max_length=255, null=True, blank=True)
+    current_city = models.CharField(max_length=100, null=True, blank=True)
+    current_state = models.CharField(max_length=50, null=True, blank=True)
+    current_country = models.CharField(max_length=20, null=True, blank=True)
+    current_zip_code = models.CharField(max_length=20, null=True, blank=True)
+
     external_user = models.CharField(max_length=50, null=True, blank=True)
     objects = UserManager()
     USERNAME_FIELD = 'email'
@@ -105,7 +113,7 @@ class KYC(models.Model):
         ('approved', 'Approved'),
         ('rejected', 'Rejected'),
     ]
-    user = models.ForeignKey(User, on_delete=models.CASCADE,blank=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE,blank=True, null=True)
     id_proof = models.CharField(max_length=50)
     document_file_front = models.FileField(upload_to='kyc_documents/front/', blank=True)
     document_file_back = models.FileField(upload_to='kyc_documents/back/', blank=True)
@@ -193,20 +201,99 @@ class UserActivityLog(models.Model):
         """ Marks logout time when the user logs out """
         self.logout_time = timezone.now()
         self.save()        
-# class TradeLog(models.Model):
-#     data_type = models.CharField(max_length=20)  # e.g., option or future
-#     alert_key = models.CharField(max_length=50)  # Unique alert key
-#     action = models.CharField(max_length=10)     # buy or sell
-#     symbol = models.CharField(max_length=20)     # e.g., NIFTY
-#     expiry = models.DateField()                  # Expiry date for the option
-#     strike_price = models.FloatField()           # Strike price of the option
-#     option_type = models.CharField(max_length=5) # CE (Call) or PE (Put)
-#     lot = models.IntegerField()                  # Number of lots
-#     order_type = models.CharField(max_length=20) # e.g., MARKET or LIMIT
-#     product_type = models.CharField(max_length=20)  # e.g., NRML
-#     strategy_tag = models.CharField(max_length=50)  # Tag for the strategy
-#     created_at = models.DateTimeField(auto_now_add=True)
 
-#     def __str__(self):
-#         return f"{self.action} {self.symbol} {self.expiry} {self.strike_price} {self.option_type}"
+class State(models.Model):
+    id = models.AutoField(primary_key=True) 
+    name = models.CharField(max_length=255) 
+    country_id = models.IntegerField()
+    country_code = models.TextField(null=True, blank=True)
+    state_code = models.TextField(null=True, blank=True)
+
+    def __str__(self):
+        return self.name 
+class cities(models.Model):
+    name = models.CharField(max_length=150)
+    state_id = models.ForeignKey( State,related_name='cities', on_delete=models.CASCADE)
+    state_code = models.TextField(null=True, blank=True)
+
+
+    def __str__(self):
+        return self.name
+    
+class License(models.Model):
+    name=models.CharField(max_length=255,null=True)    
+    no_of_days_month=models.IntegerField(blank=True,null=True)
+    period=models.CharField(max_length=255,null=True) 
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    status = models.BooleanField(default=True)
+    def __str__(self):
+        return self.name
+class categories(models.Model):
+    name=models.CharField(max_length=255,null=True)    
+    status = models.BooleanField(default=True)
+    def __str__(self):
+        return self.name    
+class Segment(models.Model):
+    name = models.CharField(max_length=150,)
+    short_name = models.CharField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    status = models.BooleanField(default=True)
+    def __str__(self):
+        return self.name    
+class Services(models.Model):
+    service_name = models.CharField(max_length=100)
+    segment = models.ForeignKey(Segment, on_delete=models.CASCADE, related_name='service_segments',blank=True)
+    category= models.ForeignKey(categories, on_delete=models.CASCADE,related_name='services_categories',blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    status = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.service_name
+class Strategies(models.Model):
+    name = models.CharField(max_length=150)
+    Lots=models.IntegerField(blank=True,null=True)
+    segment = models.ForeignKey(Segment, on_delete=models.CASCADE, related_name='strategy_segments',blank=True,null=False)
+    category= models.ForeignKey(categories, on_delete=models.CASCADE,related_name='strategy_categories', blank=False, null=False)
+    description = models.TextField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    is_submit= models.BooleanField(default=True)
+    Indicator=models.ImageField(upload_to='strategy/Indicator', null=True, blank=True)
+    Strategy_Tester=models.ImageField(upload_to='strategy/Strategy_Tester', null=True, blank=True)
+    Strategy_Logo=models.ImageField(upload_to='strategy/Strategy_Logo', null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    status = models.BooleanField(default=True)
+    
+    # Pricing Options
+    monthly_amount = models.DecimalField(max_digits=50, decimal_places=2, null=True, blank=True)
+    quarterly_amount = models.DecimalField(max_digits=50, decimal_places=2, null=True, blank=True)
+    half_yearly_amount = models.DecimalField(max_digits=50, decimal_places=2, null=True, blank=True)
+    yearly_amount = models.DecimalField(max_digits=50, decimal_places=2, null=True, blank=True)
+
+    def __str__(self):
+        return self.name
+class GroupService(models.Model):
+    group_name = models.CharField(max_length=100)
+    segment = models.ForeignKey(Segment, on_delete=models.CASCADE, related_name='group_Segments',blank=True)
+    # description = models.TextField(null=True, blank=True)
+    json_data = models.JSONField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    status = models.BooleanField(default=True)
+    def __str__(self):
+        return self.group_name    
+class Broker(models.Model):
+    broker_name = models.CharField(max_length=150)
+    is_active = models.BooleanField(default=True)
+    description = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.broker_name
+
+
     
