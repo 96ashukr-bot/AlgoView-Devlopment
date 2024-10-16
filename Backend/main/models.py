@@ -235,8 +235,8 @@ class categories(models.Model):
     def __str__(self):
         return self.name    
 class Segment(models.Model):
-    name = models.CharField(max_length=150,)
-    short_name = models.CharField(null=True, blank=True)
+    name = models.CharField(max_length=150)
+    short_name = models.CharField(null=True, blank=True,max_length=150)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     status = models.BooleanField(default=True)

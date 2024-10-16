@@ -646,6 +646,12 @@ class GroupServiceSerializer(serializers.ModelSerializer):
         if GroupService.objects.filter(group_name=value).exists():
             raise serializers.ValidationError("This group name already exists.")
         return value
+class GroupServiceUpdateSerializer(serializers.ModelSerializer):
+    segment = serializers.PrimaryKeyRelatedField(queryset=Segment.objects.all())
+
+    class Meta:
+        model = GroupService  
+        fields = ['id', 'group_name', 'json_data', 'segment']        
 class StrategySerializer(serializers.ModelSerializer):
     category = serializers.PrimaryKeyRelatedField(queryset=categories.objects.all())
     segment = serializers.PrimaryKeyRelatedField(queryset=Segment.objects.all())  # Ensure you have a queryset for segment

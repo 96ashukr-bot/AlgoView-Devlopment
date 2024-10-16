@@ -823,7 +823,7 @@ class SearchStatesView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response([], status=status.HTTP_200_OK)      
 class SegmentAPIView(APIView):
-    # permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
     
     # def get(self, request, *args, **kwargs):
     #     try:
@@ -869,7 +869,7 @@ class SegmentAPIView(APIView):
             return Response({"detail": "Segment not found."}, status=status.HTTP_404_NOT_FOUND)
 
 class CategoryAPIView(APIView):
-    # permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
 
     # def get(self, request, *args, **kwargs):
     #     try:
@@ -916,7 +916,7 @@ class CategoryAPIView(APIView):
 
 
 class LicenseAPIView(APIView):
-    # permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
         try:
@@ -956,6 +956,7 @@ class LicenseAPIView(APIView):
             return Response({"detail": "License not found."}, status=status.HTTP_404_NOT_FOUND)
 
 class ServiceAPIView(APIView):
+    permission_classes = [IsAuthenticated]
     # def get(self, request, *args, **kwargs):
     #     services = Services.objects.all()
     #     serializer = ServiceSerializer(services, many=True)
@@ -997,7 +998,7 @@ class ServiceAPIView(APIView):
             return Response({"detail": "Services not found."}, status=status.HTTP_404_NOT_FOUND)
 
 class GroupServiceView(APIView):
-    # permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
     def get(self, request,*args,**kwrgs):
         try:
             group_ser = GroupService.objects.all()
@@ -1024,7 +1025,7 @@ class GroupServiceView(APIView):
         except GroupService.DoesNotExist:
             return Response({"detail": "GroupService not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        serializer = GroupServiceSerializer(group_service, data=request.data, partial=True)
+        serializer = GroupServiceUpdateSerializer(group_service, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response({"msg": "GroupService updated successfully.", 'data': serializer.data}, status=status.HTTP_200_OK)
