@@ -636,27 +636,40 @@ class ServiceSerializer(serializers.ModelSerializer):
         representation['category'] = CategorySerializer(instance.category).data
         return representation           
 class GroupServiceSerializer(serializers.ModelSerializer):
+    segment = SegmentSerializer()  
+    class Meta:
+        model = GroupService
+        fields = ['id', 'group_name', 'json_data', 'segment']     
+class CreateGroupServiceSerializer(serializers.ModelSerializer):
     segment = serializers.PrimaryKeyRelatedField(queryset=Segment.objects.all())
 
     class Meta:
         model = GroupService  
-        fields = ['id', 'group_name', 'json_data', 'segment']     
-
-    def validate_group_name(self, value):
-        if GroupService.objects.filter(group_name=value).exists():
-            raise serializers.ValidationError("This group name already exists.")
-        return value
+        fields = ['id', 'group_name', 'json_data', 'segment']
+    # def validate_group_name(self, value):
+    #     if GroupService.objects.filter(group_name=value).exists():
+    #         raise serializers.ValidationError("This group name already exists.")
+    #     return value    
 class GroupServiceUpdateSerializer(serializers.ModelSerializer):
     segment = serializers.PrimaryKeyRelatedField(queryset=Segment.objects.all())
-
     class Meta:
         model = GroupService  
         fields = ['id', 'group_name', 'json_data', 'segment']        
 class StrategySerializer(serializers.ModelSerializer):
     category = serializers.PrimaryKeyRelatedField(queryset=categories.objects.all())
     segment = serializers.PrimaryKeyRelatedField(queryset=Segment.objects.all())  # Ensure you have a queryset for segment
-
+    
+    # category = CategorySerializer()
+    # segment = SegmentSerializer()
+    class Meta:
+        model = Strategies
+        fields =['id','name','Lots','segment','category','description','Indicator','Strategy_Tester','Strategy_Logo','status']
+class GetStrategySerializer(serializers.ModelSerializer):
+    category = CategorySerializer()
+    segment = SegmentSerializer()
 
     class Meta:
         model = Strategies
         fields = '__all__'
+                
+        

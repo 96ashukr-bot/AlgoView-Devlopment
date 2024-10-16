@@ -268,16 +268,16 @@ class Strategies(models.Model):
     status = models.BooleanField(default=True)
     
     # Pricing Options
-    monthly_amount = models.DecimalField(max_digits=50, decimal_places=2, null=True, blank=True)
-    quarterly_amount = models.DecimalField(max_digits=50, decimal_places=2, null=True, blank=True)
-    half_yearly_amount = models.DecimalField(max_digits=50, decimal_places=2, null=True, blank=True)
-    yearly_amount = models.DecimalField(max_digits=50, decimal_places=2, null=True, blank=True)
+    monthly_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    quarterly_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    half_yearly_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    yearly_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
     def __str__(self):
         return self.name
 class GroupService(models.Model):
     group_name = models.CharField(max_length=100)
-    segment = models.ForeignKey(Segment, on_delete=models.CASCADE, related_name='group_Segments',blank=True)
+    segment = models.ForeignKey(Segment, on_delete=models.CASCADE, related_name='group_Segments',blank=True,null=True)
     # description = models.TextField(null=True, blank=True)
     json_data = models.JSONField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

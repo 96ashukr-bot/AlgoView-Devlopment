@@ -1010,10 +1010,11 @@ class GroupServiceView(APIView):
         return paginator.get_paginated_response(serializer.data)
     
     def post(self, request, *args, **kwargs):
-        serializer = GroupServiceSerializer(data=request.data)
+        serializer = GroupServiceUpdateSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            group_service=serializer.save()
+            group_service=GroupServiceSerializer(group_service)
+            return Response(group_service.data, status=status.HTTP_201_CREATED)
         else:
             # Print errors to debug
             print(serializer.errors)  
@@ -1027,8 +1028,9 @@ class GroupServiceView(APIView):
 
         serializer = GroupServiceUpdateSerializer(group_service, data=request.data, partial=True)
         if serializer.is_valid():
-            serializer.save()
-            return Response({"msg": "GroupService updated successfully.", 'data': serializer.data}, status=status.HTTP_200_OK)
+            group_services=serializer.save()
+            ser=GroupServiceSerializer(group_services)
+            return Response({"msg": "GroupService updated successfully.", 'data': ser.data}, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     def delete(self, request, *args, **kwargs):
@@ -1040,27 +1042,30 @@ class GroupServiceView(APIView):
             return Response({"detail": "GroupService not found."}, status=status.HTTP_404_NOT_FOUND)
 
 class StrategyAPIView(APIView):
+    permission_classes = [IsAuthenticated]
     def get(self, request, *args, **kwargs):
         strategies = Strategies.objects.all()
         paginator = CustomPageNumberPagination()
         result_page = paginator.paginate_queryset(strategies, request)
-        serializer = StrategySerializer(result_page, many=True)
+        serializer = GetStrategySerializer(result_page, many=True)
         return paginator.get_paginated_response(serializer.data)
 
     def post(self, request, *args, **kwargs):
         serializer = StrategySerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
-            return Response({"detail": "Strategy created successfully.", "data": serializer.data}, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            strategy_instance=serializer.save()
+             # Now use the saved instance to serialize the data
+            get_strategy_serializer = GetStrategySerializer(strategy_instance)
 
+            return Response({"detail": "Strategy created successfully.", "data": get_strategy_serializer.data}, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     def put(self, request, *args, **kwargs):
         try:
             strategy = Strategies.objects.get(pk=kwargs.get('pk'))
         except Strategies.DoesNotExist:
             return Response({"detail": "Strategy not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        serializer = StrategySerializer(strategy, data=request.data, partial=True)
+        serializer = GetStrategySerializer(strategy, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response({"detail": "Strategy updated successfully.", "data": serializer.data}, status=status.HTTP_200_OK)

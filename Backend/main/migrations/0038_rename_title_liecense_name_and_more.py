@@ -50,7 +50,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='groupservice',
             name='segment',
-            field=models.ForeignKey(blank=True, default=1, on_delete=django.db.models.deletion.CASCADE, related_name='group_Segments', to='main.segment'),
+            field=models.ForeignKey(blank=True, null=True,default=1, on_delete=django.db.models.deletion.CASCADE, related_name='group_Segments', to='main.segment'),
             preserve_default=False,
         ),
         migrations.AddField(
@@ -66,7 +66,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='segment',
             name='short_name',
-            field=models.CharField(blank=True, null=True),
+            field=models.CharField(blank=True,max_length=150, null=True),
         ),
         migrations.AddField(
             model_name='segment',
