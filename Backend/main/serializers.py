@@ -82,11 +82,11 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         # Generate a random password
         password = get_random_string(length=12)
-
+        role = Role.objects.get(name='Client')
         # Start an atomic transaction
         with transaction.atomic():
             # Create the user with the generated password
-            user = User.objects.create_user(**validated_data, password=password, external_user='true')
+            user = User.objects.create_user(**validated_data, password=password, external_user='true',role=role,type_of_user='is_client')
             
             # Try to send the password to the user's email
             try:
@@ -191,7 +191,7 @@ class CustomLoginSerializer(serializers.Serializer):
         user = authenticate(email=email, password=password)
         if user is None:
             raise serializers.ValidationError('Invalid credentials')
-        if not user.role and user.external_user == "true" or user.role.name.lower() == 'client' or user.role.name == 'Client' :
+        if not user.role and user.external_user == "true" or user.role.name.lower() == 'client' or user.role.name == 'Client'  :
                 otp_instance, created = OTP.objects.get_or_create(user=user, is_verified=False)
                 otp_instance.generate_otp()
 
@@ -226,11 +226,13 @@ class CustomLoginSerializer(serializers.Serializer):
                     last_login_time=timezone.now(),
                     ip_address=public_ip,  # Store the client's IP address
                     session_key=session_key)
-
+  
                 return {
                     'user_id': user.id,
+                    'type_of_user':user.type_of_user if user.type_of_user else None,
                     'message': message,
                     'email': user.email,
+                    'is_client':True,
                     'access': str(refresh.access_token),
                     'refresh': str(refresh),
                     'role': {
@@ -526,8 +528,10 @@ class NewUserCreateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({'email': 'A user with this email already exists.'})
 
         return data
+    
 
     def update(self, instance, validated_data):
+        print("update user.....")
         instance.email = validated_data.get('email', instance.email)
         instance.firstName = validated_data.get('firstName', instance.firstName)
         instance.lastName = validated_data.get('lastName', instance.lastName)
@@ -586,7 +590,7 @@ class RolePermissionSerializer(serializers.ModelSerializer):
 class OrderLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderLog
-        fields = ['signal_time', 'order_type', 'symbol', 'price', 'strategy', 'created_at','user','status','failure_reason']
+        fields = ['signal_time', 'order_type', 'symbol', 'json_data','price', 'strategy', 'created_at','user','status','failure_reason']
 class UserActivityLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserActivityLog
@@ -671,5 +675,104 @@ class GetStrategySerializer(serializers.ModelSerializer):
     class Meta:
         model = Strategies
         fields = '__all__'
-                
-        
+class GetBrokerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Broker
+        fields = '__all__'       
+class GetClientSerializer11(serializers.ModelSerializer):
+    Groupservices = GroupServiceSerializer()
+    license = LicenseSerializer()
+    role = RoleSerializer()
+    Broker=GetBrokerSerializer()
+    class Meta:
+        model = User
+        fields = ['id', 'email', 'firstName', 'lastName', 'role', 'role_id']
+
+        # fields  = ['id', 'firstName', 'lastName','phoneNumber', 'role','external_user','Groupservices','Broker','license','to_month']              
+class GetClientSerializer(serializers.ModelSerializer):
+    Group_service = GroupServiceSerializer()  # Make sure to match field names
+    license = LicenseSerializer()
+    role = RoleSerializer()
+    Broker = GetBrokerSerializer()  # Ensure GetBrokerSerializer is correctly defined
+
+    class Meta:
+        model = User
+        fields = ['id', 'email', 'firstName', 'lastName', 'phoneNumber', 'fullName', 'role',
+                  'is_active', 'PANEL_CLIENT_KEY', 'external_user','client_type',
+                  'Group_service', 'Broker', 'license', 'to_month']
+class NewClientCreateSerializer(serializers.ModelSerializer):
+    role = serializers.PrimaryKeyRelatedField(queryset=Role.objects.all())  # Accepts role ID directly
+    class Meta:
+        model = User
+        fields = ['id', 'email', 'firstName', 'lastName', 'phoneNumber', 'fullName', 'role',
+                  'is_active', 'PANEL_CLIENT_KEY', 'external_user',
+                  'Group_service', 'Broker', 'license', 'to_month']
+
+    def validate_phoneNumber(self, value):
+        # Check if the phone number is in a valid format
+        if not value.isdigit() or len(value) != 10:  # Example validation for a 10-digit number
+            raise serializers.ValidationError("Phone number must be a 10-digit number.")
+        return value
+
+    def validate(self, data):
+        phone_number = data.get('phoneNumber')
+        email = data.get('email')
+
+        # Determine if we are updating an existing user or creating a new one
+        if self.instance is not None:
+            # Update scenario: Exclude the current instance when checking for duplicates
+            if User.objects.exclude(id=self.instance.id).filter(phoneNumber=phone_number).exists():
+                raise serializers.ValidationError({'phoneNumber': 'A user with this phone number already exists.'})
+            if User.objects.exclude(id=self.instance.id).filter(email=email).exists():
+                raise serializers.ValidationError({'email': 'A user with this email already exists.'})
+        else:
+            # Create scenario: Check for duplicates including the new data
+            if User.objects.filter(phoneNumber=phone_number).exists():
+                raise serializers.ValidationError({'phoneNumber': 'A user with this phone number already exists.'})
+            if User.objects.filter(email=email).exists():
+                raise serializers.ValidationError({'email': 'A user with this email already exists.'})
+
+        return data
+    
+class ClientCreateSerializer(serializers.ModelSerializer):
+    assigned_client = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), required=False)
+    # Group_service = GroupServiceSerializer()  # Make sure to match field names
+    # license = LicenseSerializer()
+    # Broker = GetBrokerSerializer() 
+    class Meta:
+        model = User
+        fields = ['id','email', 'firstName', 'fullName', 'lastName', 'phoneNumber', 'PANEL_CLIENT_KEY', 'Group_service', 'Broker', 'license', 'to_month', 'created_by', 'assigned_client']
+
+    def create(self, validated_data):
+        # Extract assigned_client from the validated data
+        assigned_client = validated_data.pop('assigned_client', None)
+
+        # Create the client without assigned_client initially
+        client = User.objects.create(**validated_data)
+        client.type_of_user='is_client'
+        client.is_client=True
+        client.set_password(get_random_string(length=12))  # Generate random password
+        client.save()
+
+        # If assigned_client was provided, assign it
+        if assigned_client:
+            client.assigned_client = assigned_client
+            client.save()
+
+        return client
+class AssignedClientSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'email', 'firstName']
+
+
+class ClientListSerializer(serializers.ModelSerializer):
+    assigned_client = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), required=False)
+    # Group_service = GroupServiceSerializer()  # Make sure to match field names
+    # license = LicenseSerializer()
+    Broker = GetBrokerSerializer() 
+    class Meta:
+        model = User
+        fields = ['id','email', 'firstName', 'fullName', 'lastName', 'client_status','phoneNumber', 'PANEL_CLIENT_KEY', 'Broker', 'to_month', 'created_by', 'assigned_client']
+
+

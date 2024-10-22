@@ -78,6 +78,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     permanent_country = models.CharField(max_length=20, null=True, blank=True)
     permanent_zip_code = models.CharField(max_length=20, null=True, blank=True)
     
+    
     # Current Address Fields
     current_add_line_1 = models.CharField(max_length=255, null=True, blank=True)
     current_add_line_2 = models.CharField(max_length=255, null=True, blank=True)
@@ -87,12 +88,22 @@ class User(AbstractBaseUser, PermissionsMixin):
     current_zip_code = models.CharField(max_length=20, null=True, blank=True)
 
     external_user = models.CharField(max_length=50, null=True, blank=True)
+    Group_service = models.ForeignKey('GroupService', on_delete=models.CASCADE, related_name='group_Service',blank=True,null=True)
+    Broker=models.ForeignKey('Broker', on_delete=models.CASCADE, related_name='group_Broker',blank=True,null=True)
+    license=models.ForeignKey('License', on_delete=models.CASCADE, related_name='client_license',blank=True,null=True)
+    to_month=models.CharField(max_length=20, null=True, blank=True)
+    # Hierarchy tracking
+    created_by = models.ForeignKey('self', null=True, blank=True, on_delete=models.SET_NULL, related_name='created_users')    
+
+    # Clients associated with this user (single assignment)
+    assigned_client = models.ForeignKey('self', null=True, blank=True, on_delete=models.SET_NULL, related_name='assigned_users')
+    client_status   = models.BooleanField(default=True)
+    is_client       = models.CharField(max_length=50, null=True, blank=True)
+    # assigned_clients = models.ManyToManyField('self', symmetrical=False, related_name='assigned_users', blank=True)
+    type_of_user=models.CharField(max_length=255, blank=True, null=True)
     objects = UserManager()
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['firstName','lastName', 'phoneNumber']
-
-    def __str__(self):
-        return self.email
 
     def __str__(self):
         return self.email
@@ -168,19 +179,22 @@ class RolePermission(models.Model):
     def __str__(self):
         return f"{self.role.name} - Permissions" 
     
+#order-logs
 class OrderLog(models.Model):
     signal_time = models.DateTimeField()  # Time of the signal
-    order_type = models.CharField(max_length=10)  # 'LX' or 'LE' (Type)
-    symbol = models.CharField(max_length=100)  # Symbol (e.g., BANKNIFTY)
-    price = models.DecimalField(max_digits=10, decimal_places=2)  # Price
-    strategy = models.CharField(max_length=100)  # Strategy (e.g., Support & Resistance)
+    order_type = models.CharField(max_length=10,null=True, blank=True)  # 'LX' or 'LE' (Type)
+    symbol = models.CharField(max_length=100,null=True, blank=True)  # Symbol (e.g., BANKNIFTY)
+    price = models.DecimalField(max_digits=10, decimal_places=2,null=True, blank=True)  # Price
+    strategy = models.CharField(max_length=100,null=True, blank=True)  # Strategy (e.g., Support & Resistance)
     created_at = models.DateTimeField(auto_now_add=True)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE,null=True, blank=True)
     status = models.CharField(max_length=20, default="Pending")  # "Success", "Failed"
     failure_reason = models.TextField(null=True, blank=True)  # Reason for failure (optional)
+    json_data = models.JSONField(null=True, blank=True)
     def __str__(self):
         return f"{self.signal_time} - {self.order_type} - {self.symbol} - {self.price}"   
     
+#user last login ip activtity log
 class UserActivityLog(models.Model):
     ACTION_TYPES = (
         ('login', 'Login'),
@@ -279,6 +293,7 @@ class GroupService(models.Model):
     group_name = models.CharField(max_length=100)
     segment = models.ForeignKey(Segment, on_delete=models.CASCADE, related_name='group_Segments',blank=True,null=True)
     # description = models.TextField(null=True, blank=True)
+    # service_count=
     json_data = models.JSONField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

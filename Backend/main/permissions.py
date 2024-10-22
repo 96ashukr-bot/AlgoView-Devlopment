@@ -18,7 +18,7 @@ class IsAdminRole(permissions.BasePermission):
         return request.user.is_authenticated and request.user.role and request.user.role.name == 'Admin'
 
 class UpdateRolePermissionsView(APIView):
-    permission_classes = [permissions.IsAuthenticated, IsAdminRole]
+    permission_classes = [permissions.IsAuthenticated]
     def post(self, request, role_id):
         try:
             role = Role.objects.get(id=role_id)

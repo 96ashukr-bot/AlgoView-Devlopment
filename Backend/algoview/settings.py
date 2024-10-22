@@ -12,7 +12,8 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from decouple import config
 import os
 from pathlib import Path
-
+import logging
+import logging.config
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -203,3 +204,31 @@ CONTACT_NUM="+919988746583"
 LOGIN_LINK="http://103.120.178.54:4000/login"
 HELP_CENTER_LINK="http://103.120.178.54:4000"
 COMPANY_WEBSITE="http://103.120.178.54:4000" 
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {  # Logs to console (stdout, stderr)
+            'level': 'DEBUG',  # Minimum level to log
+            'class': 'logging.StreamHandler',
+        },
+        'file': {  # Logs to a file
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(BASE_DIR, 'logs/django.log'),  # Ensure this file exists and the directory is writable
+        },
+    },
+    'loggers': {
+        'django': {  # Logger for general Django logs
+            'handlers': ['console', 'file'],
+            'level': 'INFO',  # Change to 'DEBUG' if you want more verbose logs
+            'propagate': True,
+        },
+        'main': {  # Logger for your specific app
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG',  # Set this level for your app logs
+            'propagate': False,
+        },
+    },
+}
+
