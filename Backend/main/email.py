@@ -89,22 +89,5 @@ class EmailService:
 
         # Send the email
         email_message.send()
-        # # Send the email
-        # send_mail(
-        #     subject='Your Login OTP for AlgoView Technologies',
-        #     message=plain_message,  # Plain-text version
-        #     from_email = settings.DEFAULT_FROM_EMAIL,
-        #     recipient_list=[email],  # Recipient's email
-        #     html_message=html_message,  # HTML version
-        #     fail_silently=False,
-        # )
-        
-     
-
-        # # Prepare the email
-        # msg = EmailMultiAlternatives(subject, "", from_email, [email])
-        # msg.attach_alternative(html_content, "text/html")
-        
-        # # Send the email
-        # msg.send()
+  
 

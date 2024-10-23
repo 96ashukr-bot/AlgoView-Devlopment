@@ -357,7 +357,7 @@ class UserManagementView(APIView):
         serializer = NewUserCreateSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save(created_by=request.user) 
-            user.external_user = False
+            # user.external_user = False
             user.type_of_user='is_user'
             user.set_password(password)  
             user.save() 
@@ -1029,9 +1029,15 @@ class GroupServiceView(APIView):
 
             # Add `service_count` to each item in the serialized data
             for item in serialized_data:
-                json_data = item.get('json_data', [])
-                service_names = [entry.get('Service Name') for entry in json_data if isinstance(entry, dict)]
+                json_data = item.get('json_data', None)
+                
+                # If json_data is None, set it to an empty list
+                if json_data is None:
+                    json_data = []
+                service_names = [entry.get('ServiceName') for entry in json_data if isinstance(entry, dict)]
                 item['service_count'] = len(service_names)
+
+            # return paginator.get_paginated_response(serialized_data)
         except GroupService.DoesNotExist:
             logger.error("GroupService not found.")  # ERROR message
             return Response({"error": "GroupService not found."}, status=404)
@@ -1170,7 +1176,7 @@ class Group_ServicesQtyAPIView(APIView):
             formatted_data = [
                 {
                     "Qty": entry.get("Qty"),
-                    "Service Name": entry.get("Service Name")
+                    "ServiceName": entry.get("ServiceName")
                 }
                 for entry in json_data if isinstance(entry, dict)
             ]
@@ -1217,7 +1223,7 @@ class StrategyAPIView(APIView):
             strategy = Strategies.objects.get(pk=kwargs.get('pk'))
         except Strategies.DoesNotExist:
             return Response({"detail": "Strategy not found."}, status=status.HTTP_404_NOT_FOUND)
-
+        print("equest.data>>",request.data)
         serializer = GetStrategySerializer(strategy, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
@@ -1294,50 +1300,71 @@ class BrokerView(APIView):
             return Response({"detail": "Broker deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
         except Broker.DoesNotExist:
             return Response({"detail": "Broker not found."}, status=status.HTTP_404_NOT_FOUND)
-
+import time
 class ClientCreateView(APIView):
     permission_classes = [IsAuthenticated]
     def get(self, request, *args, **kwargs):
         # Filter clients with client_type = 'client'
-        clients = User.objects.filter(type_of_user='is_client')
-        serializer = ClientListSerializer(clients, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        clients = User.objects.filter(type_of_user='is_client',is_client=True).order_by('-id')
+        paginator = CustomPageNumberPagination()
+        result_page = paginator.paginate_queryset(clients, request)
+        serializer = ClientListSerializer(result_page, many=True)
+        return paginator.get_paginated_response(serializer.data)
+    
+    
     def post(self, request, *args, **kwargs):
         data = request.data.copy()
+        start_time=time.time()
         serializer = ClientCreateSerializer(data=data)
         password = get_random_string(length=12)
         if serializer.is_valid():
-            user = serializer.save()
-            user.set_password(password)  
-            user.save() 
-            
+            client = serializer.save()
+            client.set_password(password)  
+            client.external_user=False
+            client.save() 
+            client = time.time()  # Record the end time
+            execution_time = end_time - start_time  # Calculate the total time
+            print(f"client create API executed in--------- {execution_time:.4f} seconds") 
+            start_time=time.time()
             # Send the password via email
             print("client-password---",password)
-            EmailService.send_password_email(user.email, password,user.firstName,login_link,support_email,help_center_link,company_website,contact_number)
-            
-            return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
+            # send_email_pass_async.delay(
+            #         client.email,
+            #         password,
+            #         client.firstName,
+            #         login_link,
+            #         support_email,
+            #         help_center_link,
+            #         company_website,
+            #         contact_number
+            #     )
+            EmailService.send_password_email(client.email, password,client.firstName,login_link,support_email,help_center_link,company_website,contact_number)
+            end_time = time.time()  # Record the end time
+            execution_time = end_time - start_time  # Calculate the total time
+            print(f"client mail password API executed in {execution_time:.4f} seconds") 
+            return Response(ClientListSerializer(client).data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def put(self, request, *args, **kwargs):
         client_id = kwargs.get('pk')
-        client = get_object_or_404(User, id=client_id, client_type='client')
+        client = get_object_or_404(User, id=client_id)
 
-        serializer = ClientListSerializer(client, data=request.data, partial=True)
+        serializer = ClientupdateListSerializer(client, data=request.data, partial=True)
         
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(ClientListSerializer(client).data, status=status.HTTP_201_CREATED)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     def delete(self, request, *args, **kwargs):
-        broker_id = kwargs.get('pk', None)
-        if not broker_id:
-            return Response({"detail": "Broker ID is required for deletion."}, status=status.HTTP_400_BAD_REQUEST)
+        client_id = kwargs.get('pk', None)
+        if not client_id:
+            return Response({"detail": "client ID is required for deletion."}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            broker = Broker.objects.get(pk=broker_id)
+            broker = User.objects.get(pk=client_id)
             broker.delete()
-            return Response({"detail": "Broker deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
+            return Response({"detail": "client deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
         except Broker.DoesNotExist:
-            return Response({"detail": "Broker not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"detail": "client_id not found."}, status=status.HTTP_404_NOT_FOUND)
         

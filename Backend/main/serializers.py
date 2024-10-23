@@ -191,11 +191,12 @@ class CustomLoginSerializer(serializers.Serializer):
         user = authenticate(email=email, password=password)
         if user is None:
             raise serializers.ValidationError('Invalid credentials')
-        if not user.role and user.external_user == "true" or user.role.name.lower() == 'client' or user.role.name == 'Client'  :
+        if not user.role and user.external_user == "true"or  user.type_of_user == 'is_client' or user.is_client == True or user.role.name.lower() == 'client' or user.role.name == 'Client'  :
                 otp_instance, created = OTP.objects.get_or_create(user=user, is_verified=False)
                 otp_instance.generate_otp()
 
                 # Send OTP to user's email
+                # send_email_async.delay(user.firstName,otp_instance.otp_code,user.email )
                 EmailService.send_login_email_otp(user.email, otp_instance.otp_code, user.firstName)
 
                 return {
@@ -736,28 +737,59 @@ class NewClientCreateSerializer(serializers.ModelSerializer):
     
 class ClientCreateSerializer(serializers.ModelSerializer):
     assigned_client = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), required=False)
+    Strategy = serializers.PrimaryKeyRelatedField(queryset=Strategies.objects.all(), many=True, required=False)
+
     # Group_service = GroupServiceSerializer()  # Make sure to match field names
     # license = LicenseSerializer()
     # Broker = GetBrokerSerializer() 
     class Meta:
         model = User
-        fields = ['id','email', 'firstName', 'fullName', 'lastName', 'phoneNumber', 'PANEL_CLIENT_KEY', 'Group_service', 'Broker', 'license', 'to_month', 'created_by', 'assigned_client']
+        fields = ['id','email', 'firstName', 'lastName', 'phoneNumber', 'fullName', 'middleName','client_key',
+                  'Group_service', 'Broker', 'license', 'user_license_month','to_month', 'created_by', 'assigned_client',
+                  'Strategy','client_status','givenservices_to_month','demate_acc_uid','start_date_client','end_date_client']
+    # Phone number validation
+    def validate_phoneNumber(self, value):
+        # Check if the phone number is in a valid format
+        if not value.isdigit() or len(value) != 10:  # Example validation for a 10-digit number
+            raise serializers.ValidationError("Phone number must be a 10-digit number.")
+        return value
 
+    def validate(self, data):
+        phone_number = data.get('phoneNumber')
+        email = data.get('email')
+
+        if self.instance is not None:
+            if User.objects.exclude(id=self.instance.id).filter(phoneNumber=phone_number).exists():
+                raise serializers.ValidationError({'phoneNumber': 'A user with this phone number already exists.'})
+            if User.objects.exclude(id=self.instance.id).filter(email=email).exists():
+                raise serializers.ValidationError({'email': 'A user with this email already exists.'})
+        else:
+            if User.objects.filter(phoneNumber=phone_number).exists():
+                raise serializers.ValidationError({'phoneNumber': 'A user with this phone number already exists.'})
+            if User.objects.filter(email=email).exists():
+                raise serializers.ValidationError({'email': 'A user with this email already exists.'})
+
+        return data
+    # Overriding the create method to handle assigned_client and strategies
     def create(self, validated_data):
-        # Extract assigned_client from the validated data
         assigned_client = validated_data.pop('assigned_client', None)
+        strategies = validated_data.pop('Strategy', [])
 
         # Create the client without assigned_client initially
         client = User.objects.create(**validated_data)
-        client.type_of_user='is_client'
-        client.is_client=True
+        client.type_of_user = 'is_client'
+        client.is_client = True
         client.set_password(get_random_string(length=12))  # Generate random password
-        client.save()
 
         # If assigned_client was provided, assign it
         if assigned_client:
             client.assigned_client = assigned_client
-            client.save()
+
+        # Assign strategies to the client
+        if strategies:
+            client.Strategy.set(strategies)
+
+        client.save()
 
         return client
 class AssignedClientSerializer(serializers.ModelSerializer):
@@ -768,11 +800,31 @@ class AssignedClientSerializer(serializers.ModelSerializer):
 
 class ClientListSerializer(serializers.ModelSerializer):
     assigned_client = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), required=False)
+    Strategy = StrategySerializer(many=True, read_only=True) 
     # Group_service = GroupServiceSerializer()  # Make sure to match field names
     # license = LicenseSerializer()
     Broker = GetBrokerSerializer() 
     class Meta:
         model = User
-        fields = ['id','email', 'firstName', 'fullName', 'lastName', 'client_status','phoneNumber', 'PANEL_CLIENT_KEY', 'Broker', 'to_month', 'created_by', 'assigned_client']
+        fields = ['id','email', 'firstName', 'fullName', 'lastName', 'client_status','phoneNumber',
+                  'client_key', 'start_date_client','end_date_client','Broker', 'license', 'user_license_month','to_month', 'created_by', 'assigned_client',
+                  'Strategy','client_status','givenservices_to_month','demate_acc_uid',]
 
 
+class ClientupdateListSerializer(serializers.ModelSerializer):
+    assigned_client = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), required=False)
+    Strategy = StrategySerializer(many=True, read_only=True)
+    # Broker = GetBrokerSerializer(read_only=True)  # For reading broker data
+    broker_id = serializers.PrimaryKeyRelatedField(source='Broker', queryset=Broker.objects.all(), write_only=True)  # For writing broker data as an ID
+
+    class Meta:
+        model = User
+        fields = [
+            'id', 'email', 'firstName', 'fullName', 'lastName', 'client_status', 'phoneNumber', 'client_key',
+            'start_date_client', 'end_date_client', 'Broker', 'broker_id', 'license', 'user_license_month',
+            'to_month', 'created_by', 'assigned_client', 'Strategy', 'client_status', 'givenservices_to_month',
+            'demate_acc_uid'
+        ]
+
+
+ 

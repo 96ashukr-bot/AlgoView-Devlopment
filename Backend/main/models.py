@@ -3,7 +3,12 @@ import random
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.utils.translation import gettext_lazy as _
-from django.utils import timezone
+# from django.utils import timezone
+# from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
+
+from datetime import datetime,timedelta  # Import timedelta from datetime
+from django.utils import timezone  # To handle timezones correctly in Djang
 
 class Role(models.Model):
     ACTIVE = 'active'
@@ -56,7 +61,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     lastName = models.CharField(max_length=150,blank=True)
     fullName = models.CharField(max_length=300, blank=True, editable=False)  # Will be automatically generated
     profilePicture = models.ImageField(upload_to='profile_pictures/', null=True, blank=True)
-    role = models.ForeignKey(Role, on_delete=models.CASCADE,null=True, blank=True)
+    role = models.ForeignKey(Role, on_delete=models.SET_NULL,null=True, blank=True)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     is_password_temporary = models.BooleanField(default=True)  # New field to check if password is temporary
@@ -88,17 +93,25 @@ class User(AbstractBaseUser, PermissionsMixin):
     current_zip_code = models.CharField(max_length=20, null=True, blank=True)
 
     external_user = models.CharField(max_length=50, null=True, blank=True)
-    Group_service = models.ForeignKey('GroupService', on_delete=models.CASCADE, related_name='group_Service',blank=True,null=True)
-    Broker=models.ForeignKey('Broker', on_delete=models.CASCADE, related_name='group_Broker',blank=True,null=True)
-    license=models.ForeignKey('License', on_delete=models.CASCADE, related_name='client_license',blank=True,null=True)
+    Group_service = models.ForeignKey('GroupService', on_delete=models.SET_NULL, null=True, blank=True, related_name='group_Service')
+    Broker=models.ForeignKey('Broker', on_delete=models.SET_NULL,null=True, blank=True,  related_name='group_Broker')
+    license=models.ForeignKey('License', on_delete=models.SET_NULL, null=True, blank=True, related_name='client_license')
     to_month=models.CharField(max_length=20, null=True, blank=True)
     # Hierarchy tracking
     created_by = models.ForeignKey('self', null=True, blank=True, on_delete=models.SET_NULL, related_name='created_users')    
 
     # Clients associated with this user (single assignment)
-    assigned_client = models.ForeignKey('self', null=True, blank=True, on_delete=models.SET_NULL, related_name='assigned_users')
+    assigned_client = models.ForeignKey('self', null=True, blank=True, on_delete=models.SET_NULL,related_name='assigned_users')
     client_status   = models.BooleanField(default=True)
     is_client       = models.CharField(max_length=50, null=True, blank=True)
+    client_key      = models.CharField(max_length=50, null=True, blank=True)
+    demate_acc_uid  = models.IntegerField(blank=True,null=True)
+    client_secrete  = models.CharField(max_length=50, null=True, blank=True)
+    user_license_month= models.IntegerField(blank=True,null=True)
+    Strategy = models.ManyToManyField("Strategies", related_name='client_strategy', blank=True)
+    start_date_client = models.DateField(null=True, blank=True)
+    end_date_client   = models.DateField(null=True, blank=True)
+    givenservices_to_month  = models.CharField(max_length=50, null=True, blank=True)
     # assigned_clients = models.ManyToManyField('self', symmetrical=False, related_name='assigned_users', blank=True)
     type_of_user=models.CharField(max_length=255, blank=True, null=True)
     objects = UserManager()
@@ -107,24 +120,52 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
-
     def get_full_name(self):
+        print("jnjbnjnjn")
         return f"{self.firstName} {self.lastName}"
 
     def get_short_name(self):
         return self.firstName
 
     def save(self, *args, **kwargs):
-        self.fullName = f"{self.firstName} {self.lastName}"
+        if self.middleName:
+            self.fullName = f"{self.firstName} {self.lastName} {self.middleName}"
+        else:
+            
+            self.fullName = f"{self.firstName} {self.lastName} "
+        self.calculate_dates()    
         super().save(*args, **kwargs)
 
+    def calculate_dates(self):
+        """Calculate start_date_client and end_date_client based on to_month."""
+        today = datetime.today()
+
+        if self.to_month:
+            try:
+                if "month" in self.to_month:
+                    months = int(self.to_month.split()[0])
+                    self.start_date_client = today.date()
+                    self.end_date_client = (today + relativedelta(months=months)).date()
+                elif "day" in self.to_month:
+                    days = int(self.to_month.split()[0])
+                    self.start_date_client = today.date()
+                    self.end_date_client = (today + timedelta(days=days)).date()
+                else:
+                    self.start_date_client = None
+                    self.end_date_client = None
+            except ValueError:
+                self.start_date_client = None
+                self.end_date_client = None
+        else:
+            self.start_date_client = None
+            self.end_date_client = None
 class KYC(models.Model):
     STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('approved', 'Approved'),
         ('rejected', 'Rejected'),
     ]
-    user = models.ForeignKey(User, on_delete=models.CASCADE,blank=True, null=True)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL,blank=True, null=True,related_name='kyc_user')
     id_proof = models.CharField(max_length=50)
     document_file_front = models.FileField(upload_to='kyc_documents/front/', blank=True)
     document_file_back = models.FileField(upload_to='kyc_documents/back/', blank=True)
@@ -140,7 +181,7 @@ class KYC(models.Model):
   
     
 class OTP(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User,null=True, on_delete=models.SET_NULL,related_name='user_otp' )
     otp_code = models.CharField(max_length=6)
     created_at = models.DateTimeField(default=timezone.now)
     is_verified = models.BooleanField(default=False)
@@ -148,7 +189,8 @@ class OTP(models.Model):
 
     def generate_otp(self):
         self.otp_code = random.randint(100000, 999999)
-        self.expires_at = timezone.now() + datetime.timedelta(seconds=120)  # Set expiration to 120 seconds from now
+        self.expires_at = timezone.now() + timedelta(seconds=120)  # Set expiration to 120 seconds from now
+        # Set expiration to 120 seconds from now
         self.is_verified = False
         self.save()
         
@@ -171,7 +213,7 @@ class Permission(models.Model):
     
 # RolePermission Model: Links Role to Permissions
 class RolePermission(models.Model):
-    role = models.ForeignKey(Role, on_delete=models.CASCADE)
+    role = models.ForeignKey(Role, on_delete=models.SET_NULL,null=True, blank=True,related_name='user_role' )
     permissions = models.ManyToManyField(Permission, related_name="role_permissions", blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -187,7 +229,7 @@ class OrderLog(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2,null=True, blank=True)  # Price
     strategy = models.CharField(max_length=100,null=True, blank=True)  # Strategy (e.g., Support & Resistance)
     created_at = models.DateTimeField(auto_now_add=True)
-    user = models.ForeignKey(User, on_delete=models.CASCADE,null=True, blank=True)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL,null=True, blank=True,related_name='user_log')
     status = models.CharField(max_length=20, default="Pending")  # "Success", "Failed"
     failure_reason = models.TextField(null=True, blank=True)  # Reason for failure (optional)
     json_data = models.JSONField(null=True, blank=True)
@@ -201,7 +243,7 @@ class UserActivityLog(models.Model):
         ('logout', 'Logout'),
     )
 
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL,null=True, blank=True, related_name='user_activty_log')
     action_type = models.CharField(max_length=10, choices=ACTION_TYPES)
     last_login_time = models.DateTimeField()
     last_logout_time = models.DateTimeField(null=True, blank=True)
@@ -227,7 +269,7 @@ class State(models.Model):
         return self.name 
 class cities(models.Model):
     name = models.CharField(max_length=150)
-    state_id = models.ForeignKey( State,related_name='cities', on_delete=models.CASCADE)
+    state_id = models.ForeignKey( State, on_delete=models.SET_NULL,null=True, blank=True,related_name='cities' )
     state_code = models.TextField(null=True, blank=True)
 
 
@@ -258,8 +300,8 @@ class Segment(models.Model):
         return self.name    
 class Services(models.Model):
     service_name = models.CharField(max_length=100)
-    segment = models.ForeignKey(Segment, on_delete=models.CASCADE, related_name='service_segments',blank=True)
-    category= models.ForeignKey(categories, on_delete=models.CASCADE,related_name='services_categories',blank=True)
+    segment = models.ForeignKey(Segment, on_delete=models.SET_NULL, null=True, blank=True,related_name='service_segments')
+    category= models.ForeignKey(categories, on_delete=models.SET_NULL,null=True, blank=True, related_name='services_categories')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     status = models.BooleanField(default=True)
@@ -269,8 +311,8 @@ class Services(models.Model):
 class Strategies(models.Model):
     name = models.CharField(max_length=150)
     Lots=models.IntegerField(blank=True,null=True)
-    segment = models.ForeignKey(Segment, on_delete=models.CASCADE, related_name='strategy_segments',blank=True,null=False)
-    category= models.ForeignKey(categories, on_delete=models.CASCADE,related_name='strategy_categories', blank=False, null=False)
+    segment = models.ForeignKey(Segment, on_delete=models.SET_NULL, null=True, blank=True, related_name='strategy_segments')
+    category = models.ForeignKey(categories, on_delete=models.SET_NULL, null=True, blank=True, related_name='strategy_categories')
     description = models.TextField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
     is_submit= models.BooleanField(default=True)
@@ -291,7 +333,7 @@ class Strategies(models.Model):
         return self.name
 class GroupService(models.Model):
     group_name = models.CharField(max_length=100)
-    segment = models.ForeignKey(Segment, on_delete=models.CASCADE, related_name='group_Segments',blank=True,null=True)
+    segment = models.ForeignKey(Segment, on_delete=models.SET_NULL, null=True, blank=True, related_name='group_Segments')
     # description = models.TextField(null=True, blank=True)
     # service_count=
     json_data = models.JSONField(null=True, blank=True)
