@@ -1322,7 +1322,7 @@ class ClientCreateView(APIView):
             client.set_password(password)  
             client.external_user=False
             client.save() 
-            client = time.time()  # Record the end time
+            end_time = time.time()  # Record the end time
             execution_time = end_time - start_time  # Calculate the total time
             print(f"client create API executed in--------- {execution_time:.4f} seconds") 
             start_time=time.time()
