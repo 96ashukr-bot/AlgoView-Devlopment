@@ -1,11 +1,9 @@
 from django.contrib import admin
-
-# Register your models here.
-from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 from .models import *
 @admin.register(User)
-class UserAdmin(admin.ModelAdmin):
-    list_display = ['email', 'fullName', 'phoneNumber', 'role', 'is_active', 'is_staff', 'is_superuser', 'created_at', 'updated_at']
+class UserAdmin(DjangoUserAdmin):
+    list_display = ['id','email', 'fullName', 'phoneNumber', 'role', 'is_active', 'is_staff', 'is_superuser', 'created_at', 'updated_at']
     list_filter = ['role', 'is_active', 'is_staff']
     search_fields = ['email', 'firstName', 'lastName', 'phoneNumber']
     ordering = ['email']
@@ -20,7 +18,7 @@ class UserAdmin(admin.ModelAdmin):
             # Current Address Fields
             'current_add_line_1', 'current_add_line_2', 'current_city',
             'current_state', 'current_country', 'current_zip_code','external_user','type_of_user','Group_service',
-            'Broker','license','to_month','client_status','start_date_client','end_date_client')}),
+            'Strategy','Broker','license','to_month','client_status','start_date_client','end_date_client')}),
         ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser')}),
         # ('Metadata', {'fields': ('created_at', 'updated_at')}),  # Add 'created_at' and 'updated_at' here
     )
@@ -88,7 +86,7 @@ class LiecensAdmin(admin.ModelAdmin):
 
 @admin.register(Strategies)
 class StrategyAdmin(admin.ModelAdmin):
-    list_display=('id','name')      
+    list_display=('id','name',)      
 @admin.register(Broker)
 class BrokersAdmin(admin.ModelAdmin):
     list_display=('id','broker_name','is_active','description')    

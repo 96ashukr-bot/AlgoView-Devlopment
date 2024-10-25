@@ -18,12 +18,13 @@ urlpatterns = [
     path('password-reset-request/', PasswordResetRequestView.as_view(), name='password-reset-request'),
     path('password-reset-confirm/', PasswordResetConfirmView.as_view(), name='password-reset-confirm'),
     path('create-roles/', RoleListCreateView.as_view(), name='role-list-create'),
+    path('get-role-subadmin/', GetRoleListAPIView.as_view(), name='get-sub-admin-role-list'),
     path('get-roles-list/', RoleListCreateView.as_view(), name='role-list'),
     path('delete-roles/<int:id>/', RoleDeleteView.as_view(), name='role-delete'),
     path('roles/<int:pk>/', RoleDetailView.as_view(), name='role-detail'),
     path('user/<int:pk>/', GetUser.as_view(), name='GetUser'),
     path('users/<int:pk>/assign-role/', UserAssignRoleView.as_view(), name='assign-role'),
-    path('users-list/', UserListCreateView.as_view(), name='user-management'),
+    path('users-list/', UserManagementView.as_view(), name='user-management'),
     path('create-user/', UserManagementView.as_view(), name='user-management'),
     path('update-user/<int:pk>/', UserManagementView.as_view(), name='user-management'),
     path('delete-user/<int:pk>/', UserManagementView.as_view(), name='user-detail-management'),
@@ -81,6 +82,8 @@ urlpatterns = [
     path('get-client-list/', ClientCreateView.as_view(), name='get-client'),
     path('update-client/<int:pk>/', ClientCreateView.as_view(), name='update-client'),
     path('delete-client/<int:pk>/', ClientCreateView.as_view(), name='delete-client'),
+    path('assign-client-to-strategy/<int:pk>/', AssignClientToStrategyAPIView.as_view(), name='assign-client-to-strategy'),
+    path('get-client-by-id/<int:pk>/', GetclientbyidPIView.as_view(), name='subuser-list'),
 ]
 
 

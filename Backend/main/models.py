@@ -322,12 +322,14 @@ class Strategies(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     status = models.BooleanField(default=True)
-    
-    # Pricing Options
+
+    # Pricing Options,
     monthly_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     quarterly_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     half_yearly_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     yearly_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+        # Add Many-to-Many relationship with User (clients)
+    clients = models.ManyToManyField(User, related_name='strategies', blank=True)
 
     def __str__(self):
         return self.name

@@ -69,7 +69,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
     #     instance.is_staff = validated_data.get('is_staff', instance.is_staff)
     #     instance.save()
     #     return instance
-class UserRegistrationSerializer(serializers.ModelSerializer):
+class UserRegistrationSerializer_old(serializers.ModelSerializer):
     phoneNumber = serializers.CharField(
         required=True,
         validators=[UniqueValidator(queryset=User.objects.all(), message="Phone number already exists.")]
@@ -98,7 +98,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(f"Error sending email: {str(e)}")
         
         return user
-class UserRegistrationSerializer_sync(serializers.ModelSerializer):
+class UserRegistrationSerializer(serializers.ModelSerializer):
     phoneNumber = serializers.CharField(
         required=True,
         validators=[UniqueValidator(queryset=User.objects.all(), message="Phone number already exists.")]
@@ -110,8 +110,10 @@ class UserRegistrationSerializer_sync(serializers.ModelSerializer):
     
     def create(self, validated_data):
         password = get_random_string(length=8)
+        role = Role.objects.get(name='Client')
         with transaction.atomic():
-            user = User.objects.create_user(**validated_data, password=password)
+            user = User.objects.create_user(**validated_data, password=password, role=role,external_user='true',type_of_user='is_client')
+            
 
             try:
                 print("pass...",password)
@@ -191,17 +193,22 @@ class CustomLoginSerializer(serializers.Serializer):
         user = authenticate(email=email, password=password)
         if user is None:
             raise serializers.ValidationError('Invalid credentials')
-        if not user.role and user.external_user == "true"or  user.type_of_user == 'is_client' or user.is_client == True or user.role.name.lower() == 'client' or user.role.name == 'Client'  :
+        if not user.role and user.external_user == "true"or  user.type_of_user == 'is_client' or user.is_client == True or user.role.name.lower() == 'client' or user.role.name == 'Client':
                 otp_instance, created = OTP.objects.get_or_create(user=user, is_verified=False)
                 otp_instance.generate_otp()
 
                 # Send OTP to user's email
-                # send_email_async.delay(user.firstName,otp_instance.otp_code,user.email )
-                EmailService.send_login_email_otp(user.email, otp_instance.otp_code, user.firstName)
+                send_email_async.delay(user.firstName,otp_instance.otp_code,user.email )
+                # EmailService.send_login_email_otp(user.email, otp_instance.otp_code, user.firstName)
 
                 return {
-                    'message': f"OTP sent to your email: {email}. Please verify."
-                }
+                    'message': f"OTP sent to your email: {email}. Please verify.",
+                    'role': {
+                        'role_id': user.role.id if user.role else None,
+                        'role_name': user.role.name if user.role else None,
+                        'role_status': user.role.status if user.role else None,
+                    },
+                }        
         else:
             # If the user does not have the 'client' role, proceed with direct login
             if not user.is_new_password :
@@ -233,7 +240,7 @@ class CustomLoginSerializer(serializers.Serializer):
                     'type_of_user':user.type_of_user if user.type_of_user else None,
                     'message': message,
                     'email': user.email,
-                    'is_client':True,
+                    'is_client':False,
                     'access': str(refresh.access_token),
                     'refresh': str(refresh),
                     'role': {
@@ -244,7 +251,7 @@ class CustomLoginSerializer(serializers.Serializer):
                     'ekyc_status': ekyc_status
                 }
 
-class CustomLoginSerializer_old(serializers.Serializer):
+class CustomLoginSerializer000000(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField()
 
@@ -429,7 +436,7 @@ class UserProfileRetrieveSerializer(serializers.ModelSerializer):
             'permanent_state', 'permanent_country', 'permanent_zip_code',
             # Current Address Fields
             'current_add_line_1', 'current_add_line_2', 'current_city', 
-            'current_state', 'current_country', 'current_zip_code','role','is_enable',]
+            'current_state', 'current_country', 'current_zip_code','role','is_enable','start_date_client','end_date_client',]
 
     def get_role(self, obj):
         if obj.role:
@@ -486,8 +493,14 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
         instance.save()
         
         return instance
+class CreatedBySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'firstName', 'lastName', 'email']  # Include fields you want to show for created_by
+
 class UserSerializer(serializers.ModelSerializer):
-    role = RoleSerializer()  # This will serialize the Role object into id and name fields
+    role = RoleSerializer()  # Serializes the Role object into id and name fields
+    created_by = CreatedBySerializer()  # Serializes the created_by field with detailed information
 
     class Meta:
         model = User
@@ -497,7 +510,7 @@ class UserSerializer(serializers.ModelSerializer):
             'permanent_state', 'permanent_country', 'permanent_zip_code',
             # Current Address Fields
             'current_add_line_1', 'current_add_line_2', 'current_city', 
-            'current_state', 'current_country', 'current_zip_code','role']
+            'current_state', 'current_country', 'current_zip_code','role','created_by']
 class NewUserCreateSerializer(serializers.ModelSerializer):
     role = serializers.PrimaryKeyRelatedField(queryset=Role.objects.all())  # Accepts role ID directly
     class Meta:
@@ -668,14 +681,20 @@ class StrategySerializer(serializers.ModelSerializer):
     # segment = SegmentSerializer()
     class Meta:
         model = Strategies
-        fields =['id','name','Lots','segment','category','description','Indicator','Strategy_Tester','Strategy_Logo','status']
+        fields =['id','name','Lots','segment','category','description','Indicator','Strategy_Tester','Strategy_Logo',
+                 'monthly_amount','quarterly_amount','half_yearly_amount','yearly_amount','status']
+class clientSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id','firstName','Strategy']
+
 class GetStrategySerializer(serializers.ModelSerializer):
     category = CategorySerializer()
     segment = SegmentSerializer()
-
+    clients=clientSerializer(many=True)
     class Meta:
         model = Strategies
-        fields = '__all__'
+        fields =  '__all__'
 class GetBrokerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Broker
@@ -774,10 +793,11 @@ class ClientCreateSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         assigned_client = validated_data.pop('assigned_client', None)
         strategies = validated_data.pop('Strategy', [])
-
+        role=Role.objects.get(name='Client')
         # Create the client without assigned_client initially
         client = User.objects.create(**validated_data)
         client.type_of_user = 'is_client'
+        client.role = role
         client.is_client = True
         client.set_password(get_random_string(length=12))  # Generate random password
 
@@ -826,5 +846,24 @@ class ClientupdateListSerializer(serializers.ModelSerializer):
             'demate_acc_uid'
         ]
 
+class StrategyAssignSerializer(serializers.ModelSerializer):
+    clients = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), many=True)
 
- 
+    class Meta:
+        model = Strategies
+        fields = ['id', 'name', 'clients']
+
+    def update(self, instance, validated_data):
+        # Pop the clients data from the validated data
+        clients = validated_data.pop('clients', None)
+        
+        # Update the strategy with the remaining validated data
+        instance = super().update(instance, validated_data)
+        
+        # Update the many-to-many field (clients) if provided
+        if clients is not None:
+            print("76535")
+            instance.clients.set(clients)  # Set the new clients to the strategy
+
+        instance.save()
+        return instance
