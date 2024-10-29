@@ -6960,3 +6960,936 @@ Watching for file changes with StatReloader
 "GET /get-role-subadmin/ HTTP/1.1" 200 47
 "POST /login/ HTTP/1.1" 200 681
 "GET /user-profile/ HTTP/1.1" 200 619
+Watching for file changes with StatReloader
+Watching for file changes with StatReloader
+"OPTIONS /user-last-login/ HTTP/1.1" 200 0
+"OPTIONS /user-last-login/ HTTP/1.1" 200 0
+Unauthorized: /user-last-login/
+"GET /user-last-login/ HTTP/1.1" 401 183
+Unauthorized: /user-last-login/
+"GET /user-last-login/ HTTP/1.1" 401 183
+"GET /admin/ HTTP/1.1" 200 19672
+"GET /static/admin/img/icon-deletelink.svg HTTP/1.1" 304 0
+Not Found: /favicon.ico
+"GET /favicon.ico HTTP/1.1" 404 16947
+"GET /admin/main/services/ HTTP/1.1" 200 15102
+"GET /static/admin/js/vendor/jquery/jquery.js HTTP/1.1" 304 0
+"GET /static/admin/js/vendor/xregexp/xregexp.js HTTP/1.1" 304 0
+"GET /admin/jsi18n/ HTTP/1.1" 200 3343
+"GET /admin/ HTTP/1.1" 200 19672
+Watching for file changes with StatReloader
+"GET /admin HTTP/1.1" 301 0
+"GET /admin/ HTTP/1.1" 302 0
+"GET /admin/login/?next=/admin/ HTTP/1.1" 200 4178
+"GET /static/admin/css/base.css HTTP/1.1" 200 21310
+"GET /static/admin/css/login.css HTTP/1.1" 200 958
+"GET /static/admin/css/dark_mode.css HTTP/1.1" 200 2929
+"GET /static/admin/css/nav_sidebar.css HTTP/1.1" 200 2694
+"GET /static/admin/js/theme.js HTTP/1.1" 200 1943
+"GET /static/admin/css/responsive.css HTTP/1.1" 200 18559
+"GET /static/admin/js/nav_sidebar.js HTTP/1.1" 200 3063
+Not Found: /favicon.ico
+"GET /favicon.ico HTTP/1.1" 404 16947
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+Watching for file changes with StatReloader
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+Watching for file changes with StatReloader
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+Watching for file changes with StatReloader
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+Watching for file changes with StatReloader
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/urls.py changed, reloading.
+Watching for file changes with StatReloader
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/urls.py changed, reloading.
+Watching for file changes with StatReloader
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+Watching for file changes with StatReloader
+"GET /admin/ HTTP/1.1" 302 0
+"GET /admin/login/?next=/admin/ HTTP/1.1" 200 4178
+"POST /admin/login/?next=/admin/ HTTP/1.1" 200 4353
+"POST /admin/login/?next=/admin/ HTTP/1.1" 302 0
+"GET /admin/ HTTP/1.1" 200 19164
+"GET /static/admin/css/dashboard.css HTTP/1.1" 200 441
+"GET /static/admin/img/icon-addlink.svg HTTP/1.1" 200 331
+"GET /static/admin/img/icon-changelink.svg HTTP/1.1" 200 380
+"GET /admin/main/user/ HTTP/1.1" 200 50280
+"GET /static/admin/css/changelists.css HTTP/1.1" 200 6566
+"GET /static/admin/js/jquery.init.js HTTP/1.1" 200 347
+"GET /static/admin/js/core.js HTTP/1.1" 200 5682
+"GET /static/admin/js/actions.js HTTP/1.1" 200 7872
+"GET /static/admin/js/admin/RelatedObjectLookups.js HTTP/1.1" 200 8943
+"GET /static/admin/js/vendor/jquery/jquery.js HTTP/1.1" 200 292458
+"GET /static/admin/js/urlify.js HTTP/1.1" 200 7887
+"GET /static/admin/js/prepopulate.js HTTP/1.1" 200 1531
+"GET /static/admin/js/vendor/xregexp/xregexp.js HTTP/1.1" 200 232381
+"GET /admin/jsi18n/ HTTP/1.1" 200 3343
+"GET /static/admin/img/icon-yes.svg HTTP/1.1" 200 436
+"GET /static/admin/img/search.svg HTTP/1.1" 200 458
+"GET /static/admin/js/filters.js HTTP/1.1" 200 978
+"GET /static/admin/img/icon-no.svg HTTP/1.1" 200 560
+"GET /static/admin/img/tooltag-add.svg HTTP/1.1" 200 331
+"GET /static/admin/img/sorting-icons.svg HTTP/1.1" 200 1097
+"GET /admin/main/user/86/change/ HTTP/1.1" 200 55456
+"GET /static/admin/css/forms.css HTTP/1.1" 200 9090
+"GET /static/admin/img/icon-deletelink.svg HTTP/1.1" 200 392
+"GET /static/admin/img/icon-viewlink.svg HTTP/1.1" 200 581
+"GET /static/admin/css/widgets.css HTTP/1.1" 200 11921
+"GET /static/admin/js/admin/DateTimeShortcuts.js HTTP/1.1" 200 19319
+"GET /static/admin/js/calendar.js HTTP/1.1" 200 8466
+"GET /static/admin/js/prepopulate_init.js HTTP/1.1" 200 586
+"GET /admin/jsi18n/ HTTP/1.1" 200 3343
+"GET /static/admin/js/change_form.js HTTP/1.1" 200 606
+"GET /static/admin/img/icon-calendar.svg HTTP/1.1" 200 1086
+"POST /admin/main/user/86/change/ HTTP/1.1" 302 0
+"GET /admin/main/user/ HTTP/1.1" 200 50487
+"GET /admin/jsi18n/ HTTP/1.1" 200 3343
+"GET /admin/main/kyc/ HTTP/1.1" 200 15382
+"GET /admin/jsi18n/ HTTP/1.1" 200 3343
+"GET /admin/main/kyc/add/ HTTP/1.1" 200 30257
+"GET /admin/jsi18n/ HTTP/1.1" 200 3343
+"GET /static/admin/img/icon-clock.svg HTTP/1.1" 200 677
+Unauthorized: /get-client-list/
+"GET /get-client-list/ HTTP/1.1" 401 183
+Unauthorized: /get-client-list/
+"GET /get-client-list/ HTTP/1.1" 401 58
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+Watching for file changes with StatReloader
+Internal Server Error: /get-client-list/
+Traceback (most recent call last):
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/views/decorators/csrf.py", line 56, in wrapper_view
+    return view_func(*args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/views/generic/base.py", line 104, in view
+    return self.dispatch(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py", line 1354, in get
+    if user.role and user.role.name.lower() == 'super-admin' or user.role.name =='Super-Admin':
+AttributeError: 'AnonymousUser' object has no attribute 'role'
+"GET /get-client-list/ HTTP/1.1" 500 95980
+Bad Request: /login/
+"POST /login/ HTTP/1.1" 400 88
+"POST /login/ HTTP/1.1" 200 681
+"GET /get-client-list/ HTTP/1.1" 200 3679
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+Watching for file changes with StatReloader
+"POST /admin/main/kyc/add/ HTTP/1.1" 302 0
+"GET /admin/main/kyc/ HTTP/1.1" 200 18684
+"GET /admin/jsi18n/ HTTP/1.1" 200 3343
+"GET /admin/main/kyc/14/change/ HTTP/1.1" 200 31902
+"GET /admin/jsi18n/ HTTP/1.1" 200 3343
+Internal Server Error: /get-kyc-by-id/14/
+Traceback (most recent call last):
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/views/decorators/csrf.py", line 56, in wrapper_view
+    return view_func(*args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/views/generic/base.py", line 104, in view
+    return self.dispatch(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+TypeError: get() got multiple values for argument 'pk'
+"GET /get-kyc-by-id/14/ HTTP/1.1" 500 91143
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+Watching for file changes with StatReloader
+"GET /get-kyc-by-id/14/ HTTP/1.1" 200 521
+"GET /admin/main/kyc/ HTTP/1.1" 200 18484
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+Watching for file changes with StatReloader
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+Watching for file changes with StatReloader
+"GET /get-kyc-by-id/14/ HTTP/1.1" 200 609
+"GET /get-kyc-by-id/14/ HTTP/1.1" 200 609
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+Watching for file changes with StatReloader
+Watching for file changes with StatReloader
+"GET /get-client-list/ HTTP/1.1" 200 3679
+"PUT /assign-client-to-strategy/20/ HTTP/1.1" 200 49
+"PUT /assign-client-to-strategy/20/ HTTP/1.1" 200 49
+"GET /get-strategies/ HTTP/1.1" 200 2528
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/urls.py changed, reloading.
+Watching for file changes with StatReloader
+Unauthorized: /get-strategies-by-id/20/
+"GET /get-strategies-by-id/20/ HTTP/1.1" 401 58
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+Watching for file changes with StatReloader
+"GET /get-strategies-by-id/20/ HTTP/1.1" 200 714
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/urls.py changed, reloading.
+Watching for file changes with StatReloader
+"GET /get-strategies-client/20/ HTTP/1.1" 200 714
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/urls.py changed, reloading.
+Watching for file changes with StatReloader
+Not Found: /
+"GET / HTTP/1.1" 404 17498
+"GET /admin/ HTTP/1.1" 302 0
+"GET /admin/login/?next=/admin/ HTTP/1.1" 200 4178
+"POST /admin/login/?next=/admin/ HTTP/1.1" 200 4353
+"POST /admin/login/?next=/admin/ HTTP/1.1" 302 0
+"GET /admin/ HTTP/1.1" 200 19744
+"GET /admin/main/user/ HTTP/1.1" 200 50280
+"GET /admin/jsi18n/ HTTP/1.1" 200 3343
+"OPTIONS /password-reset-request/ HTTP/1.1" 200 0
+"POST /password-reset-request/ HTTP/1.1" 200 38
+Unauthorized: /get-strategy-clients-list/
+"GET /get-strategy-clients-list/ HTTP/1.1" 401 5168
+"GET /static/rest_framework/css/bootstrap.min.css HTTP/1.1" 304 0
+"GET /static/rest_framework/css/prettify.css HTTP/1.1" 304 0
+"GET /static/rest_framework/css/bootstrap-tweaks.css HTTP/1.1" 304 0
+"GET /static/rest_framework/css/default.css HTTP/1.1" 304 0
+"GET /static/rest_framework/js/csrf.js HTTP/1.1" 304 0
+"GET /static/rest_framework/js/prettify-min.js HTTP/1.1" 304 0
+"GET /static/rest_framework/js/default.js HTTP/1.1" 304 0
+"GET /static/rest_framework/js/bootstrap.min.js HTTP/1.1" 304 0
+"GET /static/rest_framework/js/jquery-3.7.1.min.js HTTP/1.1" 304 0
+"GET /static/rest_framework/js/load-ajax-form.js HTTP/1.1" 304 0
+"GET /static/rest_framework/js/ajax-form.js HTTP/1.1" 304 0
+"GET /static/rest_framework/img/grid.png HTTP/1.1" 304 0
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+Watching for file changes with StatReloader
+"GET /get-client-list/ HTTP/1.1" 200 3679
+"GET /get-strategies-client/20/ HTTP/1.1" 200 714
+"GET /get-strategies-client/20/ HTTP/1.1" 200 714
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+Watching for file changes with StatReloader
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+Watching for file changes with StatReloader
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+Watching for file changes with StatReloader
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+Watching for file changes with StatReloader
+"OPTIONS /login/ HTTP/1.1" 200 0
+Bad Request: /login/
+"POST /login/ HTTP/1.1" 400 44
+Unauthorized: /kyc/verify/20/
+"POST /kyc/verify/20/ HTTP/1.1" 401 58
+Not Found: /kyc/verify/20/
+"POST /kyc/verify/20/ HTTP/1.1" 404 35
+"POST /kyc/verify/14/ HTTP/1.1" 200 659
+"POST /kyc/verify/14/ HTTP/1.1" 200 647
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+Watching for file changes with StatReloader
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+Watching for file changes with StatReloader
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+Watching for file changes with StatReloader
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+Watching for file changes with StatReloader
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+Watching for file changes with StatReloader
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+Watching for file changes with StatReloader
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/tasks.py changed, reloading.
+Watching for file changes with StatReloader
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/tasks.py changed, reloading.
+Watching for file changes with StatReloader
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/tasks.py changed, reloading.
+Watching for file changes with StatReloader
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+Watching for file changes with StatReloader
+Internal Server Error: /kyc/verify/14/
+Traceback (most recent call last):
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/views/decorators/csrf.py", line 56, in wrapper_view
+    return view_func(*args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/views/generic/base.py", line 104, in view
+    return self.dispatch(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py", line 542, in post
+    send_kyc_email_async.delay(user_email, from_email, kyc.user.first_name, 'approve', reason)
+AttributeError: 'User' object has no attribute 'first_name'
+"POST /kyc/verify/14/ HTTP/1.1" 500 97867
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+Watching for file changes with StatReloader
+Internal Server Error: /kyc/verify/14/
+Traceback (most recent call last):
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/views/decorators/csrf.py", line 56, in wrapper_view
+    return view_func(*args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/views/generic/base.py", line 104, in view
+    return self.dispatch(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py", line 542, in post
+    send_kyc_email_async.delay(user_email, from_email, kyc.user.firstNname, 'approve', reason)
+AttributeError: 'User' object has no attribute 'firstNname'
+"POST /kyc/verify/14/ HTTP/1.1" 500 97867
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+Watching for file changes with StatReloader
+"POST /kyc/verify/14/ HTTP/1.1" 200 659
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/tasks.py changed, reloading.
+Watching for file changes with StatReloader
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/tasks.py changed, reloading.
+Watching for file changes with StatReloader
+"POST /kyc/verify/14/ HTTP/1.1" 200 659
+"POST /kyc/verify/14/ HTTP/1.1" 200 659
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/tasks.py changed, reloading.
+Watching for file changes with StatReloader
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+Watching for file changes with StatReloader
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+Watching for file changes with StatReloader
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/tasks.py changed, reloading.
+Watching for file changes with StatReloader
+Watching for file changes with StatReloader
+"POST /kyc/verify/14/ HTTP/1.1" 200 659
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/tasks.py changed, reloading.
+Watching for file changes with StatReloader
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/tasks.py changed, reloading.
+Watching for file changes with StatReloader
+"POST /kyc/verify/14/ HTTP/1.1" 200 659
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/tasks.py changed, reloading.
+Watching for file changes with StatReloader
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+Watching for file changes with StatReloader
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+Watching for file changes with StatReloader
+"POST /kyc/verify/14/ HTTP/1.1" 200 647
+"POST /kyc/verify/14/ HTTP/1.1" 200 647
+"POST /kyc/verify/14/ HTTP/1.1" 200 647
+"POST /kyc/verify/14/ HTTP/1.1" 200 647
+"POST /kyc/verify/14/ HTTP/1.1" 200 659
+"POST /kyc/verify/14/ HTTP/1.1" 200 647
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/tasks.py changed, reloading.
+Watching for file changes with StatReloader
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+Watching for file changes with StatReloader
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+Watching for file changes with StatReloader
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/tasks.py changed, reloading.
+Watching for file changes with StatReloader
+"POST /kyc/verify/14/ HTTP/1.1" 200 647
+"POST /kyc/verify/14/ HTTP/1.1" 200 659
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/tasks.py changed, reloading.
+Watching for file changes with StatReloader
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+Watching for file changes with StatReloader
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/tasks.py changed, reloading.
+Watching for file changes with StatReloader
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/tasks.py changed, reloading.
+Watching for file changes with StatReloader
+"POST /kyc/verify/14/ HTTP/1.1" 200 659
+"POST /kyc/verify/14/ HTTP/1.1" 200 647
+"POST /kyc/verify/14/ HTTP/1.1" 200 647
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+Watching for file changes with StatReloader
+Not Found: /admin/table_files/
+"GET /admin/table_files/ HTTP/1.1" 404 8315
+Not Found: /admin/table_files/
+"GET /admin/table_files/ HTTP/1.1" 404 8315
+Watching for file changes with StatReloader
+"GET /get-strategies-by-id/20/ HTTP/1.1" 200 143
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+Watching for file changes with StatReloader
+"GET /get-strategies-by-id/20/ HTTP/1.1" 200 102
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+Watching for file changes with StatReloader
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+Watching for file changes with StatReloader
+"GET /get-strategies-by-id/20/ HTTP/1.1" 200 714
+Not Found: /gt-All-clients/
+"PUT /gt-All-clients/ HTTP/1.1" 404 17561
+Unauthorized: /get-client-list/
+"PUT /get-client-list/ HTTP/1.1" 401 58
+"GET /get-client-list/ HTTP/1.1" 200 3679
+"GET /get-strategies-by-id/20/ HTTP/1.1" 200 714
+Unauthorized: /create-client/
+"POST /create-client/ HTTP/1.1" 401 183
+Bad Request: /create-client/
+"POST /create-client/ HTTP/1.1" 400 110
+Bad Request: /create-client/
+"POST /create-client/ HTTP/1.1" 400 50
+Bad Request: /create-client/
+"POST /create-client/ HTTP/1.1" 400 65
+"POST /create-client/ HTTP/1.1" 201 843
+Bad Request: /create-client/
+"POST /create-client/ HTTP/1.1" 400 50
+Bad Request: /create-client/
+"POST /create-client/ HTTP/1.1" 400 50
+"POST /create-client/ HTTP/1.1" 201 822
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+Watching for file changes with StatReloader
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+Watching for file changes with StatReloader
+Bad Request: /create-client/
+"POST /create-client/ HTTP/1.1" 400 50
+"POST /create-client/ HTTP/1.1" 201 822
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+Watching for file changes with StatReloader
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+Watching for file changes with StatReloader
+Bad Request: /create-client/
+"POST /create-client/ HTTP/1.1" 400 50
+"POST /create-client/ HTTP/1.1" 201 822
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+Watching for file changes with StatReloader
+Bad Request: /create-client/
+"POST /create-client/ HTTP/1.1" 400 50
+"POST /create-client/ HTTP/1.1" 201 822
+"GET /admin/ HTTP/1.1" 302 0
+"GET /admin/login/?next=/admin/ HTTP/1.1" 200 4178
+"POST /admin/login/?next=/admin/ HTTP/1.1" 200 4349
+"POST /admin/login/?next=/admin/ HTTP/1.1" 200 4349
+"POST /admin/login/?next=/admin/ HTTP/1.1" 200 4349
+Watching for file changes with StatReloader
+Not Found: /
+"GET / HTTP/1.1" 404 17498
+"GET /admin/ HTTP/1.1" 302 0
+"GET /admin/login/?next=/admin/ HTTP/1.1" 200 4178
+"POST /admin/login/?next=/admin/ HTTP/1.1" 302 0
+"GET /admin/ HTTP/1.1" 200 19744
+"GET /admin/main/license/ HTTP/1.1" 200 21037
+"GET /admin/jsi18n/ HTTP/1.1" 200 3343
+"GET /admin/main/license/7/change/ HTTP/1.1" 200 17877
+"GET /admin/jsi18n/ HTTP/1.1" 200 3343
+"POST /admin/main/license/7/change/ HTTP/1.1" 302 0
+"GET /admin/main/license/ HTTP/1.1" 200 21235
+"GET /admin/jsi18n/ HTTP/1.1" 200 3343
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+Watching for file changes with StatReloader
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+Watching for file changes with StatReloader
+Bad Request: /create-client/
+"POST /create-client/ HTTP/1.1" 400 57
+"POST /create-client/ HTTP/1.1" 201 820
+Watching for file changes with StatReloader
+Unauthorized: /get-client-list/
+"GET /get-client-list/ HTTP/1.1" 401 58
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+Watching for file changes with StatReloader
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+Watching for file changes with StatReloader
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+Watching for file changes with StatReloader
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+Watching for file changes with StatReloader
+Internal Server Error: /get-client-by-id/20/
+Traceback (most recent call last):
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/views/decorators/csrf.py", line 56, in wrapper_view
+    return view_func(*args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/views/generic/base.py", line 104, in view
+    return self.dispatch(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py", line 1453, in get
+    user = User.objects.get(pk=pk)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/db/models/manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/db/models/query.py", line 637, in get
+    raise self.model.DoesNotExist(
+main.models.User.DoesNotExist: User matching query does not exist.
+"GET /get-client-by-id/20/ HTTP/1.1" 500 105815
+"GET /admin/ HTTP/1.1" 200 19738
+"GET /static/admin/css/nav_sidebar.css HTTP/1.1" 304 0
+"GET /static/admin/css/base.css HTTP/1.1" 304 0
+"GET /static/admin/css/responsive.css HTTP/1.1" 304 0
+"GET /static/admin/css/dark_mode.css HTTP/1.1" 304 0
+"GET /static/admin/css/dashboard.css HTTP/1.1" 304 0
+"GET /static/admin/js/theme.js HTTP/1.1" 304 0
+"GET /static/admin/js/nav_sidebar.js HTTP/1.1" 304 0
+"GET /static/admin/img/icon-changelink.svg HTTP/1.1" 304 0
+"GET /static/admin/img/icon-addlink.svg HTTP/1.1" 304 0
+Not Found: /favicon.ico
+"GET /favicon.ico HTTP/1.1" 404 17549
+"GET /admin/main/user/ HTTP/1.1" 200 54880
+"GET /static/admin/css/changelists.css HTTP/1.1" 304 0
+"GET /static/admin/js/jquery.init.js HTTP/1.1" 304 0
+"GET /static/admin/js/urlify.js HTTP/1.1" 304 0
+"GET /static/admin/js/actions.js HTTP/1.1" 304 0
+"GET /static/admin/js/core.js HTTP/1.1" 304 0
+"GET /static/admin/js/admin/RelatedObjectLookups.js HTTP/1.1" 304 0
+"GET /static/admin/js/prepopulate.js HTTP/1.1" 304 0
+"GET /static/admin/img/search.svg HTTP/1.1" 304 0
+"GET /static/admin/img/icon-no.svg HTTP/1.1" 304 0
+"GET /admin/jsi18n/ HTTP/1.1" 200 3343
+"GET /static/admin/js/filters.js HTTP/1.1" 304 0
+"GET /static/admin/img/tooltag-add.svg HTTP/1.1" 304 0
+"GET /static/admin/img/sorting-icons.svg HTTP/1.1" 304 0
+"GET /admin/main/user/44/change/ HTTP/1.1" 200 56027
+"GET /static/admin/css/forms.css HTTP/1.1" 304 0
+"GET /static/admin/js/admin/DateTimeShortcuts.js HTTP/1.1" 304 0
+"GET /static/admin/js/calendar.js HTTP/1.1" 304 0
+"GET /static/admin/img/icon-viewlink.svg HTTP/1.1" 304 0
+"GET /static/admin/js/prepopulate_init.js HTTP/1.1" 304 0
+"GET /static/admin/css/widgets.css HTTP/1.1" 304 0
+"GET /admin/jsi18n/ HTTP/1.1" 200 3343
+"GET /static/admin/js/change_form.js HTTP/1.1" 304 0
+"GET /static/admin/img/icon-calendar.svg HTTP/1.1" 304 0
+"GET /get-client-by-id/44/ HTTP/1.1" 200 408
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+Watching for file changes with StatReloader
+"GET /get-client-by-id/44/ HTTP/1.1" 200 408
+"POST /admin/main/user/44/change/ HTTP/1.1" 302 0
+"GET /admin/main/user/ HTTP/1.1" 200 55090
+"GET /admin/jsi18n/ HTTP/1.1" 200 3343
+"GET /get-client-by-id/44/ HTTP/1.1" 200 416
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+Watching for file changes with StatReloader
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+Watching for file changes with StatReloader
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+Watching for file changes with StatReloader
+Unauthorized: /create-client/
+"POST /create-client/ HTTP/1.1" 401 58
+Internal Server Error: /get-client-by-id/44/
+Traceback (most recent call last):
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/views/decorators/csrf.py", line 56, in wrapper_view
+    return view_func(*args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/views/generic/base.py", line 104, in view
+    return self.dispatch(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py", line 1458, in get
+    return Response(serializer.data, status=status.HTTP_200_OK)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/serializers.py", line 571, in data
+    ret = super().data
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/serializers.py", line 249, in data
+    self._data = self.to_representation(self.instance)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/serializers.py", line 523, in to_representation
+    for field in fields:
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/serializers.py", line 384, in _readable_fields
+    for field in self.fields.values():
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/utils/functional.py", line 57, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/serializers.py", line 372, in fields
+    for key, value in self.get_fields().items():
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/serializers.py", line 1079, in get_fields
+    field_names = self.get_field_names(declared_fields, info)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/serializers.py", line 1175, in get_field_names
+    assert field_name in fields, (
+AssertionError: The field 'Group_service' was declared on serializer ClientListSerializer, but has not been included in the 'fields' option.
+"GET /get-client-by-id/44/ HTTP/1.1" 500 151074
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+Watching for file changes with StatReloader
+"GET /get-client-by-id/44/ HTTP/1.1" 200 437
+"GET /admin/main/user/44/change/ HTTP/1.1" 200 56030
+"GET /admin/jsi18n/ HTTP/1.1" 200 3343
+"POST /admin/main/user/44/change/ HTTP/1.1" 302 0
+"GET /admin/main/user/44/change/ HTTP/1.1" 200 56263
+"GET /admin/jsi18n/ HTTP/1.1" 200 3343
+"GET /get-client-by-id/44/ HTTP/1.1" 200 963
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+Watching for file changes with StatReloader
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+Watching for file changes with StatReloader
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+Watching for file changes with StatReloader
+"GET /admin/main/user/44/change/ HTTP/1.1" 200 56030
+"GET /admin/main/ HTTP/1.1" 200 11820
+"GET /admin/main/license/ HTTP/1.1" 200 21037
+"GET /admin/jsi18n/ HTTP/1.1" 200 3343
+"GET /admin/main/license/2/change/ HTTP/1.1" 200 17868
+"GET /admin/jsi18n/ HTTP/1.1" 200 3343
+"POST /admin/main/license/2/change/ HTTP/1.1" 200 18003
+"GET /admin/jsi18n/ HTTP/1.1" 200 3343
+"POST /admin/main/license/2/change/ HTTP/1.1" 302 0
+"GET /admin/main/license/2/change/ HTTP/1.1" 200 18101
+"GET /admin/jsi18n/ HTTP/1.1" 200 3343
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+Watching for file changes with StatReloader
+Bad Request: /create-client/
+"POST /create-client/ HTTP/1.1" 400 50
+Bad Request: /create-client/
+"POST /create-client/ HTTP/1.1" 400 65
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+Watching for file changes with StatReloader
+Bad Request: /create-client/
+"POST /create-client/ HTTP/1.1" 400 59
+Bad Request: /create-client/
+"POST /create-client/ HTTP/1.1" 400 59
+Internal Server Error: /create-client/
+Traceback (most recent call last):
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/views/decorators/csrf.py", line 56, in wrapper_view
+    return view_func(*args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/views/generic/base.py", line 104, in view
+    return self.dispatch(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py", line 1389, in post
+    client = serializer.save(created_by=request.user)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/serializers.py", line 208, in save
+    self.instance = self.create(validated_data)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py", line 822, in create
+    client = User.objects.create(**validated_data)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/db/models/manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/db/models/query.py", line 656, in create
+    obj = self.model(**kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/db/models/base.py", line 543, in __init__
+    _setattr(self, field.name, rel_obj)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/db/models/fields/related_descriptors.py", line 266, in __set__
+    raise ValueError(
+ValueError: Cannot assign "<django.contrib.auth.models.AnonymousUser object at 0x7e010df38310>": "User.created_by" must be a "User" instance.
+"POST /create-client/ HTTP/1.1" 500 139809
+Watching for file changes with StatReloader
+"POST /login/ HTTP/1.1" 200 681
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+Watching for file changes with StatReloader
+"POST /create-client/ HTTP/1.1" 201 1627
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+Watching for file changes with StatReloader
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+Watching for file changes with StatReloader
+"POST /create-client/ HTTP/1.1" 201 1628
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+Watching for file changes with StatReloader
+"GET /admin/main/ HTTP/1.1" 200 11820
+"GET /admin/main/user/ HTTP/1.1" 200 56441
+"GET /admin/jsi18n/ HTTP/1.1" 200 3343
+"POST /admin/main/user/ HTTP/1.1" 200 15355
+"POST /admin/main/user/ HTTP/1.1" 302 0
+"GET /admin/main/user/ HTTP/1.1" 200 55797
+"GET /admin/jsi18n/ HTTP/1.1" 200 3343
+"POST /create-client/ HTTP/1.1" 201 1628
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+Watching for file changes with StatReloader
+Bad Request: /create-client/
+"POST /create-client/ HTTP/1.1" 400 50
+"POST /create-client/ HTTP/1.1" 201 1628
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+Watching for file changes with StatReloader
+Bad Request: /create-client/
+"POST /create-client/ HTTP/1.1" 400 234
+Bad Request: /create-client/
+"POST /create-client/ HTTP/1.1" 400 185
+"POST /create-client/ HTTP/1.1" 201 1640
+Bad Request: /create-client/
+"POST /create-client/ HTTP/1.1" 400 50
+"POST /create-client/ HTTP/1.1" 201 1627
+"POST /create-client/ HTTP/1.1" 201 1619
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+Watching for file changes with StatReloader
+"POST /create-client/ HTTP/1.1" 201 1618
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+Watching for file changes with StatReloader
+"POST /create-client/ HTTP/1.1" 201 1618
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+Watching for file changes with StatReloader
+"POST /create-client/ HTTP/1.1" 201 1635
+Bad Request: /create-client/
+"POST /create-client/ HTTP/1.1" 400 50
+"POST /create-client/ HTTP/1.1" 201 1634
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/permissions.py changed, reloading.
+Watching for file changes with StatReloader
+Bad Request: /create-client/
+"POST /create-client/ HTTP/1.1" 400 59
+Bad Request: /create-client/
+"POST /create-client/ HTTP/1.1" 400 59
+"POST /create-client/ HTTP/1.1" 201 1636
+"GET /admin/main/ HTTP/1.1" 200 11820
+"GET /admin/main/orderlog/ HTTP/1.1" 200 37849
+"GET /admin/jsi18n/ HTTP/1.1" 200 3343
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+Watching for file changes with StatReloader
+/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+Watching for file changes with StatReloader
+"GET /admin/ HTTP/1.1" 200 19714
+"GET /admin/main/user/ HTTP/1.1" 200 63392
+"GET /admin/jsi18n/ HTTP/1.1" 200 3343
+"OPTIONS /login/ HTTP/1.1" 200 0
+"POST /login/ HTTP/1.1" 200 681
+"OPTIONS /user-profile/ HTTP/1.1" 200 0
+"OPTIONS /user-profile/ HTTP/1.1" 200 0
+"GET /user-profile/ HTTP/1.1" 200 619
+"GET /user-profile/ HTTP/1.1" 200 619
+"OPTIONS /users-list/ HTTP/1.1" 200 0
+"OPTIONS /users-list/ HTTP/1.1" 200 0
+Admin:::{user.role.name}
+"GET /users-list/ HTTP/1.1" 200 2278
+Admin:::{user.role.name}
+"GET /users-list/ HTTP/1.1" 200 2278
+"GET /user-profile/ HTTP/1.1" 200 619
+"GET /user-profile/ HTTP/1.1" 200 619
+"OPTIONS /get-client-list/ HTTP/1.1" 200 0
+"OPTIONS /get-client-list/ HTTP/1.1" 200 0
+"GET /get-client-list/ HTTP/1.1" 200 16395
+"GET /get-client-list/ HTTP/1.1" 200 16395
+"OPTIONS /get-License/ HTTP/1.1" 200 0
+"OPTIONS /get-License/ HTTP/1.1" 200 0
+"GET /get-License/ HTTP/1.1" 200 1706
+"GET /get-License/ HTTP/1.1" 200 1706
+"OPTIONS /update-License/13/ HTTP/1.1" 200 0
+"DELETE /update-License/13/ HTTP/1.1" 204 39
+"OPTIONS /update-License/12/ HTTP/1.1" 200 0
+"DELETE /update-License/12/ HTTP/1.1" 204 39
+"OPTIONS /update-License/11/ HTTP/1.1" 200 0
+"DELETE /update-License/11/ HTTP/1.1" 204 39
+"OPTIONS /update-License/10/ HTTP/1.1" 200 0
+"DELETE /update-License/10/ HTTP/1.1" 204 39
+"OPTIONS /update-License/9/ HTTP/1.1" 200 0
+"DELETE /update-License/9/ HTTP/1.1" 204 39
+"OPTIONS /update-License/6/ HTTP/1.1" 200 0
+"DELETE /update-License/6/ HTTP/1.1" 204 39
+"OPTIONS /update-License/2/ HTTP/1.1" 200 0
+"DELETE /update-License/2/ HTTP/1.1" 204 39
+"OPTIONS /create-License/ HTTP/1.1" 200 0
+"POST /create-License/ HTTP/1.1" 201 163
+"OPTIONS /get-segments/ HTTP/1.1" 200 0
+"OPTIONS /get-segments/ HTTP/1.1" 200 0
+"GET /get-segments/ HTTP/1.1" 200 236
+"GET /get-segments/ HTTP/1.1" 200 236
+"OPTIONS /get-category/ HTTP/1.1" 200 0
+"OPTIONS /get-category/ HTTP/1.1" 200 0
+"GET /get-category/ HTTP/1.1" 200 407
+"GET /get-category/ HTTP/1.1" 200 407
+"OPTIONS /get-services/ HTTP/1.1" 200 0
+"OPTIONS /get-services/ HTTP/1.1" 200 0
+"GET /get-segments/ HTTP/1.1" 200 236
+"GET /get-category/ HTTP/1.1" 200 407
+"GET /get-services/ HTTP/1.1" 200 52
+"GET /get-category/ HTTP/1.1" 200 407
+"GET /get-segments/ HTTP/1.1" 200 236
+"GET /get-services/ HTTP/1.1" 200 52
+"OPTIONS /create-services/ HTTP/1.1" 200 0
+"POST /create-services/ HTTP/1.1" 201 307
+"GET /get-category/ HTTP/1.1" 200 407
+"GET /get-services/ HTTP/1.1" 200 309
+"GET /get-segments/ HTTP/1.1" 200 236
+"GET /get-category/ HTTP/1.1" 200 407
+"GET /get-segments/ HTTP/1.1" 200 236
+"GET /get-services/ HTTP/1.1" 200 309
+"OPTIONS /update-services/5/ HTTP/1.1" 200 0
+"PUT /update-services/5/ HTTP/1.1" 200 302
+"GET /get-services/ HTTP/1.1" 200 304
+"OPTIONS /get-group-service/ HTTP/1.1" 200 0
+"OPTIONS /get-group-service/ HTTP/1.1" 200 0
+GroupServiceView GET request received
+"GET /get-group-service/ HTTP/1.1" 200 1501
+GroupServiceView GET request received
+"GET /get-group-service/ HTTP/1.1" 200 1501
+"OPTIONS /get-services-Qty_details/9/ HTTP/1.1" 200 0
+"OPTIONS /get-services-Qty_details/9/ HTTP/1.1" 200 0
+GroupServiceDetailView GET request received for ID: 9
+An unexpected error occurred: 'NoneType' object is not iterable
+Internal Server Error: /get-services-Qty_details/9/
+"GET /get-services-Qty_details/9/ HTTP/1.1" 500 41
+GroupServiceDetailView GET request received for ID: 9
+An unexpected error occurred: 'NoneType' object is not iterable
+Internal Server Error: /get-services-Qty_details/9/
+"GET /get-services-Qty_details/9/ HTTP/1.1" 500 41
+GroupServiceView GET request received
+"GET /get-group-service/ HTTP/1.1" 200 1501
+GroupServiceView GET request received
+"GET /get-group-service/ HTTP/1.1" 200 1501
+"OPTIONS /get-services-Qty_details/8/ HTTP/1.1" 200 0
+"OPTIONS /get-services-Qty_details/8/ HTTP/1.1" 200 0
+GroupServiceDetailView GET request received for ID: 8
+Response prepared successfully for ID: 8
+"GET /get-services-Qty_details/8/ HTTP/1.1" 200 76
+GroupServiceDetailView GET request received for ID: 8
+Response prepared successfully for ID: 8
+"GET /get-services-Qty_details/8/ HTTP/1.1" 200 76
+GroupServiceView GET request received
+"GET /get-group-service/ HTTP/1.1" 200 1501
+GroupServiceView GET request received
+"GET /get-group-service/ HTTP/1.1" 200 1501
+"OPTIONS /get-Groupservices-by-id/8/ HTTP/1.1" 200 0
+"OPTIONS /get-Groupservices-by-id/8/ HTTP/1.1" 200 0
+"GET /get-Groupservices-by-id/8/ HTTP/1.1" 200 222
+"GET /get-segments/ HTTP/1.1" 200 236
+"GET /get-Groupservices-by-id/8/ HTTP/1.1" 200 222
+"GET /get-segments/ HTTP/1.1" 200 236
+GroupServiceView GET request received
+"GET /get-group-service/ HTTP/1.1" 200 1501
+GroupServiceView GET request received
+"GET /get-group-service/ HTTP/1.1" 200 1501
+"OPTIONS /delete-group-service/8/ HTTP/1.1" 200 0
+"DELETE /delete-group-service/8/ HTTP/1.1" 204 44
+"GET /get-segments/ HTTP/1.1" 200 236
+"GET /get-segments/ HTTP/1.1" 200 236
+"GET /get-services/ HTTP/1.1" 200 304
+"GET /get-services/ HTTP/1.1" 200 304
+"OPTIONS /create-group-service/ HTTP/1.1" 200 0
+"POST /create-group-service/ HTTP/1.1" 201 218
+GroupServiceView GET request received
+"GET /get-group-service/ HTTP/1.1" 200 1497
+GroupServiceView GET request received
+"GET /get-group-service/ HTTP/1.1" 200 1497
+"OPTIONS /get-services-Qty_details/10/ HTTP/1.1" 200 0
+"OPTIONS /get-services-Qty_details/10/ HTTP/1.1" 200 0
+GroupServiceDetailView GET request received for ID: 10
+Response prepared successfully for ID: 10
+"GET /get-services-Qty_details/10/ HTTP/1.1" 200 87
+GroupServiceDetailView GET request received for ID: 10
+Response prepared successfully for ID: 10
+"GET /get-services-Qty_details/10/ HTTP/1.1" 200 87
+GroupServiceView GET request received
+"GET /get-group-service/ HTTP/1.1" 200 1497
+GroupServiceView GET request received
+"GET /get-group-service/ HTTP/1.1" 200 1497
+"GET /get-client-list/ HTTP/1.1" 200 15927
+"GET /get-client-list/ HTTP/1.1" 200 15927
+"GET /get-client-list/ HTTP/1.1" 200 15927
+"GET /get-client-list/ HTTP/1.1" 200 15927
+"OPTIONS /get-client-by-id/169/ HTTP/1.1" 200 0
+"OPTIONS /get-broker/ HTTP/1.1" 200 0
+"OPTIONS /get-client-by-id/169/ HTTP/1.1" 200 0
+GroupServiceView GET request received
+"OPTIONS /get-broker/ HTTP/1.1" 200 0
+Admin:::{user.role.name}
+"GET /get-broker/ HTTP/1.1" 200 318
+"GET /get-group-service/ HTTP/1.1" 200 1497
+"GET /get-client-by-id/169/ HTTP/1.1" 200 1636
+"GET /get-broker/ HTTP/1.1" 200 318
+GroupServiceView GET request received
+"GET /users-list/ HTTP/1.1" 200 2278
+"GET /get-group-service/ HTTP/1.1" 200 1497
+Admin:::{user.role.name}
+"GET /get-client-by-id/169/ HTTP/1.1" 200 1636
+"GET /users-list/ HTTP/1.1" 200 2278
+"GET /get-client-list/ HTTP/1.1" 200 15927
+"GET /get-client-list/ HTTP/1.1" 200 15927
+Admin:::{user.role.name}
+"GET /get-broker/ HTTP/1.1" 200 318
+GroupServiceView GET request received
+"GET /get-broker/ HTTP/1.1" 200 318
+"GET /get-group-service/ HTTP/1.1" 200 1497
+"GET /users-list/ HTTP/1.1" 200 2278
+GroupServiceView GET request received
+Admin:::{user.role.name}
+"GET /get-group-service/ HTTP/1.1" 200 1497
+"GET /users-list/ HTTP/1.1" 200 2278
+"GET /get-client-list/ HTTP/1.1" 200 15927
+"GET /get-client-list/ HTTP/1.1" 200 15927
+GroupServiceView GET request received
+"GET /get-broker/ HTTP/1.1" 200 318
+Admin:::{user.role.name}
+"GET /get-group-service/ HTTP/1.1" 200 1497
+"GET /get-broker/ HTTP/1.1" 200 318
+"GET /users-list/ HTTP/1.1" 200 2278
+GroupServiceView GET request received
+"GET /get-group-service/ HTTP/1.1" 200 1497
+Admin:::{user.role.name}
+"GET /users-list/ HTTP/1.1" 200 2278
+Admin:::{user.role.name}
+"GET /users-list/ HTTP/1.1" 200 2278
+Admin:::{user.role.name}
+"GET /users-list/ HTTP/1.1" 200 2278
+"OPTIONS /user-profile/ HTTP/1.1" 200 0
+"OPTIONS /user-profile/ HTTP/1.1" 200 0
+"OPTIONS /users-list/ HTTP/1.1" 200 0
+"GET /user-profile/ HTTP/1.1" 200 619
+"GET /user-profile/ HTTP/1.1" 200 619
+Admin:::{user.role.name}
+"GET /users-list/ HTTP/1.1" 200 2278
+"GET /user-profile/ HTTP/1.1" 200 619
+Admin:::{user.role.name}
+"GET /user-profile/ HTTP/1.1" 200 619
+"GET /users-list/ HTTP/1.1" 200 2278
+Unauthorized: /get-roles-list/
+"GET /get-roles-list/ HTTP/1.1" 401 58
+Unauthorized: /get-roles-list/
+"GET /get-roles-list/ HTTP/1.1" 401 58
+Admin:::{user.role.name}
+"GET /users-list/ HTTP/1.1" 200 2278
+Admin:::{user.role.name}
+"GET /users-list/ HTTP/1.1" 200 2278
+Unauthorized: /get-roles-list/
+"GET /get-roles-list/ HTTP/1.1" 401 58
+Unauthorized: /get-roles-list/
+"GET /get-roles-list/ HTTP/1.1" 401 58
+Admin:::{user.role.name}
+"GET /users-list/ HTTP/1.1" 200 2278
+Admin:::{user.role.name}
+"GET /users-list/ HTTP/1.1" 200 2278
+Unauthorized: /get-roles-list/
+"GET /get-roles-list/ HTTP/1.1" 401 58
+Unauthorized: /get-roles-list/
+"GET /get-roles-list/ HTTP/1.1" 401 58
+Unauthorized: /get-roles-list/
+"GET /get-roles-list/ HTTP/1.1" 401 58
+"GET /user-profile/ HTTP/1.1" 200 619
+"GET /user-profile/ HTTP/1.1" 200 619
+Admin:::{user.role.name}
+"GET /users-list/ HTTP/1.1" 200 2278
+Admin:::{user.role.name}
+"GET /users-list/ HTTP/1.1" 200 2278
+Unauthorized: /get-roles-list/
+"GET /get-roles-list/ HTTP/1.1" 401 58
+Unauthorized: /get-roles-list/
+"GET /get-roles-list/ HTTP/1.1" 401 58
+"OPTIONS /get-roles-list/ HTTP/1.1" 200 0
+"GET /get-roles-list/ HTTP/1.1" 200 180
+Admin:::{user.role.name}
+"GET /users-list/ HTTP/1.1" 200 2278
+Admin:::{user.role.name}
+"GET /users-list/ HTTP/1.1" 200 2278
+"GET /get-client-list/ HTTP/1.1" 200 15927
+"GET /get-client-list/ HTTP/1.1" 200 15927
+"GET /get-client-list/ HTTP/1.1" 200 15927
+"GET /get-client-list/ HTTP/1.1" 200 15927
+"OPTIONS /user-last-login/ HTTP/1.1" 200 0
+"OPTIONS /user-last-login/ HTTP/1.1" 200 0
+"GET /user-profile/ HTTP/1.1" 200 619
+"GET /user-last-login/ HTTP/1.1" 200 94
+"GET /user-profile/ HTTP/1.1" 200 619
+"GET /user-last-login/ HTTP/1.1" 200 94
+"GET /get-client-list/ HTTP/1.1" 200 15927
+"GET /get-client-list/ HTTP/1.1" 200 15927
+"OPTIONS /logout/ HTTP/1.1" 200 0
+"POST /logout/ HTTP/1.1" 200 31

@@ -139,26 +139,43 @@ class User(AbstractBaseUser, PermissionsMixin):
     def calculate_dates(self):
         """Calculate start_date_client and end_date_client based on to_month."""
         today = datetime.today()
+                
+        license_type = getattr(self.license, 'name', None)  # Modify 'name' to match your actual attribute
 
-        if self.to_month:
-            try:
-                if "month" in self.to_month:
-                    months = int(self.to_month.split()[0])
-                    self.start_date_client = today.date()
-                    self.end_date_client = (today + relativedelta(months=months)).date()
-                elif "day" in self.to_month:
-                    days = int(self.to_month.split()[0])
-                    self.start_date_client = today.date()
-                    self.end_date_client = (today + timedelta(days=days)).date()
-                else:
+        if license_type == "Live":
+            print("Inside Live license section")
+            if self.to_month:
+                print("inside to month......")
+                try:
+                    if "month" in self.to_month:
+                        months = int(self.to_month.split()[0])
+                        self.start_date_client = today.date()
+                        self.end_date_client = (today + relativedelta(months=months)).date()
+                    elif "day" in self.to_month:
+                        days = int(self.to_month.split()[0])
+                        self.start_date_client = today.date()
+                        self.end_date_client = (today + timedelta(days=days)).date()
+                    else:
+                        # Handle unexpected format by setting dates to None
+                        self.start_date_client = None
+                        self.end_date_client = None
+                except ValueError:
+                    # Handle invalid integer conversion
                     self.start_date_client = None
                     self.end_date_client = None
-            except ValueError:
+            else:
+                # If no to_month provided, set dates to None
                 self.start_date_client = None
                 self.end_date_client = None
-        else:
-            self.start_date_client = None
-            self.end_date_client = None
+
+        elif license_type == "Demo":
+            print("Inside Demo license section")
+            # Retain the provided start and end dates as is
+            # If you don't need to assign dates, just omit these lines
+            self.start_date_client = self.start_date_client
+            self.end_date_client = self.end_date_client
+                
+            
 class KYC(models.Model):
     STATUS_CHOICES = [
         ('pending', 'Pending'),
@@ -279,7 +296,7 @@ class cities(models.Model):
 class License(models.Model):
     name=models.CharField(max_length=255,null=True)    
     no_of_days_month=models.IntegerField(blank=True,null=True)
-    period=models.CharField(max_length=255,null=True) 
+    period=models.CharField(max_length=255,null=True,blank=True) 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     status = models.BooleanField(default=True)

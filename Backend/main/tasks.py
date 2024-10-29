@@ -37,6 +37,7 @@ def send_email_async(user_name, otp_code, email):
         # Send the email
         email_message.send()
     # send_mail(subject, message, from_email, recipient_list)
+
 # tasks.py
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
@@ -57,7 +58,7 @@ def send_email_pass_async(email, password, user_name, login_link, support_email,
             'contact_number': contact_number
         }
         html_message = render_to_string('welcome_email.html', context)
-        print("html msg:::::::",html_message)
+        # print("html msg:::::::",html_message)
         from_email = settings.DEFAULT_FROM_EMAIL
         
         # Create the email
@@ -66,3 +67,36 @@ def send_email_pass_async(email, password, user_name, login_link, support_email,
 
         # Send the email
         email_message.send()
+        
+support_email=settings.DEFAULT_FROM_EMAIL
+contact_number=settings.CONTACT_NUM
+login_link=settings.LOGIN_LINK
+help_center_link=settings.HELP_CENTER_LINK
+company_website=settings.COMPANY_WEBSITE 
+@shared_task
+def send_kyc_email_async(email, from_email, user_name, action, reason):
+    if isinstance(email, list):
+        email = email[0]  
+    if isinstance(from_email, list):
+        from_email = from_email[0]
+    if action == 'approve':
+        subject = "Your KYC has been approved"
+    else:
+        subject = "Your KYC has been rejected"
+
+    context = {
+        'user_name': user_name,
+        'action': action,
+        'reason': reason,
+        'support_email': support_email,
+        'help_center': help_center_link,
+        'company_website': company_website,
+        'contact_number': contact_number
+    }
+    html_message = render_to_string('kyc_email.html', context)
+  
+    # Create the email with an HTML alternative
+    email_message = EmailMultiAlternatives(subject, "", from_email, [email])
+    email_message.attach_alternative(html_message, "text/html")
+    email_message.send()
+    

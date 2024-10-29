@@ -50,7 +50,7 @@ class UpdateRolePermissionsView(APIView):
 class RolePermissionListView(APIView):
     pagination_class = None
     # permission_classes = [IsAdminUser]
-    permission_classes = [permissions.IsAuthenticated, IsAdminRole]
+    permission_classes = [permissions.IsAuthenticated]#IsAdminRole
     def get(self, request, *args, **kwargs):
         queryset = RolePermission.objects.all()
         serializer = RolePermissionSerializer(queryset, many=True)  # Use the modified serializer

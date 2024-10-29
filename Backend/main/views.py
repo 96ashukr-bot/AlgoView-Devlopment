@@ -16,6 +16,7 @@ from django.conf import settings
 import time
 from rest_framework.generics import ListAPIView
 from main.permissions import  IsAdminRole
+from main.tasks import send_kyc_email_async
 from .models import *
 from .serializers import *
 from django.core.exceptions import ObjectDoesNotExist
@@ -469,7 +470,17 @@ class GetKYCView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         except KYC.DoesNotExist:
             return Response({'message': 'KYC not found for this user.'}, status=status.HTTP_404_NOT_FOUND)  
-        
+class GetKYCByIdView(APIView):
+    # permission_classes = [IsAuthenticated]
+    pagination_class = None
+    def get(self, request,pk, *args, **kwargs):
+        try:
+            kyc = KYC.objects.get(pk=pk)
+            serializer = KYCSerializer(kyc)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except KYC.DoesNotExist:
+            return Response({'message': 'KYC not found.'}, status=status.HTTP_404_NOT_FOUND)  
+                
 #kyc update create 
 class CreateOrUpdateKYCView(APIView):
     permission_classes = [IsAuthenticated]
@@ -494,7 +505,7 @@ class CreateOrUpdateKYCView(APIView):
 #pending kyc list for admin    
 class PendingKYCListView(APIView):# Get all pending KYC requests
     permission_classes = [permissions.IsAuthenticated, ] 
-    pagination_class = None
+    # pagination_class = None
     def get(self, request, *args, **kwargs):
         pending_kycs = KYC.objects.all().order_by('-id')
         if pending_kycs.exists():
@@ -519,12 +530,24 @@ class KYCVerificationView(APIView):
         action = request.data.get('action')
         if not action:
             return Response({"detail": "Action is required (approve/reject)."}, status=status.HTTP_400_BAD_REQUEST)
-
+        user_email = kyc.user.email 
+        from_email = settings.DEFAULT_FROM_EMAIL,
+        reason = request.data.get('reason', 'No reason provided')
         if action.lower() == 'approve':
             kyc.status = 'approved'
             kyc.is_verified = True  
             kyc.verified_by = request.user 
             kyc.save()
+            # Send approval email
+            send_kyc_email_async.delay(user_email, from_email, kyc.user.firstName, 'approve', reason)
+            # Send approval email
+            # send_mail(
+            #     subject="Your KYC has been approved",
+            #     message="Congratulations! Your KYC request has been approved.",
+            #     from_email=from_email,
+            #     recipient_list=[user_email],
+            #     fail_silently=False,
+            # )
             return Response({
                 "message": "KYC approved successfully.",
                 "kyc_data": KYCSerializer(kyc).data
@@ -533,7 +556,10 @@ class KYCVerificationView(APIView):
         elif action.lower() == 'reject':
             kyc.status = 'rejected'
             kyc.is_verified = False  
-            kyc.save()  
+            kyc.save() 
+            # Send rejection email
+            send_kyc_email_async.delay(user_email, from_email, kyc.user.firstName, 'reject', reason)
+               
             return Response({
                 "message": "KYC rejected.",
                 "kyc_data": KYCSerializer(kyc).data
@@ -1275,7 +1301,7 @@ class StrategyAPIView(APIView):
             return Response({"detail": "Strategy not found."}, status=status.HTTP_404_NOT_FOUND)
         
 class GetStrategyAPIView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    # permission_classes = [permissions.IsAuthenticated]
     def get(self, request, pk, *args, **kwargs): 
         try:
             user = Strategies.objects.get(pk=pk)  
@@ -1430,4 +1456,21 @@ class GetclientbyidPIView(APIView):
             return Response({"detail": "client id not found."}, status=status.HTTP_404_NOT_FOUND)
 
         return Response(serializer.data, status=status.HTTP_200_OK)        
+class GetStrategyClientView(APIView):
+    permission_classes = [IsAuthenticated]
     
+    def get(self, request, *args, **kwargs):
+        user = request.user 
+        try:
+            if user.role and user.role.name.lower() == 'super-admin' or user.role.name =='Super-Admin':
+                clients = User.objects.filter(type_of_user='is_client', is_client=True).order_by('-id')
+            elif user.role and user.role.name.lower() == 'sub-admin' or user.role.name=='Sub-Admin':
+                clients = User.objects.filter(assigned_client=user).order_by('-id')
+            else:
+                clients = User.objects.filter(type_of_user='is_client', created_by=user).order_by('-id')
+            serializer = ClientListSerializer(clients, many=True)
+
+        except Strategies.DoesNotExist:
+            return Response({"detail": "client id not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)    

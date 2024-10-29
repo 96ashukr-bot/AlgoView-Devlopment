@@ -557,10 +557,14 @@ class NewUserCreateSerializer(serializers.ModelSerializer):
 
 class KYCSerializer(serializers.ModelSerializer):
     user_name = serializers.SerializerMethodField()
+    first_name = serializers.SerializerMethodField()
+    last_name = serializers.SerializerMethodField()
+    email = serializers.SerializerMethodField()
+    phone = serializers.SerializerMethodField()
     class Meta:
         model = KYC
         fields = [
-            'id', 'user','user_name', 'id_proof', 'document_file_front', 'document_file_back', 'is_verified', 'status',
+            'id', 'user','first_name', 'last_name', 'email', 'phone','user_name', 'id_proof', 'document_file_front', 'document_file_back', 'is_verified', 'status',
             'verified_by', 'created_at', 'updated_at', 'address_proof_id', 'address_prof_front', 'address_prof_back'
         ]
         read_only_fields = ['user', 'created_at', 'updated_at', 'is_verified', 'verified_by']  # Restrict updates on some fields
@@ -568,6 +572,17 @@ class KYCSerializer(serializers.ModelSerializer):
         if obj.user:
             return f"{obj.user.firstName} {obj.user.lastName}"  # Get the full name of the user
         return "NO name available"
+    def get_first_name(self, obj):
+        return obj.user.firstName if obj.user else None
+
+    def get_last_name(self, obj):
+        return obj.user.lastName if obj.user else None
+
+    def get_email(self, obj):
+        return obj.user.email if obj.user else None
+
+    def get_phone(self, obj):
+        return obj.user.phoneNumber if obj.user else None
 class PermissionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Permission
@@ -695,6 +710,14 @@ class GetStrategySerializer(serializers.ModelSerializer):
     class Meta:
         model = Strategies
         fields =  '__all__'
+class GetStrategySerializer(serializers.ModelSerializer):
+    category = CategorySerializer()
+    segment = SegmentSerializer()
+    clients=clientSerializer(many=True)
+    class Meta:
+        model = Strategies
+        fields =  '__all__'
+        
 class GetBrokerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Broker
@@ -777,6 +800,7 @@ class ClientCreateSerializer(serializers.ModelSerializer):
         phone_number = data.get('phoneNumber')
         email = data.get('email')
 
+
         if self.instance is not None:
             if User.objects.exclude(id=self.instance.id).filter(phoneNumber=phone_number).exists():
                 raise serializers.ValidationError({'phoneNumber': 'A user with this phone number already exists.'})
@@ -821,14 +845,15 @@ class AssignedClientSerializer(serializers.ModelSerializer):
 class ClientListSerializer(serializers.ModelSerializer):
     assigned_client = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), required=False)
     Strategy = StrategySerializer(many=True, read_only=True) 
-    # Group_service = GroupServiceSerializer()  # Make sure to match field names
-    # license = LicenseSerializer()
+    Group_service = GroupServiceSerializer()  # Make sure to match field names
+    license = LicenseSerializer()
     Broker = GetBrokerSerializer() 
     class Meta:
         model = User
-        fields = ['id','email', 'firstName', 'fullName', 'lastName', 'client_status','phoneNumber',
-                  'client_key', 'start_date_client','end_date_client','Broker', 'license', 'user_license_month','to_month', 'created_by', 'assigned_client',
-                  'Strategy','client_status','givenservices_to_month','demate_acc_uid',]
+        fields = ['id','email', 'firstName', 'middleName','fullName', 'lastName', 'client_status','phoneNumber',
+                  'client_key', 'start_date_client','end_date_client','Broker', 'Group_service','license', 'user_license_month','to_month', 'created_by', 'assigned_client',
+                  'Strategy','client_status','givenservices_to_month','demate_acc_uid','start_date_client', 'end_date_client',
+                  ]
 
 
 class ClientupdateListSerializer(serializers.ModelSerializer):
@@ -840,7 +865,7 @@ class ClientupdateListSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'id', 'email', 'firstName', 'fullName', 'lastName', 'client_status', 'phoneNumber', 'client_key',
+            'id', 'email', 'firstName', 'middleName','fullName', 'lastName', 'client_status', 'phoneNumber', 'client_key',
             'start_date_client', 'end_date_client', 'Broker', 'broker_id', 'license', 'user_license_month',
             'to_month', 'created_by', 'assigned_client', 'Strategy', 'client_status', 'givenservices_to_month',
             'demate_acc_uid'
