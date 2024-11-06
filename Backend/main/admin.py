@@ -14,7 +14,7 @@ class UserAdmin(DjangoUserAdmin):
             , 
             # Permanent Address Fields
             'permanent_add_line_1', 'permanent_add_line_2', 'permanent_city', 
-            'permanent_state', 'permanent_country', 'permanent_zip_code',
+            'permanent_state', 'permanent_country', 'permanent_zip_code','is_address_same',
             # Current Address Fields
             'current_add_line_1', 'current_add_line_2', 'current_city',
             'current_state', 'current_country', 'current_zip_code','external_user','type_of_user','Group_service',

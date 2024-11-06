@@ -83,7 +83,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     permanent_country = models.CharField(max_length=20, null=True, blank=True)
     permanent_zip_code = models.CharField(max_length=20, null=True, blank=True)
     
-    
+    is_address_same = models.BooleanField(default=False)
     # Current Address Fields
     current_add_line_1 = models.CharField(max_length=255, null=True, blank=True)
     current_add_line_2 = models.CharField(max_length=255, null=True, blank=True)

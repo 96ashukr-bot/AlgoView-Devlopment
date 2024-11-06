@@ -433,7 +433,7 @@ class UserProfileRetrieveSerializer(serializers.ModelSerializer):
                   'start_date', 'end_date', 'client_type' ,
             # Permanent Address Fields
             'permanent_add_line_1', 'permanent_add_line_2', 'permanent_city', 
-            'permanent_state', 'permanent_country', 'permanent_zip_code',
+            'permanent_state', 'permanent_country', 'permanent_zip_code','is_address_same',
             # Current Address Fields
             'current_add_line_1', 'current_add_line_2', 'current_city', 
             'current_state', 'current_country', 'current_zip_code','role','is_enable','start_date_client','end_date_client',]
@@ -454,7 +454,7 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
         fields = ['email','firstName', 'lastName', 'fullName', 'middleName','phoneNumber', 'profilePicture', 'PANEL_CLIENT_KEY', 'start_date', 'end_date', 'client_type','is_enable',
             # Permanent Address Fields
             'permanent_add_line_1', 'permanent_add_line_2', 'permanent_city', 
-            'permanent_state', 'permanent_country', 'permanent_zip_code',
+            'permanent_state', 'permanent_country', 'permanent_zip_code','is_address_same',
             # Current Address Fields
             'current_add_line_1', 'current_add_line_2', 'current_city', 
             'current_state', 'current_country', 'current_zip_code',]
@@ -475,12 +475,6 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
         instance.is_enable=validated_data.get('is_enable',instance.is_enable)
         instance.middleName=validated_data.get('middleName',instance.middleName)
         # Update the address fields with new names
-        instance.permanent_add_line_1 = validated_data.get('permanent_add_line_1', instance.permanent_add_line_1)
-        instance.permanent_add_line_2 = validated_data.get('permanent_add_line_2', instance.permanent_add_line_2)
-        instance.permanent_city = validated_data.get('permanent_city', instance.permanent_city)
-        instance.permanent_state = validated_data.get('permanent_state', instance.permanent_state)
-        instance.permanent_country = validated_data.get('permanent_country', instance.permanent_country)
-        instance.permanent_zip_code = validated_data.get('permanent_zip_code', instance.permanent_zip_code)
 
         instance.current_add_line_1 = validated_data.get('current_add_line_1', instance.current_add_line_1)
         instance.current_add_line_2 = validated_data.get('current_add_line_2', instance.current_add_line_2)
@@ -488,6 +482,25 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
         instance.current_state = validated_data.get('current_state', instance.current_state)
         instance.current_country = validated_data.get('current_country', instance.current_country)
         instance.current_zip_code = validated_data.get('current_zip_code', instance.current_zip_code)
+        # Update is_address_same field
+        is_address_same = validated_data.get('is_address_same', instance.is_address_same)
+        instance.is_address_same = is_address_same
+
+        if is_address_same:
+            # If addresses are the same, set permanent address to current address
+            instance.permanent_add_line_1 = instance.current_add_line_1
+            instance.permanent_add_line_2 = instance.current_add_line_2
+            instance.permanent_city = instance.current_city
+            instance.permanent_state = instance.current_state
+            instance.permanent_country = instance.current_country
+            instance.permanent_zip_code = instance.current_zip_code   
+        else:     
+            instance.permanent_add_line_1 = validated_data.get('permanent_add_line_1', instance.permanent_add_line_1)
+            instance.permanent_add_line_2 = validated_data.get('permanent_add_line_2', instance.permanent_add_line_2)
+            instance.permanent_city = validated_data.get('permanent_city', instance.permanent_city)
+            instance.permanent_state = validated_data.get('permanent_state', instance.permanent_state)
+            instance.permanent_country = validated_data.get('permanent_country', instance.permanent_country)
+            instance.permanent_zip_code = validated_data.get('permanent_zip_code', instance.permanent_zip_code)
 
         # Save the updated instance
         instance.save()

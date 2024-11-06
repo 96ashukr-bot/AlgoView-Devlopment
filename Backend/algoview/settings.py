@@ -35,10 +35,10 @@ CORS_ORIGIN_ALLOW_ALL = True
 # Optional: Set X-Frame-Options header to allow specific origins for embedding your site in frames
 X_FRAME_OPTIONS = 'ALLOWALL'
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",  # React development server
-    "http://103.120.178.54:4000",
-]
+# CORS_ALLOWED_ORIGINS = [
+    # "http://localhost:3000",  # React development server
+    # "http://103.120.178.54:4000",
+# ]
 
 # Application definition
 
@@ -211,21 +211,32 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC' 
 
 CONTACT_NUM="+919988746583"
-LOGIN_LINK="http://103.120.178.54:4000/login"
-HELP_CENTER_LINK="http://103.120.178.54:4000"
-COMPANY_WEBSITE="http://103.120.178.54:4000" 
+LOGIN_LINK="'http://localhost:3000/login"
+HELP_CENTER_LINK="'http://localhost:3000"
+COMPANY_WEBSITE="'http://localhost:3000"
+# LOGIN_LINK="http://103.120.178.54:4000/login"
+# HELP_CENTER_LINK="http://103.120.178.54:4000"
+# COMPANY_WEBSITE="http://103.120.178.54:4000" 
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {  # Formatter to include date and time
+            'format': '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+            'datefmt': '%Y-%m-%d %H:%M:%S',
+        },
+    },
     'handlers': {
         'console': {  # Logs to console (stdout, stderr)
             'level': 'DEBUG',  # Minimum level to log
             'class': 'logging.StreamHandler',
+            'formatter': 'verbose',  # Apply the formatter here
         },
         'file': {  # Logs to a file
             'level': 'DEBUG',
             'class': 'logging.FileHandler',
             'filename': os.path.join(BASE_DIR, 'logs/webhooks.log'),  # Ensure this file exists and the directory is writable
+            'formatter': 'verbose',  # Apply the formatter here
         },
     },
     'loggers': {
@@ -241,4 +252,3 @@ LOGGING = {
         },
     },
 }
-
