@@ -7893,3 +7893,149 @@ Admin:::{user.role.name}
 "GET /get-client-list/ HTTP/1.1" 200 15927
 "OPTIONS /logout/ HTTP/1.1" 200 0
 "POST /logout/ HTTP/1.1" 200 31
+Not Found: /
+Not Found: /
+Internal Server Error: /admin/main/orderlog/
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/.venv/lib/python3.10/site-packages/django/db/backends/utils.py", line 89, in _execute
+    return self.cursor.execute(sql, params)
+psycopg2.errors.UndefinedColumn: column main_user.middleName does not exist
+LINE 1: ...ain_user"."phoneNumber", "main_user"."firstName", "main_user...
+                                                             ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/.venv/lib/python3.10/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/.venv/lib/python3.10/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/.venv/lib/python3.10/site-packages/django/contrib/admin/options.py", line 688, in wrapper
+    return self.admin_site.admin_view(view)(*args, **kwargs)
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/.venv/lib/python3.10/site-packages/django/utils/decorators.py", line 134, in _wrapper_view
+    response = view_func(request, *args, **kwargs)
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/.venv/lib/python3.10/site-packages/django/views/decorators/cache.py", line 62, in _wrapper_view_func
+    response = view_func(request, *args, **kwargs)
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/.venv/lib/python3.10/site-packages/django/contrib/admin/sites.py", line 230, in inner
+    if not self.has_permission(request):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/.venv/lib/python3.10/site-packages/django/contrib/admin/sites.py", line 203, in has_permission
+    return request.user.is_active and request.user.is_staff
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/.venv/lib/python3.10/site-packages/django/utils/functional.py", line 266, in inner
+    self._setup()
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/.venv/lib/python3.10/site-packages/django/utils/functional.py", line 419, in _setup
+    self._wrapped = self._setupfunc()
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/.venv/lib/python3.10/site-packages/django/contrib/auth/middleware.py", line 25, in <lambda>
+    request.user = SimpleLazyObject(lambda: get_user(request))
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/.venv/lib/python3.10/site-packages/django/contrib/auth/middleware.py", line 11, in get_user
+    request._cached_user = auth.get_user(request)
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/.venv/lib/python3.10/site-packages/django/contrib/auth/__init__.py", line 198, in get_user
+    user = backend.get_user(user_id)
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/.venv/lib/python3.10/site-packages/django/contrib/auth/backends.py", line 161, in get_user
+    user = UserModel._default_manager.get(pk=user_id)
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/.venv/lib/python3.10/site-packages/django/db/models/manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/.venv/lib/python3.10/site-packages/django/db/models/query.py", line 633, in get
+    num = len(clone)
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/.venv/lib/python3.10/site-packages/django/db/models/query.py", line 380, in __len__
+    self._fetch_all()
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/.venv/lib/python3.10/site-packages/django/db/models/query.py", line 1881, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/.venv/lib/python3.10/site-packages/django/db/models/query.py", line 91, in __iter__
+    results = compiler.execute_sql(
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/.venv/lib/python3.10/site-packages/django/db/models/sql/compiler.py", line 1562, in execute_sql
+    cursor.execute(sql, params)
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/.venv/lib/python3.10/site-packages/django/db/backends/utils.py", line 102, in execute
+    return super().execute(sql, params)
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/.venv/lib/python3.10/site-packages/django/db/backends/utils.py", line 67, in execute
+    return self._execute_with_wrappers(
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/.venv/lib/python3.10/site-packages/django/db/backends/utils.py", line 80, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/.venv/lib/python3.10/site-packages/django/db/backends/utils.py", line 84, in _execute
+    with self.db.wrap_database_errors:
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/.venv/lib/python3.10/site-packages/django/db/utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/.venv/lib/python3.10/site-packages/django/db/backends/utils.py", line 89, in _execute
+    return self.cursor.execute(sql, params)
+django.db.utils.ProgrammingError: column main_user.middleName does not exist
+LINE 1: ...ain_user"."phoneNumber", "main_user"."firstName", "main_user...
+                                                             ^
+
+Not Found: /favicon.ico
+Internal Server Error: /admin/
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/.venv/lib/python3.10/site-packages/django/db/backends/utils.py", line 89, in _execute
+    return self.cursor.execute(sql, params)
+psycopg2.errors.UndefinedColumn: column main_user.middleName does not exist
+LINE 1: ...ain_user"."phoneNumber", "main_user"."firstName", "main_user...
+                                                             ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/.venv/lib/python3.10/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/.venv/lib/python3.10/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/.venv/lib/python3.10/site-packages/django/contrib/admin/sites.py", line 261, in wrapper
+    return self.admin_view(view, cacheable)(*args, **kwargs)
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/.venv/lib/python3.10/site-packages/django/utils/decorators.py", line 134, in _wrapper_view
+    response = view_func(request, *args, **kwargs)
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/.venv/lib/python3.10/site-packages/django/views/decorators/cache.py", line 62, in _wrapper_view_func
+    response = view_func(request, *args, **kwargs)
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/.venv/lib/python3.10/site-packages/django/contrib/admin/sites.py", line 230, in inner
+    if not self.has_permission(request):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/.venv/lib/python3.10/site-packages/django/contrib/admin/sites.py", line 203, in has_permission
+    return request.user.is_active and request.user.is_staff
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/.venv/lib/python3.10/site-packages/django/utils/functional.py", line 266, in inner
+    self._setup()
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/.venv/lib/python3.10/site-packages/django/utils/functional.py", line 419, in _setup
+    self._wrapped = self._setupfunc()
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/.venv/lib/python3.10/site-packages/django/contrib/auth/middleware.py", line 25, in <lambda>
+    request.user = SimpleLazyObject(lambda: get_user(request))
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/.venv/lib/python3.10/site-packages/django/contrib/auth/middleware.py", line 11, in get_user
+    request._cached_user = auth.get_user(request)
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/.venv/lib/python3.10/site-packages/django/contrib/auth/__init__.py", line 198, in get_user
+    user = backend.get_user(user_id)
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/.venv/lib/python3.10/site-packages/django/contrib/auth/backends.py", line 161, in get_user
+    user = UserModel._default_manager.get(pk=user_id)
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/.venv/lib/python3.10/site-packages/django/db/models/manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/.venv/lib/python3.10/site-packages/django/db/models/query.py", line 633, in get
+    num = len(clone)
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/.venv/lib/python3.10/site-packages/django/db/models/query.py", line 380, in __len__
+    self._fetch_all()
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/.venv/lib/python3.10/site-packages/django/db/models/query.py", line 1881, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/.venv/lib/python3.10/site-packages/django/db/models/query.py", line 91, in __iter__
+    results = compiler.execute_sql(
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/.venv/lib/python3.10/site-packages/django/db/models/sql/compiler.py", line 1562, in execute_sql
+    cursor.execute(sql, params)
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/.venv/lib/python3.10/site-packages/django/db/backends/utils.py", line 102, in execute
+    return super().execute(sql, params)
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/.venv/lib/python3.10/site-packages/django/db/backends/utils.py", line 67, in execute
+    return self._execute_with_wrappers(
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/.venv/lib/python3.10/site-packages/django/db/backends/utils.py", line 80, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/.venv/lib/python3.10/site-packages/django/db/backends/utils.py", line 84, in _execute
+    with self.db.wrap_database_errors:
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/.venv/lib/python3.10/site-packages/django/db/utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/.venv/lib/python3.10/site-packages/django/db/backends/utils.py", line 89, in _execute
+    return self.cursor.execute(sql, params)
+django.db.utils.ProgrammingError: column main_user.middleName does not exist
+LINE 1: ...ain_user"."phoneNumber", "main_user"."firstName", "main_user...
+                                                             ^
+
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'sell', 'symbol': 'BANKNIFTY', 'expiry': '01-10-2024', 'strikePrice': 24.5, 'Type': 'CE', 'Lot': 4, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 238, 'triggerPrice': 10, 'tsl': 0, 'strategyTag': 'exit ce', 'symbol_id': '212', 'trading_symbol': 'NIFTY26SEP2426050PE'}
+Session ID expired or not found. Regenerating...
+New session ID generated: {'stat': 'Ok', 'sessionID': 'eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICIyam9lOFVScGxZU3FTcDB3RDNVemVBQkgxYkpmOE4wSDRDMGVVSWhXUVAwIn0.eyJleHAiOjE3MzQ3Nzk4OTQsImlhdCI6MTczMDE4MzIyNywianRpIjoiNDFmN2U2NDQtMzM3Mi00NmM1LTllOTItYzc5YjVjNWNkNDIzIiwiaXNzIjoiaHR0cHM6Ly9pZGFhcy5hbGljZWJsdWVvbmxpbmUuY29tL2lkYWFzL3JlYWxtcy9BbGljZUJsdWUiLCJhdWQiOiJhY2NvdW50Iiwic3ViIjoiMWU0Yjg0YTktNjFmMS00YjY4LWJkZWYtOWQ3NDI4MGIxYWMxIiwidHlwIjoiQmVhcmVyIiwiYXpwIjoiYWxpY2Uta2IiLCJzaWQiOiIzYmYyMGJlMC1iMjBjLTQ0ZmEtYWUzOS1kNWVmNDY0ZDhmNGMiLCJhbGxvd2VkLW9yaWdpbnMiOlsiaHR0cDovL2xvY2FsaG9zdDozMDAyIiwiaHR0cDovL2xvY2FsaG9zdDo1MDUwIiwiaHR0cDovL2xvY2FsaG9zdDo5OTQzIiwiaHR0cDovL2xvY2FsaG9zdDo5MDAwIl0sInJlYWxtX2FjY2VzcyI6eyJyb2xlcyI6WyJvZmZsaW5lX2FjY2VzcyIsImRlZmF1bHQtcm9sZXMtYWxpY2VibHVla2IiLCJ1bWFfYXV0aG9yaXphdGlvbiJdfSwicmVzb3VyY2VfYWNjZXNzIjp7ImFsaWNlLWtiIjp7InJvbGVzIjpbIkdVRVNUX1VTRVIiLCJBQ1RJVkVfVVNFUiJdfSwiYWNjb3VudCI6eyJyb2xlcyI6WyJtYW5hZ2UtYWNjb3VudCIsIm1hbmFnZS1hY2NvdW50LWxpbmtzIiwidmlldy1wcm9maWxlIl19fSwic2NvcGUiOiJlbWFpbCBwcm9maWxlIG9wZW5pZCIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJ1Y2MiOiI4NTc5NTgiLCJjbGllbnRSb2xlIjpbIkdVRVNUX1VTRVIiLCJBQ1RJVkVfVVNFUiJdLCJuYW1lIjoiMCBBU0hVVE9TSCIsIm1vYmlsZSI6Ijk4ODgxMjY0NzIiLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiI4NTc5NTgiLCJnaXZlbl9uYW1lIjoiMCIsImZhbWlseV9uYW1lIjoiQVNIVVRPU0giLCJlbWFpbCI6ImFzaHV0b3Noa3VtYXIuY3ZAZ21haWwuY29tIn0.W4sAFltj7NIo9AT75GHFoYcR0GGUQ9oGOZDK1vR7gI93iND9MaWClT4u1qGr5KFSzSgDY46MmFEasihx8V30FL6b7qMM-vIzCHO1P5OWllo9Giuv0bcNOZgQC6VLWW24o4xOXXYkAfdWvXs5h4p9dMj2-FJU5MCIDO97qAXr70WnQbbKj2ciVGJns7LrZmyuYE_e5m8a7Ze4ILJA4Pctvdl6R_jriIcPKDseie_s7B4CFhjyDm5cw6EEUvVTxvpF5WftucYYwgZRLZZsBsGvzl89qw4IDAXnu2E6BDTGmOpRzHI0fZ1iYhG10eSGrtXXq9Az7A9exC7Rz1KEtrdQbQ'}
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/

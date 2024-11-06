@@ -1,0 +1,2469 @@
+Not Found: /.env
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /
+Not Found: /
+Not Found: /.git/config
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'sell', 'symbol': 'BANKNIFTY', 'expiry': '01-10-2024', 'strikePrice': 24.5, 'Type': 'CE', 'Lot': 4, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 238, 'triggerPrice': 10, 'tsl': 0, 'strategyTag': 'exit ce', 'symbol_id': '212', 'trading_symbol': 'NIFTY26SEP2426050PE'}
+Session ID expired or not found. Regenerating...
+New session ID generated: {'stat': 'Ok', 'sessionID': 'eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICIyam9lOFVScGxZU3FTcDB3RDNVemVBQkgxYkpmOE4wSDRDMGVVSWhXUVAwIn0.eyJleHAiOjE3MzQ3Nzk4OTQsImlhdCI6MTczMDE4MzIyNywianRpIjoiNDFmN2U2NDQtMzM3Mi00NmM1LTllOTItYzc5YjVjNWNkNDIzIiwiaXNzIjoiaHR0cHM6Ly9pZGFhcy5hbGljZWJsdWVvbmxpbmUuY29tL2lkYWFzL3JlYWxtcy9BbGljZUJsdWUiLCJhdWQiOiJhY2NvdW50Iiwic3ViIjoiMWU0Yjg0YTktNjFmMS00YjY4LWJkZWYtOWQ3NDI4MGIxYWMxIiwidHlwIjoiQmVhcmVyIiwiYXpwIjoiYWxpY2Uta2IiLCJzaWQiOiIzYmYyMGJlMC1iMjBjLTQ0ZmEtYWUzOS1kNWVmNDY0ZDhmNGMiLCJhbGxvd2VkLW9yaWdpbnMiOlsiaHR0cDovL2xvY2FsaG9zdDozMDAyIiwiaHR0cDovL2xvY2FsaG9zdDo1MDUwIiwiaHR0cDovL2xvY2FsaG9zdDo5OTQzIiwiaHR0cDovL2xvY2FsaG9zdDo5MDAwIl0sInJlYWxtX2FjY2VzcyI6eyJyb2xlcyI6WyJvZmZsaW5lX2FjY2VzcyIsImRlZmF1bHQtcm9sZXMtYWxpY2VibHVla2IiLCJ1bWFfYXV0aG9yaXphdGlvbiJdfSwicmVzb3VyY2VfYWNjZXNzIjp7ImFsaWNlLWtiIjp7InJvbGVzIjpbIkdVRVNUX1VTRVIiLCJBQ1RJVkVfVVNFUiJdfSwiYWNjb3VudCI6eyJyb2xlcyI6WyJtYW5hZ2UtYWNjb3VudCIsIm1hbmFnZS1hY2NvdW50LWxpbmtzIiwidmlldy1wcm9maWxlIl19fSwic2NvcGUiOiJlbWFpbCBwcm9maWxlIG9wZW5pZCIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJ1Y2MiOiI4NTc5NTgiLCJjbGllbnRSb2xlIjpbIkdVRVNUX1VTRVIiLCJBQ1RJVkVfVVNFUiJdLCJuYW1lIjoiMCBBU0hVVE9TSCIsIm1vYmlsZSI6Ijk4ODgxMjY0NzIiLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiI4NTc5NTgiLCJnaXZlbl9uYW1lIjoiMCIsImZhbWlseV9uYW1lIjoiQVNIVVRPU0giLCJlbWFpbCI6ImFzaHV0b3Noa3VtYXIuY3ZAZ21haWwuY29tIn0.W4sAFltj7NIo9AT75GHFoYcR0GGUQ9oGOZDK1vR7gI93iND9MaWClT4u1qGr5KFSzSgDY46MmFEasihx8V30FL6b7qMM-vIzCHO1P5OWllo9Giuv0bcNOZgQC6VLWW24o4xOXXYkAfdWvXs5h4p9dMj2-FJU5MCIDO97qAXr70WnQbbKj2ciVGJns7LrZmyuYE_e5m8a7Ze4ILJA4Pctvdl6R_jriIcPKDseie_s7B4CFhjyDm5cw6EEUvVTxvpF5WftucYYwgZRLZZsBsGvzl89qw4IDAXnu2E6BDTGmOpRzHI0fZ1iYhG10eSGrtXXq9Az7A9exC7Rz1KEtrdQbQ'}
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /webui/
+Not Found: /favicon.ico
+Not Found: /geoserver/web/
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /_profiler/phpinfo
+Not Found: /debug/default/view
+Not Found: /config.json
+Not Found: /.git/config
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'sell', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'CE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'exit ce'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'sell', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'CE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'exit ce'}
+Session ID expired or not found. Regenerating...
+New session ID generated: {'stat': 'Ok', 'sessionID': 'eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICIyam9lOFVScGxZU3FTcDB3RDNVemVBQkgxYkpmOE4wSDRDMGVVSWhXUVAwIn0.eyJleHAiOjE3MzQ3Nzk4OTQsImlhdCI6MTczMDE4MzIyNywianRpIjoiNDFmN2U2NDQtMzM3Mi00NmM1LTllOTItYzc5YjVjNWNkNDIzIiwiaXNzIjoiaHR0cHM6Ly9pZGFhcy5hbGljZWJsdWVvbmxpbmUuY29tL2lkYWFzL3JlYWxtcy9BbGljZUJsdWUiLCJhdWQiOiJhY2NvdW50Iiwic3ViIjoiMWU0Yjg0YTktNjFmMS00YjY4LWJkZWYtOWQ3NDI4MGIxYWMxIiwidHlwIjoiQmVhcmVyIiwiYXpwIjoiYWxpY2Uta2IiLCJzaWQiOiIzYmYyMGJlMC1iMjBjLTQ0ZmEtYWUzOS1kNWVmNDY0ZDhmNGMiLCJhbGxvd2VkLW9yaWdpbnMiOlsiaHR0cDovL2xvY2FsaG9zdDozMDAyIiwiaHR0cDovL2xvY2FsaG9zdDo1MDUwIiwiaHR0cDovL2xvY2FsaG9zdDo5OTQzIiwiaHR0cDovL2xvY2FsaG9zdDo5MDAwIl0sInJlYWxtX2FjY2VzcyI6eyJyb2xlcyI6WyJvZmZsaW5lX2FjY2VzcyIsImRlZmF1bHQtcm9sZXMtYWxpY2VibHVla2IiLCJ1bWFfYXV0aG9yaXphdGlvbiJdfSwicmVzb3VyY2VfYWNjZXNzIjp7ImFsaWNlLWtiIjp7InJvbGVzIjpbIkdVRVNUX1VTRVIiLCJBQ1RJVkVfVVNFUiJdfSwiYWNjb3VudCI6eyJyb2xlcyI6WyJtYW5hZ2UtYWNjb3VudCIsIm1hbmFnZS1hY2NvdW50LWxpbmtzIiwidmlldy1wcm9maWxlIl19fSwic2NvcGUiOiJlbWFpbCBwcm9maWxlIG9wZW5pZCIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJ1Y2MiOiI4NTc5NTgiLCJjbGllbnRSb2xlIjpbIkdVRVNUX1VTRVIiLCJBQ1RJVkVfVVNFUiJdLCJuYW1lIjoiMCBBU0hVVE9TSCIsIm1vYmlsZSI6Ijk4ODgxMjY0NzIiLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiI4NTc5NTgiLCJnaXZlbl9uYW1lIjoiMCIsImZhbWlseV9uYW1lIjoiQVNIVVRPU0giLCJlbWFpbCI6ImFzaHV0b3Noa3VtYXIuY3ZAZ21haWwuY29tIn0.W4sAFltj7NIo9AT75GHFoYcR0GGUQ9oGOZDK1vR7gI93iND9MaWClT4u1qGr5KFSzSgDY46MmFEasihx8V30FL6b7qMM-vIzCHO1P5OWllo9Giuv0bcNOZgQC6VLWW24o4xOXXYkAfdWvXs5h4p9dMj2-FJU5MCIDO97qAXr70WnQbbKj2ciVGJns7LrZmyuYE_e5m8a7Ze4ILJA4Pctvdl6R_jriIcPKDseie_s7B4CFhjyDm5cw6EEUvVTxvpF5WftucYYwgZRLZZsBsGvzl89qw4IDAXnu2E6BDTGmOpRzHI0fZ1iYhG10eSGrtXXq9Az7A9exC7Rz1KEtrdQbQ'}
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'sell', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'CE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'exit ce'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'sell', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'CE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'exit ce'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Not Found: /
+Unauthorized: /user-profile/
+Unauthorized: /user-profile/
+Unauthorized: /get-client-list/
+Unauthorized: /user-last-login/
+Unauthorized: /user-profile/
+Unauthorized: /user-profile/
+Unauthorized: /user-profile/
+Unauthorized: /user-profile/
+Unauthorized: /user-last-login/
+Not Found: /.env
+Not Found: /
+Admin:::{user.role.name}
+Admin:::{user.role.name}
+Not Found: /.env
+Not Found: /
+Admin:::{user.role.name}
+Not Found: /kyc/
+Unauthorized: /user-profile/
+Unauthorized: /user-profile/
+Admin:::{user.role.name}
+Unauthorized: /users-list/
+Unauthorized: /users-list/
+Unauthorized: /users-list/
+Unauthorized: /users-list/
+Not Found: /_profiler/phpinfo
+Not Found: /info.php
+Not Found: /null
+Not Found: /
+Unauthorized: /user-profile/
+Unauthorized: /users-list/
+Unauthorized: /user-profile/
+Not Found: /null
+Bad Request: /login/
+Bad Request: /login/
+Bad Request: /login/
+Not Found: /favicon.ico
+Bad Request: /login/
+Not Found: /kyc/
+Bad Request: /login/
+Bad Request: /login/
+Bad Request: /login/
+Bad Request: /login/
+Bad Request: /login/
+Not Found: /null
+super-admin:::Super-Admin
+super-admin:::Super-Admin
+Unauthorized: /get-roles-list/
+Unauthorized: /user-profile/
+Unauthorized: /user-profile/
+Unauthorized: /kyc/
+Unauthorized: /user-profile/
+Unauthorized: /users-list/
+Unauthorized: /user-profile/
+Unauthorized: /user-profile/
+Unauthorized: /user-profile/
+Bad Request: /login/
+Bad Request: /login/
+Not Found: /kyc/
+Admin:::{user.role.name}
+Not Found: /.env
+Not Found: /
+Admin:::{user.role.name}
+Unauthorized: /get-roles-list/
+Unauthorized: /get-roles-list/
+Admin:::{user.role.name}
+Admin:::{user.role.name}
+Unauthorized: /get-roles-list/
+Unauthorized: /get-roles-list/
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Admin:::{user.role.name}
+Admin:::{user.role.name}
+Unauthorized: /get-roles-list/
+Unauthorized: /get-roles-list/
+Not Found: /
+Unauthorized: /get-roles-list/
+Unauthorized: /user-profile/
+Unauthorized: /user-profile/
+Unauthorized: /get-roles-list/
+Unauthorized: /user-profile/
+Unauthorized: /user-profile/
+Unauthorized: /get-roles-list/
+Admin:::{user.role.name}
+Admin:::{user.role.name}
+Unauthorized: /get-roles-list/
+Unauthorized: /get-roles-list/
+Not Found: /.env
+Not Found: /
+Not Found: /
+Unauthorized: /get-roles-list/
+Unauthorized: /user-profile/
+Unauthorized: /user-profile/
+Unauthorized: /get-roles-list/
+Unauthorized: /user-profile/
+Unauthorized: /user-profile/
+Unauthorized: /get-roles-list/
+Unauthorized: /user-profile/
+Unauthorized: /user-profile/
+Not Found: /
+Unauthorized: /get-roles-list/
+Unauthorized: /get-roles-list/
+Unauthorized: /user-profile/
+Unauthorized: /user-profile/
+Unauthorized: /user-profile/
+Unauthorized: /user-profile/
+Unauthorized: /user-last-login/
+Unauthorized: /user-last-login/
+Unauthorized: /logout/
+Unauthorized: /user-profile/
+Unauthorized: /user-profile/
+super-admin:::Super-Admin
+super-admin:::Super-Admin
+Unauthorized: /get-roles-list/
+Unauthorized: /get-roles-list/
+Unauthorized: /get-roles-list/
+super-admin:::Super-Admin
+super-admin:::Super-Admin
+super-admin:::Super-Admin
+super-admin:::Super-Admin
+Not Found: /null
+Not Found: /null
+GroupServiceView GET request received
+GroupServiceView GET request received
+Admin:::{user.role.name}
+Admin:::{user.role.name}
+Unauthorized: /get-roles-list/
+Unauthorized: /get-roles-list/
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /
+Not Found: /
+Not Found: /cgi-bin/luci/;stok=/locale
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /.env
+Not Found: /
+Not Found: /c/
+Not Found: /.env
+Not Found: /.env
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /
+Not Found: /form.html
+Not Found: /upl.php
+Not Found: /t4
+Not Found: /geoip/
+Not Found: /favicon.ico
+Not Found: /1.php
+Not Found: /systembc/password.php
+Not Found: /password.php
+Not Found: /.env
+Not Found: /
+Not Found: /.git/config
+Not Found: /Core/Skin/Login.aspx
+Not Found: /.env
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /hello.world
+Not Found: /vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /vendor/phpunit/phpunit/Util/PHP/eval-stdin.php
+Not Found: /vendor/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /vendor/phpunit/Util/PHP/eval-stdin.php
+Not Found: /vendor/phpunit/phpunit/LICENSE/eval-stdin.php
+Not Found: /vendor/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /phpunit/phpunit/Util/PHP/eval-stdin.php
+Not Found: /phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /phpunit/Util/PHP/eval-stdin.php
+Not Found: /lib/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /lib/phpunit/phpunit/Util/PHP/eval-stdin.php
+Not Found: /lib/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /lib/phpunit/Util/PHP/eval-stdin.php
+Not Found: /lib/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /laravel/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /www/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /ws/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /yii/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /zend/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /ws/ec/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /V2/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /tests/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /test/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /testing/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /api/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /demo/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /cms/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /crm/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /backup/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /blog/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /workspace/drupal/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /panel/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /public/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /apps/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /app/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /index.php
+Not Found: /public/index.php
+Not Found: /index.php
+Not Found: /index.php
+Not Found: /containers/json
+Not Found: /
+Not Found: /.env
+Not Found: /Core/Skin/Login.aspx
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /login.rsp
+Not Found: /.env
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /.env
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /robots.txt
+Not Found: /sitemap.xml
+Not Found: /.well-known/security.txt
+Not Found: /favicon.ico
+Not Found: /.env
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /.env
+Not Found: /
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'buy', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'PE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'pe entry'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'buy', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'PE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'pe entry'}
+Session ID expired or not found. Regenerating...
+New session ID generated: {'userId': None, 'userData': None, 'encKey': None, 'apikey': None, 'stat': 'Ok', 'emsg': 'User does not login. Please login', 'loginType': None, 'version': None, 'fcmToken': None, 'imei': None, 'login': False}
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'buy', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'PE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'pe entry'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'buy', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'PE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'pe entry'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /.env
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /
+Not Found: /cgi-bin/luci/;stok=/locale
+Not Found: /.env
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /dispatch.asp
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /.env
+Not Found: /.env
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'sell', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'PE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'exit pe'}
+Session ID expired or not found. Regenerating...
+New session ID generated: {'userId': None, 'userData': None, 'encKey': None, 'apikey': None, 'stat': 'Ok', 'emsg': 'User does not login. Please login', 'loginType': None, 'version': None, 'fcmToken': None, 'imei': None, 'login': False}
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'sell', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'PE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'exit pe'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'sell', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'PE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'exit pe'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'sell', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'PE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'exit pe'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /
+Not Found: /.git/config
+Not Found: /
+Not Found: /.svn/wc.db
+Not Found: /.env
+Not Found: /
+Not Found: /.git/config
+Not Found: /Core/Skin/Login.aspx
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /.git/config
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /login.rsp
+Not Found: /Core/Skin/Login.aspx
+Not Found: /dev/.git/config
+Not Found: /test/.git/config
+Not Found: /static../.git/config
+Not Found: /include/.git/config
+Not Found: /docs../.git/config
+Not Found: /apps/.git/config
+Not Found: /media../.git/config
+Not Found: /source/.git/config
+Not Found: /app/.git/config
+Not Found: /includes/.git/config
+Not Found: /.env
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /.env
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /login.rsp
+Not Found: /
+Not Found: /actuator/health
+Not Found: /
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /.env
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /login.rsp
+Not Found: /.env
+Not Found: /
+Not Found: /sendgrid/.env
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /
+Not Found: /
+Not Found: /robots.txt
+Not Found: /sitemap.xml
+Not Found: /.well-known/security.txt
+Not Found: /favicon.ico
+Not Found: /.env
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /druid/index.html
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /
+Not Found: /
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'buy', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'CE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'ce entry'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'buy', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'CE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'ce entry'}
+Session ID expired or not found. Regenerating...
+New session ID generated: {'userId': None, 'userData': None, 'encKey': None, 'apikey': None, 'stat': 'Ok', 'emsg': 'User does not login. Please login', 'loginType': None, 'version': None, 'fcmToken': None, 'imei': None, 'login': False}
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'buy', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'CE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'ce entry'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'buy', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'CE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'ce entry'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Not Found: /Core/Skin/Login.aspx
+Not Found: /.vscode/sftp.json
+Not Found: /
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /.env
+Not Found: /
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'sell', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'CE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'exit ce'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'buy', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'PE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'pe entry'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'sell', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'CE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'exit ce'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'buy', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'PE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'pe entry'}
+Session ID expired or not found. Regenerating...
+New session ID generated: {'userId': None, 'userData': None, 'encKey': None, 'apikey': None, 'stat': 'Ok', 'emsg': 'User does not login. Please login', 'loginType': None, 'version': None, 'fcmToken': None, 'imei': None, 'login': False}
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'sell', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'CE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'exit ce'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'buy', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'PE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'pe entry'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'sell', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'CE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'exit ce'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'buy', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'PE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'pe entry'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Not Found: /
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /favicon.ico
+Not Found: /robots.txt
+Not Found: /sitemap.xml
+Not Found: /vicidial/welcome.php
+Not Found: /Core/Skin/Login.aspx
+Not Found: /.env
+Not Found: /
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'sell', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'PE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'exit pe'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'sell', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'PE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'exit pe'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'sell', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'PE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'exit pe'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'sell', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'PE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'exit pe'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /sdk
+Not Found: /odinhttpcall1730374825
+Not Found: /HNAP1
+Not Found: /evox/about
+Not Found: /
+Not Found: /solr/admin/info/system
+Not Found: /
+Not Found: /v2/_catalog
+Not Found: /cgi-bin/authLogin.cgi
+Not Found: /query
+Not Found: /solr/admin/cores
+Not Found: /favicon.ico
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /
+Not Found: /
+Not Found: /.git/config
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /
+Not Found: /favicon.ico
+Not Found: /_profiler/phpinfo
+Not Found: /
+Not Found: /favicon.ico
+Not Found: /.env
+Not Found: /
+Not Found: /.git/config
+Not Found: /.env
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /cgi-bin/luci/;stok=/locale
+Not Found: /.env
+Not Found: /
+Not Found: /i.php
+Not Found: /service/info.php
+Not Found: /asdf.php
+Not Found: /development/iinfo.php
+Not Found: /develop/info.php
+Not Found: /phpinfo
+Not Found: /dev/phpinfo.php
+Not Found: /helper/phpinfo.php
+Not Found: /info.php
+Not Found: /help/phpinfo.php
+Not Found: /lara/info.php
+Not Found: /backend/info.php
+Not Found: /temp.php
+Not Found: /laravel/phpinfo.php
+Not Found: /test.php
+Not Found: /services/phpinfo.php
+Not Found: /backend/phpinfo.php
+Not Found: /linusadmin-phpinfo.php
+Not Found: /infophp.php
+Not Found: /infos.php
+Not Found: /dev/info.php
+Not Found: /php.ini
+Not Found: /lara/phpinfo.php
+Not Found: /current/info.php
+Not Found: /server/info.php
+Not Found: /webroot/index.php/_environment
+Not Found: /php-info.php
+Not Found: /server/phpinfo.php
+Not Found: /xampp/info.php
+Not Found: /phpversion.php
+Not Found: /time.php
+Not Found: /phpinfo.php
+Not Found: /development/phpinfo.php
+Not Found: /_profiler/phpinfo
+Not Found: /help/info.php
+Not Found: /dashboard/phpinfo.php
+Not Found: /services/info.php
+Not Found: /current/phpinfo.php
+Not Found: /service/phpinfo.php
+Not Found: /laravel/info.php
+Not Found: /pinfo.php
+Not Found: /backup/info.php
+Not Found: /backup/phpinfo.php
+Not Found: /xampp/phpinfo.php
+Not Found: /api/phpinfo.php
+Not Found: /php.php
+Not Found: /old_phpinfo.php
+Not Found: /api/info.php
+Not Found: /crm/info.php
+Not Found: /xampp/phpinfo
+Not Found: /_environment
+Not Found: /develop/phpinfo.php
+Not Found: /crm/phpinfo.php
+Not Found: /helper/info.php
+Not Found: /phpinfo
+Not Found: /php.ini
+Not Found: /_profiler/phpinfo
+Not Found: /1_1_phpinfo.php
+Not Found: /phpinfo.php3
+Not Found: /__info.php
+Not Found: /.__info.php
+Not Found: /php-info
+Not Found: /pi.php
+Not Found: /frontend_dev.php/$
+Not Found: /symfony/public/_profiler/phpinfo
+Not Found: /scripts/phpinfo
+Not Found: /console/phpinfo.php
+Not Found: /api/index.php
+Not Found: /v1/config/application
+Not Found: /html/phpinfo.php
+Not Found: /apache/phpinfo.php
+Not Found: /phpinfo.php4
+Not Found: /foo.php
+Not Found: /scripts/index.php
+Not Found: /php-info/info.php
+Not Found: /_info-backoffice.php
+Not Found: /app_dev.php
+Not Found: /composer.json
+Not Found: /dashboard/test.php
+Not Found: /.env
+Not Found: /images/.env
+Not Found: /api/.env
+Not Found: /actuator/env
+Not Found: /dev/.env
+Not Found: /.aws/credentials
+Not Found: /laravel/.env
+Not Found: /cron/.env
+Not Found: /backend/.env
+Not Found: /management/env
+Not Found: /server/.env
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /sendgrid/.env
+Not Found: /
+Not Found: /
+Not Found: /webui/
+Not Found: /favicon.ico
+Not Found: /geoserver/web/
+Not Found: /_profiler/phpinfo
+Not Found: /.env
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /
+Not Found: /console
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: //.env
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /.env
+Not Found: /.git/config
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /
+Not Found: /hudson
+Not Found: /Core/Skin/Login.aspx
+Not Found: /
+Not Found: /
+Not Found: /login.rsp
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /.git/config
+Not Found: /Core/Skin/Login.aspx
+Not Found: /.git/config
+Not Found: /.env
+Not Found: /
+Not Found: /login.rsp
+Not Found: /.git/config
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /.env
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /cgi-bin/luci/;stok=/locale
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /
+Not Found: /
+Not Found: /_profiler/phpinfo
+Not Found: /
+Not Found: /frontend_dev.php/$
+Not Found: /.env
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /.env
+Not Found: /.remote
+Not Found: /.local
+Not Found: /.production
+Not Found: /vendor/.env
+Not Found: /lib/.env
+Not Found: /lab/.env
+Not Found: /cronlab/.env
+Not Found: /cron/.env
+Not Found: /core/.env
+Not Found: /core/app/.env
+Not Found: /core/Datavase/.env
+Not Found: /database/.env
+Not Found: /config/.env
+Not Found: /assets/.env
+Not Found: /app/.env
+Not Found: /apps/.env
+Not Found: /uploads/.env
+Not Found: /sitemaps/.env
+Not Found: /saas/.env
+Not Found: /api/.env
+Not Found: /psnlink/.env
+Not Found: /exapi/.env
+Not Found: /site/.env
+Not Found: /web/.env
+Not Found: /public/.env
+Not Found: /en/.env
+Not Found: /tools/.env
+Not Found: /v1/.env
+Not Found: /v2/.env
+Not Found: /administrator/.env
+Not Found: /laravel/.env
+Not Found: /sendgrid.env
+Not Found: /storage/.env
+Not Found: /__tests__/test-become/.env
+Not Found: /redmine/.env
+Not Found: /gists/cache
+Not Found: /backend/.env
+Not Found: /.env.example
+Not Found: /main/.env
+Not Found: /docs/.env
+Not Found: /client/.env
+Not Found: /blog/.env
+Not Found: /.env.dev
+Not Found: /blogs/.env
+Not Found: /shared/.env
+Not Found: /download/.env
+Not Found: /.env.php
+Not Found: /sites/.env
+Not Found: /web/.env]
+Not Found: /.env.bak
+Not Found: /.env.live
+Not Found: /.env.swp
+Not Found: /.env.uat
+Not Found: /.aws/credentials
+Not Found: /.env.old
+Not Found: /.env.www
+Not Found: /.env_1
+Not Found: /.env_sample
+Not Found: /_static/.env
+Not Found: /.docker/.env
+Not Found: /.env.backup
+Not Found: /product/.env.staging
+Not Found: /content/.env
+Not Found: /storage/.env.local
+Not Found: /.env.local
+Not Found: /.env.save
+Not Found: /user/.env.staging
+Not Found: /files/.env
+Not Found: /.env.production
+Not Found: /env/.env
+Not Found: /icons/.env
+Not Found: /index.js
+Not Found: /index.json
+Not Found: /index.php
+Not Found: /index1.php
+Not Found: /.environment
+Not Found: /conf/.env
+Not Found: /wp-content/.env
+Not Found: /wp-admin/.env
+Not Found: /library/.env
+Not Found: /new/.env
+Not Found: /old/.env
+Not Found: /local/.env
+Not Found: /crm/.env
+Not Found: /app/config/.env
+Not Found: /audio/.env
+Not Found: /cgi-bin/.env
+Not Found: /src/.env
+Not Found: /base/.env
+Not Found: /vendor/laravel/.env
+Not Found: /protected/.env
+Not Found: /newsite/.env
+Not Found: /www/.env
+Not Found: /sites/all/libraries/mailchimp/.env
+Not Found: /aws.env
+Not Found: /_profiler/phpinfo
+Not Found: /tool/view/phpinfo.view.php
+Not Found: /wp-config.php-backup
+Not Found: /%C0
+Not Found: /debug/default/view.html
+Not Found: /debug/default/view
+Not Found: /frontend/web/debug/default/view
+Not Found: /web/debug/default/view
+Not Found: /sapi/debug/default/view
+Not Found: /debug/default/view
+Not Found: /phpinfo.php
+Not Found: /phpinfo
+Not Found: /aws.yml
+Not Found: /info.php
+Not Found: /config/aws.yml
+Not Found: /config.js
+Not Found: /symfony/public/_profiler/phpinfo
+Not Found: /.env
+Not Found: /
+Not Found: /.env
+Not Found: /.env
+Not Found: /.git/config
+Not Found: /_profiler/phpinfo
+Not Found: /
+Not Found: /frontend_dev.php/$
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /manager/text/list
+Not Found: /login.rsp
+Not Found: /Core/Skin/Login.aspx
+Not Found: /.env
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /.git/config
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /
+Not Found: /
+Not Found: /
+Not Found: /favicon.ico
+Not Found: /Core/Skin/Login.aspx
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /hello.world
+Not Found: /vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /vendor/phpunit/phpunit/Util/PHP/eval-stdin.php
+Not Found: /vendor/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /vendor/phpunit/Util/PHP/eval-stdin.php
+Not Found: /vendor/phpunit/phpunit/LICENSE/eval-stdin.php
+Not Found: /vendor/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /phpunit/phpunit/Util/PHP/eval-stdin.php
+Not Found: /phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /phpunit/Util/PHP/eval-stdin.php
+Not Found: /lib/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /lib/phpunit/phpunit/Util/PHP/eval-stdin.php
+Not Found: /lib/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /lib/phpunit/Util/PHP/eval-stdin.php
+Not Found: /lib/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /laravel/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /www/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /ws/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /yii/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /zend/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /ws/ec/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /V2/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /tests/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /test/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /testing/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /api/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /demo/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /cms/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /crm/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /backup/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /blog/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /workspace/drupal/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /panel/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /public/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /apps/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /app/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /index.php
+Not Found: /public/index.php
+Not Found: /index.php
+Not Found: /index.php
+Not Found: /containers/json
+Not Found: /Core/Skin/Login.aspx
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /hello.world
+Not Found: /vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /vendor/phpunit/phpunit/Util/PHP/eval-stdin.php
+Not Found: /vendor/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /vendor/phpunit/Util/PHP/eval-stdin.php
+Not Found: /vendor/phpunit/phpunit/LICENSE/eval-stdin.php
+Not Found: /vendor/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /phpunit/phpunit/Util/PHP/eval-stdin.php
+Not Found: /phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /phpunit/Util/PHP/eval-stdin.php
+Not Found: /lib/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /lib/phpunit/phpunit/Util/PHP/eval-stdin.php
+Not Found: /lib/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /lib/phpunit/Util/PHP/eval-stdin.php
+Not Found: /lib/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /laravel/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /www/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /ws/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /yii/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /zend/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /ws/ec/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /V2/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /tests/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /test/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /testing/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /api/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /demo/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /cms/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /crm/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /backup/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /blog/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /workspace/drupal/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /panel/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /public/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /apps/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /app/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /index.php
+Not Found: /public/index.php
+Not Found: /index.php
+Not Found: /index.php
+Not Found: /containers/json
+Not Found: /
+Not Found: /c/
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /_profiler/phpinfo
+Not Found: /.env
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /
+Not Found: /favicon.ico
+Not Found: /.env
+Not Found: /
+Not Found: /.git/HEAD
+Not Found: /login.rsp
+Not Found: /phpmyadmin/index.php
+Not Found: /pmd/index.php
+Not Found: /phpmyadmin4.8.5/index.php
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /.js
+Not Found: /.git
+Not Found: /login.rsp
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /boaform/admin/formLogin
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /
+Not Found: /favicon.ico
+Not Found: /Core/Skin/Login.aspx
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /s3cmd.ini
+Not Found: /.aws/credentials
+Not Found: /
+Not Found: /robots.txt
+Not Found: /sitemap.xml
+Not Found: /.well-known/security.txt
+Not Found: /favicon.ico
+Not Found: /.env
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /
+Not Found: /form.html
+Not Found: /upl.php
+Not Found: /t4
+Not Found: /geoip/
+Not Found: /favicon.ico
+Not Found: /1.php
+Not Found: /systembc/password.php
+Not Found: /password.php
+Not Found: /
+Not Found: /
+Not Found: /
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /.env
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /
+Not Found: /
+Not Found: /boaform/admin/formLogin
+Not Found: /Core/Skin/Login.aspx
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /
+Not Found: /
+Not Found: /hello.world
+Not Found: /vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /vendor/phpunit/phpunit/Util/PHP/eval-stdin.php
+Not Found: /vendor/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /vendor/phpunit/Util/PHP/eval-stdin.php
+Not Found: /vendor/phpunit/phpunit/LICENSE/eval-stdin.php
+Not Found: /vendor/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /phpunit/phpunit/Util/PHP/eval-stdin.php
+Not Found: /phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /phpunit/Util/PHP/eval-stdin.php
+Not Found: /lib/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /lib/phpunit/phpunit/Util/PHP/eval-stdin.php
+Not Found: /lib/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /lib/phpunit/Util/PHP/eval-stdin.php
+Not Found: /lib/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /laravel/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /www/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /ws/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /yii/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /zend/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /ws/ec/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /V2/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /tests/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /test/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /testing/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /api/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /demo/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /cms/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /crm/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /backup/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /blog/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /workspace/drupal/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /panel/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /public/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /apps/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /app/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /index.php
+Not Found: /public/index.php
+Not Found: /index.php
+Not Found: /index.php
+Not Found: /containers/json
+Not Found: /login.rsp
+Not Found: /Core/Skin/Login.aspx
+Not Found: /druid/index.html
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /boaform/admin/formLogin
+Not Found: /Core/Skin/Login.aspx
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /portal/redlion
+Not Found: /.env
+Not Found: /
+Not Found: /.env
+Not Found: /Core/Skin/Login.aspx
+Not Found: /
+Not Found: /
+Not Found: /robots.txt
+Not Found: /sitemap.xml
+Not Found: /.well-known/security.txt
+Not Found: /favicon.ico
+Not Found: /.env
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /.env
+Not Found: /
+Not Found: /.env
+Not Found: /.env
+Not Found: /Core/Skin/Login.aspx
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /
+Not Found: /favicon.ico
+Not Found: /.env
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /.env
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /favicon.ico
+Not Found: /robots.txt
+Not Found: /sitemap.xml
+Not Found: /Core/Skin/Login.aspx
+Not Found: /.env
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /
+Not Found: /
+Not Found: /server-status
+Not Found: /config.json
+Not Found: /.env
+Not Found: /telescope/requests
+Not Found: /info.php
+Not Found: /.git/config
+Not Found: /
+Not Found: /.env
+Not Found: /
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'buy', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'PE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'pe entry'}
+Session ID expired or not found. Regenerating...
+New session ID generated: {'userId': None, 'userData': None, 'encKey': None, 'apikey': None, 'stat': 'Ok', 'emsg': 'User does not login. Please login', 'loginType': None, 'version': None, 'fcmToken': None, 'imei': None, 'login': False}
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'buy', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'PE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'pe entry'}
+Session ID expired or not found. Regenerating...
+New session ID generated: {'userId': None, 'userData': None, 'encKey': None, 'apikey': None, 'stat': 'Ok', 'emsg': 'User does not login. Please login', 'loginType': None, 'version': None, 'fcmToken': None, 'imei': None, 'login': False}
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'buy', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'PE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'pe entry'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'buy', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'PE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'pe entry'}
+Session ID expired or not found. Regenerating...
+New session ID generated: {'userId': None, 'userData': None, 'encKey': None, 'apikey': None, 'stat': 'Ok', 'emsg': 'User does not login. Please login', 'loginType': None, 'version': None, 'fcmToken': None, 'imei': None, 'login': False}
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Not Found: /.env
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Unauthorized: /user-profile/
+Unauthorized: /user-profile/
+Unauthorized: /token/refresh/
+Unauthorized: /token/refresh/
+Unauthorized: /logout/
+Unauthorized: /logout/
+Not Found: /
+Bad Request: /login/
+Bad Request: /login/
+Bad Request: /login/
+Not Found: /
+Not Found: /connector_server/
+Not Found: /
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /MKVn
+Not Found: /OhTR
+Not Found: /aab8
+Not Found: /jquery-3.3.1.slim.min.js
+Not Found: /aab9
+Not Found: /jquery-3.3.2.slim.min.js
+Not Found: /connector_server/
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /form.html
+Not Found: /upl.php
+Not Found: /t4
+Not Found: /geoip/
+Not Found: /favicon.ico
+Not Found: /1.php
+Not Found: /systembc/password.php
+Not Found: /password.php
+Not Found: /Core/Skin/Login.aspx
+Not Found: /
+Not Found: /.env
+Not Found: /
+Unauthorized: /user-profile/
+Unauthorized: /user-profile/
+Unauthorized: /token/refresh/
+Unauthorized: /token/refresh/
+Unauthorized: /logout/
+Unauthorized: /user-profile/
+Unauthorized: /user-profile/
+Unauthorized: /token/refresh/
+Unauthorized: /token/refresh/
+Unauthorized: /logout/
+Unauthorized: /logout/
+Unauthorized: /logout/
+Unauthorized: /logout/
+Unauthorized: /user-profile/
+Unauthorized: /user-profile/
+Unauthorized: /get-segments/
+Unauthorized: /get-services/
+Unauthorized: /token/refresh/
+Unauthorized: /get-category/
+Unauthorized: /token/refresh/
+Not Found: /
+Unauthorized: /user-profile/
+Unauthorized: /get-segments/
+Unauthorized: /get-services/
+Unauthorized: /get-category/
+Unauthorized: /user-profile/
+Unauthorized: /token/refresh/
+Unauthorized: /token/refresh/
+Unauthorized: /user-profile/
+Unauthorized: /get-services/
+Unauthorized: /get-category/
+Unauthorized: /get-segments/
+Unauthorized: /user-profile/
+Unauthorized: /token/refresh/
+Unauthorized: /token/refresh/
+Unauthorized: /user-profile/
+Unauthorized: /user-last-login/
+Unauthorized: /user-profile/
+Unauthorized: /token/refresh/
+Unauthorized: /user-last-login/
+Unauthorized: /token/refresh/
+Unauthorized: /logout/
+Unauthorized: /logout/
+Unauthorized: /user-profile/
+Unauthorized: /user-profile/
+Unauthorized: /get-License/
+Unauthorized: /token/refresh/
+Unauthorized: /token/refresh/
+Not Found: /
+Not Found: /config/php.ini
+Not Found: /phpinfo.php
+Not Found: /test.php
+Not Found: /config.properties
+Not Found: /config
+Not Found: /main.js
+Not Found: /phpinfo
+Not Found: /test
+Not Found: /.aws/credentials
+Not Found: /app_dev.php/_profiler/phpinfo
+Not Found: /app/etc/env.php
+Not Found: /index.php
+Not Found: /config/constants.js
+Not Found: /secured/phpinfo.php
+Not Found: /application.properties
+Not Found: /config.ini
+Not Found: /config/config.php
+Not Found: /index.php/phpinfo
+Not Found: /.profile
+Not Found: /appsettings.json
+Not Found: /config/index.js
+Not Found: /public/js/main.js
+Not Found: /info.php
+Not Found: /config/config.js
+Not Found: /config.js
+Not Found: /gulpfile.js
+Not Found: /application-dev.properties
+Not Found: /config/default.json
+Not Found: /README.md
+Not Found: /info
+Not Found: /app.js
+Not Found: /env.json
+Not Found: /config/config.ini
+Not Found: /config/environments/production.rb
+Not Found: /environment.ts
+Not Found: /resources/application.conf
+Not Found: /config/aws.json
+Not Found: /app.py
+Not Found: /application/config/constants.php/
+Not Found: /debug/default
+Not Found: /src/config.js
+Not Found: /config/application.yml
+Not Found: /config/services.yaml
+Not Found: /dev/phpinfo.php
+Not Found: /php_info.php
+Not Found: /server.js
+Not Found: /config/development.json
+Not Found: /test2.php
+Not Found: /
+Not Found: /test1.php
+Not Found: /wp-config.php
+Not Found: /config/config.json
+Not Found: /frontend_dev.php/$
+Not Found: /staticfiles
+Not Found: /_profiler/phpinfo
+Not Found: /phpversion.php
+Not Found: /Dockerfile
+Not Found: /settings.json
+Not Found: /src/main/resources/appsettings.yml
+Not Found: /configs/application.ini
+Not Found: /js/config.js
+Not Found: /login/index.php
+Not Found: /src/main/resources/application.properties
+Not Found: /install/index.php
+Not Found: /config.php
+Not Found: /products/.gitlab-ci.yml
+Not Found: /manifest.json
+Not Found: /ecosystem.config.js
+Not Found: /device/device.js
+Not Found: /php-info.php
+Not Found: /config.json
+Not Found: /
+Not Found: /
+Not Found: /php.php
+Not Found: /
+Not Found: /
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'sell', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'PE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'exit pe'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'sell', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'PE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'exit pe'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'sell', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'PE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'exit pe'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'sell', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'PE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'exit pe'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /.env
+Not Found: /
+Bad Request: /login/
+Not Found: /
+Not Found: /env
+Not Found: /.env.uat
+Not Found: /uat/mappings.json
+Not Found: /uat/env.json
+Not Found: /uat/actuator/mappings
+Not Found: /uat/management/mappings
+Not Found: /uat/actuator/env
+Not Found: /uat/management/env
+Not Found: /mappings.json
+Not Found: /info
+Not Found: /env.json
+Not Found: /actuator/
+Not Found: /actuator/mappings
+Not Found: /actuator/env
+Not Found: /actuator/;/env
+Not Found: /api/actuator/
+Not Found: /api/actuator/env
+Not Found: /api/actuator/;/env
+Not Found: /management/
+Not Found: /management/mappings
+Not Found: /management/env
+Not Found: /management/;/env
+Not Found: /dev/actuator/
+Not Found: /dev/actuator/env
+Not Found: /dev/env
+Not Found: /app/env
+Not Found: /app/actuator/
+Not Found: /app/actuator/env
+Not Found: /.env
+Not Found: /
+Unauthorized: /user-profile/
+Unauthorized: /get-License/
+Unauthorized: /user-profile/
+Bad Request: /login/
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /
+Not Found: /hudson
+Not Found: /hello.world
+Not Found: /vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /vendor/phpunit/phpunit/Util/PHP/eval-stdin.php
+Not Found: /vendor/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /vendor/phpunit/Util/PHP/eval-stdin.php
+Not Found: /vendor/phpunit/phpunit/LICENSE/eval-stdin.php
+Not Found: /vendor/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /phpunit/phpunit/Util/PHP/eval-stdin.php
+Not Found: /phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /phpunit/Util/PHP/eval-stdin.php
+Not Found: /lib/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /lib/phpunit/phpunit/Util/PHP/eval-stdin.php
+Not Found: /lib/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /lib/phpunit/Util/PHP/eval-stdin.php
+Not Found: /lib/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /laravel/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /www/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /ws/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /yii/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /zend/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /ws/ec/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /V2/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /tests/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /test/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /testing/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /api/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /demo/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /cms/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /crm/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /backup/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /blog/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /workspace/drupal/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /panel/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /public/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /apps/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /app/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /index.php
+Not Found: /public/index.php
+Not Found: /index.php
+Not Found: /index.php
+Not Found: /containers/json
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /.env
+Not Found: /demo/.env
+Not Found: /dev/.env
+Not Found: /doc/.env
+Not Found: /docs/.env
+Not Found: /download/.env
+Not Found: /env/.env
+Not Found: /frontend/web/debug/default/view
+Not Found: /html/.env
+Not Found: /inc/.env
+Not Found: /info/
+Not Found: /infophp.php
+Not Found: /infos.php
+Not Found: /infos/
+Not Found: /lib/.env
+Not Found: /library/.env
+Not Found: /logging/.env
+Not Found: /misc/.env
+Not Found: /new/.env
+Not Found: /phpinfo.php
+Not Found: /phpinfos/
+Not Found: /pinfo.php
+Not Found: /production/.env
+Not Found: /public/.env
+Not Found: /public_html/.env
+Not Found: /server/.env
+Not Found: /shared/.env
+Not Found: /site/.env
+Not Found: /stage/.env
+Not Found: /staging/.env
+Not Found: /tool/view/phpinfo.view.php
+Not Found: /upload/.env
+Not Found: /vendor/.env
+Not Found: /web/.env
+Not Found: /Core/Skin/Login.aspx
+Not Found: /
+Not Found: /_profiler/empty/search/results
+Not Found: /.env
+Not Found: /
+Not Found: /login.rsp
+Not Found: /
+Not Found: /Public/home/js/check.js
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /
+Not Found: /
+Not Found: /.env
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /kyc/
+Not Found: /kyc/
+Bad Request: /user-profile/
+Bad Request: /user-profile/
+Bad Request: /user-profile/
+Bad Request: /user-profile/
+Bad Request: /user-profile/
+Bad Request: /user-profile/
+Bad Request: /user-profile/
+Bad Request: /user-profile/
+Bad Request: /user-profile/
+Bad Request: /user-profile/
+Bad Request: /user-profile/
+Bad Request: /user-profile/
+Bad Request: /user-profile/
+Bad Request: /user-profile/
+Bad Request: /user-profile/
+Bad Request: /user-profile/
+Bad Request: /user-profile/
+Bad Request: /user-profile/
+Bad Request: /user-profile/
+Bad Request: /user-profile/
+Bad Request: /user-profile/
+Bad Request: /user-profile/
+Bad Request: /user-profile/
+Bad Request: /user-profile/
+Bad Request: /user-profile/
+Bad Request: /user-profile/
+Bad Request: /user-profile/
+Bad Request: /user-profile/
+Bad Request: /user-profile/
+Bad Request: /user-profile/
+Bad Request: /user-profile/
+Bad Request: /user-profile/
+Bad Request: /user-profile/
+Bad Request: /user-profile/
+Bad Request: /user-profile/
+Bad Request: /user-profile/
+Bad Request: /user-profile/
+Bad Request: /user-profile/
+Bad Request: /user-profile/
+Bad Request: /user-profile/
+Not Found: /kyc/
+Not Found: /kyc/
+Not Found: /kyc/
+Not Found: /kyc/
+Not Found: /kyc/
+Not Found: /kyc/
+super-admin:::Super-Admin
+super-admin:::Super-Admin
+super-admin:::Super-Admin
+Not Found: /null
+Not Found: /favicon.ico
+Not Found: /null
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'buy', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'CE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'ce entry'}
+Session ID expired or not found. Regenerating...
+New session ID generated: {'userId': None, 'userData': None, 'encKey': None, 'apikey': None, 'stat': 'Ok', 'emsg': 'User does not login. Please login', 'loginType': None, 'version': None, 'fcmToken': None, 'imei': None, 'login': False}
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'buy', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'CE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'ce entry'}
+Session ID expired or not found. Regenerating...
+New session ID generated: {'userId': None, 'userData': None, 'encKey': None, 'apikey': None, 'stat': 'Ok', 'emsg': 'User does not login. Please login', 'loginType': None, 'version': None, 'fcmToken': None, 'imei': None, 'login': False}
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'buy', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'CE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'ce entry'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'buy', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'CE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'ce entry'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Not Found: /.env
+Not Found: /
+Not Found: /null
+GroupServiceView GET request received
+GroupServiceView GET request received
+GroupServiceView GET request received
+GroupServiceView GET request received
+Not Found: /null
+Not Found: /.env
+Not Found: /
+Not Found: /login.rsp
+Not Found: /
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'sell', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'CE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'exit ce'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'buy', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'PE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'pe entry'}
+Session ID expired or not found. Regenerating...
+New session ID generated: {'userId': None, 'userData': None, 'encKey': None, 'apikey': None, 'stat': 'Ok', 'emsg': 'User does not login. Please login', 'loginType': None, 'version': None, 'fcmToken': None, 'imei': None, 'login': False}
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'sell', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'CE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'exit ce'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'buy', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'PE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'pe entry'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'sell', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'CE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'exit ce'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'buy', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'PE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'pe entry'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'sell', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'CE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'exit ce'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'buy', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'PE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'pe entry'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Not Found: /.env
+Not Found: /
+Not Found: /.env
+Not Found: /
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'buy', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'CE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'ce entry'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'sell', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'PE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'exit pe'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'buy', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'CE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'ce entry'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'sell', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'PE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'exit pe'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'buy', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'CE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'ce entry'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'sell', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'PE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'exit pe'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'buy', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'CE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'ce entry'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'sell', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'PE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'exit pe'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+super-admin:::Super-Admin
+super-admin:::Super-Admin
+Bad Request: /create-user/
+Bad Request: /create-user/
+super-admin:::Super-Admin
+super-admin:::Super-Admin
+super-admin:::Super-Admin
+Admin:::{user.role.name}
+GroupServiceView GET request received
+Admin:::{user.role.name}
+GroupServiceView GET request received
+super-admin:::Super-Admin
+Not Found: /.env
+super-admin:::Super-Admin
+super-admin:::Super-Admin
+super-admin:::Super-Admin
+super-admin:::Super-Admin
+super-admin:::Super-Admin
+super-admin:::Super-Admin
+super-admin:::Super-Admin
+super-admin:::Super-Admin
+Not Found: /
+Not Found: /webui/
+Not Found: /favicon.ico
+Not Found: /geoserver/web/
+super-admin:::Super-Admin
+Not Found: /.env
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'sell', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'CE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'exit ce'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'sell', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'CE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'exit ce'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'sell', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'CE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'exit ce'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'sell', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'CE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'exit ce'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+super-admin:::Super-Admin
+super-admin:::Super-Admin
+super-admin:::Super-Admin
+Not Found: /
+Not Found: /form.html
+Not Found: /upl.php
+Not Found: /t4
+Not Found: /geoip/
+Not Found: /favicon.ico
+Not Found: /1.php
+Not Found: /systembc/password.php
+Not Found: /password.php
+Not Found: /.env
+Not Found: /
+Not Found: /
+super-admin:::Super-Admin
+super-admin:::Super-Admin
+super-admin:::Super-Admin
+super-admin:::Super-Admin
+Not Found: /Core/Skin/Login.aspx
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /apifb/stats.php
+super-admin:::Super-Admin
+super-admin:::Super-Admin
+super-admin:::Super-Admin
+Not Found: /boaform/admin/formLogin
+Not Found: /.env
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /.env
+Not Found: /
+Not Found: /_profiler/phpinfo
+Not Found: /phpinfo.php
+Not Found: /phpinfo
+Not Found: /info.php
+Not Found: /php-info.php
+Not Found: /phpinfoposmeta.php
+Not Found: /main.yml
+Not Found: /config.json
+Not Found: /helpers/utility.js
+Not Found: /server/s3.js
+Not Found: /s3.js
+Not Found: /debug/default/view
+Not Found: /aws/credentials
+Not Found: /.aws/config
+Not Found: /.env
+Not Found: /
+Not Found: /_profiler/phpinfo
+Not Found: /phpinfo.php
+Not Found: /phpinfo
+Not Found: /info.php
+Not Found: /php-info.php
+Not Found: /phpinfoposmeta.php
+Not Found: /main.yml
+Not Found: /config.json
+Not Found: /helpers/utility.js
+Not Found: /server/s3.js
+Not Found: /s3.js
+Not Found: /debug/default/view
+Not Found: /aws/credentials
+Not Found: /.aws/config
+Not Found: /
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /.git/config
+Not Found: /.env
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /.env
+Not Found: /
+Not Found: /stalker_portal/server/tools/auth_simple.php
+Not Found: /.env
+Not Found: /
+Not Found: /sendgrid/.env
+Not Found: /
+Not Found: /.env
+Not Found: /hello.world
+Not Found: /vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /vendor/phpunit/phpunit/Util/PHP/eval-stdin.php
+Not Found: /vendor/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /vendor/phpunit/Util/PHP/eval-stdin.php
+Not Found: /vendor/phpunit/phpunit/LICENSE/eval-stdin.php
+Not Found: /vendor/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /phpunit/phpunit/Util/PHP/eval-stdin.php
+Not Found: /phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /phpunit/Util/PHP/eval-stdin.php
+Not Found: /lib/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /lib/phpunit/phpunit/Util/PHP/eval-stdin.php
+Not Found: /lib/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /lib/phpunit/Util/PHP/eval-stdin.php
+Not Found: /lib/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /laravel/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /www/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /ws/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /yii/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /zend/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /ws/ec/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /V2/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /tests/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /test/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /testing/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /api/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /demo/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /cms/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /crm/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /backup/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /blog/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /workspace/drupal/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /panel/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /public/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /apps/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /app/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+Not Found: /index.php
+Not Found: /public/index.php
+Not Found: /index.php
+Not Found: /index.php
+Not Found: /containers/json
+Not Found: /.env
+Not Found: /
+Not Found: /any
+Not Found: /Core/Skin/Login.aspx
+Not Found: /
+Not Found: /
+Not Found: /.env
+Not Found: /
+Not Found: /_profiler/phpinfo
+Not Found: /
+Not Found: /frontend_dev.php/$
+Not Found: /.env
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /.env
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /.env
+Not Found: /
+Not Found: /.git/config
+Not Found: /.git/config
+Not Found: /.git/config
+Not Found: /.git/config
+Not Found: /.env
+Not Found: /
+Not Found: /
+Not Found: /
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'buy', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'PE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'pe entry'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'buy', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'PE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'pe entry'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'buy', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'PE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'pe entry'}
+Session ID expired or not found. Regenerating...
+New session ID generated: {'userId': None, 'userData': None, 'encKey': None, 'apikey': None, 'stat': 'Ok', 'emsg': 'User does not login. Please login', 'loginType': None, 'version': None, 'fcmToken': None, 'imei': None, 'login': False}
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'buy', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'PE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'pe entry'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Error occurred while processing the alert
+Traceback (most recent call last):
+  File "/home/ubuntu/AlgoView-Devlopment/Backend/main/views.py", line 684, in post
+    },order_response.status_code )
+AttributeError: 'dict' object has no attribute 'status_code'
+Internal Server Error: /v1/algo/webhook/
+Not Found: /favicon.ico
+super-admin:::Super-Admin
+super-admin:::Super-Admin
+super-admin:::Super-Admin
+Unauthorized: /users-list/
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'sell', 'symbol': 'BANKNIFTY', 'expiry': '01-10-2024', 'strikePrice': 24.5, 'Type': 'CE', 'Lot': 4, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 238, 'triggerPrice': 10, 'tsl': 0, 'strategyTag': 'exit ce', 'symbol_id': '212', 'trading_symbol': 'NIFTY26SEP2426050PE'}
+Session ID expired or not found. Regenerating...
+New session ID generated: {'userId': None, 'userData': None, 'encKey': None, 'apikey': None, 'stat': 'Ok', 'emsg': 'User does not login. Please login', 'loginType': None, 'version': None, 'fcmToken': None, 'imei': None, 'login': False}
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Received alert: {'Alert_Key': 'option_alert_1', 'buy_sell': 'buy', 'data_type': 'option', 'expiry': '21-02-2024', 'IntType': 1, 'limitPrice': 0, 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'strategyTag': 'ce entry', 'strikePrice': 2300, 'symbol': 'NIFTY', 'triggerPrice': 0, 'symbol_id': '212', 'trading_symbol': 'NIFTY26SEP2426050PE', 'tsl': 0, 'Type': 'CE'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Received alert: {'Alert_Key': 'option_alert_1', 'buy_sell': 'buy', 'data_type': 'option', 'expiry': '21-02-2024', 'IntType': 1, 'limitPrice': 0, 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'strategyTag': 'ce entry', 'strikePrice': 2300, 'symbol': 'NIFTY', 'triggerPrice': 0, 'symbol_id': '212', 'trading_symbol': 'NIFTY26SEP2426050PE', 'tsl': 0, 'Type': 'CE'}
+Session ID expired or not found. Regenerating...
+New session ID generated: {'stat': 'Ok', 'sessionID': 'eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICIyam9lOFVScGxZU3FTcDB3RDNVemVBQkgxYkpmOE4wSDRDMGVVSWhXUVAwIn0.eyJleHAiOjE3MzYwNTI5MTMsImlhdCI6MTczMDg2ODkxMywianRpIjoiMDI4OTE2MzYtMjdlMC00Y2Q4LTlkNTAtMzU5MzE1ZWIyNjFhIiwiaXNzIjoiaHR0cHM6Ly9pZGFhcy5hbGljZWJsdWVvbmxpbmUuY29tL2lkYWFzL3JlYWxtcy9BbGljZUJsdWUiLCJhdWQiOiJhY2NvdW50Iiwic3ViIjoiODI1ZjgzNmYtZGZjMi00NTk4LWE1MWUtNDc4MGVjNDVjZjlmIiwidHlwIjoiQmVhcmVyIiwiYXpwIjoiYWxpY2Uta2IiLCJzaWQiOiIyYTYzZWMyOS1kODU5LTQzNTctYWRjMC0zNzdhZWI5ZDZhOTkiLCJhbGxvd2VkLW9yaWdpbnMiOlsiaHR0cDovL2xvY2FsaG9zdDozMDAyIiwiaHR0cDovL2xvY2FsaG9zdDo1MDUwIiwiaHR0cDovL2xvY2FsaG9zdDo5OTQzIiwiaHR0cDovL2xvY2FsaG9zdDo5MDAwIl0sInJlYWxtX2FjY2VzcyI6eyJyb2xlcyI6WyJvZmZsaW5lX2FjY2VzcyIsImRlZmF1bHQtcm9sZXMtYWxpY2VibHVla2IiLCJ1bWFfYXV0aG9yaXphdGlvbiJdfSwicmVzb3VyY2VfYWNjZXNzIjp7ImFsaWNlLWtiIjp7InJvbGVzIjpbIkdVRVNUX1VTRVIiLCJBQ1RJVkVfVVNFUiJdfSwiYWNjb3VudCI6eyJyb2xlcyI6WyJtYW5hZ2UtYWNjb3VudCIsIm1hbmFnZS1hY2NvdW50LWxpbmtzIiwidmlldy1wcm9maWxlIl19fSwic2NvcGUiOiJlbWFpbCBwcm9maWxlIG9wZW5pZCIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJ1Y2MiOiIxNjE3NjQ2IiwiY2xpZW50Um9sZSI6WyJHVUVTVF9VU0VSIiwiQUNUSVZFX1VTRVIiXSwibmFtZSI6IlJBR0hBViBQQUxJV0FMIiwibW9iaWxlIjoiOTY0NDMzMDA4MCIsInByZWZlcnJlZF91c2VybmFtZSI6IjE2MTc2NDYiLCJnaXZlbl9uYW1lIjoiUkFHSEFWIFBBTElXQUwiLCJlbWFpbCI6InJhZ2hhdjE3MjlyYWdoYXZAZ21haWwuY29tIn0.C7k1gtIW1yaDHVVG9RMFy-10eK0Lrnb_Y3nVXjXQQBsjbh_GzTvk7OlCG4RptKEHc0P-TmLUtbhsyfLQm8D4Nll1lZqyBnNLzOcFEI1isVcPVyUmvHK3s2lUhKVBuzXsZ4flX3cMAZIbBf-mdeIcwZ54ndfwY6GR_FVReQAJWeZT_Qc_H2aukqZ5sEUQg3RsQLTbffcTo-vXbdmMde1xD-QkgiIwMVwSmvKesl8zkFELT3MjJZsy-CoDn_CGz3qwkvUMEEVGR57S_HE83CJAny4s95qYjjOkWqmNQmHcHXT9L1ntPIzjg1RyxChPGriCiVXUU87beT65glknrzSzWQ'}
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Received alert: {'Alert_Key': 'option_alert_1', 'buy_sell': 'buy', 'data_type': 'option', 'expiry': '21-02-2024', 'IntType': 1, 'limitPrice': 0, 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'strategyTag': 'ce entry', 'strikePrice': 2300, 'symbol': 'NIFTY', 'triggerPrice': 0, 'symbol_id': '212', 'trading_symbol': 'NIFTY26SEP2426050PE', 'tsl': 0, 'Type': 'CE'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Received alert: {'Alert_Key': 'option_alert_1', 'buy_sell': 'buy', 'data_type': 'option', 'expiry': '21-02-2024', 'IntType': 1, 'limitPrice': 0, 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'strategyTag': 'ce entry', 'strikePrice': 2300, 'symbol': 'NIFTY', 'triggerPrice': 0, 'symbol_id': '212', 'trading_symbol': 'NIFTY26SEP2426050PE', 'tsl': 0, 'Type': 'CE'}
+Session ID expired or not found. Regenerating...
+New session ID generated: {'stat': 'Ok', 'sessionID': 'eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICIyam9lOFVScGxZU3FTcDB3RDNVemVBQkgxYkpmOE4wSDRDMGVVSWhXUVAwIn0.eyJleHAiOjE3MzYwNTI5MTMsImlhdCI6MTczMDg2ODkxMywianRpIjoiMDI4OTE2MzYtMjdlMC00Y2Q4LTlkNTAtMzU5MzE1ZWIyNjFhIiwiaXNzIjoiaHR0cHM6Ly9pZGFhcy5hbGljZWJsdWVvbmxpbmUuY29tL2lkYWFzL3JlYWxtcy9BbGljZUJsdWUiLCJhdWQiOiJhY2NvdW50Iiwic3ViIjoiODI1ZjgzNmYtZGZjMi00NTk4LWE1MWUtNDc4MGVjNDVjZjlmIiwidHlwIjoiQmVhcmVyIiwiYXpwIjoiYWxpY2Uta2IiLCJzaWQiOiIyYTYzZWMyOS1kODU5LTQzNTctYWRjMC0zNzdhZWI5ZDZhOTkiLCJhbGxvd2VkLW9yaWdpbnMiOlsiaHR0cDovL2xvY2FsaG9zdDozMDAyIiwiaHR0cDovL2xvY2FsaG9zdDo1MDUwIiwiaHR0cDovL2xvY2FsaG9zdDo5OTQzIiwiaHR0cDovL2xvY2FsaG9zdDo5MDAwIl0sInJlYWxtX2FjY2VzcyI6eyJyb2xlcyI6WyJvZmZsaW5lX2FjY2VzcyIsImRlZmF1bHQtcm9sZXMtYWxpY2VibHVla2IiLCJ1bWFfYXV0aG9yaXphdGlvbiJdfSwicmVzb3VyY2VfYWNjZXNzIjp7ImFsaWNlLWtiIjp7InJvbGVzIjpbIkdVRVNUX1VTRVIiLCJBQ1RJVkVfVVNFUiJdfSwiYWNjb3VudCI6eyJyb2xlcyI6WyJtYW5hZ2UtYWNjb3VudCIsIm1hbmFnZS1hY2NvdW50LWxpbmtzIiwidmlldy1wcm9maWxlIl19fSwic2NvcGUiOiJlbWFpbCBwcm9maWxlIG9wZW5pZCIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJ1Y2MiOiIxNjE3NjQ2IiwiY2xpZW50Um9sZSI6WyJHVUVTVF9VU0VSIiwiQUNUSVZFX1VTRVIiXSwibmFtZSI6IlJBR0hBViBQQUxJV0FMIiwibW9iaWxlIjoiOTY0NDMzMDA4MCIsInByZWZlcnJlZF91c2VybmFtZSI6IjE2MTc2NDYiLCJnaXZlbl9uYW1lIjoiUkFHSEFWIFBBTElXQUwiLCJlbWFpbCI6InJhZ2hhdjE3MjlyYWdoYXZAZ21haWwuY29tIn0.C7k1gtIW1yaDHVVG9RMFy-10eK0Lrnb_Y3nVXjXQQBsjbh_GzTvk7OlCG4RptKEHc0P-TmLUtbhsyfLQm8D4Nll1lZqyBnNLzOcFEI1isVcPVyUmvHK3s2lUhKVBuzXsZ4flX3cMAZIbBf-mdeIcwZ54ndfwY6GR_FVReQAJWeZT_Qc_H2aukqZ5sEUQg3RsQLTbffcTo-vXbdmMde1xD-QkgiIwMVwSmvKesl8zkFELT3MjJZsy-CoDn_CGz3qwkvUMEEVGR57S_HE83CJAny4s95qYjjOkWqmNQmHcHXT9L1ntPIzjg1RyxChPGriCiVXUU87beT65glknrzSzWQ'}
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Received alert: {'Alert_Key': 'option_alert_1', 'buy_sell': 'buy', 'data_type': 'option', 'expiry': '21-02-2024', 'IntType': 1, 'limitPrice': 0, 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'strategyTag': 'ce entry', 'strikePrice': 2300, 'symbol': 'NIFTY', 'triggerPrice': 0, 'symbol_id': '212', 'trading_symbol': 'NIFTY26SEP2426050PE', 'tsl': 0, 'Type': 'CE'}
+Using existing session ID
+Session ID retrieved successfully
+Order response (dict): {'status': 'Orders processed'}
+Received alert: {'Alert_Key': 'option_alert_1', 'buy_sell': 'buy', 'data_type': 'option', 'expiry': '21-02-2024', 'IntType': 1, 'limitPrice': 0, 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'strategyTag': 'ce entry', 'strikePrice': 2300, 'symbol': 'NIFTY', 'triggerPrice': 0, 'symbol_id': '212', 'trading_symbol': 'NIFTY26SEP2426050PE', 'tsl': 0, 'Type': 'CE'}
+Session ID expired or not found. Regenerating...1617646
+New session ID generated: {'stat': 'Ok', 'sessionID': 'eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICIyam9lOFVScGxZU3FTcDB3RDNVemVBQkgxYkpmOE4wSDRDMGVVSWhXUVAwIn0.eyJleHAiOjE3MzYwNTI5MTMsImlhdCI6MTczMDg2ODkxMywianRpIjoiMDI4OTE2MzYtMjdlMC00Y2Q4LTlkNTAtMzU5MzE1ZWIyNjFhIiwiaXNzIjoiaHR0cHM6Ly9pZGFhcy5hbGljZWJsdWVvbmxpbmUuY29tL2lkYWFzL3JlYWxtcy9BbGljZUJsdWUiLCJhdWQiOiJhY2NvdW50Iiwic3ViIjoiODI1ZjgzNmYtZGZjMi00NTk4LWE1MWUtNDc4MGVjNDVjZjlmIiwidHlwIjoiQmVhcmVyIiwiYXpwIjoiYWxpY2Uta2IiLCJzaWQiOiIyYTYzZWMyOS1kODU5LTQzNTctYWRjMC0zNzdhZWI5ZDZhOTkiLCJhbGxvd2VkLW9yaWdpbnMiOlsiaHR0cDovL2xvY2FsaG9zdDozMDAyIiwiaHR0cDovL2xvY2FsaG9zdDo1MDUwIiwiaHR0cDovL2xvY2FsaG9zdDo5OTQzIiwiaHR0cDovL2xvY2FsaG9zdDo5MDAwIl0sInJlYWxtX2FjY2VzcyI6eyJyb2xlcyI6WyJvZmZsaW5lX2FjY2VzcyIsImRlZmF1bHQtcm9sZXMtYWxpY2VibHVla2IiLCJ1bWFfYXV0aG9yaXphdGlvbiJdfSwicmVzb3VyY2VfYWNjZXNzIjp7ImFsaWNlLWtiIjp7InJvbGVzIjpbIkdVRVNUX1VTRVIiLCJBQ1RJVkVfVVNFUiJdfSwiYWNjb3VudCI6eyJyb2xlcyI6WyJtYW5hZ2UtYWNjb3VudCIsIm1hbmFnZS1hY2NvdW50LWxpbmtzIiwidmlldy1wcm9maWxlIl19fSwic2NvcGUiOiJlbWFpbCBwcm9maWxlIG9wZW5pZCIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJ1Y2MiOiIxNjE3NjQ2IiwiY2xpZW50Um9sZSI6WyJHVUVTVF9VU0VSIiwiQUNUSVZFX1VTRVIiXSwibmFtZSI6IlJBR0hBViBQQUxJV0FMIiwibW9iaWxlIjoiOTY0NDMzMDA4MCIsInByZWZlcnJlZF91c2VybmFtZSI6IjE2MTc2NDYiLCJnaXZlbl9uYW1lIjoiUkFHSEFWIFBBTElXQUwiLCJlbWFpbCI6InJhZ2hhdjE3MjlyYWdoYXZAZ21haWwuY29tIn0.C7k1gtIW1yaDHVVG9RMFy-10eK0Lrnb_Y3nVXjXQQBsjbh_GzTvk7OlCG4RptKEHc0P-TmLUtbhsyfLQm8D4Nll1lZqyBnNLzOcFEI1isVcPVyUmvHK3s2lUhKVBuzXsZ4flX3cMAZIbBf-mdeIcwZ54ndfwY6GR_FVReQAJWeZT_Qc_H2aukqZ5sEUQg3RsQLTbffcTo-vXbdmMde1xD-QkgiIwMVwSmvKesl8zkFELT3MjJZsy-CoDn_CGz3qwkvUMEEVGR57S_HE83CJAny4s95qYjjOkWqmNQmHcHXT9L1ntPIzjg1RyxChPGriCiVXUU87beT65glknrzSzWQ'}
+Session ID retrieved successfully and user id is :::1617646
+Order response (dict): {'status': 'Orders processed'}
+Received alert: {'Alert_Key': 'option_alert_1', 'buy_sell': 'buy', 'data_type': 'option', 'expiry': '21-02-2024', 'IntType': 1, 'limitPrice': 0, 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'strategyTag': 'ce entry', 'strikePrice': 2300, 'symbol': 'NIFTY', 'triggerPrice': 10, 'symbol_id': '212', 'trading_symbol': 'NIFTY26SEP2426050PE', 'tsl': 0, 'Type': 'CE'}
+Session ID expired or not found. Regenerating...857958
+New session ID generated: {'userId': None, 'userData': None, 'encKey': None, 'apikey': None, 'stat': 'Ok', 'emsg': 'User does not login. Please login', 'loginType': None, 'version': None, 'fcmToken': None, 'imei': None, 'login': False}
+Session ID retrieved successfully and user id is :::857958
+Order response (dict): {'status': 'Orders processed'}
+super-admin:::Super-Admin
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'sell', 'symbol': 'NIFTY', 'expiry': '01-10-2024', 'strikePrice': 24.5, 'Type': 'CE', 'Lot': 2, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 238, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'exit ce', 'symbol_id': '212', 'trading_symbol': 'NIFTY26SEP2426050PE'}
+Session ID expired or not found. Regenerating...857958
+New session ID generated: {'userId': None, 'userData': None, 'encKey': None, 'apikey': None, 'stat': 'Ok', 'emsg': 'User does not login. Please login', 'loginType': None, 'version': None, 'fcmToken': None, 'imei': None, 'login': False}
+Session ID retrieved successfully and user id is :::857958
+Order response (dict): {'status': 'Orders processed'}
+super-admin:::Super-Admin
+super-admin:::Super-Admin
+Admin:::{user.role.name}
+Admin:::{user.role.name}
+Admin:::{user.role.name}
+Admin:::{user.role.name}
+Admin:::{user.role.name}
+super-admin:::Super-Admin
+super-admin:::Super-Admin
+Not Found: /.env
+Not Found: /
+Received alert: {'Alert_Key': 'option_alert_1', 'buy_sell': 'buy', 'data_type': 'option', 'expiry': '21-02-2024', 'IntType': 1, 'limitPrice': 0, 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'strategyTag': 'ce entry', 'strikePrice': 2300, 'symbol': 'NIFTY', 'triggerPrice': 10, 'symbol_id': '212', 'trading_symbol': 'NIFTY26SEP2426050PE', 'tsl': 0, 'Type': 'CE'}
+Session ID expired or not found. Regenerating...1617646
+New session ID generated: {'stat': 'Ok', 'sessionID': 'eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICIyam9lOFVScGxZU3FTcDB3RDNVemVBQkgxYkpmOE4wSDRDMGVVSWhXUVAwIn0.eyJleHAiOjE3MzYwNTI5MTMsImlhdCI6MTczMDg2ODkxMywianRpIjoiMDI4OTE2MzYtMjdlMC00Y2Q4LTlkNTAtMzU5MzE1ZWIyNjFhIiwiaXNzIjoiaHR0cHM6Ly9pZGFhcy5hbGljZWJsdWVvbmxpbmUuY29tL2lkYWFzL3JlYWxtcy9BbGljZUJsdWUiLCJhdWQiOiJhY2NvdW50Iiwic3ViIjoiODI1ZjgzNmYtZGZjMi00NTk4LWE1MWUtNDc4MGVjNDVjZjlmIiwidHlwIjoiQmVhcmVyIiwiYXpwIjoiYWxpY2Uta2IiLCJzaWQiOiIyYTYzZWMyOS1kODU5LTQzNTctYWRjMC0zNzdhZWI5ZDZhOTkiLCJhbGxvd2VkLW9yaWdpbnMiOlsiaHR0cDovL2xvY2FsaG9zdDozMDAyIiwiaHR0cDovL2xvY2FsaG9zdDo1MDUwIiwiaHR0cDovL2xvY2FsaG9zdDo5OTQzIiwiaHR0cDovL2xvY2FsaG9zdDo5MDAwIl0sInJlYWxtX2FjY2VzcyI6eyJyb2xlcyI6WyJvZmZsaW5lX2FjY2VzcyIsImRlZmF1bHQtcm9sZXMtYWxpY2VibHVla2IiLCJ1bWFfYXV0aG9yaXphdGlvbiJdfSwicmVzb3VyY2VfYWNjZXNzIjp7ImFsaWNlLWtiIjp7InJvbGVzIjpbIkdVRVNUX1VTRVIiLCJBQ1RJVkVfVVNFUiJdfSwiYWNjb3VudCI6eyJyb2xlcyI6WyJtYW5hZ2UtYWNjb3VudCIsIm1hbmFnZS1hY2NvdW50LWxpbmtzIiwidmlldy1wcm9maWxlIl19fSwic2NvcGUiOiJlbWFpbCBwcm9maWxlIG9wZW5pZCIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJ1Y2MiOiIxNjE3NjQ2IiwiY2xpZW50Um9sZSI6WyJHVUVTVF9VU0VSIiwiQUNUSVZFX1VTRVIiXSwibmFtZSI6IlJBR0hBViBQQUxJV0FMIiwibW9iaWxlIjoiOTY0NDMzMDA4MCIsInByZWZlcnJlZF91c2VybmFtZSI6IjE2MTc2NDYiLCJnaXZlbl9uYW1lIjoiUkFHSEFWIFBBTElXQUwiLCJlbWFpbCI6InJhZ2hhdjE3MjlyYWdoYXZAZ21haWwuY29tIn0.C7k1gtIW1yaDHVVG9RMFy-10eK0Lrnb_Y3nVXjXQQBsjbh_GzTvk7OlCG4RptKEHc0P-TmLUtbhsyfLQm8D4Nll1lZqyBnNLzOcFEI1isVcPVyUmvHK3s2lUhKVBuzXsZ4flX3cMAZIbBf-mdeIcwZ54ndfwY6GR_FVReQAJWeZT_Qc_H2aukqZ5sEUQg3RsQLTbffcTo-vXbdmMde1xD-QkgiIwMVwSmvKesl8zkFELT3MjJZsy-CoDn_CGz3qwkvUMEEVGR57S_HE83CJAny4s95qYjjOkWqmNQmHcHXT9L1ntPIzjg1RyxChPGriCiVXUU87beT65glknrzSzWQ'}
+Session ID retrieved successfully and user id is :::1617646
+Order response (dict): {'status': 'Orders processed'}
+Not Found: /
+Received alert: {'Alert_Key': 'option_alert_1', 'buy_sell': 'buy', 'data_type': 'option', 'expiry': '21-02-2024', 'IntType': 1, 'limitPrice': 0, 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'strategyTag': 'ce entry', 'strikePrice': 2300, 'symbol': 'NIFTY', 'triggerPrice': 10, 'symbol_id': '212', 'trading_symbol': 'NIFTY26SEP2426050PE', 'tsl': 0, 'Type': 'CE'}
+Session ID expired or not found. Regenerating...1617646
+New session ID generated: {'stat': 'Ok', 'sessionID': 'eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICIyam9lOFVScGxZU3FTcDB3RDNVemVBQkgxYkpmOE4wSDRDMGVVSWhXUVAwIn0.eyJleHAiOjE3MzYwNTI5MTMsImlhdCI6MTczMDg2ODkxMywianRpIjoiMDI4OTE2MzYtMjdlMC00Y2Q4LTlkNTAtMzU5MzE1ZWIyNjFhIiwiaXNzIjoiaHR0cHM6Ly9pZGFhcy5hbGljZWJsdWVvbmxpbmUuY29tL2lkYWFzL3JlYWxtcy9BbGljZUJsdWUiLCJhdWQiOiJhY2NvdW50Iiwic3ViIjoiODI1ZjgzNmYtZGZjMi00NTk4LWE1MWUtNDc4MGVjNDVjZjlmIiwidHlwIjoiQmVhcmVyIiwiYXpwIjoiYWxpY2Uta2IiLCJzaWQiOiIyYTYzZWMyOS1kODU5LTQzNTctYWRjMC0zNzdhZWI5ZDZhOTkiLCJhbGxvd2VkLW9yaWdpbnMiOlsiaHR0cDovL2xvY2FsaG9zdDozMDAyIiwiaHR0cDovL2xvY2FsaG9zdDo1MDUwIiwiaHR0cDovL2xvY2FsaG9zdDo5OTQzIiwiaHR0cDovL2xvY2FsaG9zdDo5MDAwIl0sInJlYWxtX2FjY2VzcyI6eyJyb2xlcyI6WyJvZmZsaW5lX2FjY2VzcyIsImRlZmF1bHQtcm9sZXMtYWxpY2VibHVla2IiLCJ1bWFfYXV0aG9yaXphdGlvbiJdfSwicmVzb3VyY2VfYWNjZXNzIjp7ImFsaWNlLWtiIjp7InJvbGVzIjpbIkdVRVNUX1VTRVIiLCJBQ1RJVkVfVVNFUiJdfSwiYWNjb3VudCI6eyJyb2xlcyI6WyJtYW5hZ2UtYWNjb3VudCIsIm1hbmFnZS1hY2NvdW50LWxpbmtzIiwidmlldy1wcm9maWxlIl19fSwic2NvcGUiOiJlbWFpbCBwcm9maWxlIG9wZW5pZCIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJ1Y2MiOiIxNjE3NjQ2IiwiY2xpZW50Um9sZSI6WyJHVUVTVF9VU0VSIiwiQUNUSVZFX1VTRVIiXSwibmFtZSI6IlJBR0hBViBQQUxJV0FMIiwibW9iaWxlIjoiOTY0NDMzMDA4MCIsInByZWZlcnJlZF91c2VybmFtZSI6IjE2MTc2NDYiLCJnaXZlbl9uYW1lIjoiUkFHSEFWIFBBTElXQUwiLCJlbWFpbCI6InJhZ2hhdjE3MjlyYWdoYXZAZ21haWwuY29tIn0.C7k1gtIW1yaDHVVG9RMFy-10eK0Lrnb_Y3nVXjXQQBsjbh_GzTvk7OlCG4RptKEHc0P-TmLUtbhsyfLQm8D4Nll1lZqyBnNLzOcFEI1isVcPVyUmvHK3s2lUhKVBuzXsZ4flX3cMAZIbBf-mdeIcwZ54ndfwY6GR_FVReQAJWeZT_Qc_H2aukqZ5sEUQg3RsQLTbffcTo-vXbdmMde1xD-QkgiIwMVwSmvKesl8zkFELT3MjJZsy-CoDn_CGz3qwkvUMEEVGR57S_HE83CJAny4s95qYjjOkWqmNQmHcHXT9L1ntPIzjg1RyxChPGriCiVXUU87beT65glknrzSzWQ'}
+Session ID retrieved successfully and user id is :::1617646
+Order placed  for user 6 with response 200
+Order log saved for user 6 with status Success
+Order response (object): <Response [200]>
+Order response JSON: [{'stat': 'Ok', 'NOrdNo': '24110600164230'}]
+Not Found: /.env
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Not Found: /_profiler/phpinfo
+Not Found: /login.rsp
+Received alert: {'Alert_Key': 'option_alert_1', 'buy_sell': 'buy', 'data_type': 'option', 'expiry': '21-02-2024', 'IntType': 1, 'limitPrice': 0, 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'strategyTag': 'ce entry', 'strikePrice': 2300, 'symbol': 'NIFTY', 'triggerPrice': 10, 'symbol_id': '212', 'trading_symbol': 'NIFTY26SEP2426050PE', 'tsl': 0, 'Type': 'CE'}
+Session ID expired or not found. Regenerating...1617646
+New session ID generated: {'stat': 'Ok', 'sessionID': 'eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICIyam9lOFVScGxZU3FTcDB3RDNVemVBQkgxYkpmOE4wSDRDMGVVSWhXUVAwIn0.eyJleHAiOjE3MzYwNTI5MTMsImlhdCI6MTczMDg2ODkxMywianRpIjoiMDI4OTE2MzYtMjdlMC00Y2Q4LTlkNTAtMzU5MzE1ZWIyNjFhIiwiaXNzIjoiaHR0cHM6Ly9pZGFhcy5hbGljZWJsdWVvbmxpbmUuY29tL2lkYWFzL3JlYWxtcy9BbGljZUJsdWUiLCJhdWQiOiJhY2NvdW50Iiwic3ViIjoiODI1ZjgzNmYtZGZjMi00NTk4LWE1MWUtNDc4MGVjNDVjZjlmIiwidHlwIjoiQmVhcmVyIiwiYXpwIjoiYWxpY2Uta2IiLCJzaWQiOiIyYTYzZWMyOS1kODU5LTQzNTctYWRjMC0zNzdhZWI5ZDZhOTkiLCJhbGxvd2VkLW9yaWdpbnMiOlsiaHR0cDovL2xvY2FsaG9zdDozMDAyIiwiaHR0cDovL2xvY2FsaG9zdDo1MDUwIiwiaHR0cDovL2xvY2FsaG9zdDo5OTQzIiwiaHR0cDovL2xvY2FsaG9zdDo5MDAwIl0sInJlYWxtX2FjY2VzcyI6eyJyb2xlcyI6WyJvZmZsaW5lX2FjY2VzcyIsImRlZmF1bHQtcm9sZXMtYWxpY2VibHVla2IiLCJ1bWFfYXV0aG9yaXphdGlvbiJdfSwicmVzb3VyY2VfYWNjZXNzIjp7ImFsaWNlLWtiIjp7InJvbGVzIjpbIkdVRVNUX1VTRVIiLCJBQ1RJVkVfVVNFUiJdfSwiYWNjb3VudCI6eyJyb2xlcyI6WyJtYW5hZ2UtYWNjb3VudCIsIm1hbmFnZS1hY2NvdW50LWxpbmtzIiwidmlldy1wcm9maWxlIl19fSwic2NvcGUiOiJlbWFpbCBwcm9maWxlIG9wZW5pZCIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJ1Y2MiOiIxNjE3NjQ2IiwiY2xpZW50Um9sZSI6WyJHVUVTVF9VU0VSIiwiQUNUSVZFX1VTRVIiXSwibmFtZSI6IlJBR0hBViBQQUxJV0FMIiwibW9iaWxlIjoiOTY0NDMzMDA4MCIsInByZWZlcnJlZF91c2VybmFtZSI6IjE2MTc2NDYiLCJnaXZlbl9uYW1lIjoiUkFHSEFWIFBBTElXQUwiLCJlbWFpbCI6InJhZ2hhdjE3MjlyYWdoYXZAZ21haWwuY29tIn0.C7k1gtIW1yaDHVVG9RMFy-10eK0Lrnb_Y3nVXjXQQBsjbh_GzTvk7OlCG4RptKEHc0P-TmLUtbhsyfLQm8D4Nll1lZqyBnNLzOcFEI1isVcPVyUmvHK3s2lUhKVBuzXsZ4flX3cMAZIbBf-mdeIcwZ54ndfwY6GR_FVReQAJWeZT_Qc_H2aukqZ5sEUQg3RsQLTbffcTo-vXbdmMde1xD-QkgiIwMVwSmvKesl8zkFELT3MjJZsy-CoDn_CGz3qwkvUMEEVGR57S_HE83CJAny4s95qYjjOkWqmNQmHcHXT9L1ntPIzjg1RyxChPGriCiVXUU87beT65glknrzSzWQ'}
+Session ID retrieved successfully and user id is :::1617646
+Order placed  for user 6 with response 200
+Order log saved for user 6 with status Success
+Order response (object): <Response [200]>
+Order response JSON: [{'stat': 'Ok', 'NOrdNo': '24110600200631'}]
+Not Found: /.env
+Not Found: /
+Not Found: /Core/Skin/Login.aspx
+Received alert: {'data_type': 'option', 'Alert_Key': 'option_alert_1', 'IntType': 1, 'buy_sell': 'sell', 'symbol': 'NIFTY', 'expiry': '21-02-2024', 'strikePrice': 2300, 'Type': 'PE', 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'limitPrice': 0, 'triggerPrice': 0, 'tsl': 0, 'strategyTag': 'exit pe'}
+Session ID expired or not found. Regenerating...857958
+New session ID generated: {'userId': None, 'userData': None, 'encKey': None, 'apikey': None, 'stat': 'Ok', 'emsg': 'User does not login. Please login', 'loginType': None, 'version': None, 'fcmToken': None, 'imei': None, 'login': False}
+Session ID retrieved successfully and user id is :::857958
+Order placed  for user 6 with response 401
+Order placement failed for user 6. Reason: 401 Client Error: Unauthorized for url: https://ant.aliceblueonline.com/rest/AliceBlueAPIService/api/placeOrder/executePlaceOrder
+Order log saved for user 6 with status Failed
+Order response (dict): {'status': 'Orders processed'}

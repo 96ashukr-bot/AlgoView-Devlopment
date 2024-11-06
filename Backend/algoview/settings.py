@@ -28,7 +28,17 @@ SECRET_KEY = 'django-insecure-7jwmkcbftdxtro)*t%h0=8@-5z#pf2+16kut9s8s27xr#c3jll
 DEBUG = True
 
 ALLOWED_HOSTS = ['*']
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
+CORS_ORIGIN_ALLOW_ALL = True
 
+# Optional: Set X-Frame-Options header to allow specific origins for embedding your site in frames
+X_FRAME_OPTIONS = 'ALLOWALL'
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",  # React development server
+    "http://103.120.178.54:4000",
+]
 
 # Application definition
 
@@ -215,7 +225,7 @@ LOGGING = {
         'file': {  # Logs to a file
             'level': 'DEBUG',
             'class': 'logging.FileHandler',
-            'filename': os.path.join(BASE_DIR, 'logs/django.log'),  # Ensure this file exists and the directory is writable
+            'filename': os.path.join(BASE_DIR, 'logs/webhooks.log'),  # Ensure this file exists and the directory is writable
         },
     },
     'loggers': {

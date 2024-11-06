@@ -632,7 +632,8 @@ def save_order_log(alert_data, user, status, reason=None):
             strategy=alert_data.get('strategy', 'Unknown'),  # Strategy used
             user=user,  # User placing the order
             status=status,  # "Success" or "Failed"
-            failure_reason=reason  # Save failure reason if any (for failed orders)
+            failure_reason=reason,  # Save failure reason if any (for failed orders)
+            json_data=alert_data
         )
         logger.info(f"Order log saved for user {user.id} with status {status}")
     except Exception as e:
@@ -647,7 +648,7 @@ def get_or_regenerate_session_id(USER_ID, ALICE_API_KEY):
     current_time = datetime.now()
     # Check if the session ID is expired or not set
     if SESSION_ID is None or SESSION_EXPIRATION is None or current_time >= SESSION_EXPIRATION:
-        logger.info("Session ID expired or not found. Regenerating...")
+        logger.info(f"Session ID expired or not found. Regenerating...{USER_ID}")
         alice = Aliceblue(user_id=USER_ID, api_key=ALICE_API_KEY)
         SESSION_ID = alice.get_session_id(alice)
         
@@ -666,10 +667,10 @@ class TradingViewWebhook(APIView):
         try:
             alert_data = request.data
             logger.info(f"Received alert: {alert_data}")
-            OrderLog.objects.create(json_data=alert_data, signal_time=timezone.now())
+            #OrderLog.objects.create(json_data=alert_data, signal_time=timezone.now())
             # Get or regenerate session ID
             session_id = get_or_regenerate_session_id(USER_ID, ALICE_API_KEY)
-            logger.info("Session ID retrieved successfully")
+            logger.info(f"Session ID retrieved successfully and user id is :::{USER_ID}")
 
             # Place the order using the session ID
             order_response = place_order(alert_data, session_id)
@@ -681,7 +682,7 @@ class TradingViewWebhook(APIView):
                 logger.info(f"Order response JSON: {order_response.json()}")
             return Response({
                 'order_resp': order_response
-            },order_response.status_code )
+            })
 
         except json.JSONDecodeError:
             logger.error("Invalid JSON received")
@@ -839,10 +840,15 @@ class LastLoginActivityView(APIView):
 
     def get(self, request, *args, **kwargs):
         try:
-            last_login_activity = UserActivityLog.objects.filter(
+            last_two_login_activities = UserActivityLog.objects.filter(
                 user=request.user, action_type='login'
-            ).latest('last_login_time')
-
+            ).order_by('-last_login_time')[:2]
+            if last_two_login_activities:
+                if len(last_two_login_activities) == 1:
+                    last_login_activity = last_two_login_activities[0]
+                else:
+                    # If there are at least two, get the second latest
+                    last_login_activity = last_two_login_activities[1]
             response_data = {
                 'last_login_time': last_login_activity.last_login_time,
                 'last_ip': last_login_activity.ip_address,
