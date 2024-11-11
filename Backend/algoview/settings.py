@@ -26,7 +26,6 @@ SECRET_KEY = 'django-insecure-7jwmkcbftdxtro)*t%h0=8@-5z#pf2+16kut9s8s27xr#c3jll
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
-
 ALLOWED_HOSTS = ['*']
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
@@ -35,11 +34,10 @@ CORS_ORIGIN_ALLOW_ALL = True
 # Optional: Set X-Frame-Options header to allow specific origins for embedding your site in frames
 X_FRAME_OPTIONS = 'ALLOWALL'
 
-# CORS_ALLOWED_ORIGINS = [
-    # "http://localhost:3000",  # React development server
-    # "http://103.120.178.54:4000",
-# ]
-
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",  # React development server
+    "http://103.120.178.54:4000",
+]
 # Application definition
 
 INSTALLED_APPS = [
@@ -200,9 +198,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',  # Default backend
 )
-CORS_ALLOWED_ORIGINS = [
-    'http://localhost:3000',  # React frontend
-]
+
 CELERY_BROKER_URL = 'redis://localhost:6379/0'  # URL for Redis
 CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'  # Backend for results
 CELERY_ACCEPT_CONTENT = ['json']
@@ -211,12 +207,12 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC' 
 
 CONTACT_NUM="+919988746583"
-LOGIN_LINK="'http://localhost:3000/login"
-HELP_CENTER_LINK="'http://localhost:3000"
-COMPANY_WEBSITE="'http://localhost:3000"
-# LOGIN_LINK="http://103.120.178.54:4000/login"
-# HELP_CENTER_LINK="http://103.120.178.54:4000"
-# COMPANY_WEBSITE="http://103.120.178.54:4000" 
+#LOGIN_LINK="'http://localhost:3000/login"
+#HELP_CENTER_LINK="'http://localhost:3000"
+#COMPANY_WEBSITE="'http://localhost:3000"
+LOGIN_LINK="http://103.120.178.54:4000/login"
+HELP_CENTER_LINK="http://103.120.178.54:4000"
+COMPANY_WEBSITE="http://103.120.178.54:4000" 
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,

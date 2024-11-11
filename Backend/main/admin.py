@@ -18,7 +18,7 @@ class UserAdmin(DjangoUserAdmin):
             # Current Address Fields
             'current_add_line_1', 'current_add_line_2', 'current_city',
             'current_state', 'current_country', 'current_zip_code','external_user','type_of_user','Group_service',
-            'Strategy','Broker','license','to_month','client_status','start_date_client','end_date_client' ,'is_enable')}),
+            'Strategy','Broker','license','to_month','is_client','client_status','start_date_client','end_date_client' ,'is_enable')}),
         ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser')}),
         # ('Metadata', {'fields': ('created_at', 'updated_at')}),  # Add 'created_at' and 'updated_at' here
     )
