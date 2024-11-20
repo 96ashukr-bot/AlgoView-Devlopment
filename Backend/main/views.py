@@ -576,7 +576,7 @@ SESSION_EXPIRATION = None
 
 # Place an order using Alice Blue API
 def place_order(alert_data, session_id):
-    all_enable_users=User.objects.filter(is_enable=True)
+    all_enable_users=ClientTradeSetting.objects.filter(is_trade_status='true')
     sessionID = session_id.get('sessionID')
     headers = {
         'Content-Type': 'application/json',
@@ -584,6 +584,9 @@ def place_order(alert_data, session_id):
     }
     """Place an order using Alice Blue API"""
     for user in all_enable_users:
+        ProductType = user.product_type
+        symbol = user.symbol
+        strategy=user.strategy
         order_payload = {
             "complexty": "regular",
             "discqty": "0",
@@ -1393,6 +1396,7 @@ class ClientCreateView(APIView):
     def post(self, request, *args, **kwargs):
         data = request.data.copy()
         start_time=time.time()
+        print("data>>>>",data)
         serializer = ClientCreateSerializer(data=data)
         password = get_random_string(length=12)
         if serializer.is_valid():
@@ -1699,6 +1703,60 @@ class UpdateTradeSettingStatusView(APIView):
         # Update the 'is_status' field
         try:
             # Start transaction in case of complex updates
+            with transaction.atomic():
+                trade_setting.is_tread_status = is_trade_status
+                trade_setting.save()
+
+                # Serialize and return updated data
+                serializer = ClientTradeSettingSerializer(trade_setting)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class UpdateTradeStatusView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, *args, **kwargs):
+        # Get the authenticated user
+        user = request.user
+        
+        # Extract query parameters
+        segment_name = request.query_params.get('segment')
+        sub_segment_name = request.query_params.get('sub_segment')
+        is_trade_status = request.data.get('is_trade_status')
+
+        # Validate query parameters and the required field
+        if not segment_name or not sub_segment_name:
+            return Response({"detail": "'segment' and 'sub_segment' query parameters are required."}, 
+                            status=status.HTTP_400_BAD_REQUEST)
+        if is_trade_status is None:
+            return Response({"detail": "'is_trade_status' field is required."}, 
+                            status=status.HTTP_400_BAD_REQUEST)
+        if not isinstance(is_trade_status, bool):
+            return Response({"detail": "'is_trade_status' must be a boolean value."}, 
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        # Look up the Segment and SubSegment objects by name
+        try:
+            print("kkkkk")
+            segment = Segment.objects.get(name__iexact=segment_name)
+            sub_segment = SubSegment.objects.get(name__iexact=sub_segment_name)
+            print("segmentsssssss",segment)
+            # Find the trade setting for the client based on segment and sub-segment
+            trade_setting = ClientTradeSetting.objects.get(client=user, segment=segment, sub_segment=sub_segment)
+        except Segment.DoesNotExist:
+            return Response({"detail": f"Segment with name '{segment_name}' not found."}, 
+                            status=status.HTTP_404_NOT_FOUND)
+        except SubSegment.DoesNotExist:
+            return Response({"detail": f"SubSegment with name '{sub_segment_name}' not found."}, 
+                            status=status.HTTP_404_NOT_FOUND)
+        except ClientTradeSetting.DoesNotExist:
+            return Response({"detail": "Trade setting not found."}, 
+                            status=status.HTTP_404_NOT_FOUND)
+
+        # Update the 'is_trade_status' field
+        try:
             with transaction.atomic():
                 trade_setting.is_tread_status = is_trade_status
                 trade_setting.save()

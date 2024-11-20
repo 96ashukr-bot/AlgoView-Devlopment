@@ -130,14 +130,20 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
+    # def save(self, *args, **kwargs):
+    #     # Automatically populate fullName if it is not already set
+    #     if not self.fullName:
+    #         self.fullName = f"{self.firstName} {self.middleName or ''} {self.lastName}".strip()
+    #     super().save(*args, **kwargs)
     def get_full_name(self):
-        print("jnjbnjnjn")
         return f"{self.firstName} {self.lastName}"
 
     def get_short_name(self):
         return self.firstName
 
     def save(self, *args, **kwargs):
+        if not self.fullName:
+            self.fullName = f"{self.firstName} {self.middleName or ''} {self.lastName}".strip()
         if self.middleName:
             self.fullName = f"{self.firstName}  {self.middleName} {self.lastName}"
         else:
@@ -145,7 +151,7 @@ class User(AbstractBaseUser, PermissionsMixin):
             self.fullName = f"{self.firstName} {self.lastName} "
         self.calculate_dates()    
         super().save(*args, **kwargs)
-
+    
     def calculate_dates(self):
         """Calculate start_date_client and end_date_client based on to_month."""
         today = datetime.today()

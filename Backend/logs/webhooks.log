@@ -1,0 +1,523 @@
+2024-11-20 10:10:50 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 10:11:35 - django.server - INFO - "PATCH /update-trade-status/ HTTP/1.1" 200 352
+2024-11-20 10:12:06 - django.server - INFO - "PUT /client-trade-settings/update/ HTTP/1.1" 200 352
+2024-11-20 10:12:37 - django.server - INFO - "PUT /client-trade-settings/update/ HTTP/1.1" 200 352
+2024-11-20 10:14:01 - django.server - INFO - "GET /get-client-by-id/7/ HTTP/1.1" 200 1434
+2024-11-20 10:14:37 - django.server - INFO - "GET /get-client-by-id/7/ HTTP/1.1" 200 1434
+2024-11-20 10:47:49 - django.server - INFO - "GET /get-client-trade-setting/?client=7&segment=14&sub_segment=2 HTTP/1.1" 200 354
+2024-11-20 10:59:53 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-20 10:59:57 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 11:00:14 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-20 11:00:17 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 11:02:45 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-20 11:02:48 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 11:03:13 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-20 11:03:17 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 11:03:28 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/urls.py changed, reloading.
+2024-11-20 11:03:30 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 11:04:26 - django.server - INFO - "PATCH /update-trade-status/?segment=Option&sub_segment=Equity%20Options HTTP/1.1" 200 352
+2024-11-20 11:04:39 - django.request - WARNING - Not Found: /update-trade-status/
+2024-11-20 11:04:39 - django.server - WARNING - "PATCH /update-trade-status/?segment=Option&sub_segment=Equity%20Options HTTP/1.1" 404 37
+2024-11-20 11:04:56 - django.request - WARNING - Not Found: /update-trade-status/
+2024-11-20 11:04:56 - django.server - WARNING - "PATCH /update-trade-status/?segment=Option&sub_segment=NIFTY HTTP/1.1" 404 37
+2024-11-20 11:05:48 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-20 11:05:52 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 11:05:58 - django.request - WARNING - Not Found: /update-trade-status/
+2024-11-20 11:05:58 - django.server - WARNING - "PATCH /update-trade-status/?segment=Option&sub_segment=NIFTY HTTP/1.1" 404 37
+2024-11-20 11:06:20 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-20 11:06:23 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 11:06:27 - django.request - WARNING - Not Found: /update-trade-status/
+2024-11-20 11:06:27 - django.server - WARNING - "PATCH /update-trade-status/?segment=Option&sub_segment=NIFTY HTTP/1.1" 404 37
+2024-11-20 11:06:54 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/urls.py changed, reloading.
+2024-11-20 11:06:57 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 11:07:14 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/urls.py changed, reloading.
+2024-11-20 11:07:18 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 11:07:23 - django.server - INFO - "PATCH /update-trade-status/?segment=Option&sub_segment=NIFTY HTTP/1.1" 200 351
+2024-11-20 11:19:14 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-20 11:19:18 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 11:21:30 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-20 11:21:34 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 11:22:05 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-20 11:22:09 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 11:22:56 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-20 11:23:00 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 11:23:29 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-20 11:23:31 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 11:29:20 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-20 11:29:24 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 12:07:58 - django.server - INFO - "GET /get-client-segments-list/ HTTP/1.1" 200 1590
+2024-11-20 12:08:08 - django.request - WARNING - Bad Request: /create-client/
+2024-11-20 12:08:08 - django.server - WARNING - "POST /create-client/ HTTP/1.1" 400 50
+2024-11-20 12:16:34 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-11-20 12:16:34 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 12:18:14 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-11-20 12:18:15 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 12:18:36 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-11-20 12:18:36 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 12:18:42 - django.request - WARNING - Bad Request: /create-client/
+2024-11-20 12:18:42 - django.server - WARNING - "POST /create-client/ HTTP/1.1" 400 50
+2024-11-20 12:18:54 - django.request - WARNING - Bad Request: /create-client/
+2024-11-20 12:18:54 - django.server - WARNING - "POST /create-client/ HTTP/1.1" 400 39
+2024-11-20 12:19:11 - django.request - WARNING - Bad Request: /create-client/
+2024-11-20 12:19:11 - django.server - WARNING - "POST /create-client/ HTTP/1.1" 400 39
+2024-11-20 12:19:27 - django.request - WARNING - Bad Request: /create-client/
+2024-11-20 12:19:27 - django.server - WARNING - "POST /create-client/ HTTP/1.1" 400 39
+2024-11-20 12:19:45 - django.request - WARNING - Bad Request: /create-client/
+2024-11-20 12:19:45 - django.server - WARNING - "POST /create-client/ HTTP/1.1" 400 39
+2024-11-20 12:20:01 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-11-20 12:20:02 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 12:20:20 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-11-20 12:20:21 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 12:20:32 - django.request - WARNING - Bad Request: /create-client/
+2024-11-20 12:20:32 - django.server - WARNING - "POST /create-client/ HTTP/1.1" 400 39
+2024-11-20 12:21:19 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-11-20 12:21:20 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 12:21:29 - django.request - WARNING - Bad Request: /create-client/
+2024-11-20 12:21:29 - django.server - WARNING - "POST /create-client/ HTTP/1.1" 400 39
+2024-11-20 12:21:31 - django.request - WARNING - Bad Request: /create-client/
+2024-11-20 12:21:31 - django.server - WARNING - "POST /create-client/ HTTP/1.1" 400 39
+2024-11-20 12:23:25 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-11-20 12:23:25 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 12:23:46 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-11-20 12:23:46 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 12:23:52 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 12:23:58 - django.request - WARNING - Bad Request: /create-client/
+2024-11-20 12:23:58 - django.server - WARNING - "POST /create-client/ HTTP/1.1" 400 39
+2024-11-20 12:24:42 - django.server - INFO - "OPTIONS /logout/ HTTP/1.1" 200 0
+2024-11-20 12:24:42 - django.server - INFO - "POST /logout/ HTTP/1.1" 200 31
+2024-11-20 12:24:45 - django.server - INFO - "OPTIONS /login/ HTTP/1.1" 200 0
+2024-11-20 12:24:46 - django.server - INFO - "POST /login/ HTTP/1.1" 200 736
+2024-11-20 12:24:46 - django.server - INFO - "OPTIONS /user-profile/ HTTP/1.1" 200 0
+2024-11-20 12:24:46 - django.server - INFO - "OPTIONS /user-last-login/ HTTP/1.1" 200 0
+2024-11-20 12:24:46 - django.server - INFO - "OPTIONS /get-city-data/ HTTP/1.1" 200 0
+2024-11-20 12:24:46 - django.server - INFO - "OPTIONS /get-state-data/ HTTP/1.1" 200 0
+2024-11-20 12:24:46 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 648
+2024-11-20 12:24:46 - django.server - INFO - "GET /get-state-data/ HTTP/1.1" 200 29
+2024-11-20 12:24:46 - django.server - INFO - "GET /user-last-login/ HTTP/1.1" 200 95
+2024-11-20 12:24:46 - django.server - INFO - "GET /get-city-data/ HTTP/1.1" 200 30
+2024-11-20 12:24:46 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 648
+2024-11-20 12:24:46 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 648
+2024-11-20 12:25:13 - django.request - WARNING - Bad Request: /create-client/
+2024-11-20 12:25:13 - django.server - WARNING - "POST /create-client/ HTTP/1.1" 400 39
+2024-11-20 12:25:36 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-11-20 12:25:36 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 12:25:40 - django.request - WARNING - Bad Request: /create-client/
+2024-11-20 12:25:40 - django.server - WARNING - "POST /create-client/ HTTP/1.1" 400 39
+2024-11-20 12:25:41 - django.request - WARNING - Bad Request: /create-client/
+2024-11-20 12:25:41 - django.server - WARNING - "POST /create-client/ HTTP/1.1" 400 39
+2024-11-20 12:26:41 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-11-20 12:26:42 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 12:26:52 - django.server - INFO - "POST /create-client/ HTTP/1.1" 201 1315
+2024-11-20 12:29:23 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-11-20 12:29:24 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 12:30:42 - django.request - WARNING - Bad Request: /create-client/
+2024-11-20 12:30:42 - django.server - WARNING - "POST /create-client/ HTTP/1.1" 400 50
+2024-11-20 12:30:53 - django.request - ERROR - Internal Server Error: /create-client/
+Traceback (most recent call last):
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/views/decorators/csrf.py", line 56, in wrapper_view
+    return view_func(*args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/views/generic/base.py", line 104, in view
+    return self.dispatch(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py", line 1401, in post
+    if serializer.is_valid():
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/serializers.py", line 223, in is_valid
+    self._validated_data = self.run_validation(self.initial_data)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/serializers.py", line 445, in run_validation
+    value = self.validate(value)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py", line 823, in validate
+    name_parts = full_name.split()
+AttributeError: 'NoneType' object has no attribute 'split'
+2024-11-20 12:30:53 - django.server - ERROR - "POST /create-client/ HTTP/1.1" 500 125168
+2024-11-20 12:31:19 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-11-20 12:31:19 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 12:31:23 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-11-20 12:31:23 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 12:31:47 - django.server - INFO - "POST /create-client/ HTTP/1.1" 201 1315
+2024-11-20 12:33:31 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-11-20 12:33:32 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 12:33:36 - django.request - WARNING - Bad Request: /create-client/
+2024-11-20 12:33:36 - django.server - WARNING - "POST /create-client/ HTTP/1.1" 400 50
+2024-11-20 12:33:42 - django.request - WARNING - Bad Request: /create-client/
+2024-11-20 12:33:42 - django.server - WARNING - "POST /create-client/ HTTP/1.1" 400 39
+2024-11-20 12:34:31 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-11-20 12:34:31 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 12:34:59 - django.request - WARNING - Bad Request: /create-client/
+2024-11-20 12:34:59 - django.server - WARNING - "POST /create-client/ HTTP/1.1" 400 39
+2024-11-20 12:35:15 - django.request - WARNING - Bad Request: /create-client/
+2024-11-20 12:35:15 - django.server - WARNING - "POST /create-client/ HTTP/1.1" 400 41
+2024-11-20 12:35:33 - django.request - WARNING - Bad Request: /create-client/
+2024-11-20 12:35:33 - django.server - WARNING - "POST /create-client/ HTTP/1.1" 400 39
+2024-11-20 12:36:06 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-11-20 12:36:07 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 12:36:14 - django.request - WARNING - Bad Request: /create-client/
+2024-11-20 12:36:14 - django.server - WARNING - "POST /create-client/ HTTP/1.1" 400 39
+2024-11-20 12:37:25 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-11-20 12:37:26 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 12:37:29 - django.request - WARNING - Bad Request: /create-client/
+2024-11-20 12:37:29 - django.server - WARNING - "POST /create-client/ HTTP/1.1" 400 39
+2024-11-20 12:38:23 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-20 12:38:24 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 12:38:38 - django.request - WARNING - Bad Request: /create-client/
+2024-11-20 12:38:38 - django.server - WARNING - "POST /create-client/ HTTP/1.1" 400 39
+2024-11-20 12:40:07 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-11-20 12:40:08 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 12:40:16 - django.request - WARNING - Bad Request: /create-client/
+2024-11-20 12:40:16 - django.server - WARNING - "POST /create-client/ HTTP/1.1" 400 39
+2024-11-20 12:41:03 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+2024-11-20 12:41:03 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 12:41:23 - django.request - WARNING - Bad Request: /create-client/
+2024-11-20 12:41:23 - django.server - WARNING - "POST /create-client/ HTTP/1.1" 400 39
+2024-11-20 12:41:25 - django.request - WARNING - Bad Request: /create-client/
+2024-11-20 12:41:25 - django.server - WARNING - "POST /create-client/ HTTP/1.1" 400 39
+2024-11-20 12:41:38 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+2024-11-20 12:41:39 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 12:41:42 - django.request - WARNING - Bad Request: /create-client/
+2024-11-20 12:41:42 - django.server - WARNING - "POST /create-client/ HTTP/1.1" 400 39
+2024-11-20 12:41:56 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+2024-11-20 12:41:56 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 12:44:05 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+2024-11-20 12:44:05 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 12:44:20 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-11-20 12:44:20 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 12:44:38 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-11-20 12:44:39 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 12:45:01 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-11-20 12:45:02 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 12:45:11 - django.server - INFO - "POST /create-client/ HTTP/1.1" 201 1293
+2024-11-20 12:46:11 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-11-20 12:46:11 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 12:46:20 - django.request - WARNING - Bad Request: /create-client/
+2024-11-20 12:46:20 - django.server - WARNING - "POST /create-client/ HTTP/1.1" 400 50
+2024-11-20 12:46:27 - django.request - WARNING - Bad Request: /create-client/
+2024-11-20 12:46:27 - django.server - WARNING - "POST /create-client/ HTTP/1.1" 400 65
+2024-11-20 12:46:47 - django.server - INFO - "POST /create-client/ HTTP/1.1" 201 1289
+2024-11-20 12:47:38 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-11-20 12:47:39 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 12:47:53 - django.request - WARNING - Bad Request: /create-client/
+2024-11-20 12:47:53 - django.server - WARNING - "POST /create-client/ HTTP/1.1" 400 50
+2024-11-20 12:48:22 - django.server - INFO - "POST /create-client/ HTTP/1.1" 201 1286
+2024-11-20 12:52:51 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+2024-11-20 12:52:52 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 12:53:56 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-11-20 12:53:57 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 12:54:10 - django.request - WARNING - Bad Request: /create-client/
+2024-11-20 12:54:10 - django.server - WARNING - "POST /create-client/ HTTP/1.1" 400 50
+2024-11-20 12:54:20 - django.request - WARNING - Bad Request: /create-client/
+2024-11-20 12:54:20 - django.server - WARNING - "POST /create-client/ HTTP/1.1" 400 39
+2024-11-20 12:54:40 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-11-20 12:54:40 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 12:54:49 - django.request - WARNING - Bad Request: /create-client/
+2024-11-20 12:54:49 - django.server - WARNING - "POST /create-client/ HTTP/1.1" 400 39
+2024-11-20 12:55:57 - django.request - WARNING - Bad Request: /create-client/
+2024-11-20 12:55:57 - django.server - WARNING - "POST /create-client/ HTTP/1.1" 400 50
+2024-11-20 12:56:06 - django.request - WARNING - Bad Request: /create-client/
+2024-11-20 12:56:06 - django.server - WARNING - "POST /create-client/ HTTP/1.1" 400 39
+2024-11-20 12:57:11 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-11-20 12:57:11 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 12:57:16 - django.server - INFO - "POST /create-client/ HTTP/1.1" 201 446
+2024-11-20 12:57:47 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-11-20 12:57:47 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 12:57:51 - django.request - WARNING - Bad Request: /create-client/
+2024-11-20 12:57:51 - django.server - WARNING - "POST /create-client/ HTTP/1.1" 400 50
+2024-11-20 12:58:04 - django.request - WARNING - Bad Request: /create-client/
+2024-11-20 12:58:04 - django.server - WARNING - "POST /create-client/ HTTP/1.1" 400 50
+2024-11-20 12:58:13 - django.server - INFO - "POST /create-client/ HTTP/1.1" 201 446
+2024-11-20 12:58:20 - django.server - INFO - "POST /create-client/ HTTP/1.1" 201 446
+2024-11-20 12:59:04 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-11-20 12:59:05 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 12:59:13 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-11-20 12:59:14 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 12:59:30 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-11-20 12:59:31 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 13:03:41 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-11-20 13:03:42 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 13:03:51 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-11-20 13:03:52 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 13:04:47 - django.server - INFO - "POST /create-client/ HTTP/1.1" 201 1314
+2024-11-20 13:05:02 - django.request - WARNING - Bad Request: /create-client/
+2024-11-20 13:05:02 - django.server - WARNING - "POST /create-client/ HTTP/1.1" 400 50
+2024-11-20 13:05:10 - django.server - INFO - "POST /create-client/ HTTP/1.1" 201 1330
+2024-11-20 13:06:42 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+2024-11-20 13:06:43 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 13:06:53 - django.request - WARNING - Bad Request: /create-client/
+2024-11-20 13:06:53 - django.server - WARNING - "POST /create-client/ HTTP/1.1" 400 50
+2024-11-20 13:07:01 - django.server - INFO - "POST /create-client/ HTTP/1.1" 201 1334
+2024-11-20 13:07:31 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+2024-11-20 13:07:32 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 13:08:39 - django.server - INFO - "POST /create-client/ HTTP/1.1" 201 1325
+2024-11-20 13:08:55 - django.server - INFO - "GET /admin/main/ HTTP/1.1" 200 12727
+2024-11-20 13:08:58 - django.server - INFO - "GET /admin/main/user/ HTTP/1.1" 200 34165
+2024-11-20 13:08:58 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-20 13:09:26 - django.server - INFO - "POST /admin/main/user/ HTTP/1.1" 200 17455
+2024-11-20 13:09:29 - django.server - INFO - "POST /admin/main/user/ HTTP/1.1" 302 0
+2024-11-20 13:09:29 - django.server - INFO - "GET /admin/main/user/ HTTP/1.1" 200 27483
+2024-11-20 13:09:29 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-20 13:09:40 - django.server - INFO - "POST /admin/main/user/ HTTP/1.1" 200 15912
+2024-11-20 13:09:42 - django.server - INFO - "POST /admin/main/user/ HTTP/1.1" 302 0
+2024-11-20 13:09:42 - django.server - INFO - "GET /admin/main/user/ HTTP/1.1" 200 26720
+2024-11-20 13:09:42 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-20 13:10:46 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-11-20 13:10:46 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 13:11:29 - django.request - WARNING - Bad Request: /create-client/
+2024-11-20 13:11:29 - django.server - WARNING - "POST /create-client/ HTTP/1.1" 400 65
+2024-11-20 13:11:37 - django.server - INFO - "POST /create-client/ HTTP/1.1" 201 1325
+2024-11-20 13:11:40 - django.request - WARNING - Bad Request: /create-client/
+2024-11-20 13:11:40 - django.server - WARNING - "POST /create-client/ HTTP/1.1" 400 50
+2024-11-20 13:11:50 - django.server - INFO - "GET /admin/main/user/ HTTP/1.1" 200 27348
+2024-11-20 13:11:50 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-20 13:11:59 - django.server - INFO - "POST /admin/main/user/ HTTP/1.1" 200 16134
+2024-11-20 13:12:01 - django.server - INFO - "POST /admin/main/user/ HTTP/1.1" 302 0
+2024-11-20 13:12:01 - django.server - INFO - "GET /admin/main/user/ HTTP/1.1" 200 25973
+2024-11-20 13:12:01 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-20 13:12:12 - django.server - INFO - "POST /logout/ HTTP/1.1" 200 31
+2024-11-20 13:12:18 - django.server - INFO - "POST /login/ HTTP/1.1" 200 736
+2024-11-20 13:12:18 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 648
+2024-11-20 13:12:18 - django.server - INFO - "GET /get-city-data/ HTTP/1.1" 200 30
+2024-11-20 13:12:18 - django.server - INFO - "GET /user-last-login/ HTTP/1.1" 200 94
+2024-11-20 13:12:18 - django.server - INFO - "GET /get-state-data/ HTTP/1.1" 200 29
+2024-11-20 13:12:18 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 648
+2024-11-20 13:12:18 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 648
+2024-11-20 13:12:23 - django.server - INFO - "POST /logout/ HTTP/1.1" 200 31
+2024-11-20 13:12:32 - django.server - INFO - "POST /login/ HTTP/1.1" 200 738
+2024-11-20 13:12:32 - django.server - INFO - "GET /user-last-login/ HTTP/1.1" 200 94
+2024-11-20 13:12:32 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 655
+2024-11-20 13:12:32 - django.server - INFO - "GET /get-city-data/ HTTP/1.1" 200 30
+2024-11-20 13:12:32 - django.server - INFO - "GET /get-state-data/ HTTP/1.1" 200 29
+2024-11-20 13:12:32 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 655
+2024-11-20 13:12:32 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 655
+2024-11-20 13:12:41 - django.server - INFO - "OPTIONS /users-list/ HTTP/1.1" 200 0
+2024-11-20 13:12:41 - django.server - INFO - "OPTIONS /users-list/ HTTP/1.1" 200 0
+2024-11-20 13:12:41 - main - INFO - super-admin:::Super-Admin
+2024-11-20 13:12:41 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 1206
+2024-11-20 13:12:41 - main - INFO - super-admin:::Super-Admin
+2024-11-20 13:12:41 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 1206
+2024-11-20 13:12:43 - django.server - INFO - "OPTIONS /get-roles-list/ HTTP/1.1" 200 0
+2024-11-20 13:12:43 - django.server - INFO - "OPTIONS /get-roles-list/ HTTP/1.1" 200 0
+2024-11-20 13:12:43 - django.server - INFO - "GET /get-roles-list/ HTTP/1.1" 200 180
+2024-11-20 13:12:43 - django.server - INFO - "GET /get-roles-list/ HTTP/1.1" 200 180
+2024-11-20 13:13:33 - django.server - INFO - "OPTIONS /create-user/ HTTP/1.1" 200 0
+2024-11-20 13:13:33 - django.server - INFO - "POST /create-user/ HTTP/1.1" 201 581
+2024-11-20 13:13:36 - main - INFO - super-admin:::Super-Admin
+2024-11-20 13:13:37 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 1788
+2024-11-20 13:13:37 - main - INFO - super-admin:::Super-Admin
+2024-11-20 13:13:37 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 1788
+2024-11-20 13:13:38 - django.server - INFO - "GET /admin/main/user/ HTTP/1.1" 200 26606
+2024-11-20 13:13:38 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-20 13:13:43 - django.request - ERROR - Internal Server Error: /admin/main/user/21/change/
+Traceback (most recent call last):
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/contrib/admin/options.py", line 809, in get_form
+    return modelform_factory(self.model, **defaults)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/forms/models.py", line 642, in modelform_factory
+    return type(form)(class_name, (form,), form_class_attrs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/forms/models.py", line 321, in __new__
+    raise FieldError(message)
+django.core.exceptions.FieldError: Unknown field(s) (buy_or_sell, expiry, quantity, symbol, client_trad_settings, tread_limit, product_type) specified for User
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/contrib/admin/options.py", line 688, in wrapper
+    return self.admin_site.admin_view(view)(*args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/utils/decorators.py", line 134, in _wrapper_view
+    response = view_func(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/views/decorators/cache.py", line 62, in _wrapper_view_func
+    response = view_func(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/contrib/admin/sites.py", line 242, in inner
+    return view(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/contrib/admin/options.py", line 1889, in change_view
+    return self.changeform_view(request, object_id, form_url, extra_context)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/utils/decorators.py", line 46, in _wrapper
+    return bound_method(*args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/utils/decorators.py", line 134, in _wrapper_view
+    response = view_func(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/contrib/admin/options.py", line 1747, in changeform_view
+    return self._changeform_view(request, object_id, form_url, extra_context)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/contrib/admin/options.py", line 1782, in _changeform_view
+    ModelForm = self.get_form(
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/contrib/auth/admin.py", line 98, in get_form
+    return super().get_form(request, obj, **defaults)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/contrib/admin/options.py", line 811, in get_form
+    raise FieldError(
+django.core.exceptions.FieldError: Unknown field(s) (buy_or_sell, expiry, quantity, symbol, client_trad_settings, tread_limit, product_type) specified for User. Check fields/fieldsets/exclude attributes of class UserAdmin.
+2024-11-20 13:13:43 - django.server - ERROR - "GET /admin/main/user/21/change/ HTTP/1.1" 500 162726
+2024-11-20 13:14:09 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/admin.py changed, reloading.
+2024-11-20 13:14:09 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 13:14:12 - django.request - ERROR - Internal Server Error: /admin/main/user/21/change/
+Traceback (most recent call last):
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/contrib/admin/options.py", line 809, in get_form
+    return modelform_factory(self.model, **defaults)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/forms/models.py", line 642, in modelform_factory
+    return type(form)(class_name, (form,), form_class_attrs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/forms/models.py", line 321, in __new__
+    raise FieldError(message)
+django.core.exceptions.FieldError: Unknown field(s) (client_trad_settings) specified for User
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/contrib/admin/options.py", line 688, in wrapper
+    return self.admin_site.admin_view(view)(*args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/utils/decorators.py", line 134, in _wrapper_view
+    response = view_func(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/views/decorators/cache.py", line 62, in _wrapper_view_func
+    response = view_func(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/contrib/admin/sites.py", line 242, in inner
+    return view(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/contrib/admin/options.py", line 1889, in change_view
+    return self.changeform_view(request, object_id, form_url, extra_context)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/utils/decorators.py", line 46, in _wrapper
+    return bound_method(*args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/utils/decorators.py", line 134, in _wrapper_view
+    response = view_func(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/contrib/admin/options.py", line 1747, in changeform_view
+    return self._changeform_view(request, object_id, form_url, extra_context)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/contrib/admin/options.py", line 1782, in _changeform_view
+    ModelForm = self.get_form(
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/contrib/auth/admin.py", line 98, in get_form
+    return super().get_form(request, obj, **defaults)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/contrib/admin/options.py", line 811, in get_form
+    raise FieldError(
+django.core.exceptions.FieldError: Unknown field(s) (client_trad_settings) specified for User. Check fields/fieldsets/exclude attributes of class UserAdmin.
+2024-11-20 13:14:12 - django.server - ERROR - "GET /admin/main/user/21/change/ HTTP/1.1" 500 160213
+2024-11-20 13:14:13 - django.request - ERROR - Internal Server Error: /admin/main/user/21/change/
+Traceback (most recent call last):
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/contrib/admin/options.py", line 809, in get_form
+    return modelform_factory(self.model, **defaults)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/forms/models.py", line 642, in modelform_factory
+    return type(form)(class_name, (form,), form_class_attrs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/forms/models.py", line 321, in __new__
+    raise FieldError(message)
+django.core.exceptions.FieldError: Unknown field(s) (client_trad_settings) specified for User
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/contrib/admin/options.py", line 688, in wrapper
+    return self.admin_site.admin_view(view)(*args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/utils/decorators.py", line 134, in _wrapper_view
+    response = view_func(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/views/decorators/cache.py", line 62, in _wrapper_view_func
+    response = view_func(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/contrib/admin/sites.py", line 242, in inner
+    return view(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/contrib/admin/options.py", line 1889, in change_view
+    return self.changeform_view(request, object_id, form_url, extra_context)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/utils/decorators.py", line 46, in _wrapper
+    return bound_method(*args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/utils/decorators.py", line 134, in _wrapper_view
+    response = view_func(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/contrib/admin/options.py", line 1747, in changeform_view
+    return self._changeform_view(request, object_id, form_url, extra_context)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/contrib/admin/options.py", line 1782, in _changeform_view
+    ModelForm = self.get_form(
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/contrib/auth/admin.py", line 98, in get_form
+    return super().get_form(request, obj, **defaults)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/contrib/admin/options.py", line 811, in get_form
+    raise FieldError(
+django.core.exceptions.FieldError: Unknown field(s) (client_trad_settings) specified for User. Check fields/fieldsets/exclude attributes of class UserAdmin.
+2024-11-20 13:14:13 - django.server - ERROR - "GET /admin/main/user/21/change/ HTTP/1.1" 500 160213
+2024-11-20 13:14:28 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/admin.py changed, reloading.
+2024-11-20 13:14:29 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 13:14:30 - django.request - ERROR - Internal Server Error: /admin/main/user/21/change/
+Traceback (most recent call last):
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/contrib/admin/options.py", line 809, in get_form
+    return modelform_factory(self.model, **defaults)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/forms/models.py", line 642, in modelform_factory
+    return type(form)(class_name, (form,), form_class_attrs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/forms/models.py", line 321, in __new__
+    raise FieldError(message)
+django.core.exceptions.FieldError: Unknown field(s) (is_new_passwordpermanent_add_line_1) specified for User
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/contrib/admin/options.py", line 688, in wrapper
+    return self.admin_site.admin_view(view)(*args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/utils/decorators.py", line 134, in _wrapper_view
+    response = view_func(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/views/decorators/cache.py", line 62, in _wrapper_view_func
+    response = view_func(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/contrib/admin/sites.py", line 242, in inner
+    return view(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/contrib/admin/options.py", line 1889, in change_view
+    return self.changeform_view(request, object_id, form_url, extra_context)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/utils/decorators.py", line 46, in _wrapper
+    return bound_method(*args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/utils/decorators.py", line 134, in _wrapper_view
+    response = view_func(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/contrib/admin/options.py", line 1747, in changeform_view
+    return self._changeform_view(request, object_id, form_url, extra_context)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/contrib/admin/options.py", line 1782, in _changeform_view
+    ModelForm = self.get_form(
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/contrib/auth/admin.py", line 98, in get_form
+    return super().get_form(request, obj, **defaults)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/contrib/admin/options.py", line 811, in get_form
+    raise FieldError(
+django.core.exceptions.FieldError: Unknown field(s) (is_new_passwordpermanent_add_line_1) specified for User. Check fields/fieldsets/exclude attributes of class UserAdmin.
+2024-11-20 13:14:30 - django.server - ERROR - "GET /admin/main/user/21/change/ HTTP/1.1" 500 159581
+2024-11-20 13:15:00 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/admin.py changed, reloading.
+2024-11-20 13:15:00 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 13:15:04 - django.server - INFO - "GET /admin/main/user/21/change/ HTTP/1.1" 200 53965
+2024-11-20 13:15:04 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-20 13:16:36 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-11-20 13:16:37 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 13:16:40 - main - INFO - super-admin:::Super-Admin
+2024-11-20 13:16:40 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 1865
+2024-11-20 13:16:55 - django.server - INFO - "POST /logout/ HTTP/1.1" 200 31
+2024-11-20 13:17:35 - django.server - INFO - "OPTIONS /signup/ HTTP/1.1" 200 0
+2024-11-20 13:17:36 - django.server - INFO - "POST /signup/ HTTP/1.1" 201 134
+2024-11-20 13:18:11 - django.server - INFO - "GET /admin/main/ HTTP/1.1" 200 12727
+2024-11-20 13:18:18 - django.server - INFO - "GET /admin/main/user/ HTTP/1.1" 200 27378
+2024-11-20 13:18:18 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-20 13:18:45 - django.server - INFO - "POST /login/ HTTP/1.1" 200 145
+2024-11-20 13:19:03 - django.server - INFO - "GET /admin/ HTTP/1.1" 200 20254
+2024-11-20 13:19:06 - django.server - INFO - "GET /admin/main/otp/ HTTP/1.1" 200 19924
+2024-11-20 13:19:06 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-20 13:19:15 - django.server - INFO - "OPTIONS /verify-otp/ HTTP/1.1" 200 0
+2024-11-20 13:19:15 - django.server - INFO - "POST /verify-otp/ HTTP/1.1" 200 703
+2024-11-20 13:19:45 - django.server - INFO - "OPTIONS /change-password/ HTTP/1.1" 200 0
+2024-11-20 13:19:45 - django.server - INFO - "POST /change-password/ HTTP/1.1" 200 170
+2024-11-20 13:19:47 - django.server - INFO - "OPTIONS /kyc/ HTTP/1.1" 200 0
+2024-11-20 13:19:47 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 652
+2024-11-20 13:19:47 - django.request - WARNING - Not Found: /kyc/
+2024-11-20 13:19:47 - django.server - WARNING - "GET /kyc/ HTTP/1.1" 404 42
+2024-11-20 13:19:47 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 652
+2024-11-20 13:20:47 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-11-20 13:20:48 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 13:20:58 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 677
+2024-11-20 13:20:58 - django.server - INFO - "GET /user-last-login/ HTTP/1.1" 200 94
+2024-11-20 13:20:58 - django.server - INFO - "GET /get-city-data/ HTTP/1.1" 200 30
+2024-11-20 13:20:58 - django.server - INFO - "GET /get-state-data/ HTTP/1.1" 200 29
+2024-11-20 13:20:58 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 677
+2024-11-20 13:20:58 - django.server - INFO - "GET /get-city-data/ HTTP/1.1" 200 30
+2024-11-20 13:20:58 - django.server - INFO - "GET /user-last-login/ HTTP/1.1" 200 94
+2024-11-20 13:20:58 - django.server - INFO - "GET /get-state-data/ HTTP/1.1" 200 29
+2024-11-20 13:22:58 - django.utils.autoreload - INFO - Watching for file changes with StatReloader

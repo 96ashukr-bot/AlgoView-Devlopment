@@ -429,7 +429,7 @@ class UserProfileRetrieveSerializer(serializers.ModelSerializer):
     role = serializers.SerializerMethodField()
     class Meta:
         model = User
-        fields = ['email', 'firstName', 'lastName','middleName', 'phoneNumber', 'profilePicture', 'PANEL_CLIENT_KEY', 
+        fields = ['email', 'firstName', 'lastName', 'fullName','middleName', 'phoneNumber', 'profilePicture', 'PANEL_CLIENT_KEY', 
                   'start_date', 'end_date', 'client_type' ,
             # Permanent Address Fields
             'permanent_add_line_1', 'permanent_add_line_2', 'permanent_city', 
@@ -517,7 +517,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'email', 'firstName', 'lastName', 'middleName','phoneNumber',   
+        fields = ['id', 'email', 'firstName', 'lastName', 'fullName','middleName','phoneNumber',   
             # Permanent Address Fields
             'permanent_add_line_1', 'permanent_add_line_2', 'permanent_city', 
             'permanent_state', 'permanent_country', 'permanent_zip_code',
@@ -793,7 +793,7 @@ class NewClientCreateSerializer(serializers.ModelSerializer):
 class ClientCreateSerializer(serializers.ModelSerializer):
     assigned_client = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), required=False)
     Strategy = serializers.PrimaryKeyRelatedField(queryset=Strategies.objects.all(), many=True, required=False)
-
+    fullName = serializers.CharField(required=True)
     # Group_service = GroupServiceSerializer()  # Make sure to match field names
     # license = LicenseSerializer()
     # Broker = GetBrokerSerializer() 
@@ -808,24 +808,69 @@ class ClientCreateSerializer(serializers.ModelSerializer):
         if not value.isdigit() or len(value) != 10:  # Example validation for a 10-digit number
             raise serializers.ValidationError("Phone number must be a 10-digit number.")
         return value
+    
+    # def validate(self, data):
+    #     phone_number = data.get('phoneNumber')
+    #     email = data.get('email')
 
+
+    #     if self.instance is not None:
+    #         if User.objects.exclude(id=self.instance.id).filter(phoneNumber=phone_number).exists():
+    #             raise serializers.ValidationError({'phoneNumber': 'A user with this phone number already exists.'})
+    #         if User.objects.exclude(id=self.instance.id).filter(email=email).exists():
+    #             raise serializers.ValidationError({'email': 'A user with this email already exists.'})
+    #     else:
+    #         if User.objects.filter(phoneNumber=phone_number).exists():
+    #             raise serializers.ValidationError({'phoneNumber': 'A user with this phone number already exists.'})
+    #         if User.objects.filter(email=email).exists():
+    #             raise serializers.ValidationError({'email': 'A user with this email already exists.'})
+
+    #     return data
     def validate(self, data):
+        full_name = data.get('fullName')
         phone_number = data.get('phoneNumber')
-        email = data.get('email')
+        email = data.get('email')  # Ensure you get email from the data
 
+        if not full_name:
+            raise serializers.ValidationError({'fullName': 'Full name is required.'})
 
-        if self.instance is not None:
-            if User.objects.exclude(id=self.instance.id).filter(phoneNumber=phone_number).exists():
-                raise serializers.ValidationError({'phoneNumber': 'A user with this phone number already exists.'})
-            if User.objects.exclude(id=self.instance.id).filter(email=email).exists():
-                raise serializers.ValidationError({'email': 'A user with this email already exists.'})
+         # Check for duplicate phone number
+        if phone_number:
+        # Check if the phone number already exists for another user (excluding the current instance if updating)
+            if self.instance is None:  # For new users, just check if phone exists
+                if User.objects.filter(phoneNumber=phone_number).exists():
+                    raise serializers.ValidationError({'phoneNumber': 'A user with this phone number already exists.'})
+            else:  # For updates, exclude the current user from the check
+                if User.objects.exclude(id=self.instance.id).filter(phoneNumber=phone_number).exists():
+                    raise serializers.ValidationError({'phoneNumber': 'A user with this phone number already exists.'})
+
+            # Check for duplicate email
+            if email:
+                # Check if the email already exists for another user (excluding the current instance if updating)
+                if self.instance is None:  # For new users, just check if email exists
+                    if User.objects.filter(email=email).exists():
+                        raise serializers.ValidationError({'email': 'A user with this email already exists.'})
+                else:  # For updates, exclude the current user from the check
+                    if User.objects.exclude(id=self.instance.id).filter(email=email).exists():
+                        raise serializers.ValidationError({'email': 'A user with this email already exists.'})
+
+        # Split the full name into first, middle, and last names
+        name_parts = full_name.split()
+
+        if len(name_parts) < 2:
+            raise serializers.ValidationError({'fullName': 'Full name must have at least a first and last name.'})
+
+        # Assign the split parts to firstName, middleName, and lastName
+        data['firstName'] = name_parts[0]
+        if len(name_parts) > 2:
+            data['middleName'] = ' '.join(name_parts[1:-1])  # Middle name (if any)
+            data['lastName'] = name_parts[-1]
         else:
-            if User.objects.filter(phoneNumber=phone_number).exists():
-                raise serializers.ValidationError({'phoneNumber': 'A user with this phone number already exists.'})
-            if User.objects.filter(email=email).exists():
-                raise serializers.ValidationError({'email': 'A user with this email already exists.'})
+            data['middleName'] = None
+            data['lastName'] = name_parts[1]
 
         return data
+
     # Overriding the create method to handle assigned_client and strategies
     def create(self, validated_data):
         assigned_client = validated_data.pop('assigned_client', None)

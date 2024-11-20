@@ -10,16 +10,14 @@ class UserAdmin(DjangoUserAdmin):
 
     fieldsets = (
         (None, {'fields': ('email', 'password')}),
-        ('Personal info', {'fields': ('firstName', 'lastName','phoneNumber','middleName', 'profilePicture', 'role', 'assigned_client','created_by', 'PANEL_CLIENT_KEY', 'start_date', 'end_date', 'client_type', 'is_password_temporary', 'is_new_password'
-            , 'client_trad_settings',
+        ('Personal info', {'fields': ('firstName', 'lastName','phoneNumber','middleName', 'profilePicture', 'role', 'assigned_client','created_by', 'PANEL_CLIENT_KEY', 'start_date', 'end_date', 'client_type', 'is_password_temporary', 'is_new_password',
             # Permanent Address Fields
             'permanent_add_line_1', 'permanent_add_line_2', 'permanent_city', 
             'permanent_state', 'permanent_country', 'permanent_zip_code','is_address_same',
             # Current Address Fields
             'current_add_line_1', 'current_add_line_2', 'current_city',
             'current_state', 'current_country', 'current_zip_code','external_user','type_of_user','Group_service',
-            'Strategy','Broker','license','to_month','is_client','client_status','start_date_client','end_date_client' ,'is_enable',
-            'symbol','expiry','product_type','buy_or_sell','quantity','tread_limit')}),
+            'Strategy','Broker','license','to_month','is_client','client_status','start_date_client','end_date_client' ,'is_enable',)}),
         ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser')}),
         # ('Metadata', {'fields': ('created_at', 'updated_at')}),  # Add 'created_at' and 'updated_at' here
     )
