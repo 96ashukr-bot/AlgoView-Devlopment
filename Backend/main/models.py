@@ -105,7 +105,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     client_status   = models.BooleanField(default=True)
     is_client       = models.CharField(max_length=50, null=True, blank=True)
     client_key      = models.CharField(max_length=50, null=True, blank=True)
-    demate_acc_uid  = models.IntegerField(blank=True,null=True)
+    demate_acc_uid  = models.CharField(max_length=150,blank=True,null=True)
     client_secrete  = models.CharField(max_length=50, null=True, blank=True)
     user_license_month= models.IntegerField(blank=True,null=True)
     Strategy = models.ManyToManyField("Strategies", related_name='client_strategy', blank=True)
@@ -114,7 +114,17 @@ class User(AbstractBaseUser, PermissionsMixin):
     givenservices_to_month  = models.CharField(max_length=50, null=True, blank=True)
     # assigned_clients = models.ManyToManyField('self', symmetrical=False, related_name='assigned_users', blank=True)
     type_of_user=models.CharField(max_length=255, blank=True, null=True)
-    objects = UserManager()
+    #client penle Run Algo form
+
+    # segments    = models.CharField(max_length=150,blank=True,null=True)
+    # symbol      = models.CharField(max_length=150,blank=True,null=True)
+    # expiry      = models.DateField(null=True, blank=True)
+    # product_type= models.CharField(max_length=150,blank=True,null=True)
+    # buy_or_sell = models.CharField(max_length=150,blank=True,null=True)
+    # quantity    = models.IntegerField(blank=True,null=True)
+    # tread_limit = models.IntegerField(blank=True,null=True)
+    # max_loss    = models.IntegerField(blank=True,null=True)
+    objects     = UserManager()
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['firstName','lastName', 'phoneNumber']
 
@@ -129,7 +139,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def save(self, *args, **kwargs):
         if self.middleName:
-            self.fullName = f"{self.firstName} {self.lastName} {self.middleName}"
+            self.fullName = f"{self.firstName}  {self.middleName} {self.lastName}"
         else:
             
             self.fullName = f"{self.firstName} {self.lastName} "
@@ -314,7 +324,18 @@ class Segment(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     status = models.BooleanField(default=True)
     def __str__(self):
-        return self.name    
+        return self.name  
+class SubSegment(models.Model):
+    segment = models.ForeignKey(Segment, on_delete=models.CASCADE, related_name='sub_segments')
+    name = models.CharField(max_length=150)
+    short_name = models.CharField(max_length=150, null=True, blank=True)
+    status = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.segment.name} - {self.name}"
+
+
+    
 class Services(models.Model):
     service_name = models.CharField(max_length=100)
     segment = models.ForeignKey(Segment, on_delete=models.SET_NULL, null=True, blank=True,related_name='service_segments')
@@ -372,4 +393,32 @@ class Broker(models.Model):
         return self.broker_name
 
 
+class ClientTradeSetting(models.Model):
+    client = models.ForeignKey('User', on_delete=models.SET_NULL, null=True, blank=True)
+    segment = models.ForeignKey('Segment', on_delete=models.SET_NULL, null=True, blank=True)
+    sub_segment = models.ForeignKey('SubSegment', on_delete=models.SET_NULL, null=True, blank=True)
+  
+    # Specific trade settings for the selected segment/sub-segment
+    symbol = models.CharField(max_length=50,null=True, blank=True)
+    strategy = models.CharField(max_length=50,null=True, blank=True)
+    broker = models.CharField(max_length=50,null=True, blank=True)
+    product_type = models.CharField(max_length=20,null=True, blank=True)
+    
+    buy_sell = models.CharField(max_length=10, null=True, blank=True)  # "Buy" or "Sell"
+    quantity = models.IntegerField(null=True, blank=True)
+    trade_limit = models.DecimalField(max_digits=10, decimal_places=2,null=True, blank=True)
+    max_loss_for_day = models.DecimalField(max_digits=10, decimal_places=2,null=True, blank=True)
+    min_loss_for_day = models.DecimalField(max_digits=10, decimal_places=2,null=True, blank=True)
+    max_profit_for_day = models.DecimalField(max_digits=10, decimal_places=2,null=True, blank=True)
+    min_profit_for_day = models.DecimalField(max_digits=10, decimal_places=2,null=True, blank=True)
+    current_date = models.DateTimeField(auto_now_add=True)
+    
+    # Allow manual input for expiry_date, not auto field
+    expiry_date = models.DateTimeField(null=True, blank=True)  # Allows manual input (client-defined)
+
+    # Corrected 'is_tread_status' field definition
+    is_tread_status = models.BooleanField(default=True)  # Default to True or False as required
+    
+    def __str__(self):
+        return f"Trade Setting for {self.client.email} in {self.segment.name} - {self.sub_segment.name}"
     

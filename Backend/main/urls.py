@@ -7,6 +7,8 @@ from rest_framework_simplejwt.views import (
 from main.permissions import RolePermissionListView, UpdateRolePermissionsView
 from .views import *
 from django.conf.urls.static import static
+
+from main import views
 urlpatterns = [
     path('signup/', UserRegistrationView.as_view(), name='user-registration'),
     path('login/', CustomLoginView.as_view(), name='login'),
@@ -87,7 +89,17 @@ urlpatterns = [
     path('delete-client/<int:pk>/', ClientCreateView.as_view(), name='delete-client'),
     path('assign-client-to-strategy/<int:pk>/', AssignClientToStrategyAPIView.as_view(), name='assign-client-to-strategy'),
     path('get-client-by-id/<int:pk>/', GetclientbyidPIView.as_view(), name='subuser-list'),
-]
+    path('enable-client/<int:pk>/', ClientCreateView.as_view(), name='update-client'),
+    path('get-client-services/<int:pk>/', ClientTreadSettingView.as_view(), name='get-client-services'),
+    path('update-client-trading-setting/<int:pk>/', ClientTreadSettingView.as_view(), name='update-client-trading'),
+    path('expiry-clients-list/', ClientsDataView.as_view(), name='expiry-clients'),
+    path('api/segments/', SubSegmentsView.as_view(), name='sub_segments'),
+    # path('api/update-client-settings/<int:client_id>/', views.update_client_settings, name='update_or_create_client_settings'),
+    path('update-trade-status/', UpdateTradeSettingStatusView.as_view(), name='update_client_setting'),
+    path('client-trade-settings/update/', UpdateClientTradeSettingAPIView.as_view(), name='update-trade-setting'),
+    path('get-client-trade-setting/', GetTradeSettingAPIView.as_view(), name='get-trade-settings'),
+    path('get-client-segments-list/', UpdateTradeSettingStatusView.as_view(), name='get-trade-settings'),
+    ]
 
 
 if settings.DEBUG:

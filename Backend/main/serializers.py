@@ -112,7 +112,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         password = get_random_string(length=8)
         role = Role.objects.get(name='Client')
         with transaction.atomic():
-            user = User.objects.create_user(**validated_data, password=password, role=role,external_user='true',type_of_user='is_client')
+            user = User.objects.create_user(**validated_data, password=password, role=role,external_user='true',type_of_user='is_client',is_client=True)
             
 
             try:
@@ -523,7 +523,7 @@ class UserSerializer(serializers.ModelSerializer):
             'permanent_state', 'permanent_country', 'permanent_zip_code',
             # Current Address Fields
             'current_add_line_1', 'current_add_line_2', 'current_city', 
-            'current_state', 'current_country', 'current_zip_code','role','created_by']
+            'current_state', 'current_country', 'current_zip_code','role','created_by','is_active']
 class NewUserCreateSerializer(serializers.ModelSerializer):
     role = serializers.PrimaryKeyRelatedField(queryset=Role.objects.all())  # Accepts role ID directly
     class Meta:
@@ -854,7 +854,6 @@ class AssignedClientSerializer(serializers.ModelSerializer):
         model = User
         fields = ['id', 'email', 'firstName']
 
-
 class ClientListSerializer(serializers.ModelSerializer):
     assigned_client = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), required=False)
     Strategy = StrategySerializer(many=True, read_only=True) 
@@ -865,13 +864,13 @@ class ClientListSerializer(serializers.ModelSerializer):
         model = User
         fields = ['id','email', 'firstName', 'middleName','fullName', 'lastName', 'client_status','phoneNumber',
                   'client_key', 'start_date_client','end_date_client','Broker', 'Group_service','license', 'user_license_month','to_month', 'created_by', 'assigned_client',
-                  'Strategy','client_status','givenservices_to_month','demate_acc_uid','start_date_client', 'end_date_client',
+                  'Strategy','client_status','givenservices_to_month','demate_acc_uid','start_date_client', 'end_date_client','is_enable',
                   ]
 
 
 class ClientupdateListSerializer(serializers.ModelSerializer):
     assigned_client = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), required=False)
-    Strategy = StrategySerializer(many=True, read_only=True)
+    # Strategy = StrategySerializer(many=True, read_only=True)
     # Broker = GetBrokerSerializer(read_only=True)  # For reading broker data
     broker_id = serializers.PrimaryKeyRelatedField(source='Broker', queryset=Broker.objects.all(), write_only=True)  # For writing broker data as an ID
 
@@ -881,7 +880,7 @@ class ClientupdateListSerializer(serializers.ModelSerializer):
             'id', 'email', 'firstName', 'middleName','fullName', 'lastName', 'client_status', 'phoneNumber', 'client_key',
             'start_date_client', 'end_date_client', 'Broker', 'broker_id', 'license', 'user_license_month',
             'to_month', 'created_by', 'assigned_client', 'Strategy', 'client_status', 'givenservices_to_month',
-            'demate_acc_uid'
+            'demate_acc_uid','is_enable',
         ]
 
 class StrategyAssignSerializer(serializers.ModelSerializer):
@@ -905,3 +904,61 @@ class StrategyAssignSerializer(serializers.ModelSerializer):
 
         instance.save()
         return instance
+
+# Serializer for displaying segments and sub-segments
+class SegmentTSerializer(serializers.ModelSerializer):
+    sub_segments = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Segment
+        fields = ['id', 'name', 'short_name', 'sub_segments']
+
+    def get_sub_segments(self, obj):
+        return SegmentTSerializer(obj.sub_segments.filter(status=True), many=True).data
+
+class SubSegmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SubSegment
+        fields = ['id', 'name', 'short_name', 'status']
+
+
+# # API View for all segments and sub-segments
+# class ClientSegmentListView(generics.ListAPIView):
+#     permission_classes = [permissions.IsAuthenticated]
+
+#     def get(self, request, *args, **kwargs):
+#         segments = Segment.objects.all()
+#         serializer = SegmentSerializer(segments, many=True)
+#         return Response({"segments": serializer.data})
+
+
+class ClientTradeSettingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ClientTradeSetting
+        fields = ['id', 'client', 'segment', 'sub_segment', 'symbol', 
+                  'strategy', 'broker', 'product_type', 'buy_sell', 'quantity', 
+                  'trade_limit', 'max_loss_for_day', 'min_loss_for_day', 
+                  'max_profit_for_day', 'min_profit_for_day', 'expiry_date', 'is_tread_status']
+
+class SegmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Segment
+        fields = '__all__'  # Include all fields of the Segment model
+
+
+class SubSegmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SubSegment
+        fields = '__all__'  # Include all fields of the SubSegment model
+
+
+class ClientSegementsSerializer(serializers.ModelSerializer):
+    segment = SegmentSerializer()  # Use the SegmentSerializer to include all segment details
+    sub_segment = SubSegmentSerializer()  # Use the SubSegmentSerializer for sub-segment details
+    client = UserSerializer()  # Include user details using the UserSerializer
+
+    class Meta:
+        model = ClientTradeSetting
+        fields = [
+            'id', 'client', 'segment', 'sub_segment','is_tread_status'
+        ]
