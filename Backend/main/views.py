@@ -576,7 +576,7 @@ SESSION_EXPIRATION = None
 
 # Place an order using Alice Blue API
 def place_order(alert_data, session_id):
-    all_enable_users=ClientTradeSetting.objects.filter(is_trade_status='true')
+    all_enable_users=ClientTradeSetting.objects.filter(is_enable=True)
     sessionID = session_id.get('sessionID')
     headers = {
         'Content-Type': 'application/json',
@@ -584,9 +584,9 @@ def place_order(alert_data, session_id):
     }
     """Place an order using Alice Blue API"""
     for user in all_enable_users:
-        ProductType = user.product_type
-        symbol = user.symbol
-        strategy=user.strategy
+        # ProductType = user.product_type
+        # symbol = user.symbol
+        # strategy=user.strategy
         order_payload = {
             "complexty": "regular",
             "discqty": "0",
@@ -1594,6 +1594,14 @@ class UpdateClientTradeSettingAPIView(UpdateAPIView):
         if serializer.is_valid():
             # Save the updated trade setting
             serializer.save()
+            # Log the update in TradeLog
+            TradeLog.objects.create(
+                client=client,
+                trade_setting=trade_setting,
+                symbol=trade_setting.symbol,
+                is_trade_status =trade_setting.is_tread_status,
+                trade_date=timezone.now()
+            )
             return Response(serializer.data, status=status.HTTP_200_OK)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -1697,8 +1705,15 @@ class UpdateTradeSettingStatusView(APIView):
             with transaction.atomic():
                 trade_setting.is_tread_status = is_trade_status
                 trade_setting.save()
-
                 # Serialize and return updated data
+                                # Create a TradeLog entry to record the update
+                TradeLog.objects.create(
+                    client=user,
+                    trade_setting=trade_setting,
+                    symbol=trade_setting.symbol,
+                    is_trade_status=is_trade_status,
+                    trade_date=timezone.now()
+                )
                 serializer = ClientTradeSettingSerializer(trade_setting)
                 return Response(serializer.data, status=status.HTTP_200_OK)
         except Exception as e:
@@ -1730,10 +1745,8 @@ class UpdateTradeStatusView(APIView):
 
         # Look up the Segment and SubSegment objects by name
         try:
-            print("kkkkk")
             segment = Segment.objects.get(name__iexact=segment_name)
             sub_segment = SubSegment.objects.get(name__iexact=sub_segment_name)
-            print("segmentsssssss",segment)
             # Find the trade setting for the client based on segment and sub-segment
             trade_setting = ClientTradeSetting.objects.get(client=user, segment=segment, sub_segment=sub_segment)
         except Segment.DoesNotExist:
@@ -1751,7 +1764,13 @@ class UpdateTradeStatusView(APIView):
             with transaction.atomic():
                 trade_setting.is_tread_status = is_trade_status
                 trade_setting.save()
-
+                TradeLog.objects.create(
+                    client=user,
+                    trade_setting=trade_setting,
+                    symbol=trade_setting.symbol,
+                    is_trade_status=is_trade_status,
+                    trade_date=timezone.now()
+                )
                 # Serialize and return updated data
                 serializer = ClientTradeSettingSerializer(trade_setting)
                 return Response(serializer.data, status=status.HTTP_200_OK)

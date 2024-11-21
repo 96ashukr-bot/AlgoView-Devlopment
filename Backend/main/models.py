@@ -398,6 +398,15 @@ class Broker(models.Model):
     def __str__(self):
         return self.broker_name
 
+class TradeLog(models.Model):
+    client = models.ForeignKey(User, on_delete=models.CASCADE, related_name='trade_logs')
+    trade_setting = models.ForeignKey("ClientTradeSetting", on_delete=models.CASCADE, related_name='trade_logs')
+    symbol = models.CharField(max_length=50)
+    is_trade_status = models.BooleanField()
+    trade_date = models.DateTimeField(default=timezone.now)
+
+    def __str__(self):
+        return f"Trade log for {self.client.firstName} - {self.symbol} - {self.trade_date}"
 
 class ClientTradeSetting(models.Model):
     client = models.ForeignKey('User', on_delete=models.SET_NULL, null=True, blank=True)

@@ -1029,4 +1029,7 @@ class ClientSegementsSerializer(serializers.ModelSerializer):
             'trade_limit', 'max_loss_for_day', 'min_loss_for_day', 
             'max_profit_for_day', 'min_profit_for_day', 'expiry_date', 'is_tread_status']
 
-    
+class TreadLogSerializer(serializers.ModelSerializer):
+    class Meta:
+        model=TradeLog
+        fileds=['client','trade_setting','symbol','is_trade_status','trade_date']    

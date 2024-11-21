@@ -635,3 +635,373 @@ django.core.exceptions.FieldError: Unknown field(s) (is_new_passwordpermanent_ad
 2024-11-21 05:50:22 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
 2024-11-21 05:50:55 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
 2024-11-21 05:50:58 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-21 05:57:28 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-21 06:05:01 - django.server - INFO - "OPTIONS /get-client-segments-list/?segment=Option HTTP/1.1" 200 0
+2024-11-21 06:05:01 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 681
+2024-11-21 06:05:01 - django.server - INFO - "GET /get-client-segments-list/?segment=Option HTTP/1.1" 200 26
+2024-11-21 06:05:01 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 681
+2024-11-21 06:05:34 - django.server - INFO - "OPTIONS /get-broker/ HTTP/1.1" 200 0
+2024-11-21 06:05:34 - django.server - INFO - "OPTIONS /get-group-service/ HTTP/1.1" 200 0
+2024-11-21 06:05:34 - django.server - INFO - "OPTIONS /get-License/ HTTP/1.1" 200 0
+2024-11-21 06:05:34 - django.server - INFO - "OPTIONS /get-License/ HTTP/1.1" 200 0
+2024-11-21 06:05:34 - django.server - INFO - "OPTIONS /users-list/ HTTP/1.1" 200 0
+2024-11-21 06:05:35 - django.server - INFO - "OPTIONS /users-list/ HTTP/1.1" 200 0
+2024-11-21 06:05:35 - django.server - INFO - "OPTIONS /get-group-service/ HTTP/1.1" 200 0
+2024-11-21 06:05:35 - django.server - INFO - "GET /get-broker/ HTTP/1.1" 200 316
+2024-11-21 06:05:35 - django.server - INFO - "GET /get-License/ HTTP/1.1" 200 376
+2024-11-21 06:05:35 - main - DEBUG - GroupServiceView GET request received
+2024-11-21 06:05:35 - main - INFO - super-admin:::Super-Admin
+2024-11-21 06:05:35 - django.server - INFO - "GET /get-group-service/ HTTP/1.1" 200 496
+2024-11-21 06:05:35 - django.server - INFO - "GET /get-broker/ HTTP/1.1" 200 316
+2024-11-21 06:05:35 - django.server - INFO - "GET /get-License/ HTTP/1.1" 200 376
+2024-11-21 06:05:35 - main - DEBUG - GroupServiceView GET request received
+2024-11-21 06:05:35 - django.server - INFO - "GET /get-group-service/ HTTP/1.1" 200 496
+2024-11-21 06:05:35 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 1865
+2024-11-21 06:05:35 - main - INFO - super-admin:::Super-Admin
+2024-11-21 06:05:36 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 1865
+2024-11-21 06:07:22 - django.server - INFO - "OPTIONS /get-strategies/ HTTP/1.1" 200 0
+2024-11-21 06:07:22 - django.server - INFO - "GET /get-strategies/ HTTP/1.1" 200 1148
+2024-11-21 06:07:31 - django.server - INFO - "OPTIONS /create-client/ HTTP/1.1" 200 0
+2024-11-21 06:07:34 - django.server - INFO - "POST /create-client/ HTTP/1.1" 201 1682
+2024-11-21 06:07:36 - django.server - INFO - "OPTIONS /get-client-list/ HTTP/1.1" 200 0
+2024-11-21 06:07:36 - django.server - INFO - "OPTIONS /get-client-list/ HTTP/1.1" 200 0
+2024-11-21 06:07:36 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 10846
+2024-11-21 06:07:36 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 10846
+2024-11-21 06:07:41 - django.server - INFO - "OPTIONS /get-client-by-id/24/ HTTP/1.1" 200 0
+2024-11-21 06:07:41 - django.server - INFO - "OPTIONS /get-client-by-id/24/ HTTP/1.1" 200 0
+2024-11-21 06:07:41 - django.server - INFO - "GET /get-broker/ HTTP/1.1" 200 316
+2024-11-21 06:07:41 - main - INFO - super-admin:::Super-Admin
+2024-11-21 06:07:41 - django.server - INFO - "GET /get-License/ HTTP/1.1" 200 376
+2024-11-21 06:07:41 - main - DEBUG - GroupServiceView GET request received
+2024-11-21 06:07:41 - django.server - INFO - "GET /get-group-service/ HTTP/1.1" 200 496
+2024-11-21 06:07:41 - django.server - INFO - "GET /get-broker/ HTTP/1.1" 200 316
+2024-11-21 06:07:41 - django.server - INFO - "GET /get-client-by-id/24/ HTTP/1.1" 200 1682
+2024-11-21 06:07:41 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 1865
+2024-11-21 06:07:41 - django.server - INFO - "GET /get-License/ HTTP/1.1" 200 376
+2024-11-21 06:07:42 - main - DEBUG - GroupServiceView GET request received
+2024-11-21 06:07:42 - django.server - INFO - "GET /get-group-service/ HTTP/1.1" 200 496
+2024-11-21 06:07:42 - main - INFO - super-admin:::Super-Admin
+2024-11-21 06:07:42 - django.server - INFO - "GET /get-client-by-id/24/ HTTP/1.1" 200 1682
+2024-11-21 06:07:42 - django.server - INFO - "GET /get-strategies/ HTTP/1.1" 200 1148
+2024-11-21 06:07:42 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 1865
+2024-11-21 06:07:42 - django.server - INFO - "GET /get-strategies/ HTTP/1.1" 200 1148
+2024-11-21 06:08:11 - django.server - INFO - "OPTIONS /update-client/24/ HTTP/1.1" 200 0
+2024-11-21 06:08:11 - django.server - INFO - "PUT /update-client/24/ HTTP/1.1" 201 1671
+2024-11-21 06:08:12 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 10835
+2024-11-21 06:08:12 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 10835
+2024-11-21 06:08:16 - django.server - INFO - "GET /get-License/ HTTP/1.1" 200 376
+2024-11-21 06:08:16 - django.server - INFO - "GET /get-broker/ HTTP/1.1" 200 316
+2024-11-21 06:08:16 - main - DEBUG - GroupServiceView GET request received
+2024-11-21 06:08:16 - main - INFO - super-admin:::Super-Admin
+2024-11-21 06:08:17 - django.server - INFO - "GET /get-group-service/ HTTP/1.1" 200 496
+2024-11-21 06:08:17 - django.server - INFO - "GET /get-License/ HTTP/1.1" 200 376
+2024-11-21 06:08:17 - django.server - INFO - "GET /get-broker/ HTTP/1.1" 200 316
+2024-11-21 06:08:17 - django.server - INFO - "GET /get-client-by-id/24/ HTTP/1.1" 200 1671
+2024-11-21 06:08:17 - main - DEBUG - GroupServiceView GET request received
+2024-11-21 06:08:17 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 1865
+2024-11-21 06:08:17 - django.server - INFO - "GET /get-group-service/ HTTP/1.1" 200 496
+2024-11-21 06:08:17 - main - INFO - super-admin:::Super-Admin
+2024-11-21 06:08:17 - django.server - INFO - "GET /get-client-by-id/24/ HTTP/1.1" 200 1671
+2024-11-21 06:08:17 - django.server - INFO - "GET /get-strategies/ HTTP/1.1" 200 1148
+2024-11-21 06:08:17 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 1865
+2024-11-21 06:08:17 - django.server - INFO - "GET /get-strategies/ HTTP/1.1" 200 1148
+2024-11-21 06:08:24 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 10835
+2024-11-21 06:08:24 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 10835
+2024-11-21 06:09:22 - django.server - INFO - "OPTIONS /delete-client/18/ HTTP/1.1" 200 0
+2024-11-21 06:09:22 - django.server - INFO - "DELETE /delete-client/18/ HTTP/1.1" 204 41
+2024-11-21 06:09:22 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 9500
+2024-11-21 06:09:28 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 9500
+2024-11-21 06:13:55 - django.server - INFO - "OPTIONS /logout/ HTTP/1.1" 200 0
+2024-11-21 06:13:55 - django.server - INFO - "POST /logout/ HTTP/1.1" 200 31
+2024-11-21 06:14:07 - django.server - INFO - "OPTIONS /login/ HTTP/1.1" 200 0
+2024-11-21 06:14:08 - django.server - INFO - "POST /login/ HTTP/1.1" 200 141
+2024-11-21 06:14:28 - django.server - INFO - "GET /admin/ HTTP/1.1" 200 20254
+2024-11-21 06:14:29 - django.request - WARNING - Not Found: /favicon.ico
+2024-11-21 06:14:29 - django.server - WARNING - "GET /favicon.ico HTTP/1.1" 404 19350
+2024-11-21 06:14:39 - django.server - INFO - "GET /admin/main/user/ HTTP/1.1" 200 28147
+2024-11-21 06:14:39 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-21 06:14:41 - django.server - INFO - "GET /admin/ HTTP/1.1" 200 20254
+2024-11-21 06:14:44 - django.server - INFO - "GET /admin/main/otp/ HTTP/1.1" 200 20271
+2024-11-21 06:14:44 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-21 06:14:52 - django.server - INFO - "OPTIONS /verify-otp/ HTTP/1.1" 200 0
+2024-11-21 06:14:53 - django.server - INFO - "POST /verify-otp/ HTTP/1.1" 200 644
+2024-11-21 06:14:53 - django.server - INFO - "OPTIONS /kyc/ HTTP/1.1" 200 0
+2024-11-21 06:14:53 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 691
+2024-11-21 06:14:53 - django.request - WARNING - Not Found: /kyc/
+2024-11-21 06:14:53 - django.server - WARNING - "GET /kyc/ HTTP/1.1" 404 42
+2024-11-21 06:14:54 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 691
+2024-11-21 06:15:02 - django.server - INFO - "GET /get-client-segments-list/?segment=Option HTTP/1.1" 200 1102
+2024-11-21 06:15:03 - django.server - INFO - "GET /get-client-segments-list/?segment=Option HTTP/1.1" 200 1102
+2024-11-21 06:16:30 - django.server - INFO - "GET /admin/main/ HTTP/1.1" 200 12727
+2024-11-21 06:16:33 - django.server - INFO - "GET /admin/main/clienttradesetting/ HTTP/1.1" 200 18024
+2024-11-21 06:16:33 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-21 06:16:36 - django.server - INFO - "GET /admin/main/clienttradesetting/add/ HTTP/1.1" 200 30774
+2024-11-21 06:16:36 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-21 06:18:25 - django.server - INFO - "POST /logout/ HTTP/1.1" 200 31
+2024-11-21 06:18:45 - django.server - INFO - "POST /login/ HTTP/1.1" 200 736
+2024-11-21 06:18:46 - django.server - INFO - "OPTIONS /user-last-login/ HTTP/1.1" 200 0
+2024-11-21 06:18:46 - django.server - INFO - "OPTIONS /get-city-data/ HTTP/1.1" 200 0
+2024-11-21 06:18:46 - django.server - INFO - "OPTIONS /get-state-data/ HTTP/1.1" 200 0
+2024-11-21 06:18:46 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 675
+2024-11-21 06:18:46 - django.server - INFO - "GET /get-state-data/ HTTP/1.1" 200 29
+2024-11-21 06:18:46 - django.server - INFO - "GET /get-city-data/ HTTP/1.1" 200 30
+2024-11-21 06:18:46 - django.server - INFO - "GET /user-last-login/ HTTP/1.1" 200 94
+2024-11-21 06:18:46 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 675
+2024-11-21 06:18:46 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 675
+2024-11-21 06:18:56 - django.server - INFO - "GET /get-broker/ HTTP/1.1" 200 316
+2024-11-21 06:18:56 - django.server - INFO - "GET /get-License/ HTTP/1.1" 200 376
+2024-11-21 06:18:56 - main - DEBUG - GroupServiceView GET request received
+2024-11-21 06:18:56 - main - INFO - Admin:::{user.role.name}
+2024-11-21 06:18:56 - django.server - INFO - "GET /get-group-service/ HTTP/1.1" 200 496
+2024-11-21 06:18:56 - django.server - INFO - "GET /get-broker/ HTTP/1.1" 200 316
+2024-11-21 06:18:56 - django.server - INFO - "GET /get-License/ HTTP/1.1" 200 376
+2024-11-21 06:18:56 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 653
+2024-11-21 06:18:56 - main - DEBUG - GroupServiceView GET request received
+2024-11-21 06:18:56 - django.server - INFO - "GET /get-group-service/ HTTP/1.1" 200 496
+2024-11-21 06:18:56 - main - INFO - Admin:::{user.role.name}
+2024-11-21 06:18:56 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 653
+2024-11-21 06:20:12 - django.server - INFO - "GET /admin/main/ HTTP/1.1" 200 12727
+2024-11-21 06:20:15 - django.server - INFO - "GET /admin/main/segment/ HTTP/1.1" 200 17282
+2024-11-21 06:20:15 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-21 06:20:17 - django.server - INFO - "GET /admin/main/ HTTP/1.1" 200 12727
+2024-11-21 06:20:19 - django.server - INFO - "GET /admin/main/subsegment/ HTTP/1.1" 200 18306
+2024-11-21 06:20:19 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-21 06:20:22 - django.server - INFO - "GET /admin/main/subsegment/add/ HTTP/1.1" 200 19311
+2024-11-21 06:20:22 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-21 06:21:31 - django.server - INFO - "GET /admin/main/ HTTP/1.1" 200 12727
+2024-11-21 06:21:34 - django.server - INFO - "GET /admin/main/groupservice/ HTTP/1.1" 200 17578
+2024-11-21 06:21:34 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-21 06:21:36 - django.server - INFO - "GET /admin/main/groupservice/2/change/ HTTP/1.1" 200 20273
+2024-11-21 06:21:36 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-21 06:22:15 - django.server - INFO - "POST /logout/ HTTP/1.1" 200 31
+2024-11-21 06:22:31 - django.server - INFO - "POST /login/ HTTP/1.1" 200 141
+2024-11-21 06:22:35 - django.server - INFO - "GET /admin/main/ HTTP/1.1" 200 12727
+2024-11-21 06:22:39 - django.server - INFO - "GET /admin/main/otp/ HTTP/1.1" 200 20618
+2024-11-21 06:22:39 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-21 06:22:47 - django.server - INFO - "POST /verify-otp/ HTTP/1.1" 200 644
+2024-11-21 06:22:48 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 691
+2024-11-21 06:22:48 - django.request - WARNING - Not Found: /kyc/
+2024-11-21 06:22:48 - django.server - WARNING - "GET /kyc/ HTTP/1.1" 404 42
+2024-11-21 06:22:48 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 691
+2024-11-21 06:22:49 - django.server - INFO - "POST /login/ HTTP/1.1" 200 141
+2024-11-21 06:22:53 - django.request - WARNING - Unauthorized: /get-client-segments-list/
+2024-11-21 06:22:53 - django.server - WARNING - "GET /get-client-segments-list/?segment=Option HTTP/1.1" 401 183
+2024-11-21 06:22:53 - django.request - WARNING - Unauthorized: /get-client-segments-list/
+2024-11-21 06:22:53 - django.server - WARNING - "GET /get-client-segments-list/?segment=Option HTTP/1.1" 401 183
+2024-11-21 06:23:02 - django.request - WARNING - Unauthorized: /logout/
+2024-11-21 06:23:02 - django.server - WARNING - "POST /logout/ HTTP/1.1" 401 183
+2024-11-21 06:23:04 - django.request - WARNING - Unauthorized: /logout/
+2024-11-21 06:23:04 - django.server - WARNING - "POST /logout/ HTTP/1.1" 401 183
+2024-11-21 06:24:19 - django.request - WARNING - Unauthorized: /logout/
+2024-11-21 06:24:19 - django.server - WARNING - "POST /logout/ HTTP/1.1" 401 183
+2024-11-21 06:24:24 - django.request - WARNING - Unauthorized: /logout/
+2024-11-21 06:24:24 - django.server - WARNING - "POST /logout/ HTTP/1.1" 401 183
+2024-11-21 06:24:25 - django.request - WARNING - Unauthorized: /logout/
+2024-11-21 06:24:25 - django.server - WARNING - "POST /logout/ HTTP/1.1" 401 183
+2024-11-21 06:24:26 - django.request - WARNING - Unauthorized: /logout/
+2024-11-21 06:24:26 - django.server - WARNING - "POST /logout/ HTTP/1.1" 401 183
+2024-11-21 06:25:29 - django.server - INFO - "POST /login/ HTTP/1.1" 200 141
+2024-11-21 06:25:31 - django.server - INFO - "GET /admin/main/otp/ HTTP/1.1" 200 20970
+2024-11-21 06:25:31 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-21 06:25:40 - django.server - INFO - "POST /verify-otp/ HTTP/1.1" 200 644
+2024-11-21 06:25:41 - django.request - WARNING - Not Found: /kyc/
+2024-11-21 06:25:41 - django.server - WARNING - "GET /kyc/ HTTP/1.1" 404 42
+2024-11-21 06:25:41 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 691
+2024-11-21 06:25:41 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 691
+2024-11-21 06:25:42 - django.server - INFO - "POST /login/ HTTP/1.1" 200 141
+2024-11-21 06:25:46 - django.request - WARNING - Unauthorized: /get-client-segments-list/
+2024-11-21 06:25:46 - django.server - WARNING - "GET /get-client-segments-list/?segment=Option HTTP/1.1" 401 183
+2024-11-21 06:25:46 - django.request - WARNING - Unauthorized: /get-client-segments-list/
+2024-11-21 06:25:46 - django.server - WARNING - "GET /get-client-segments-list/?segment=Option HTTP/1.1" 401 183
+2024-11-21 06:45:39 - django.server - INFO - "GET /order-logs-list/ HTTP/1.1" 200 30
+2024-11-21 06:45:39 - django.server - INFO - "GET /order-logs-list/ HTTP/1.1" 200 30
+2024-11-21 06:45:41 - django.server - INFO - "GET /order-logs-list/ HTTP/1.1" 200 30
+2024-11-21 06:46:35 - django.server - INFO - "GET /order-logs-list/ HTTP/1.1" 200 30
+2024-11-21 06:46:52 - django.server - INFO - "GET /admin/main/ HTTP/1.1" 200 12727
+2024-11-21 06:46:59 - django.server - INFO - "GET /admin/main/orderlog/ HTTP/1.1" 200 16057
+2024-11-21 06:46:59 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-21 07:08:25 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+2024-11-21 07:08:28 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-21 07:11:24 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+2024-11-21 07:11:26 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-21 07:13:33 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+2024-11-21 07:13:36 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-21 07:14:53 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+2024-11-21 07:14:55 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-21 07:17:01 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+2024-11-21 07:17:03 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-21 07:19:02 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+2024-11-21 07:19:04 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-21 07:19:37 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+2024-11-21 07:19:41 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-21 07:21:14 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+2024-11-21 07:21:18 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-21 07:26:42 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+2024-11-21 07:26:45 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-21 07:27:07 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+2024-11-21 07:27:11 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-21 07:27:24 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-21 07:27:28 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-21 08:48:09 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+2024-11-21 08:48:13 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-21 08:48:19 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+2024-11-21 08:48:22 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-21 08:49:36 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-21 08:50:44 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+2024-11-21 08:50:48 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-21 08:53:50 - django.server - INFO - "GET /admin/main/ HTTP/1.1" 200 12727
+2024-11-21 08:54:01 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+2024-11-21 08:54:06 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-21 08:55:46 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-11-21 08:55:50 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-21 08:56:28 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/admin.py changed, reloading.
+2024-11-21 08:56:32 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-21 08:56:39 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/admin.py changed, reloading.
+2024-11-21 08:56:42 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-21 08:57:46 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/admin.py changed, reloading.
+2024-11-21 08:57:49 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-21 08:59:06 - django.server - INFO - "GET /admin/main/ HTTP/1.1" 200 13152
+2024-11-21 08:59:14 - django.server - INFO - "GET /admin/main/tradelog/ HTTP/1.1" 200 16041
+2024-11-21 08:59:14 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-21 08:59:20 - django.server - INFO - "GET /admin/main/tradelog/add/ HTTP/1.1" 200 22497
+2024-11-21 08:59:20 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-21 08:59:20 - django.server - INFO - "GET /static/admin/img/icon-clock.svg HTTP/1.1" 304 0
+2024-11-21 09:00:31 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-21 09:00:33 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-21 09:01:37 - django.server - INFO - "PUT /client-trade-settings/update/ HTTP/1.1" 200 351
+2024-11-21 09:01:44 - django.server - INFO - "GET /admin/main/tradelog/add/ HTTP/1.1" 200 22497
+2024-11-21 09:01:44 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-21 09:01:46 - django.server - INFO - "GET /admin/main/ HTTP/1.1" 200 13152
+2024-11-21 09:01:50 - django.server - INFO - "GET /admin/main/tradelog/ HTTP/1.1" 200 16041
+2024-11-21 09:01:50 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-21 09:02:10 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-21 09:02:14 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-21 09:03:03 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-21 09:03:05 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-21 09:03:19 - django.server - INFO - "PUT /client-trade-settings/update/ HTTP/1.1" 200 351
+2024-11-21 09:03:52 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-21 09:03:55 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-21 09:04:11 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-21 09:04:15 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-21 09:06:04 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-21 09:06:07 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-21 09:06:15 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-21 09:06:19 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-21 09:09:05 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-21 09:09:08 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-21 09:09:28 - django.request - ERROR - Internal Server Error: /client-trade-settings/update/
+Traceback (most recent call last):
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/views/decorators/csrf.py", line 56, in wrapper_view
+    return view_func(*args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/views/generic/base.py", line 104, in view
+    return self.dispatch(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/generics.py", line 230, in put
+    return self.update(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py", line 1602, in update
+    is_trade_status=is_trade_status if is_trade_status is not None else trade_setting.is_trade_status,
+NameError: name 'is_trade_status' is not defined
+2024-11-21 09:09:28 - django.server - ERROR - "PUT /client-trade-settings/update/ HTTP/1.1" 500 105306
+2024-11-21 09:09:45 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-21 09:09:49 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-21 09:09:57 - django.request - ERROR - Internal Server Error: /client-trade-settings/update/
+Traceback (most recent call last):
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/views/decorators/csrf.py", line 56, in wrapper_view
+    return view_func(*args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/views/generic/base.py", line 104, in view
+    return self.dispatch(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/generics.py", line 230, in put
+    return self.update(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py", line 1602, in update
+    is_trade_status=is_trade_status if is_trade_status is not None else trade_setting.is_tread_status,
+NameError: name 'is_trade_status' is not defined
+2024-11-21 09:09:57 - django.server - ERROR - "PUT /client-trade-settings/update/ HTTP/1.1" 500 105306
+2024-11-21 09:11:42 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-21 09:11:46 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-21 09:13:27 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-21 09:13:29 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-21 09:13:40 - django.server - INFO - "PUT /client-trade-settings/update/ HTTP/1.1" 200 351
+2024-11-21 09:13:49 - django.server - INFO - "GET /admin/main/tradelog/ HTTP/1.1" 200 17635
+2024-11-21 09:13:49 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-21 09:13:52 - django.request - ERROR - Internal Server Error: /admin/main/tradelog/1/change/
+Traceback (most recent call last):
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/contrib/admin/options.py", line 688, in wrapper
+    return self.admin_site.admin_view(view)(*args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/utils/decorators.py", line 134, in _wrapper_view
+    response = view_func(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/views/decorators/cache.py", line 62, in _wrapper_view_func
+    response = view_func(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/contrib/admin/sites.py", line 242, in inner
+    return view(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/contrib/admin/options.py", line 1889, in change_view
+    return self.changeform_view(request, object_id, form_url, extra_context)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/utils/decorators.py", line 46, in _wrapper
+    return bound_method(*args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/utils/decorators.py", line 134, in _wrapper_view
+    response = view_func(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/contrib/admin/options.py", line 1747, in changeform_view
+    return self._changeform_view(request, object_id, form_url, extra_context)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/contrib/admin/options.py", line 1855, in _changeform_view
+    "subtitle": str(obj) if obj else None,
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py", line 409, in __str__
+    return f"Trade log for {self.client.username} - {self.symbol} - {self.trade_date}"
+AttributeError: 'User' object has no attribute 'username'
+2024-11-21 09:13:52 - django.server - ERROR - "GET /admin/main/tradelog/1/change/ HTTP/1.1" 500 117910
+2024-11-21 09:14:15 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+2024-11-21 09:14:18 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-21 09:14:21 - django.server - INFO - "GET /admin/main/tradelog/1/change/ HTTP/1.1" 200 22910
+2024-11-21 09:14:22 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-21 09:15:22 - django.server - INFO - "GET /admin/main/tradelog/ HTTP/1.1" 200 17635
+2024-11-21 09:16:19 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-21 09:16:21 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-21 09:18:57 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-21 09:19:01 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-21 09:19:48 - django.request - WARNING - Not Found: /update-trade-status/
+2024-11-21 09:19:48 - django.server - WARNING - "PATCH /update-trade-status/?segment=Option&sub_segment=NIFTY HTTP/1.1" 404 37
+2024-11-21 09:20:07 - django.server - INFO - "GET /admin/main/ HTTP/1.1" 200 13152
+2024-11-21 09:20:09 - django.server - INFO - "GET /admin/main/clienttradesetting/ HTTP/1.1" 200 18319
+2024-11-21 09:20:09 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-21 09:20:15 - django.server - INFO - "GET /admin/main/clienttradesetting/2/change/ HTTP/1.1" 200 31436
+2024-11-21 09:20:15 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-21 09:20:18 - django.server - INFO - "GET /admin/main/clienttradesetting/ HTTP/1.1" 200 18319
+2024-11-21 09:20:20 - django.server - INFO - "GET /admin/main/clienttradesetting/1/change/ HTTP/1.1" 200 31611
+2024-11-21 09:20:21 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-21 09:21:45 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-21 09:21:48 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-21 09:22:08 - django.server - INFO - "PATCH /update-trade-status/ HTTP/1.1" 200 352
+2024-11-21 09:22:15 - django.server - INFO - "GET /admin/main/ HTTP/1.1" 200 13152
+2024-11-21 09:22:17 - django.server - INFO - "GET /admin/main/tradelog/ HTTP/1.1" 200 17983
+2024-11-21 09:22:17 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-21 09:22:31 - django.server - INFO - "GET /admin/main/tradelog/2/change/ HTTP/1.1" 200 22902
+2024-11-21 09:22:31 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-21 09:22:37 - django.server - INFO - "GET /admin/main/tradelog/ HTTP/1.1" 200 17983
+2024-11-21 09:22:39 - django.server - INFO - "GET /admin/main/tradelog/1/change/ HTTP/1.1" 200 22910
+2024-11-21 09:22:39 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-21 09:22:45 - django.server - INFO - "GET /admin/main/tradelog/ HTTP/1.1" 200 17983

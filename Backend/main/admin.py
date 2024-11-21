@@ -102,3 +102,7 @@ class categoriesAdmin(admin.ModelAdmin):
 @admin.register(ClientTradeSetting)    
 class ClientTradeSettingAdmin(admin.ModelAdmin):
     list_display=("id",'client','segment','is_tread_status') 
+
+@admin.register(TradeLog)    
+class TradeLogAdmin(admin.ModelAdmin):
+    list_display=("id",'client','is_trade_status') 
