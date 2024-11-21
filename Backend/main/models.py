@@ -58,8 +58,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     phoneNumber = models.CharField(max_length=15, null=True, blank=True)
     firstName = models.CharField(max_length=150)
     middleName = models.CharField(max_length=150,null=True,blank=True)
-    lastName = models.CharField(max_length=150,blank=True)
-    fullName = models.CharField(max_length=300, blank=True, editable=False)  # Will be automatically generated
+    lastName = models.CharField(max_length=150,blank=True,null=True)
+    fullName = models.CharField(max_length=300, blank=True, editable=False,null=True)  # Will be automatically generated
     profilePicture = models.ImageField(upload_to='profile_pictures/', null=True, blank=True)
     role = models.ForeignKey(Role, on_delete=models.SET_NULL,null=True, blank=True)
     is_active = models.BooleanField(default=True)

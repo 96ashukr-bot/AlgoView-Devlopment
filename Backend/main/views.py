@@ -52,7 +52,7 @@ class GetRoleListAPIView(APIView):
     # permission_classes = [permissions.IsAuthenticated]
     def get(self, request, *args, **kwargs):
         try:
-            roles = Role.objects.filter(name__iexact='Sub-Admin').order_by('-id')
+            roles = Role.objects.filter(Q(name__iexact='Sub-Admin') | Q(name__iexact='Admin')).order_by('-id')
             serializer = RoleSerializer(roles, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Role.DoesNotExist:
@@ -446,6 +446,7 @@ class UserProfileView(APIView):
         try:
             # Start transaction in case of complex updates (optional)
             with transaction.atomic():
+                print("____________",request.data)
                 serializer = UserProfileUpdateSerializer(user, data=request.data, partial=True)
                 if serializer.is_valid():
                     serializer.save()

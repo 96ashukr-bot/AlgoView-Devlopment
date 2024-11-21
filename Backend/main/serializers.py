@@ -447,7 +447,7 @@ class UserProfileRetrieveSerializer(serializers.ModelSerializer):
             }
         return None  # Return None if the user has no role assigned
 class UserProfileUpdateSerializer(serializers.ModelSerializer):
-    fullName = serializers.CharField(read_only=True)  # FullName is read-only, derived from first_name and last_name.
+    fullName = serializers.CharField()  # FullName is read-only, derived from first_name and last_name.
 
     class Meta:
         model = User
@@ -460,10 +460,36 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
             'current_state', 'current_country', 'current_zip_code',]
 
     def update(self, instance, validated_data):
-        # Update first_name and last_name
-        instance.firstName = validated_data.get('firstName', instance.firstName)
-        instance.lastName = validated_data.get('lastName', instance.lastName)
-        
+        # Handle fullName and split if provided
+        full_name = validated_data.get('fullName')
+        if full_name:
+            # Split full name into parts
+            name_parts = full_name.split()
+            instance.firstName = name_parts[0]  # First name
+
+            if len(name_parts) > 1:
+                instance.lastName = name_parts[-1]  # Last name
+            else:
+                instance.lastName = ""
+
+            if len(name_parts) > 2:
+                instance.middleName = ' '.join(name_parts[1:-1])  # Middle name
+            else:
+                instance.middleName = ""
+        else:
+            # Construct fullName from first, middle, and last names if available
+            instance.firstName = validated_data.get('firstName', instance.firstName)
+            instance.middleName = validated_data.get('middleName', instance.middleName)
+            instance.lastName = validated_data.get('lastName', instance.lastName)
+
+            # Construct fullName using available name parts
+            full_name_parts = [instance.firstName]
+            if instance.middleName:
+                full_name_parts.append(instance.middleName)
+            if instance.lastName:
+                full_name_parts.append(instance.lastName)
+            instance.fullName = " ".join(full_name_parts)
+
         # Update other fields
         instance.email = validated_data.get('email', instance.email)
         instance.phoneNumber = validated_data.get('phoneNumber', instance.phoneNumber)
@@ -472,16 +498,16 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
         instance.start_date = validated_data.get('start_date', instance.start_date)
         instance.end_date = validated_data.get('end_date', instance.end_date)
         instance.client_type = validated_data.get('client_type', instance.client_type)
-        instance.is_enable=validated_data.get('is_enable',instance.is_enable)
-        instance.middleName=validated_data.get('middleName',instance.middleName)
-        # Update the address fields with new names
+        instance.is_enable = validated_data.get('is_enable', instance.is_enable)
 
+        # Update address fields
         instance.current_add_line_1 = validated_data.get('current_add_line_1', instance.current_add_line_1)
         instance.current_add_line_2 = validated_data.get('current_add_line_2', instance.current_add_line_2)
         instance.current_city = validated_data.get('current_city', instance.current_city)
         instance.current_state = validated_data.get('current_state', instance.current_state)
         instance.current_country = validated_data.get('current_country', instance.current_country)
         instance.current_zip_code = validated_data.get('current_zip_code', instance.current_zip_code)
+
         # Update is_address_same field
         is_address_same = validated_data.get('is_address_same', instance.is_address_same)
         instance.is_address_same = is_address_same
@@ -493,8 +519,8 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
             instance.permanent_city = instance.current_city
             instance.permanent_state = instance.current_state
             instance.permanent_country = instance.current_country
-            instance.permanent_zip_code = instance.current_zip_code   
-        else:     
+            instance.permanent_zip_code = instance.current_zip_code
+        else:
             instance.permanent_add_line_1 = validated_data.get('permanent_add_line_1', instance.permanent_add_line_1)
             instance.permanent_add_line_2 = validated_data.get('permanent_add_line_2', instance.permanent_add_line_2)
             instance.permanent_city = validated_data.get('permanent_city', instance.permanent_city)
@@ -504,8 +530,10 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
 
         # Save the updated instance
         instance.save()
-        
+
         return instance
+
+   
 class CreatedBySerializer(serializers.ModelSerializer):
     class Meta:
         model = User
@@ -854,22 +882,27 @@ class ClientCreateSerializer(serializers.ModelSerializer):
                     if User.objects.exclude(id=self.instance.id).filter(email=email).exists():
                         raise serializers.ValidationError({'email': 'A user with this email already exists.'})
 
-        # Split the full name into first, middle, and last names
-        name_parts = full_name.split()
+            # Split the full name into parts
+            name_parts = full_name.split()
 
-        if len(name_parts) < 2:
-            raise serializers.ValidationError({'fullName': 'Full name must have at least a first and last name.'})
+            # Assign names based on the number of parts
+            data['firstName'] = name_parts[0]
+            data['fullName'] = full_name  # Save the original full name
 
-        # Assign the split parts to firstName, middleName, and lastName
-        data['firstName'] = name_parts[0]
-        if len(name_parts) > 2:
-            data['middleName'] = ' '.join(name_parts[1:-1])  # Middle name (if any)
-            data['lastName'] = name_parts[-1]
-        else:
-            data['middleName'] = None
-            data['lastName'] = name_parts[1]
+            if len(name_parts) == 1:
+                # If only one name part, save it as firstName and fullName only
+                data['middleName'] = ""
+                data['lastName'] = ""
+            elif len(name_parts) == 2:
+                # If two name parts, assign first and last name
+                data['lastName'] = name_parts[1]
+                data['middleName'] = ""
+            else:
+                # If more than two parts, assign first, middle, and last names
+                data['middleName'] = ' '.join(name_parts[1:-1])  # Middle name (if any)
+                data['lastName'] = name_parts[-1]
 
-        return data
+            return data
 
     # Overriding the create method to handle assigned_client and strategies
     def create(self, validated_data):
@@ -931,22 +964,28 @@ class ClientupdateListSerializer(serializers.ModelSerializer):
         # Handle fullName and split it if provided
         full_name = validated_data.get('fullName')
         if full_name:
-            # Split full name into first, middle, and last names
+            # Split full name into parts
             name_parts = full_name.split()
-            if len(name_parts) >= 2:
-                validated_data['firstName'] = name_parts[0]
-                validated_data['lastName'] = name_parts[-1]
-                if len(name_parts) > 2:
-                    validated_data['middleName'] = ' '.join(name_parts[1:-1])
-                else:
-                    validated_data['middleName'] = None
+            
+            # Assign names based on the number of parts
+            validated_data['firstName'] = name_parts[0]
+            validated_data['fullName'] = full_name  # Save the original full name
+            
+            if len(name_parts) == 1:
+                # If only one name part, set firstName and fullName only
+                validated_data['middleName'] = ""
+                validated_data['lastName'] = ""
+            elif len(name_parts) == 2:
+                # If two name parts, assign first and last names
+                validated_data['lastName'] = name_parts[1]
+                validated_data['middleName'] = ""
             else:
-                raise serializers.ValidationError(
-                    {'fullName': 'Full name must contain at least a first and last name.'}
-                )
-        
-        # Update instance with validated data
-        return super().update(instance, validated_data)    
+                # If more than two parts, assign first, middle, and last names
+                validated_data['middleName'] = ' '.join(name_parts[1:-1])  # Middle name (if any)
+                validated_data['lastName'] = name_parts[-1]
+
+        # Call the superclass update method with the modified validated_data
+        return super().update(instance, validated_data)
 
 class StrategyAssignSerializer(serializers.ModelSerializer):
     clients = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), many=True)
