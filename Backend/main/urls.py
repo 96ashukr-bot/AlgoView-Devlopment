@@ -21,7 +21,7 @@ urlpatterns = [
     path('password-reset-confirm/', PasswordResetConfirmView.as_view(), name='password-reset-confirm'),
     path('create-roles/', RoleListCreateView.as_view(), name='role-list-create'),
     path('get-role-subadmin/', GetRoleListAPIView.as_view(), name='get-sub-admin-role-list'),
-    path('get-roles-list/', RoleListCreateView.as_view(), name='role-list'),
+    path('get-roles-list/', GetRoleListAPIView.as_view(), name='role-list'),
     path('delete-roles/<int:id>/', RoleDeleteView.as_view(), name='role-delete'),
     path('roles/<int:pk>/', RoleDetailView.as_view(), name='role-detail'),
     path('user/<int:pk>/', GetUser.as_view(), name='GetUser'),
@@ -100,6 +100,7 @@ urlpatterns = [
     #  path('update-trade-status/', UpdateTradeStatusView.as_view(), name='update_client_setting'),
  
     path('get-client-segments-list/', UpdateTradeSettingStatusView.as_view(), name='get-trade-settings'),
+    # path('get-count-client/',SubAdminAllClientView.as_view(),name='active-inactive-client')
     ]
 
 if settings.DEBUG:

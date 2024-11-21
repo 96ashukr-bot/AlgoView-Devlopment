@@ -49,7 +49,7 @@ class RoleListCreateView(generics.ListCreateAPIView):
     serializer_class = RoleSerializer
     permission_classes = [permissions.IsAuthenticated]
 class GetRoleListAPIView(APIView):
-    # permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
     def get(self, request, *args, **kwargs):
         try:
             roles = Role.objects.filter(Q(name__iexact='Sub-Admin') | Q(name__iexact='Admin')).order_by('-id')
@@ -357,9 +357,13 @@ class UserManagementView(APIView):
         user = request.user 
         if user.role and user.role.name == 'Super-Admin':
             logger.info(f"super-admin:::{user.role.name}")
-            users = User.objects.filter(type_of_user='is_user').order_by('-id')
+            users = User.objects.filter(type_of_user='is_user').annotate(
+                client_count=Count('assigned_users')
+            ).order_by('-id')
         else:
-            users = User.objects.filter(type_of_user='is_user', created_by=user).order_by('-id')
+            users = User.objects.filter(type_of_user='is_user', created_by=user).annotate(
+                client_count=Count('assigned_users')
+            ).order_by('-id')
             logger.info("Admin:::{user.role.name}")
         paginator = CustomPageNumberPagination()
         result_page = paginator.paginate_queryset(users, request)
@@ -1777,3 +1781,29 @@ class UpdateTradeStatusView(APIView):
                 return Response(serializer.data, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+from django.db.models import Count        
+
+class SubAdminAllClientView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        user = request.user
+        
+        # Check if the user is a Super-Admin or not
+        if user.role and user.role.name == 'Super-Admin':
+            # Get all Sub-Admins (with a role of 'Sub-Admin') and annotate with the count of their clients
+            sub_admins = User.objects.filter(role__name='Sub-Admin').annotate(
+                client_count=Count('assigned_users')
+            ).order_by('-id')
+        else:
+            # Get Sub-Admins that the logged-in user has created
+            sub_admins = User.objects.filter(role__name='Sub-Admin', created_by=user).annotate(
+                client_count=Count('assigned_users')
+            ).order_by('-id')
+
+        # Pagination for the list of Sub-Admins
+        paginator = CustomPageNumberPagination()
+        result_page = paginator.paginate_queryset(sub_admins, request)
+        serializer = UserclientSerializer(result_page, many=True)
+        
+        return paginator.get_paginated_response(serializer.data)

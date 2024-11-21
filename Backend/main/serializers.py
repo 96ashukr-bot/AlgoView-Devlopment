@@ -542,7 +542,7 @@ class CreatedBySerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     role = RoleSerializer()  # Serializes the Role object into id and name fields
     created_by = CreatedBySerializer()  # Serializes the created_by field with detailed information
-
+    client_count = serializers.IntegerField(read_only=True) 
     class Meta:
         model = User
         fields = ['id', 'email', 'firstName', 'lastName', 'fullName','middleName','phoneNumber',   
@@ -551,7 +551,7 @@ class UserSerializer(serializers.ModelSerializer):
             'permanent_state', 'permanent_country', 'permanent_zip_code',
             # Current Address Fields
             'current_add_line_1', 'current_add_line_2', 'current_city', 
-            'current_state', 'current_country', 'current_zip_code','role','created_by','is_active']
+            'current_state', 'current_country', 'current_zip_code','role','created_by','is_active','assigned_client','client_count']
 class NewUserCreateSerializer(serializers.ModelSerializer):
     role = serializers.PrimaryKeyRelatedField(queryset=Role.objects.all())  # Accepts role ID directly
     class Meta:
@@ -1072,3 +1072,17 @@ class TreadLogSerializer(serializers.ModelSerializer):
     class Meta:
         model=TradeLog
         fileds=['client','trade_setting','symbol','is_trade_status','trade_date']    
+from rest_framework import serializers
+from .models import User
+
+class UserclientSerializer(serializers.ModelSerializer):
+    client_count = serializers.IntegerField(read_only=True)  # Dynamically calculated field
+
+    class Meta:
+        model = User
+        fields = [
+            'id', 'email', 'firstName', 'middleName', 'lastName', 'fullName', 'phoneNumber',
+            'client_key', 'assigned_client', 'client_status', 'start_date_client', 'end_date_client',
+            'is_enable', 'client_count',  # Include client_count in the serialized output
+        ]
+        
