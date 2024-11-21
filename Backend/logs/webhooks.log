@@ -521,3 +521,117 @@ django.core.exceptions.FieldError: Unknown field(s) (is_new_passwordpermanent_ad
 2024-11-20 13:20:58 - django.server - INFO - "GET /user-last-login/ HTTP/1.1" 200 94
 2024-11-20 13:20:58 - django.server - INFO - "GET /get-state-data/ HTTP/1.1" 200 29
 2024-11-20 13:22:58 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 13:40:59 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-20 13:41:04 - django.server - INFO - "POST /logout/ HTTP/1.1" 200 31
+2024-11-20 13:41:10 - django.server - INFO - "POST /login/ HTTP/1.1" 200 736
+2024-11-20 13:41:10 - django.server - INFO - "GET /user-last-login/ HTTP/1.1" 200 94
+2024-11-20 13:41:10 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 675
+2024-11-20 13:41:10 - django.server - INFO - "GET /get-city-data/ HTTP/1.1" 200 30
+2024-11-20 13:41:10 - django.server - INFO - "GET /get-state-data/ HTTP/1.1" 200 29
+2024-11-20 13:41:10 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 675
+2024-11-20 13:41:10 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 675
+2024-11-20 13:41:16 - django.server - INFO - "OPTIONS /get-client-list/ HTTP/1.1" 200 0
+2024-11-20 13:41:16 - django.server - INFO - "OPTIONS /get-client-list/ HTTP/1.1" 200 0
+2024-11-20 13:41:16 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 7110
+2024-11-20 13:41:16 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 7110
+2024-11-20 13:41:27 - django.server - INFO - "POST /create-client/ HTTP/1.1" 201 1327
+2024-11-20 13:41:32 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 8438
+2024-11-20 13:42:17 - django.server - INFO - "OPTIONS /get-broker/ HTTP/1.1" 200 0
+2024-11-20 13:42:17 - django.server - INFO - "OPTIONS /get-License/ HTTP/1.1" 200 0
+2024-11-20 13:42:17 - django.server - INFO - "OPTIONS /get-group-service/ HTTP/1.1" 200 0
+2024-11-20 13:42:17 - django.server - INFO - "OPTIONS /get-group-service/ HTTP/1.1" 200 0
+2024-11-20 13:42:17 - django.server - INFO - "GET /get-License/ HTTP/1.1" 200 376
+2024-11-20 13:42:17 - django.server - INFO - "GET /get-broker/ HTTP/1.1" 200 316
+2024-11-20 13:42:17 - main - INFO - Admin:::{user.role.name}
+2024-11-20 13:42:17 - main - DEBUG - GroupServiceView GET request received
+2024-11-20 13:42:17 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 653
+2024-11-20 13:42:17 - django.server - INFO - "GET /get-group-service/ HTTP/1.1" 200 496
+2024-11-20 13:42:17 - django.server - INFO - "GET /get-License/ HTTP/1.1" 200 376
+2024-11-20 13:42:17 - django.server - INFO - "GET /get-broker/ HTTP/1.1" 200 316
+2024-11-20 13:42:17 - main - INFO - Admin:::{user.role.name}
+2024-11-20 13:42:17 - main - DEBUG - GroupServiceView GET request received
+2024-11-20 13:42:17 - django.server - INFO - "GET /get-group-service/ HTTP/1.1" 200 496
+2024-11-20 13:42:17 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 653
+2024-11-20 13:42:19 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 8438
+2024-11-20 13:42:20 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 8438
+2024-11-20 13:42:30 - django.server - INFO - "POST /logout/ HTTP/1.1" 200 31
+2024-11-20 13:42:39 - django.server - INFO - "POST /login/ HTTP/1.1" 200 738
+2024-11-20 13:42:40 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 681
+2024-11-20 13:42:40 - django.server - INFO - "GET /user-last-login/ HTTP/1.1" 200 94
+2024-11-20 13:42:40 - django.server - INFO - "GET /get-city-data/ HTTP/1.1" 200 30
+2024-11-20 13:42:40 - django.server - INFO - "GET /get-state-data/ HTTP/1.1" 200 29
+2024-11-20 13:42:40 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 681
+2024-11-20 13:42:40 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 681
+2024-11-20 13:42:47 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 8897
+2024-11-20 13:42:47 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 8897
+2024-11-20 13:42:54 - django.server - INFO - "GET /admin/main/ HTTP/1.1" 200 12727
+2024-11-20 13:42:56 - django.server - INFO - "GET /admin/main/user/ HTTP/1.1" 200 28138
+2024-11-20 13:42:56 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-20 13:43:13 - django.server - INFO - "OPTIONS /get-client-by-id/23/ HTTP/1.1" 200 0
+2024-11-20 13:43:13 - django.server - INFO - "OPTIONS /get-client-by-id/23/ HTTP/1.1" 200 0
+2024-11-20 13:43:13 - django.server - INFO - "GET /get-broker/ HTTP/1.1" 200 316
+2024-11-20 13:43:13 - main - DEBUG - GroupServiceView GET request received
+2024-11-20 13:43:13 - main - INFO - super-admin:::Super-Admin
+2024-11-20 13:43:13 - django.server - INFO - "GET /get-group-service/ HTTP/1.1" 200 496
+2024-11-20 13:43:13 - django.server - INFO - "GET /get-License/ HTTP/1.1" 200 376
+2024-11-20 13:43:13 - django.server - INFO - "GET /get-broker/ HTTP/1.1" 200 316
+2024-11-20 13:43:13 - main - DEBUG - GroupServiceView GET request received
+2024-11-20 13:43:13 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 1865
+2024-11-20 13:43:13 - django.server - INFO - "GET /get-group-service/ HTTP/1.1" 200 496
+2024-11-20 13:43:13 - django.server - INFO - "GET /get-client-by-id/23/ HTTP/1.1" 200 1327
+2024-11-20 13:43:13 - django.server - INFO - "GET /get-License/ HTTP/1.1" 200 376
+2024-11-20 13:43:13 - main - INFO - super-admin:::Super-Admin
+2024-11-20 13:43:13 - django.server - INFO - "OPTIONS /get-strategies/ HTTP/1.1" 200 0
+2024-11-20 13:43:13 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 1865
+2024-11-20 13:43:13 - django.server - INFO - "GET /get-client-by-id/23/ HTTP/1.1" 200 1327
+2024-11-20 13:43:13 - django.server - INFO - "GET /get-strategies/ HTTP/1.1" 200 1148
+2024-11-20 13:43:13 - django.server - INFO - "GET /get-strategies/ HTTP/1.1" 200 1148
+2024-11-20 13:45:44 - django.server - INFO - "PUT /update-client/23/ HTTP/1.1" 201 1329
+2024-11-21 05:01:45 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-21 05:03:19 - django.server - INFO - "OPTIONS /user-profile/ HTTP/1.1" 200 0
+2024-11-21 05:03:19 - django.server - INFO - "OPTIONS /user-profile/ HTTP/1.1" 200 0
+2024-11-21 05:03:19 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 681
+2024-11-21 05:03:19 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 681
+2024-11-21 05:03:41 - django.server - INFO - "PUT /update-client/23/ HTTP/1.1" 201 1329
+2024-11-21 05:05:31 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-11-21 05:05:35 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-21 05:05:58 - django.server - INFO - "PUT /update-client/23/ HTTP/1.1" 201 1329
+2024-11-21 05:06:32 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-11-21 05:06:35 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-21 05:06:43 - django.request - WARNING - Bad Request: /update-client/23/
+2024-11-21 05:06:43 - django.server - WARNING - "PUT /update-client/23/ HTTP/1.1" 400 39
+2024-11-21 05:09:28 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-11-21 05:09:31 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-21 05:09:36 - django.server - INFO - "PUT /update-client/23/ HTTP/1.1" 201 1329
+2024-11-21 05:09:47 - django.server - INFO - "PUT /update-client/23/ HTTP/1.1" 201 1329
+2024-11-21 05:10:15 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-11-21 05:10:18 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-21 05:10:48 - django.server - INFO - "PUT /update-client/23/ HTTP/1.1" 201 1329
+2024-11-21 05:11:50 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-11-21 05:11:53 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-21 05:11:58 - django.server - INFO - "PUT /update-client/23/ HTTP/1.1" 201 1330
+2024-11-21 05:12:14 - django.server - INFO - "PUT /update-client/23/ HTTP/1.1" 201 1328
+2024-11-21 05:12:36 - django.server - INFO - "PUT /update-client/23/ HTTP/1.1" 201 1330
+2024-11-21 05:12:54 - django.server - INFO - "PUT /update-client/23/ HTTP/1.1" 201 1342
+2024-11-21 05:13:26 - django.request - WARNING - Bad Request: /update-client/23/
+2024-11-21 05:13:26 - django.server - WARNING - "PUT /update-client/23/ HTTP/1.1" 400 83
+2024-11-21 05:13:45 - django.server - INFO - "PUT /update-client/23/ HTTP/1.1" 201 1593
+2024-11-21 05:14:08 - django.server - INFO - "PUT /update-client/23/ HTTP/1.1" 201 1593
+2024-11-21 05:14:36 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-11-21 05:14:39 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-21 05:33:12 - django.server - INFO - "GET /get-client-segments-list/?segment=Option HTTP/1.1" 200 1642
+2024-11-21 05:34:34 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-11-21 05:34:37 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-21 05:35:06 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-11-21 05:35:09 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-21 05:35:14 - django.server - INFO - "GET /get-client-segments-list/?segment=Option HTTP/1.1" 200 1102
+2024-11-21 05:49:26 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-21 05:49:30 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-21 05:49:52 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-21 05:49:55 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-21 05:50:06 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-21 05:50:11 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-21 05:50:19 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-21 05:50:22 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-21 05:50:55 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-21 05:50:58 - django.utils.autoreload - INFO - Watching for file changes with StatReloader

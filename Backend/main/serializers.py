@@ -912,13 +912,12 @@ class ClientListSerializer(serializers.ModelSerializer):
                   'Strategy','client_status','givenservices_to_month','demate_acc_uid','start_date_client', 'end_date_client','is_enable',
                   ]
 
-
 class ClientupdateListSerializer(serializers.ModelSerializer):
     assigned_client = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), required=False)
     # Strategy = StrategySerializer(many=True, read_only=True)
     # Broker = GetBrokerSerializer(read_only=True)  # For reading broker data
     broker_id = serializers.PrimaryKeyRelatedField(source='Broker', queryset=Broker.objects.all(), write_only=True)  # For writing broker data as an ID
-
+    fullName = serializers.CharField(required=True)
     class Meta:
         model = User
         fields = [
@@ -927,6 +926,27 @@ class ClientupdateListSerializer(serializers.ModelSerializer):
             'to_month', 'created_by', 'assigned_client', 'Strategy', 'client_status', 'givenservices_to_month',
             'demate_acc_uid','is_enable',
         ]
+    
+    def update(self, instance, validated_data):
+        # Handle fullName and split it if provided
+        full_name = validated_data.get('fullName')
+        if full_name:
+            # Split full name into first, middle, and last names
+            name_parts = full_name.split()
+            if len(name_parts) >= 2:
+                validated_data['firstName'] = name_parts[0]
+                validated_data['lastName'] = name_parts[-1]
+                if len(name_parts) > 2:
+                    validated_data['middleName'] = ' '.join(name_parts[1:-1])
+                else:
+                    validated_data['middleName'] = None
+            else:
+                raise serializers.ValidationError(
+                    {'fullName': 'Full name must contain at least a first and last name.'}
+                )
+        
+        # Update instance with validated data
+        return super().update(instance, validated_data)    
 
 class StrategyAssignSerializer(serializers.ModelSerializer):
     clients = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), many=True)
@@ -944,7 +964,6 @@ class StrategyAssignSerializer(serializers.ModelSerializer):
         
         # Update the many-to-many field (clients) if provided
         if clients is not None:
-            print("76535")
             instance.clients.set(clients)  # Set the new clients to the strategy
 
         instance.save()
@@ -1000,10 +1019,14 @@ class SubSegmentSerializer(serializers.ModelSerializer):
 class ClientSegementsSerializer(serializers.ModelSerializer):
     segment = SegmentSerializer()  # Use the SegmentSerializer to include all segment details
     sub_segment = SubSegmentSerializer()  # Use the SubSegmentSerializer for sub-segment details
-    client = UserSerializer()  # Include user details using the UserSerializer
+    # client = UserSerializer()  # Include user details using the UserSerializer
 
     class Meta:
         model = ClientTradeSetting
         fields = [
-            'id', 'client', 'segment', 'sub_segment','is_tread_status'
-        ]
+            'id', 'client', 'segment', 'sub_segment','is_tread_status','symbol', 
+            'strategy', 'broker', 'product_type', 'buy_sell', 'quantity', 
+            'trade_limit', 'max_loss_for_day', 'min_loss_for_day', 
+            'max_profit_for_day', 'min_profit_for_day', 'expiry_date', 'is_tread_status']
+
+    

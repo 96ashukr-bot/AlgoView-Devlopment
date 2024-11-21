@@ -14,7 +14,7 @@ from django.utils.encoding import force_bytes, force_str
 from django.core.mail import send_mail
 from django.conf import settings
 import time
-from rest_framework.generics import ListAPIView
+from rest_framework.generics import ListAPIView,UpdateAPIView
 from main.permissions import  IsAdminRole
 from main.tasks import send_kyc_email_async
 from .models import *
@@ -1372,6 +1372,7 @@ class BrokerView(APIView):
         except Broker.DoesNotExist:
             return Response({"detail": "Broker not found."}, status=status.HTTP_404_NOT_FOUND)
 import time
+#Client ADD Api
 class ClientCreateView(APIView):
     permission_classes = [IsAuthenticated]
     
@@ -1488,7 +1489,7 @@ class GetStrategyClientView(APIView):
             return Response({"detail": "client id not found."}, status=status.HTTP_404_NOT_FOUND)
 
         return Response(serializer.data, status=status.HTTP_200_OK)    
-
+#Client penel setting
 class ClientTreadSettingView(APIView):
    
     def get(self, request, pk, *args, **kwargs):
@@ -1520,7 +1521,7 @@ class ClientTreadSettingView(APIView):
         if serializer.is_valid():
             serializer.save()
             return Response(ClientListSerializer(client).data, status=status.HTTP_201_CREATED)
-
+#client expiry list
 class ClientsDataView(APIView):
     def get(self, request, *args, **kwargs):
         try:
@@ -1560,16 +1561,6 @@ class SubSegmentsView(APIView):
         serializer = SubSegmentSerializer(sub_segments, many=True)
         
         return Response({"sub_segments": serializer.data}, status=status.HTTP_200_OK)
-
-from rest_framework import status
-from rest_framework.generics import UpdateAPIView
-from rest_framework.response import Response
-from rest_framework import status
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.generics import UpdateAPIView
-from .models import ClientTradeSetting
-from .serializers import ClientTradeSettingSerializer
 
 class UpdateClientTradeSettingAPIView(UpdateAPIView):
     permission_classes = [IsAuthenticated]
