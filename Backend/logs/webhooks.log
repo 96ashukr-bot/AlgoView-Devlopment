@@ -2256,3 +2256,12 @@ AttributeError: 'UserSerializer' object has no attribute 'get_clients'
 2024-11-21 13:42:16 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
 2024-11-21 13:43:43 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
 2024-11-21 13:43:44 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-21 13:47:39 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-21 13:56:19 - django.server - INFO - "OPTIONS /logout/ HTTP/1.1" 200 0
+2024-11-21 13:56:19 - django.server - INFO - "POST /logout/ HTTP/1.1" 200 31
+2024-11-21 13:57:54 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+2024-11-21 13:57:55 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-21 13:58:11 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+2024-11-21 13:58:11 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-21 13:58:14 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+2024-11-21 13:58:15 - django.utils.autoreload - INFO - Watching for file changes with StatReloader

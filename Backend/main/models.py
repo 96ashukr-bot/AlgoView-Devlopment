@@ -400,9 +400,9 @@ class TradeLog(models.Model):
         return f"Trade log for {self.client.firstName} - {self.symbol} - {self.trade_date}"
 
 class ClientTradeSetting(models.Model):
-    client = models.ForeignKey('User', on_delete=models.SET_NULL, null=True, blank=True)
-    segment = models.ForeignKey('Segment', on_delete=models.SET_NULL, null=True, blank=True)
-    sub_segment = models.ForeignKey('SubSegment', on_delete=models.SET_NULL, null=True, blank=True)
+    client = models.ForeignKey('User', on_delete=models.CASCADE, null=True, blank=True)
+    segment = models.ForeignKey('Segment', on_delete=models.CASCADE, null=True, blank=True)
+    sub_segment = models.ForeignKey('SubSegment',on_delete=models.CASCADE, null=True, blank=True)
   
     # Specific trade settings for the selected segment/sub-segment
     symbol = models.CharField(max_length=50,null=True, blank=True)
