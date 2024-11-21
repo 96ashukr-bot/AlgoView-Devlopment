@@ -543,6 +543,9 @@ class UserSerializer(serializers.ModelSerializer):
     role = RoleSerializer()  # Serializes the Role object into id and name fields
     created_by = CreatedBySerializer()  # Serializes the created_by field with detailed information
     client_count = serializers.IntegerField(read_only=True) 
+    clients = serializers.SerializerMethodField()  # To fetch the list of clients' names
+  # List of clients assigned to the sub-admin
+
     class Meta:
         model = User
         fields = ['id', 'email', 'firstName', 'lastName', 'fullName','middleName','phoneNumber',   
@@ -551,7 +554,13 @@ class UserSerializer(serializers.ModelSerializer):
             'permanent_state', 'permanent_country', 'permanent_zip_code',
             # Current Address Fields
             'current_add_line_1', 'current_add_line_2', 'current_city', 
-            'current_state', 'current_country', 'current_zip_code','role','created_by','is_active','assigned_client','client_count']
+            'current_state', 'current_country', 'current_zip_code','role','created_by','is_active',
+            'assigned_client','client_count','clients']
+    def get_clients(self, obj):
+        # Get the clients assigned to the Sub-Admin
+        # Here, 'assigned_users' is the related field in the User model representing clients
+        clients = obj.assigned_users.all()  # Adjust this according to your actual relationship
+        return [client.fullName for client in clients]    
 class NewUserCreateSerializer(serializers.ModelSerializer):
     role = serializers.PrimaryKeyRelatedField(queryset=Role.objects.all())  # Accepts role ID directly
     class Meta:

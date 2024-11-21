@@ -30,6 +30,8 @@ from main.email import EmailService
 from django.contrib.auth.signals import user_logged_in, user_logged_out
 from django.dispatch import receiver
 from django.db.models import Q
+from django.db.models import Count, Prefetch
+
 USER_ID=config('USER_ID')
 ALICE_API_KEY=config('ALICE_API_KEY')
 import logging
@@ -356,13 +358,18 @@ class UserManagementView(APIView):
     def get(self, request, *args, **kwargs):
         user = request.user 
         if user.role and user.role.name == 'Super-Admin':
-            logger.info(f"super-admin:::{user.role.name}")
-            users = User.objects.filter(type_of_user='is_user').annotate(
+            # Get all Sub-Admins (with role 'Sub-Admin') and prefetch their clients
+            users = User.objects.filter(role__name='Sub-Admin').annotate(
                 client_count=Count('assigned_users')
+            ).prefetch_related(
+                Prefetch('assigned_users', queryset=User.objects.all(), to_attr='assigned_users_list')
             ).order_by('-id')
         else:
-            users = User.objects.filter(type_of_user='is_user', created_by=user).annotate(
+            # Get Sub-Admins that the logged-in user has created, with client count and client list
+            users = User.objects.filter(role__name='Sub-Admin', created_by=user).annotate(
                 client_count=Count('assigned_users')
+            ).prefetch_related(
+                Prefetch('assigned_users', queryset=User.objects.all(), to_attr='assigned_users_list')
             ).order_by('-id')
             logger.info("Admin:::{user.role.name}")
         paginator = CustomPageNumberPagination()
@@ -1600,13 +1607,13 @@ class UpdateClientTradeSettingAPIView(UpdateAPIView):
             # Save the updated trade setting
             serializer.save()
             # Log the update in TradeLog
-            TradeLog.objects.create(
-                client=client,
-                trade_setting=trade_setting,
-                symbol=trade_setting.symbol,
-                is_trade_status =trade_setting.is_tread_status,
-                trade_date=timezone.now()
-            )
+            # TradeLog.objects.create(
+            #     client=client,
+            #     trade_setting=trade_setting,
+            #     symbol=trade_setting.symbol,
+            #     is_trade_status =trade_setting.is_tread_status,
+            #     trade_date=timezone.now()
+            # )
             return Response(serializer.data, status=status.HTTP_200_OK)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -1712,13 +1719,13 @@ class UpdateTradeSettingStatusView(APIView):
                 trade_setting.save()
                 # Serialize and return updated data
                                 # Create a TradeLog entry to record the update
-                TradeLog.objects.create(
-                    client=user,
-                    trade_setting=trade_setting,
-                    symbol=trade_setting.symbol,
-                    is_trade_status=is_trade_status,
-                    trade_date=timezone.now()
-                )
+                # TradeLog.objects.create(
+                #     client=user,
+                #     trade_setting=trade_setting,
+                #     symbol=trade_setting.symbol,
+                #     is_trade_status=is_trade_status,
+                #     trade_date=timezone.now()
+                # )
                 serializer = ClientTradeSettingSerializer(trade_setting)
                 return Response(serializer.data, status=status.HTTP_200_OK)
         except Exception as e:
@@ -1769,13 +1776,13 @@ class UpdateTradeStatusView(APIView):
             with transaction.atomic():
                 trade_setting.is_tread_status = is_trade_status
                 trade_setting.save()
-                TradeLog.objects.create(
-                    client=user,
-                    trade_setting=trade_setting,
-                    symbol=trade_setting.symbol,
-                    is_trade_status=is_trade_status,
-                    trade_date=timezone.now()
-                )
+                # TradeLog.objects.create(
+                #     client=user,
+                #     trade_setting=trade_setting,
+                #     symbol=trade_setting.symbol,
+                #     is_trade_status=is_trade_status,
+                #     trade_date=timezone.now()
+                # )
                 # Serialize and return updated data
                 serializer = ClientTradeSettingSerializer(trade_setting)
                 return Response(serializer.data, status=status.HTTP_200_OK)

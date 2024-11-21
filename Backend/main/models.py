@@ -115,15 +115,6 @@ class User(AbstractBaseUser, PermissionsMixin):
     # assigned_clients = models.ManyToManyField('self', symmetrical=False, related_name='assigned_users', blank=True)
     type_of_user=models.CharField(max_length=255, blank=True, null=True)
     #client penle Run Algo form
-
-    # segments    = models.CharField(max_length=150,blank=True,null=True)
-    # symbol      = models.CharField(max_length=150,blank=True,null=True)
-    # expiry      = models.DateField(null=True, blank=True)
-    # product_type= models.CharField(max_length=150,blank=True,null=True)
-    # buy_or_sell = models.CharField(max_length=150,blank=True,null=True)
-    # quantity    = models.IntegerField(blank=True,null=True)
-    # tread_limit = models.IntegerField(blank=True,null=True)
-    # max_loss    = models.IntegerField(blank=True,null=True)
     objects     = UserManager()
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['firstName','lastName', 'phoneNumber']
@@ -401,8 +392,8 @@ class Broker(models.Model):
 class TradeLog(models.Model):
     client = models.ForeignKey(User, on_delete=models.CASCADE, related_name='trade_logs')
     trade_setting = models.ForeignKey("ClientTradeSetting", on_delete=models.CASCADE, related_name='trade_logs')
-    symbol = models.CharField(max_length=50)
-    is_trade_status = models.BooleanField()
+    symbol = models.CharField(max_length=50,null=True, blank=True)
+    is_trade_status = models.BooleanField(null=True, blank=True)
     trade_date = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
