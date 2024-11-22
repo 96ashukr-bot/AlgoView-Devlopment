@@ -1790,28 +1790,65 @@ class UpdateTradeStatusView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 #Active Inactive clints for specific sub-Admin
 class clientActiveInactiveView(APIView):
+    # Uncomment this if authentication is required
     # permission_classes = [permissions.IsAuthenticated]
+    
     def get(self, request, id, *args, **kwargs):
         try:
-            user = User.objects.filter(Q(id=id) & (Q(role__name='Sub-Admin') | Q(role__name='Admin'))).first()
+            user = User.objects.get(id=id, role__name='Sub-Admin')
         except User.DoesNotExist:
             return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
-
+        
         current_date = timezone.now().date()
 
-        # Retrieve active clients
-        active_clients = user.assigned_users.filter(
-            type_of_user='is_client', is_client=True, end_date_client__gte=current_date
-        ).values('id', 'email', 'fullName')
+        try:
+            # Retrieve active clients and update client_status to True
+            active_clients = user.assigned_users.filter(
+                type_of_user='is_client', is_client=True, end_date_client__gt=current_date
+            )
+            active_clients.update(client_status=True)
+            
+            active_clients_list = [
+                {
+                    "id": client.id,
+                    "email": client.email,
+                    "client_name": client.fullName,
+                    "assigned_client_name": user.fullName,
+                    "client_status": "active",  # Should now be True
+                    "client_phone": client.phoneNumber
+                }
+                for client in active_clients
+            ]
+        except Exception as e:
+            return Response({"error": "Error fetching active clients", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
-        # Retrieve inactive clients
-        inactive_clients = user.assigned_users.filter(
-            type_of_user='is_client', is_client=True, end_date_client__lte=current_date
-        ).values('id', 'email', 'fullName')
-
-        # Serialize user data with clients
-        user_data = UserclientSerializer(user).data
-        user_data['active_clients'] = list(active_clients)  # Convert queryset to list for serialization
-        user_data['inactive_clients'] = list(inactive_clients)  # Convert queryset to list for serialization
+        try:
+            # Retrieve inactive clients and update client_status to False
+            inactive_clients = user.assigned_users.filter(
+                type_of_user='is_client', is_client=True, end_date_client__lte=current_date
+            )
+            inactive_clients.update(client_status=False)
+            
+            inactive_clients_list = [
+                {
+                    "id": client.id,
+                    "email": client.email,
+                    "client_name": client.fullName,
+                    "assigned_client_name": user.fullName,
+                    "client_status": "inactive",  # Should now be False
+                    "client_phone": client.phoneNumber
+                }
+                for client in inactive_clients
+            ]
+        except Exception as e:
+            return Response({"error": "Error fetching inactive clients", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        try:
+            # Serialize user data with active and inactive clients
+            user_data = UserclientSerializer(user).data
+            user_data['active_clients'] = active_clients_list
+            user_data['inactive_clients'] = inactive_clients_list
+        except Exception as e:
+            return Response({"error": "Error serializing user data", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         return Response(user_data, status=status.HTTP_200_OK)

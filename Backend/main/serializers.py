@@ -1081,8 +1081,7 @@ class TreadLogSerializer(serializers.ModelSerializer):
     class Meta:
         model=TradeLog
         fileds=['client','trade_setting','symbol','is_trade_status','trade_date']    
-from rest_framework import serializers
-from .models import User
+
 
 class UserclientSerializer(serializers.ModelSerializer):
     class Meta:
