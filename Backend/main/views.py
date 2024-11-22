@@ -366,11 +366,9 @@ class UserManagementView(APIView):
             ).order_by('-id')
         else:
             # Get Sub-Admins that the logged-in user has created, with client count and client list
-            users = User.objects.filter(role__name='Sub-Admin', created_by=user).annotate(
-                client_count=Count('assigned_users')
-            ).prefetch_related(
-                Prefetch('assigned_users', queryset=User.objects.all(), to_attr='assigned_users_list')
-            ).order_by('-id')
+            users = User.objects.filter(role__name='Sub-Admin', id=user.id)
+            # .annotate(client_count=Count('assigned_users')).prefetch_related(
+            #     Prefetch('assigned_users', queryset=User.objects.all(), to_attr='assigned_users_list') ).order_by('-id')
             logger.info("Admin:::{user.role.name}")
         paginator = CustomPageNumberPagination()
         result_page = paginator.paginate_queryset(users, request)
@@ -1719,13 +1717,13 @@ class UpdateTradeSettingStatusView(APIView):
                 trade_setting.save()
                 # Serialize and return updated data
                                 # Create a TradeLog entry to record the update
-                # TradeLog.objects.create(
-                #     client=user,
-                #     trade_setting=trade_setting,
-                #     symbol=trade_setting.symbol,
-                #     is_trade_status=is_trade_status,
-                #     trade_date=timezone.now()
-                # )
+                TradeLog.objects.create(
+                    client=user,
+                    trade_setting=trade_setting,
+                    symbol=trade_setting.symbol,
+                    is_trade_status=is_trade_status,
+                    trade_date=timezone.now()
+                )
                 serializer = ClientTradeSettingSerializer(trade_setting)
                 return Response(serializer.data, status=status.HTTP_200_OK)
         except Exception as e:
@@ -1776,13 +1774,13 @@ class UpdateTradeStatusView(APIView):
             with transaction.atomic():
                 trade_setting.is_tread_status = is_trade_status
                 trade_setting.save()
-                # TradeLog.objects.create(
-                #     client=user,
-                #     trade_setting=trade_setting,
-                #     symbol=trade_setting.symbol,
-                #     is_trade_status=is_trade_status,
-                #     trade_date=timezone.now()
-                # )
+                TradeLog.objects.create(
+                    client=user,
+                    trade_setting=trade_setting,
+                    symbol=trade_setting.symbol,
+                    is_trade_status=is_trade_status,
+                    trade_date=timezone.now()
+                )
                 # Serialize and return updated data
                 serializer = ClientTradeSettingSerializer(trade_setting)
                 return Response(serializer.data, status=status.HTTP_200_OK)
@@ -1816,7 +1814,9 @@ class clientActiveInactiveView(APIView):
                     "client_name": client.fullName,
                     "assigned_client_name": user.fullName,
                     "client_status": "active",
-                    "client_phone": client.phoneNumber
+                    "client_phone": client.phoneNumber,
+                    "start_date_client":client.start_date_client,
+                    "end_date_client"  :  client.end_date_client,
                 }
                 for client in active_clients
             ]
@@ -1838,7 +1838,9 @@ class clientActiveInactiveView(APIView):
                     "client_name": client.fullName,
                     "assigned_client_name": user.fullName,
                     "client_status": "inactive",
-                    "client_phone": client.phoneNumber
+                    "client_phone": client.phoneNumber,
+                    "start_date_client":client.start_date_client,
+                    "end_date_client"  :  client.end_date_client,
                 }
                 for client in inactive_clients
             ]
@@ -1874,18 +1876,14 @@ class ClientsByGroupServiceView(APIView):
                 "client_status": "active" if client.client_status else "inactive",
                 "start_date_client":client.start_date_client,
                 "end_date_client"  :  client.end_date_client,
+                
             }
             for client in clients
         ]
 
         return Response({"group_service": group_service.group_name, "clients": client_data}, status=status.HTTP_200_OK)
 
-from django.utils import timezone
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from django.db.models import Q
+#all active clients for dashboard
 
 class ActiveClientsView(APIView):
     permission_classes = [IsAuthenticated]
