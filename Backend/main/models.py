@@ -96,7 +96,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     Group_service = models.ForeignKey('GroupService', on_delete=models.SET_NULL, null=True, blank=True, related_name='group_Service')
     Broker=models.ForeignKey('Broker', on_delete=models.SET_NULL,null=True, blank=True,  related_name='group_Broker')
     license=models.ForeignKey('License', on_delete=models.SET_NULL, null=True, blank=True, related_name='client_license')
-    to_month=models.CharField(max_length=20, null=True, blank=True)
+    to_month=models.IntegerField(null=True, blank=True)
     # Hierarchy tracking
     created_by = models.ForeignKey('self', null=True, blank=True, on_delete=models.SET_NULL, related_name='created_users')    
 
@@ -154,14 +154,14 @@ class User(AbstractBaseUser, PermissionsMixin):
             if self.to_month:
                 print("inside to month......")
                 try:
-                    if "month" in self.to_month:
-                        months = int(self.to_month.split()[0])
+                    if self.to_month:
+                        months = int(self.to_month)
                         self.start_date_client = today.date()
                         self.end_date_client = (today + relativedelta(months=months)).date()
-                    elif "day" in self.to_month:
-                        days = int(self.to_month.split()[0])
-                        self.start_date_client = today.date()
-                        self.end_date_client = (today + timedelta(days=days)).date()
+                    # elif "day" in self.to_month:
+                    #     days = int(self.to_month.split()[0])
+                    #     self.start_date_client = today.date()
+                    #     self.end_date_client = (today + timedelta(days=days)).date()
                     else:
                         # Handle unexpected format by setting dates to None
                         self.start_date_client = None
