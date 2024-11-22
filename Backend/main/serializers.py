@@ -1085,13 +1085,10 @@ from rest_framework import serializers
 from .models import User
 
 class UserclientSerializer(serializers.ModelSerializer):
-    client_count = serializers.IntegerField(read_only=True)  # Dynamically calculated field
-
     class Meta:
         model = User
         fields = [
-            'id', 'email', 'firstName', 'middleName', 'lastName', 'fullName', 'phoneNumber',
-            'client_key', 'assigned_client', 'client_status', 'start_date_client', 'end_date_client',
-            'is_enable', 'client_count',  # Include client_count in the serialized output
+            'id', 'email', 'firstName', 'middleName', 'lastName', 'fullName', 'phoneNumber','assigned_client', 
+            'is_enable', 'is_active', 
         ]
         

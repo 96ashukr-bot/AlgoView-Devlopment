@@ -2265,3 +2265,645 @@ AttributeError: 'UserSerializer' object has no attribute 'get_clients'
 2024-11-21 13:58:11 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
 2024-11-21 13:58:14 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
 2024-11-21 13:58:15 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 04:58:29 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 05:02:27 - django.server - INFO - "GET /admin/ HTTP/1.1" 200 20679
+2024-11-22 05:02:28 - django.request - WARNING - Not Found: /favicon.ico
+2024-11-22 05:02:28 - django.server - WARNING - "GET /favicon.ico HTTP/1.1" 404 19350
+2024-11-22 05:07:42 - django.server - INFO - "GET /admin/main/clienttradesetting/ HTTP/1.1" 200 18319
+2024-11-22 05:07:42 - django.server - INFO - "GET /static/admin/js/vendor/jquery/jquery.js HTTP/1.1" 200 292458
+2024-11-22 05:07:42 - django.server - INFO - "GET /static/admin/js/vendor/xregexp/xregexp.js HTTP/1.1" 200 232381
+2024-11-22 05:07:42 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-22 05:07:47 - django.server - INFO - "GET /admin/main/clienttradesetting/1/change/ HTTP/1.1" 200 30621
+2024-11-22 05:07:47 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-22 05:07:55 - django.request - ERROR - Internal Server Error: /admin/main/clienttradesetting/1/change/
+Traceback (most recent call last):
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/contrib/admin/options.py", line 688, in wrapper
+    return self.admin_site.admin_view(view)(*args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/utils/decorators.py", line 134, in _wrapper_view
+    response = view_func(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/views/decorators/cache.py", line 62, in _wrapper_view_func
+    response = view_func(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/contrib/admin/sites.py", line 242, in inner
+    return view(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/contrib/admin/options.py", line 1889, in change_view
+    return self.changeform_view(request, object_id, form_url, extra_context)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/utils/decorators.py", line 46, in _wrapper
+    return bound_method(*args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/utils/decorators.py", line 134, in _wrapper_view
+    response = view_func(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/contrib/admin/options.py", line 1747, in changeform_view
+    return self._changeform_view(request, object_id, form_url, extra_context)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/contrib/admin/options.py", line 1807, in _changeform_view
+    self.log_change(request, new_object, change_message)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/contrib/admin/options.py", line 943, in log_change
+    object_repr=str(obj),
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py", line 429, in __str__
+    return f"Trade Setting for {self.client.email} in {self.segment.name} - {self.sub_segment.name}"
+AttributeError: 'NoneType' object has no attribute 'email'
+2024-11-22 05:07:55 - django.server - ERROR - "POST /admin/main/clienttradesetting/1/change/ HTTP/1.1" 500 124871
+2024-11-22 05:07:59 - django.server - INFO - "GET /admin/main/clienttradesetting/1/change/ HTTP/1.1" 200 30621
+2024-11-22 05:08:06 - django.server - INFO - "POST /admin/main/clienttradesetting/1/change/ HTTP/1.1" 302 0
+2024-11-22 05:08:07 - django.server - INFO - "GET /admin/main/clienttradesetting/ HTTP/1.1" 200 18595
+2024-11-22 05:08:07 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-22 05:09:57 - django.server - INFO - "GET /admin/main/clienttradesetting/2/change/ HTTP/1.1" 200 30454
+2024-11-22 05:09:57 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-22 05:10:04 - django.request - ERROR - Internal Server Error: /admin/main/clienttradesetting/2/change/
+Traceback (most recent call last):
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/contrib/admin/options.py", line 688, in wrapper
+    return self.admin_site.admin_view(view)(*args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/utils/decorators.py", line 134, in _wrapper_view
+    response = view_func(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/views/decorators/cache.py", line 62, in _wrapper_view_func
+    response = view_func(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/contrib/admin/sites.py", line 242, in inner
+    return view(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/contrib/admin/options.py", line 1889, in change_view
+    return self.changeform_view(request, object_id, form_url, extra_context)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/utils/decorators.py", line 46, in _wrapper
+    return bound_method(*args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/utils/decorators.py", line 134, in _wrapper_view
+    response = view_func(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/contrib/admin/options.py", line 1747, in changeform_view
+    return self._changeform_view(request, object_id, form_url, extra_context)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/contrib/admin/options.py", line 1807, in _changeform_view
+    self.log_change(request, new_object, change_message)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/contrib/admin/options.py", line 943, in log_change
+    object_repr=str(obj),
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py", line 429, in __str__
+    return f"Trade Setting for {self.client.email} in {self.segment.name} - {self.sub_segment.name}"
+AttributeError: 'NoneType' object has no attribute 'email'
+2024-11-22 05:10:04 - django.server - ERROR - "POST /admin/main/clienttradesetting/2/change/ HTTP/1.1" 500 124938
+2024-11-22 05:10:09 - django.server - INFO - "GET /admin/main/clienttradesetting/2/change/ HTTP/1.1" 200 30454
+2024-11-22 05:10:16 - django.server - INFO - "GET /admin/main/clienttradesetting/ HTTP/1.1" 200 18319
+2024-11-22 05:11:30 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+2024-11-22 05:11:34 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 05:12:02 - django.server - INFO - "GET /admin/main/ HTTP/1.1" 200 13152
+2024-11-22 05:12:05 - django.server - INFO - "GET /admin/main/user/ HTTP/1.1" 200 27659
+2024-11-22 05:12:05 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-22 05:12:54 - django.server - INFO - "GET /admin/main/user/2/change/ HTTP/1.1" 200 54424
+2024-11-22 05:12:54 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-22 05:12:58 - django.server - INFO - "GET /admin/main/user/2/password/ HTTP/1.1" 200 16264
+2024-11-22 05:13:14 - django.server - INFO - "POST /admin/main/user/2/password/ HTTP/1.1" 302 0
+2024-11-22 05:13:15 - django.server - INFO - "GET /admin/main/user/2/change/ HTTP/1.1" 200 54560
+2024-11-22 05:13:15 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-22 05:13:55 - django.server - INFO - "POST /admin/main/user/2/change/ HTTP/1.1" 302 0
+2024-11-22 05:13:56 - django.server - INFO - "GET /admin/main/user/2/change/ HTTP/1.1" 200 54659
+2024-11-22 05:13:56 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-22 05:16:55 - django.server - INFO - "GET /get-client-by-id/7/ HTTP/1.1" 200 1434
+2024-11-22 05:17:45 - django.server - INFO - "OPTIONS /login/ HTTP/1.1" 200 0
+2024-11-22 05:17:47 - django.request - WARNING - Bad Request: /login/
+2024-11-22 05:17:47 - django.server - WARNING - "POST /login/ HTTP/1.1" 400 44
+2024-11-22 05:18:15 - django.request - WARNING - Bad Request: /login/
+2024-11-22 05:18:15 - django.server - WARNING - "POST /login/ HTTP/1.1" 400 44
+2024-11-22 05:18:34 - django.server - INFO - "GET /admin/main/user/ HTTP/1.1" 200 27658
+2024-11-22 05:18:34 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-22 05:18:51 - django.server - INFO - "POST /login/ HTTP/1.1" 200 737
+2024-11-22 05:18:52 - django.server - INFO - "OPTIONS /user-profile/ HTTP/1.1" 200 0
+2024-11-22 05:18:52 - django.server - INFO - "OPTIONS /user-profile/ HTTP/1.1" 200 0
+2024-11-22 05:18:52 - django.server - INFO - "OPTIONS /user-last-login/ HTTP/1.1" 200 0
+2024-11-22 05:18:52 - django.server - INFO - "OPTIONS /get-city-data/ HTTP/1.1" 200 0
+2024-11-22 05:18:52 - django.server - INFO - "OPTIONS /get-state-data/ HTTP/1.1" 200 0
+2024-11-22 05:18:52 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 696
+2024-11-22 05:18:52 - django.server - INFO - "GET /user-last-login/ HTTP/1.1" 200 94
+2024-11-22 05:18:52 - django.server - INFO - "GET /get-city-data/ HTTP/1.1" 200 30
+2024-11-22 05:18:52 - django.server - INFO - "GET /get-state-data/ HTTP/1.1" 200 29
+2024-11-22 05:18:52 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 696
+2024-11-22 05:18:53 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 696
+2024-11-22 05:18:58 - django.server - INFO - "OPTIONS /get-broker/ HTTP/1.1" 200 0
+2024-11-22 05:18:58 - django.server - INFO - "OPTIONS /get-group-service/ HTTP/1.1" 200 0
+2024-11-22 05:18:58 - django.server - INFO - "OPTIONS /users-list/ HTTP/1.1" 200 0
+2024-11-22 05:18:58 - django.server - INFO - "OPTIONS /get-License/ HTTP/1.1" 200 0
+2024-11-22 05:18:58 - django.server - INFO - "OPTIONS /get-License/ HTTP/1.1" 200 0
+2024-11-22 05:18:58 - django.server - INFO - "OPTIONS /users-list/ HTTP/1.1" 200 0
+2024-11-22 05:18:58 - django.server - INFO - "GET /get-broker/ HTTP/1.1" 200 316
+2024-11-22 05:18:58 - main - DEBUG - GroupServiceView GET request received
+2024-11-22 05:18:58 - django.server - INFO - "GET /get-group-service/ HTTP/1.1" 200 496
+2024-11-22 05:18:58 - django.server - INFO - "GET /get-License/ HTTP/1.1" 200 376
+2024-11-22 05:18:58 - main - INFO - Admin:::{user.role.name}
+2024-11-22 05:18:59 - main - DEBUG - GroupServiceView GET request received
+2024-11-22 05:18:59 - django.server - INFO - "GET /get-broker/ HTTP/1.1" 200 316
+2024-11-22 05:18:59 - django.server - INFO - "GET /get-License/ HTTP/1.1" 200 376
+2024-11-22 05:18:59 - django.server - INFO - "GET /get-group-service/ HTTP/1.1" 200 496
+2024-11-22 05:18:59 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 709
+2024-11-22 05:18:59 - main - INFO - Admin:::{user.role.name}
+2024-11-22 05:18:59 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 709
+2024-11-22 05:18:59 - django.server - INFO - "OPTIONS /get-client-list/ HTTP/1.1" 200 0
+2024-11-22 05:18:59 - django.server - INFO - "OPTIONS /get-client-list/ HTTP/1.1" 200 0
+2024-11-22 05:19:00 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 4126
+2024-11-22 05:19:00 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 4126
+2024-11-22 05:19:21 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 4126
+2024-11-22 05:19:25 - django.server - INFO - "OPTIONS /logout/ HTTP/1.1" 200 0
+2024-11-22 05:19:26 - django.server - INFO - "POST /logout/ HTTP/1.1" 200 31
+2024-11-22 05:19:37 - django.server - INFO - "POST /login/ HTTP/1.1" 200 738
+2024-11-22 05:19:37 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 681
+2024-11-22 05:19:38 - django.server - INFO - "GET /user-last-login/ HTTP/1.1" 200 94
+2024-11-22 05:19:38 - django.server - INFO - "GET /get-city-data/ HTTP/1.1" 200 30
+2024-11-22 05:19:38 - django.server - INFO - "GET /get-state-data/ HTTP/1.1" 200 29
+2024-11-22 05:19:38 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 681
+2024-11-22 05:19:38 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 681
+2024-11-22 05:19:44 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 2748
+2024-11-22 05:19:44 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 2748
+2024-11-22 05:20:50 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 6257
+2024-11-22 05:20:50 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 6257
+2024-11-22 05:21:00 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 6257
+2024-11-22 05:21:01 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 6257
+2024-11-22 05:21:03 - django.server - INFO - "OPTIONS /get-client-by-id/26/ HTTP/1.1" 200 0
+2024-11-22 05:21:03 - django.server - INFO - "OPTIONS /get-client-by-id/26/ HTTP/1.1" 200 0
+2024-11-22 05:21:03 - django.server - INFO - "GET /get-broker/ HTTP/1.1" 200 316
+2024-11-22 05:21:03 - main - DEBUG - GroupServiceView GET request received
+2024-11-22 05:21:03 - django.server - INFO - "GET /get-group-service/ HTTP/1.1" 200 496
+2024-11-22 05:21:03 - django.server - INFO - "GET /get-License/ HTTP/1.1" 200 376
+2024-11-22 05:21:03 - main - DEBUG - GroupServiceView GET request received
+2024-11-22 05:21:03 - django.server - INFO - "GET /get-broker/ HTTP/1.1" 200 316
+2024-11-22 05:21:03 - django.server - INFO - "GET /get-client-by-id/26/ HTTP/1.1" 200 1320
+2024-11-22 05:21:03 - django.server - INFO - "GET /get-group-service/ HTTP/1.1" 200 496
+2024-11-22 05:21:04 - django.server - INFO - "GET /get-License/ HTTP/1.1" 200 376
+2024-11-22 05:21:04 - django.server - INFO - "OPTIONS /get-strategies/ HTTP/1.1" 200 0
+2024-11-22 05:21:04 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 2748
+2024-11-22 05:21:04 - django.server - INFO - "GET /get-client-by-id/26/ HTTP/1.1" 200 1320
+2024-11-22 05:21:04 - django.server - INFO - "GET /get-strategies/ HTTP/1.1" 200 1148
+2024-11-22 05:21:05 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 2748
+2024-11-22 05:21:05 - django.server - INFO - "GET /get-strategies/ HTTP/1.1" 200 1148
+2024-11-22 05:21:08 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 6257
+2024-11-22 05:21:09 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 6257
+2024-11-22 05:21:21 - django.server - INFO - "OPTIONS /get-client-by-id/7/ HTTP/1.1" 200 0
+2024-11-22 05:21:21 - django.server - INFO - "OPTIONS /get-client-by-id/7/ HTTP/1.1" 200 0
+2024-11-22 05:21:21 - django.server - INFO - "GET /get-broker/ HTTP/1.1" 200 316
+2024-11-22 05:21:21 - main - DEBUG - GroupServiceView GET request received
+2024-11-22 05:21:21 - django.server - INFO - "GET /get-group-service/ HTTP/1.1" 200 496
+2024-11-22 05:21:21 - django.server - INFO - "GET /get-License/ HTTP/1.1" 200 376
+2024-11-22 05:21:22 - main - DEBUG - GroupServiceView GET request received
+2024-11-22 05:21:22 - django.server - INFO - "GET /get-broker/ HTTP/1.1" 200 316
+2024-11-22 05:21:22 - django.server - INFO - "GET /get-client-by-id/7/ HTTP/1.1" 200 1434
+2024-11-22 05:21:22 - django.server - INFO - "GET /get-group-service/ HTTP/1.1" 200 496
+2024-11-22 05:21:22 - django.server - INFO - "GET /get-License/ HTTP/1.1" 200 376
+2024-11-22 05:21:22 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 2748
+2024-11-22 05:21:22 - django.server - INFO - "GET /get-client-by-id/7/ HTTP/1.1" 200 1434
+2024-11-22 05:21:22 - django.server - INFO - "GET /get-strategies/ HTTP/1.1" 200 1148
+2024-11-22 05:21:22 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 2748
+2024-11-22 05:21:22 - django.server - INFO - "GET /get-strategies/ HTTP/1.1" 200 1148
+2024-11-22 05:21:25 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 6257
+2024-11-22 05:21:25 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 6257
+2024-11-22 05:21:30 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 6257
+2024-11-22 05:21:31 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 6257
+2024-11-22 05:21:32 - django.server - INFO - "OPTIONS /get-client-by-id/23/ HTTP/1.1" 200 0
+2024-11-22 05:21:32 - main - DEBUG - GroupServiceView GET request received
+2024-11-22 05:21:32 - django.server - INFO - "GET /get-broker/ HTTP/1.1" 200 316
+2024-11-22 05:21:32 - django.server - INFO - "GET /get-group-service/ HTTP/1.1" 200 496
+2024-11-22 05:21:33 - django.server - INFO - "GET /get-License/ HTTP/1.1" 200 376
+2024-11-22 05:21:33 - main - DEBUG - GroupServiceView GET request received
+2024-11-22 05:21:33 - django.server - INFO - "GET /get-group-service/ HTTP/1.1" 200 496
+2024-11-22 05:21:33 - django.server - INFO - "GET /get-client-by-id/23/ HTTP/1.1" 200 1318
+2024-11-22 05:21:33 - django.server - INFO - "GET /get-broker/ HTTP/1.1" 200 316
+2024-11-22 05:21:33 - django.server - INFO - "GET /get-License/ HTTP/1.1" 200 376
+2024-11-22 05:21:33 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 2748
+2024-11-22 05:21:34 - django.server - INFO - "GET /get-client-by-id/23/ HTTP/1.1" 200 1318
+2024-11-22 05:21:34 - django.server - INFO - "GET /get-strategies/ HTTP/1.1" 200 1148
+2024-11-22 05:21:34 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 2748
+2024-11-22 05:21:34 - django.server - INFO - "GET /get-strategies/ HTTP/1.1" 200 1148
+2024-11-22 05:21:37 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 6257
+2024-11-22 05:21:37 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 6257
+2024-11-22 05:26:44 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-22 05:26:50 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 05:27:31 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-22 05:27:35 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 05:32:36 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-22 05:32:39 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 05:33:04 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-22 05:33:09 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 05:34:18 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-22 05:34:22 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 05:34:34 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-22 05:34:37 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 05:35:01 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-22 05:35:06 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 05:35:31 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-22 05:35:35 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 05:36:46 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/urls.py changed, reloading.
+2024-11-22 05:36:51 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 05:37:05 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-22 05:37:09 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 05:37:21 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/urls.py changed, reloading.
+2024-11-22 05:37:24 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 05:37:56 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-22 05:38:00 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 05:38:29 - django.server - INFO - "GET /inactive-clients/2/ HTTP/1.1" 200 715
+2024-11-22 05:39:05 - main - DEBUG - GroupServiceView GET request received
+2024-11-22 05:39:05 - django.server - INFO - "GET /get-group-service/ HTTP/1.1" 200 496
+2024-11-22 05:39:05 - django.server - INFO - "GET /get-broker/ HTTP/1.1" 200 316
+2024-11-22 05:39:05 - django.server - INFO - "GET /get-License/ HTTP/1.1" 200 376
+2024-11-22 05:39:05 - main - DEBUG - GroupServiceView GET request received
+2024-11-22 05:39:05 - django.server - INFO - "GET /get-client-by-id/7/ HTTP/1.1" 200 1434
+2024-11-22 05:39:05 - django.server - INFO - "GET /get-broker/ HTTP/1.1" 200 316
+2024-11-22 05:39:05 - django.server - INFO - "GET /get-group-service/ HTTP/1.1" 200 496
+2024-11-22 05:39:05 - django.server - INFO - "GET /get-License/ HTTP/1.1" 200 376
+2024-11-22 05:39:05 - django.server - INFO - "GET /get-client-by-id/7/ HTTP/1.1" 200 1434
+2024-11-22 05:39:05 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 2748
+2024-11-22 05:39:05 - django.server - INFO - "GET /get-strategies/ HTTP/1.1" 200 1148
+2024-11-22 05:39:05 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 2748
+2024-11-22 05:39:05 - django.server - INFO - "GET /get-strategies/ HTTP/1.1" 200 1148
+2024-11-22 05:39:13 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 6257
+2024-11-22 05:39:13 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 6257
+2024-11-22 05:39:22 - django.server - INFO - "GET /admin/main/user/7/change/ HTTP/1.1" 200 54490
+2024-11-22 05:39:22 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-22 05:39:44 - django.server - INFO - "POST /admin/main/user/7/change/ HTTP/1.1" 302 0
+2024-11-22 05:39:44 - django.server - INFO - "GET /admin/main/user/ HTTP/1.1" 200 27868
+2024-11-22 05:39:44 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-22 05:39:49 - django.server - INFO - "GET /inactive-clients/2/ HTTP/1.1" 200 715
+2024-11-22 05:39:52 - django.server - INFO - "GET /inactive-clients/2/ HTTP/1.1" 200 715
+2024-11-22 05:40:13 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-22 05:40:14 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 05:40:24 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-22 05:40:25 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 05:40:34 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-22 05:40:35 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 05:40:41 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-22 05:40:42 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 05:40:44 - django.request - ERROR - Internal Server Error: /inactive-clients/2/
+Traceback (most recent call last):
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/views/decorators/csrf.py", line 56, in wrapper_view
+    return view_func(*args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/views/generic/base.py", line 104, in view
+    return self.dispatch(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py", line 1845, in get
+    user_data['active_clients'] = [client.fullName for client in active_clients]
+TypeError: 'UserSerializer' object does not support item assignment
+2024-11-22 05:40:44 - django.server - ERROR - "GET /inactive-clients/2/ HTTP/1.1" 500 101096
+2024-11-22 05:41:01 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-22 05:41:01 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 05:41:10 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-22 05:41:11 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 05:41:41 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-22 05:41:42 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 05:41:52 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-22 05:41:53 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 05:41:55 - django.server - INFO - "GET /inactive-clients/2/ HTTP/1.1" 200 681
+2024-11-22 05:42:19 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-22 05:42:20 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 05:42:26 - django.request - ERROR - Internal Server Error: /inactive-clients/2/
+Traceback (most recent call last):
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/views/decorators/csrf.py", line 56, in wrapper_view
+    return view_func(*args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/views/generic/base.py", line 104, in view
+    return self.dispatch(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py", line 1839, in get
+    inactive_clients = user.assigned_client.filter(
+AttributeError: 'NoneType' object has no attribute 'filter'
+2024-11-22 05:42:26 - django.server - ERROR - "GET /inactive-clients/2/ HTTP/1.1" 500 97915
+2024-11-22 05:43:47 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-22 05:43:47 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 05:44:54 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-22 05:44:55 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 05:45:00 - django.server - INFO - "GET /inactive-clients/2/ HTTP/1.1" 200 681
+2024-11-22 05:45:11 - django.server - INFO - "GET /admin/main/user/7/change/ HTTP/1.1" 200 54490
+2024-11-22 05:45:11 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-22 05:45:39 - django.server - INFO - "POST /admin/main/user/7/change/ HTTP/1.1" 302 0
+2024-11-22 05:45:40 - django.server - INFO - "GET /admin/main/user/7/change/ HTTP/1.1" 200 54729
+2024-11-22 05:45:40 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-22 05:46:08 - django.server - INFO - "POST /admin/main/user/7/change/ HTTP/1.1" 302 0
+2024-11-22 05:46:08 - django.server - INFO - "GET /admin/main/user/7/change/ HTTP/1.1" 200 54729
+2024-11-22 05:46:08 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-22 05:46:28 - django.server - INFO - "POST /admin/main/user/7/change/ HTTP/1.1" 302 0
+2024-11-22 05:46:29 - django.server - INFO - "GET /admin/main/user/7/change/ HTTP/1.1" 200 54729
+2024-11-22 05:46:29 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-22 05:46:56 - django.server - INFO - "GET /admin/main/user/7/change/ HTTP/1.1" 200 54490
+2024-11-22 05:47:00 - django.server - INFO - "OPTIONS /get-client-by-id/24/ HTTP/1.1" 200 0
+2024-11-22 05:47:00 - django.server - INFO - "OPTIONS /get-client-by-id/24/ HTTP/1.1" 200 0
+2024-11-22 05:47:00 - django.server - INFO - "GET /get-broker/ HTTP/1.1" 200 316
+2024-11-22 05:47:00 - main - DEBUG - GroupServiceView GET request received
+2024-11-22 05:47:00 - django.server - INFO - "GET /get-group-service/ HTTP/1.1" 200 496
+2024-11-22 05:47:00 - django.server - INFO - "GET /get-client-by-id/24/ HTTP/1.1" 200 1671
+2024-11-22 05:47:00 - main - DEBUG - GroupServiceView GET request received
+2024-11-22 05:47:00 - django.server - INFO - "GET /get-broker/ HTTP/1.1" 200 316
+2024-11-22 05:47:00 - django.server - INFO - "GET /get-License/ HTTP/1.1" 200 376
+2024-11-22 05:47:00 - django.server - INFO - "GET /get-group-service/ HTTP/1.1" 200 496
+2024-11-22 05:47:00 - django.server - INFO - "GET /get-License/ HTTP/1.1" 200 376
+2024-11-22 05:47:00 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 2748
+2024-11-22 05:47:00 - django.server - INFO - "GET /get-client-by-id/24/ HTTP/1.1" 200 1671
+2024-11-22 05:47:00 - django.server - INFO - "GET /get-strategies/ HTTP/1.1" 200 1148
+2024-11-22 05:47:00 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 2748
+2024-11-22 05:47:00 - django.server - INFO - "GET /get-strategies/ HTTP/1.1" 200 1148
+2024-11-22 05:47:34 - django.server - INFO - "GET /admin/main/user/ HTTP/1.1" 200 27658
+2024-11-22 05:47:34 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-22 05:47:38 - django.server - INFO - "GET /admin/main/user/24/change/ HTTP/1.1" 200 54476
+2024-11-22 05:47:38 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-22 05:47:55 - django.server - INFO - "POST /admin/main/user/24/change/ HTTP/1.1" 302 0
+2024-11-22 05:47:55 - django.server - INFO - "GET /admin/main/user/24/change/ HTTP/1.1" 200 54716
+2024-11-22 05:47:55 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-22 05:48:56 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 2748
+2024-11-22 05:48:56 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 2748
+2024-11-22 05:54:10 - django.server - INFO - "GET /admin/main/user/ HTTP/1.1" 200 27658
+2024-11-22 05:54:11 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-22 05:54:21 - django.server - INFO - "GET /inactive-clients/21/ HTTP/1.1" 200 713
+2024-11-22 05:56:01 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-11-22 05:56:02 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 05:56:09 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-22 05:56:09 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 05:56:14 - django.request - ERROR - Internal Server Error: /inactive-clients/21/
+Traceback (most recent call last):
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/views/decorators/csrf.py", line 56, in wrapper_view
+    return view_func(*args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/views/generic/base.py", line 104, in view
+    return self.dispatch(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py", line 1844, in get
+    user_data = UserclientSerializer(user).data
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/serializers.py", line 571, in data
+    ret = super().data
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/serializers.py", line 249, in data
+    self._data = self.to_representation(self.instance)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/serializers.py", line 523, in to_representation
+    for field in fields:
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/serializers.py", line 384, in _readable_fields
+    for field in self.fields.values():
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/utils/functional.py", line 57, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/serializers.py", line 372, in fields
+    for key, value in self.get_fields().items():
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/serializers.py", line 1079, in get_fields
+    field_names = self.get_field_names(declared_fields, info)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/serializers.py", line 1175, in get_field_names
+    assert field_name in fields, (
+AssertionError: The field 'client_count' was declared on serializer UserclientSerializer, but has not been included in the 'fields' option.
+2024-11-22 05:56:14 - django.server - ERROR - "GET /inactive-clients/21/ HTTP/1.1" 500 144157
+2024-11-22 05:56:27 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-11-22 05:56:28 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 05:56:29 - django.server - INFO - "GET /inactive-clients/21/ HTTP/1.1" 200 331
+2024-11-22 05:56:48 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-22 05:56:49 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 05:56:51 - django.request - ERROR - Internal Server Error: /inactive-clients/21/
+Traceback (most recent call last):
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/fields.py", line 437, in get_attribute
+    return get_attribute(instance, self.source_attrs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/fields.py", line 104, in get_attribute
+    instance = getattr(instance, attr)
+AttributeError: 'QuerySet' object has no attribute 'email'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/views/decorators/csrf.py", line 56, in wrapper_view
+    return view_func(*args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/views/generic/base.py", line 104, in view
+    return self.dispatch(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py", line 1844, in get
+    user_data = UserclientSerializer(inactive_clients).data
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/serializers.py", line 571, in data
+    ret = super().data
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/serializers.py", line 249, in data
+    self._data = self.to_representation(self.instance)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/serializers.py", line 525, in to_representation
+    attribute = field.get_attribute(instance)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/fields.py", line 470, in get_attribute
+    raise type(exc)(msg)
+AttributeError: Got AttributeError when attempting to get a value for field `email` on serializer `UserclientSerializer`.
+The serializer field might be named incorrectly and not match any attribute or key on the `QuerySet` instance.
+Original exception text was: 'QuerySet' object has no attribute 'email'.
+2024-11-22 05:56:51 - django.server - ERROR - "GET /inactive-clients/21/ HTTP/1.1" 500 129421
+2024-11-22 05:56:59 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-22 05:57:00 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 05:57:04 - django.request - ERROR - Internal Server Error: /inactive-clients/21/
+Traceback (most recent call last):
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/fields.py", line 437, in get_attribute
+    return get_attribute(instance, self.source_attrs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/fields.py", line 104, in get_attribute
+    instance = getattr(instance, attr)
+AttributeError: 'QuerySet' object has no attribute 'email'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/views/decorators/csrf.py", line 56, in wrapper_view
+    return view_func(*args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/views/generic/base.py", line 104, in view
+    return self.dispatch(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py", line 1844, in get
+    user_data = UserclientSerializer(inactive_clients).data
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/serializers.py", line 571, in data
+    ret = super().data
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/serializers.py", line 249, in data
+    self._data = self.to_representation(self.instance)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/serializers.py", line 525, in to_representation
+    attribute = field.get_attribute(instance)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/fields.py", line 470, in get_attribute
+    raise type(exc)(msg)
+AttributeError: Got AttributeError when attempting to get a value for field `email` on serializer `UserclientSerializer`.
+The serializer field might be named incorrectly and not match any attribute or key on the `QuerySet` instance.
+Original exception text was: 'QuerySet' object has no attribute 'email'.
+2024-11-22 05:57:04 - django.server - ERROR - "GET /inactive-clients/21/ HTTP/1.1" 500 129423
+2024-11-22 05:57:34 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-22 05:57:34 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 05:58:01 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-22 05:58:02 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 05:58:08 - django.request - ERROR - Internal Server Error: /inactive-clients/21/
+Traceback (most recent call last):
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/fields.py", line 437, in get_attribute
+    return get_attribute(instance, self.source_attrs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/fields.py", line 104, in get_attribute
+    instance = getattr(instance, attr)
+AttributeError: 'QuerySet' object has no attribute 'email'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/views/decorators/csrf.py", line 56, in wrapper_view
+    return view_func(*args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/views/generic/base.py", line 104, in view
+    return self.dispatch(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py", line 1843, in get
+    user_data = UserclientSerializer(inactive_clients).data
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/serializers.py", line 571, in data
+    ret = super().data
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/serializers.py", line 249, in data
+    self._data = self.to_representation(self.instance)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/serializers.py", line 525, in to_representation
+    attribute = field.get_attribute(instance)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/fields.py", line 470, in get_attribute
+    raise type(exc)(msg)
+AttributeError: Got AttributeError when attempting to get a value for field `email` on serializer `UserclientSerializer`.
+The serializer field might be named incorrectly and not match any attribute or key on the `QuerySet` instance.
+Original exception text was: 'QuerySet' object has no attribute 'email'.
+2024-11-22 05:58:08 - django.server - ERROR - "GET /inactive-clients/21/ HTTP/1.1" 500 129445
+2024-11-22 05:58:10 - django.request - ERROR - Internal Server Error: /inactive-clients/21/
+Traceback (most recent call last):
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/fields.py", line 437, in get_attribute
+    return get_attribute(instance, self.source_attrs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/fields.py", line 104, in get_attribute
+    instance = getattr(instance, attr)
+AttributeError: 'QuerySet' object has no attribute 'email'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/views/decorators/csrf.py", line 56, in wrapper_view
+    return view_func(*args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/views/generic/base.py", line 104, in view
+    return self.dispatch(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py", line 1843, in get
+    user_data = UserclientSerializer(inactive_clients).data
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/serializers.py", line 571, in data
+    ret = super().data
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/serializers.py", line 249, in data
+    self._data = self.to_representation(self.instance)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/serializers.py", line 525, in to_representation
+    attribute = field.get_attribute(instance)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/fields.py", line 470, in get_attribute
+    raise type(exc)(msg)
+AttributeError: Got AttributeError when attempting to get a value for field `email` on serializer `UserclientSerializer`.
+The serializer field might be named incorrectly and not match any attribute or key on the `QuerySet` instance.
+Original exception text was: 'QuerySet' object has no attribute 'email'.
+2024-11-22 05:58:10 - django.server - ERROR - "GET /inactive-clients/21/ HTTP/1.1" 500 129445
+2024-11-22 05:58:33 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-11-22 05:58:33 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 05:58:37 - django.request - ERROR - Internal Server Error: /inactive-clients/21/
+Traceback (most recent call last):
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/fields.py", line 437, in get_attribute
+    return get_attribute(instance, self.source_attrs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/fields.py", line 104, in get_attribute
+    instance = getattr(instance, attr)
+AttributeError: 'QuerySet' object has no attribute 'firstName'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/views/decorators/csrf.py", line 56, in wrapper_view
+    return view_func(*args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/django/views/generic/base.py", line 104, in view
+    return self.dispatch(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py", line 1843, in get
+    user_data = UserclientSerializer(inactive_clients).data
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/serializers.py", line 571, in data
+    ret = super().data
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/serializers.py", line 249, in data
+    self._data = self.to_representation(self.instance)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/serializers.py", line 525, in to_representation
+    attribute = field.get_attribute(instance)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/env/lib/python3.8/site-packages/rest_framework/fields.py", line 470, in get_attribute
+    raise type(exc)(msg)
+AttributeError: Got AttributeError when attempting to get a value for field `firstName` on serializer `UserclientSerializer`.
+The serializer field might be named incorrectly and not match any attribute or key on the `QuerySet` instance.
+Original exception text was: 'QuerySet' object has no attribute 'firstName'.
+2024-11-22 05:58:37 - django.server - ERROR - "GET /inactive-clients/21/ HTTP/1.1" 500 129090
+2024-11-22 05:59:00 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-22 05:59:01 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 05:59:04 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-11-22 05:59:05 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 05:59:06 - django.server - INFO - "GET /inactive-clients/21/ HTTP/1.1" 200 386
+2024-11-22 06:04:36 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-22 06:04:37 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 06:04:46 - django.server - INFO - "GET /inactive-clients/21/ HTTP/1.1" 200 590
+2024-11-22 06:06:06 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-11-22 06:06:07 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 06:06:12 - django.server - INFO - "GET /inactive-clients/21/ HTTP/1.1" 200 503
+2024-11-22 06:06:21 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-11-22 06:06:22 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 06:06:23 - django.server - INFO - "GET /inactive-clients/21/ HTTP/1.1" 200 503
+2024-11-22 06:07:15 - django.server - INFO - "GET /inactive-clients/21/ HTTP/1.1" 200 503
+2024-11-22 06:08:15 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-22 06:08:16 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 06:08:47 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-22 06:08:48 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 06:09:05 - django.server - INFO - "GET /inactive-clients/21/ HTTP/1.1" 200 503

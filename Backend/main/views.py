@@ -1788,29 +1788,30 @@ class UpdateTradeStatusView(APIView):
                 return Response(serializer.data, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-from django.db.models import Count        
+#Active Inactive clints for specific sub-Admin
+class clientActiveInactiveView(APIView):
+    # permission_classes = [permissions.IsAuthenticated]
+    def get(self, request, id, *args, **kwargs):
+        try:
+            user = User.objects.filter(Q(id=id) & (Q(role__name='Sub-Admin') | Q(role__name='Admin'))).first()
+        except User.DoesNotExist:
+            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
-class SubAdminAllClientView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+        current_date = timezone.now().date()
 
-    def get(self, request, *args, **kwargs):
-        user = request.user
+        # Retrieve active clients
+        active_clients = user.assigned_users.filter(
+            type_of_user='is_client', is_client=True, end_date_client__gte=current_date
+        ).values('id', 'email', 'fullName')
         
-        # Check if the user is a Super-Admin or not
-        if user.role and user.role.name == 'Super-Admin':
-            # Get all Sub-Admins (with a role of 'Sub-Admin') and annotate with the count of their clients
-            sub_admins = User.objects.filter(role__name='Sub-Admin').annotate(
-                client_count=Count('assigned_users')
-            ).order_by('-id')
-        else:
-            # Get Sub-Admins that the logged-in user has created
-            sub_admins = User.objects.filter(role__name='Sub-Admin', created_by=user).annotate(
-                client_count=Count('assigned_users')
-            ).order_by('-id')
+        # Retrieve inactive clients
+        inactive_clients = user.assigned_users.filter(
+            type_of_user='is_client', is_client=True, end_date_client__lte=current_date
+        ).values('id', 'email', 'fullName')
 
-        # Pagination for the list of Sub-Admins
-        paginator = CustomPageNumberPagination()
-        result_page = paginator.paginate_queryset(sub_admins, request)
-        serializer = UserclientSerializer(result_page, many=True)
-        
-        return paginator.get_paginated_response(serializer.data)
+        # Serialize user data with clients
+        user_data = UserclientSerializer(user).data
+        user_data['active_clients'] = list(active_clients)  # Convert queryset to list for serialization
+        user_data['inactive_clients'] = list(inactive_clients)  # Convert queryset to list for serialization
+
+        return Response(user_data, status=status.HTTP_200_OK)

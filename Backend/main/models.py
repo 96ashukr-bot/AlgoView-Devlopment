@@ -426,5 +426,5 @@ class ClientTradeSetting(models.Model):
     is_tread_status = models.BooleanField(default=True)  # Default to True or False as required
     
     def __str__(self):
-        return f"Trade Setting for {self.client.email} in {self.segment.name} - {self.sub_segment.name}"
+        return f"Trade Setting {self.segment.name} - {self.sub_segment.name}"
     
