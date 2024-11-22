@@ -103,7 +103,9 @@ urlpatterns = [
     # path('get-count-client/',SubAdminAllClientView.as_view(),name='active-inactive-client')
     path('active-inactive-clients/<int:id>/', clientActiveInactiveView.as_view(), name='user-detail'),
     path('clients-by-group-service/<int:group_service_id>/', ClientsByGroupServiceView.as_view(), name='clients-by-group-service'),
-
+    path('active-client-list/', ActiveClientsView.as_view(), name='get-active-client-list'),
+    path('inactive-client-list/',InactiveClientsView.as_view(),name='get-inactive-client-list'),
+    path('all-subadmins-list/', UserManagementView.as_view(), name='user-management'),
     ]
 
 if settings.DEBUG:

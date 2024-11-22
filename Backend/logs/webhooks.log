@@ -3460,3 +3460,386 @@ AttributeError: 'License' object has no attribute 'license_name'
 2024-11-22 07:18:01 - django.server - INFO - "GET /get-strategies/ HTTP/1.1" 200 1148
 2024-11-22 07:18:02 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 2748
 2024-11-22 07:18:02 - django.server - INFO - "GET /get-strategies/ HTTP/1.1" 200 1148
+2024-11-22 07:19:54 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 07:20:05 - django.server - INFO - "GET /active-inactive-clients/2/ HTTP/1.1" 200 569
+2024-11-22 07:23:06 - django.server - INFO - "OPTIONS /get-client-list/ HTTP/1.1" 200 0
+2024-11-22 07:23:06 - django.server - INFO - "OPTIONS /get-client-list/ HTTP/1.1" 200 0
+2024-11-22 07:23:06 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 6257
+2024-11-22 07:23:06 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 6257
+2024-11-22 07:24:21 - django.server - INFO - "OPTIONS /get-broker/ HTTP/1.1" 200 0
+2024-11-22 07:24:21 - django.server - INFO - "OPTIONS /get-License/ HTTP/1.1" 200 0
+2024-11-22 07:24:21 - django.server - INFO - "OPTIONS /get-group-service/ HTTP/1.1" 200 0
+2024-11-22 07:24:21 - django.server - INFO - "OPTIONS /get-License/ HTTP/1.1" 200 0
+2024-11-22 07:24:21 - django.server - INFO - "OPTIONS /users-list/ HTTP/1.1" 200 0
+2024-11-22 07:24:21 - django.server - INFO - "OPTIONS /users-list/ HTTP/1.1" 200 0
+2024-11-22 07:24:21 - django.server - INFO - "OPTIONS /get-group-service/ HTTP/1.1" 200 0
+2024-11-22 07:24:21 - django.server - INFO - "GET /get-License/ HTTP/1.1" 200 376
+2024-11-22 07:24:21 - django.server - INFO - "GET /get-broker/ HTTP/1.1" 200 316
+2024-11-22 07:24:21 - main - DEBUG - GroupServiceView GET request received
+2024-11-22 07:24:21 - django.server - INFO - "GET /get-group-service/ HTTP/1.1" 200 496
+2024-11-22 07:24:21 - django.server - INFO - "GET /get-broker/ HTTP/1.1" 200 316
+2024-11-22 07:24:21 - django.server - INFO - "GET /get-License/ HTTP/1.1" 200 376
+2024-11-22 07:24:21 - main - DEBUG - GroupServiceView GET request received
+2024-11-22 07:24:21 - django.server - INFO - "GET /get-group-service/ HTTP/1.1" 200 496
+2024-11-22 07:24:21 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 2748
+2024-11-22 07:24:21 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 2748
+2024-11-22 07:24:34 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 2748
+2024-11-22 07:24:34 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 2748
+2024-11-22 07:25:33 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 6257
+2024-11-22 07:25:33 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 6257
+2024-11-22 07:26:27 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-22 07:26:28 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 07:27:09 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-22 07:27:11 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 07:27:18 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-22 07:27:19 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 07:27:53 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-22 07:27:54 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 07:28:05 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 6257
+2024-11-22 07:28:40 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-22 07:28:41 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 07:30:00 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-22 07:30:01 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 07:31:21 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-22 07:31:23 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 07:32:56 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/urls.py changed, reloading.
+2024-11-22 07:32:57 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 08:28:05 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 2748
+2024-11-22 08:28:05 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 2748
+2024-11-22 08:29:42 - django.request - WARNING - Unauthorized: /active-client-list/
+2024-11-22 08:29:42 - django.server - WARNING - "GET /active-client-list/ HTTP/1.1" 401 58
+2024-11-22 08:30:02 - django.server - INFO - "GET /active-client-list/ HTTP/1.1" 200 4126
+2024-11-22 08:31:49 - django.server - INFO - "GET /inactive-client-list/ HTTP/1.1" 200 1723
+2024-11-22 08:33:10 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/urls.py changed, reloading.
+2024-11-22 08:33:11 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 08:33:19 - django.server - INFO - "GET /all-subadmins-list/ HTTP/1.1" 200 2748
+2024-11-22 08:33:20 - django.server - INFO - "GET /all-subadmins-list/ HTTP/1.1" 200 2748
+2024-11-22 08:33:32 - django.server - INFO - "GET /all-subadmins-list/ HTTP/1.1" 200 2748
+2024-11-22 08:33:39 - django.server - INFO - "GET /all-subadmins-list/ HTTP/1.1" 200 2748
+2024-11-22 08:34:09 - django.server - INFO - "OPTIONS /logout/ HTTP/1.1" 200 0
+2024-11-22 08:34:09 - django.server - INFO - "POST /logout/ HTTP/1.1" 200 31
+2024-11-22 08:34:15 - django.server - INFO - "OPTIONS /login/ HTTP/1.1" 200 0
+2024-11-22 08:34:16 - django.server - INFO - "POST /login/ HTTP/1.1" 200 737
+2024-11-22 08:34:16 - django.server - INFO - "OPTIONS /user-profile/ HTTP/1.1" 200 0
+2024-11-22 08:34:16 - django.server - INFO - "OPTIONS /user-profile/ HTTP/1.1" 200 0
+2024-11-22 08:34:16 - django.server - INFO - "OPTIONS /get-city-data/ HTTP/1.1" 200 0
+2024-11-22 08:34:16 - django.server - INFO - "OPTIONS /user-last-login/ HTTP/1.1" 200 0
+2024-11-22 08:34:16 - django.server - INFO - "OPTIONS /get-state-data/ HTTP/1.1" 200 0
+2024-11-22 08:34:16 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 696
+2024-11-22 08:34:16 - django.server - INFO - "GET /get-city-data/ HTTP/1.1" 200 30
+2024-11-22 08:34:16 - django.server - INFO - "GET /user-last-login/ HTTP/1.1" 200 94
+2024-11-22 08:34:16 - django.server - INFO - "GET /get-state-data/ HTTP/1.1" 200 29
+2024-11-22 08:34:16 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 696
+2024-11-22 08:34:16 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 696
+2024-11-22 08:34:21 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 5798
+2024-11-22 08:34:21 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 5798
+2024-11-22 08:34:30 - django.server - INFO - "GET /admin/main/user/ HTTP/1.1" 200 27661
+2024-11-22 08:34:30 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-22 08:34:38 - django.server - INFO - "GET /admin/main/user/7/change/ HTTP/1.1" 200 54490
+2024-11-22 08:34:38 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-22 08:34:42 - django.server - INFO - "GET /admin/main/user/ HTTP/1.1" 200 27661
+2024-11-22 08:34:43 - django.server - INFO - "GET /admin/main/user/24/change/ HTTP/1.1" 200 54468
+2024-11-22 08:34:43 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-22 08:34:51 - django.server - INFO - "GET /admin/main/user/ HTTP/1.1" 200 27661
+2024-11-22 08:36:01 - django.server - INFO - "GET /admin/main/user/24/change/ HTTP/1.1" 200 54468
+2024-11-22 08:36:01 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-22 08:36:11 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 5798
+2024-11-22 08:37:11 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-22 08:37:12 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 08:37:18 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 2691
+2024-11-22 08:38:18 - django.server - INFO - "GET /active-client-list/ HTTP/1.1" 200 4126
+2024-11-22 08:38:57 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 2691
+2024-11-22 08:39:14 - django.server - INFO - "GET /admin/main/user/ HTTP/1.1" 200 27661
+2024-11-22 08:39:14 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-22 08:39:43 - django.server - INFO - "GET /admin/main/user/7/change/ HTTP/1.1" 200 54490
+2024-11-22 08:39:43 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-22 08:40:26 - django.server - INFO - "GET /admin/main/user/ HTTP/1.1" 200 27661
+2024-11-22 08:40:35 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 2691
+2024-11-22 08:40:48 - django.server - INFO - "GET /admin/main/user/7/change/ HTTP/1.1" 200 54490
+2024-11-22 08:40:48 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-22 08:41:28 - django.server - INFO - "GET /admin/main/user/ HTTP/1.1" 200 27661
+2024-11-22 08:42:05 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-22 08:42:05 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 08:42:10 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 2691
+2024-11-22 08:42:11 - main - DEBUG - GroupServiceView GET request received
+2024-11-22 08:42:11 - django.server - INFO - "GET /get-broker/ HTTP/1.1" 200 316
+2024-11-22 08:42:11 - django.server - INFO - "GET /get-group-service/ HTTP/1.1" 200 496
+2024-11-22 08:42:11 - django.server - INFO - "GET /get-License/ HTTP/1.1" 200 376
+2024-11-22 08:42:11 - main - INFO - Admin:::{user.role.name}
+2024-11-22 08:42:11 - main - DEBUG - GroupServiceView GET request received
+2024-11-22 08:42:11 - django.server - INFO - "GET /get-group-service/ HTTP/1.1" 200 496
+2024-11-22 08:42:11 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 709
+2024-11-22 08:42:11 - django.server - INFO - "GET /get-broker/ HTTP/1.1" 200 316
+2024-11-22 08:42:11 - django.server - INFO - "GET /get-License/ HTTP/1.1" 200 376
+2024-11-22 08:42:11 - main - INFO - Admin:::{user.role.name}
+2024-11-22 08:42:11 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 709
+2024-11-22 08:42:13 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 2691
+2024-11-22 08:42:13 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 2691
+2024-11-22 08:42:16 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 2691
+2024-11-22 08:42:30 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 2691
+2024-11-22 08:43:26 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-22 08:43:27 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 08:43:33 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 2691
+2024-11-22 08:44:00 - django.server - INFO - "GET /admin/main/user/24/change/ HTTP/1.1" 200 54468
+2024-11-22 08:44:00 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-22 08:44:32 - django.server - INFO - "GET /active-client-list/ HTTP/1.1" 200 4126
+2024-11-22 08:45:19 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-22 08:45:20 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 08:46:11 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-22 08:46:11 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 08:49:51 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-22 08:49:52 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 08:50:19 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-22 08:50:20 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 08:51:26 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-22 08:51:27 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 08:51:34 - django.server - INFO - "GET /active-client-list/ HTTP/1.1" 200 2691
+2024-11-22 08:51:53 - django.server - INFO - "GET /inactive-client-list/ HTTP/1.1" 200 1723
+2024-11-22 08:51:55 - django.server - INFO - "GET /inactive-client-list/ HTTP/1.1" 200 1723
+2024-11-22 08:52:21 - django.server - INFO - "GET /active-client-list/ HTTP/1.1" 200 2691
+2024-11-22 08:52:29 - django.server - INFO - "GET /inactive-client-list/ HTTP/1.1" 200 1723
+2024-11-22 08:52:51 - django.server - INFO - "GET /inactive-client-list/ HTTP/1.1" 200 52
+2024-11-22 08:53:00 - django.server - INFO - "GET /admin/main/user/ HTTP/1.1" 200 27661
+2024-11-22 08:53:11 - django.server - INFO - "GET /admin/main/user/27/change/ HTTP/1.1" 200 54398
+2024-11-22 08:53:11 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-22 08:53:54 - django.server - INFO - "POST /logout/ HTTP/1.1" 200 31
+2024-11-22 08:54:02 - django.server - INFO - "POST /login/ HTTP/1.1" 200 738
+2024-11-22 08:54:03 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 681
+2024-11-22 08:54:03 - django.server - INFO - "GET /user-last-login/ HTTP/1.1" 200 94
+2024-11-22 08:54:03 - django.server - INFO - "GET /get-city-data/ HTTP/1.1" 200 30
+2024-11-22 08:54:03 - django.server - INFO - "GET /get-state-data/ HTTP/1.1" 200 29
+2024-11-22 08:54:03 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 681
+2024-11-22 08:54:03 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 681
+2024-11-22 08:54:11 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 6257
+2024-11-22 08:54:11 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 6257
+2024-11-22 08:54:14 - django.server - INFO - "OPTIONS /get-client-by-id/22/ HTTP/1.1" 200 0
+2024-11-22 08:54:14 - django.server - INFO - "OPTIONS /get-client-by-id/22/ HTTP/1.1" 200 0
+2024-11-22 08:54:14 - django.server - INFO - "GET /get-broker/ HTTP/1.1" 200 316
+2024-11-22 08:54:14 - main - DEBUG - GroupServiceView GET request received
+2024-11-22 08:54:14 - django.server - INFO - "GET /get-License/ HTTP/1.1" 200 376
+2024-11-22 08:54:15 - django.server - INFO - "GET /get-group-service/ HTTP/1.1" 200 496
+2024-11-22 08:54:15 - django.server - INFO - "GET /get-client-by-id/22/ HTTP/1.1" 200 458
+2024-11-22 08:54:15 - django.server - INFO - "GET /get-broker/ HTTP/1.1" 200 316
+2024-11-22 08:54:15 - django.server - INFO - "GET /get-License/ HTTP/1.1" 200 376
+2024-11-22 08:54:15 - main - DEBUG - GroupServiceView GET request received
+2024-11-22 08:54:15 - django.server - INFO - "GET /get-group-service/ HTTP/1.1" 200 496
+2024-11-22 08:54:15 - django.server - INFO - "OPTIONS /get-strategies/ HTTP/1.1" 200 0
+2024-11-22 08:54:15 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 2748
+2024-11-22 08:54:15 - django.server - INFO - "GET /get-client-by-id/22/ HTTP/1.1" 200 458
+2024-11-22 08:54:15 - django.server - INFO - "GET /get-strategies/ HTTP/1.1" 200 1148
+2024-11-22 08:54:15 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 2748
+2024-11-22 08:54:15 - django.server - INFO - "GET /get-strategies/ HTTP/1.1" 200 1148
+2024-11-22 08:54:53 - django.server - INFO - "OPTIONS /update-client/22/ HTTP/1.1" 200 0
+2024-11-22 08:54:54 - django.server - INFO - "PUT /update-client/22/ HTTP/1.1" 201 1033
+2024-11-22 08:54:54 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 6832
+2024-11-22 08:54:54 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 6832
+2024-11-22 08:54:59 - django.server - INFO - "GET /admin/main/user/27/password/ HTTP/1.1" 200 16290
+2024-11-22 08:55:13 - django.server - INFO - "POST /admin/main/user/27/password/ HTTP/1.1" 200 16437
+2024-11-22 08:55:25 - django.server - INFO - "POST /admin/main/user/27/password/ HTTP/1.1" 302 0
+2024-11-22 08:55:25 - django.server - INFO - "GET /admin/main/user/27/change/ HTTP/1.1" 200 54534
+2024-11-22 08:55:25 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-22 08:55:34 - django.server - INFO - "POST /admin/main/user/27/change/ HTTP/1.1" 302 0
+2024-11-22 08:55:34 - django.server - INFO - "GET /admin/main/user/27/change/ HTTP/1.1" 200 54631
+2024-11-22 08:55:34 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-22 08:55:38 - django.server - INFO - "POST /logout/ HTTP/1.1" 200 31
+2024-11-22 08:55:50 - django.server - INFO - "POST /login/ HTTP/1.1" 200 746
+2024-11-22 08:55:50 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 681
+2024-11-22 08:55:50 - django.server - INFO - "GET /user-last-login/ HTTP/1.1" 200 95
+2024-11-22 08:55:50 - django.server - INFO - "GET /get-state-data/ HTTP/1.1" 200 29
+2024-11-22 08:55:50 - django.server - INFO - "GET /get-city-data/ HTTP/1.1" 200 30
+2024-11-22 08:55:50 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 681
+2024-11-22 08:55:50 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 681
+2024-11-22 08:55:55 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 52
+2024-11-22 08:55:55 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 52
+2024-11-22 08:55:56 - django.server - INFO - "GET /get-broker/ HTTP/1.1" 200 316
+2024-11-22 08:55:56 - main - DEBUG - GroupServiceView GET request received
+2024-11-22 08:55:56 - main - INFO - Admin:::{user.role.name}
+2024-11-22 08:55:56 - django.server - INFO - "GET /get-License/ HTTP/1.1" 200 376
+2024-11-22 08:55:56 - django.server - INFO - "GET /get-group-service/ HTTP/1.1" 200 496
+2024-11-22 08:55:56 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 52
+2024-11-22 08:55:56 - django.server - INFO - "GET /get-broker/ HTTP/1.1" 200 316
+2024-11-22 08:55:56 - main - DEBUG - GroupServiceView GET request received
+2024-11-22 08:55:56 - django.server - INFO - "GET /get-group-service/ HTTP/1.1" 200 496
+2024-11-22 08:55:56 - django.server - INFO - "GET /get-License/ HTTP/1.1" 200 376
+2024-11-22 08:55:56 - main - INFO - Admin:::{user.role.name}
+2024-11-22 08:55:56 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 52
+2024-11-22 08:55:57 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 52
+2024-11-22 08:55:57 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 52
+2024-11-22 08:57:06 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-22 08:57:06 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 08:57:17 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 1085
+2024-11-22 08:57:54 - django.server - INFO - "GET /get-broker/ HTTP/1.1" 200 316
+2024-11-22 08:57:54 - main - DEBUG - GroupServiceView GET request received
+2024-11-22 08:57:54 - main - INFO - Admin:::{user.role.name}
+2024-11-22 08:57:54 - django.server - INFO - "GET /get-group-service/ HTTP/1.1" 200 496
+2024-11-22 08:57:54 - django.server - INFO - "GET /get-License/ HTTP/1.1" 200 376
+2024-11-22 08:57:54 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 52
+2024-11-22 08:57:54 - django.server - INFO - "GET /get-broker/ HTTP/1.1" 200 316
+2024-11-22 08:57:54 - main - DEBUG - GroupServiceView GET request received
+2024-11-22 08:57:54 - django.server - INFO - "GET /get-group-service/ HTTP/1.1" 200 496
+2024-11-22 08:57:54 - django.server - INFO - "GET /get-License/ HTTP/1.1" 200 376
+2024-11-22 08:57:54 - main - INFO - Admin:::{user.role.name}
+2024-11-22 08:57:54 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 52
+2024-11-22 08:59:32 - django.server - INFO - "GET /get-strategies/ HTTP/1.1" 200 1148
+2024-11-22 09:01:25 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 1085
+2024-11-22 09:01:25 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 1085
+2024-11-22 09:01:28 - main - DEBUG - GroupServiceView GET request received
+2024-11-22 09:01:28 - django.server - INFO - "GET /get-broker/ HTTP/1.1" 200 316
+2024-11-22 09:01:28 - django.server - INFO - "GET /get-group-service/ HTTP/1.1" 200 496
+2024-11-22 09:01:28 - main - INFO - Admin:::{user.role.name}
+2024-11-22 09:01:28 - django.server - INFO - "GET /get-License/ HTTP/1.1" 200 376
+2024-11-22 09:01:28 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 52
+2024-11-22 09:01:28 - main - DEBUG - GroupServiceView GET request received
+2024-11-22 09:01:28 - django.server - INFO - "GET /get-group-service/ HTTP/1.1" 200 496
+2024-11-22 09:01:28 - django.server - INFO - "GET /get-broker/ HTTP/1.1" 200 316
+2024-11-22 09:01:28 - django.server - INFO - "GET /get-License/ HTTP/1.1" 200 376
+2024-11-22 09:01:28 - main - INFO - Admin:::{user.role.name}
+2024-11-22 09:01:28 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 52
+2024-11-22 09:01:45 - django.server - INFO - "GET /active-client-list/ HTTP/1.1" 200 52
+2024-11-22 09:02:04 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-22 09:02:05 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 09:02:29 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-22 09:02:29 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 09:02:32 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-22 09:02:34 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 09:02:36 - django.server - INFO - "GET /active-client-list/ HTTP/1.1" 200 1085
+2024-11-22 09:02:57 - django.server - INFO - "POST /logout/ HTTP/1.1" 200 31
+2024-11-22 09:03:02 - django.request - WARNING - Bad Request: /login/
+2024-11-22 09:03:02 - django.server - WARNING - "POST /login/ HTTP/1.1" 400 44
+2024-11-22 09:03:09 - django.request - WARNING - Bad Request: /login/
+2024-11-22 09:03:09 - django.server - WARNING - "POST /login/ HTTP/1.1" 400 44
+2024-11-22 09:03:17 - django.server - INFO - "POST /login/ HTTP/1.1" 200 737
+2024-11-22 09:03:17 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 696
+2024-11-22 09:03:17 - django.server - INFO - "GET /user-last-login/ HTTP/1.1" 200 95
+2024-11-22 09:03:17 - django.server - INFO - "GET /get-state-data/ HTTP/1.1" 200 29
+2024-11-22 09:03:17 - django.server - INFO - "GET /get-city-data/ HTTP/1.1" 200 30
+2024-11-22 09:03:17 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 696
+2024-11-22 09:03:17 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 696
+2024-11-22 09:03:25 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 5798
+2024-11-22 09:03:25 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 5798
+2024-11-22 09:03:38 - django.server - INFO - "GET /admin/main/user/ HTTP/1.1" 200 27664
+2024-11-22 09:03:38 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-22 09:03:45 - django.server - INFO - "GET /admin/main/user/23/change/ HTTP/1.1" 200 54451
+2024-11-22 09:03:45 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-22 09:03:52 - django.server - INFO - "POST /admin/main/user/23/change/ HTTP/1.1" 302 0
+2024-11-22 09:03:52 - django.server - INFO - "GET /admin/main/user/ HTTP/1.1" 200 27874
+2024-11-22 09:03:52 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-22 09:03:54 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 5806
+2024-11-22 09:03:57 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 5806
+2024-11-22 09:03:58 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 5806
+2024-11-22 09:04:05 - django.server - INFO - "GET /admin/main/user/23/change/ HTTP/1.1" 200 54451
+2024-11-22 09:04:06 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-22 09:04:25 - django.server - INFO - "POST /admin/main/user/23/change/ HTTP/1.1" 302 0
+2024-11-22 09:04:25 - django.server - INFO - "GET /admin/main/user/ HTTP/1.1" 200 27874
+2024-11-22 09:04:25 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-22 09:04:27 - django.server - INFO - "GET /get-broker/ HTTP/1.1" 200 316
+2024-11-22 09:04:27 - main - DEBUG - GroupServiceView GET request received
+2024-11-22 09:04:27 - django.server - INFO - "GET /get-License/ HTTP/1.1" 200 376
+2024-11-22 09:04:27 - django.server - INFO - "GET /get-group-service/ HTTP/1.1" 200 496
+2024-11-22 09:04:27 - main - INFO - Admin:::{user.role.name}
+2024-11-22 09:04:27 - django.server - INFO - "GET /get-broker/ HTTP/1.1" 200 316
+2024-11-22 09:04:27 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 709
+2024-11-22 09:04:27 - main - DEBUG - GroupServiceView GET request received
+2024-11-22 09:04:27 - django.server - INFO - "GET /get-License/ HTTP/1.1" 200 376
+2024-11-22 09:04:27 - django.server - INFO - "GET /get-group-service/ HTTP/1.1" 200 496
+2024-11-22 09:04:27 - main - INFO - Admin:::{user.role.name}
+2024-11-22 09:04:27 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 709
+2024-11-22 09:04:30 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 4479
+2024-11-22 09:04:30 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 4479
+2024-11-22 09:04:38 - django.server - INFO - "GET /active-client-list/ HTTP/1.1" 200 1486
+2024-11-22 09:04:58 - django.server - INFO - "GET /active-client-list/ HTTP/1.1" 200 1486
+2024-11-22 09:05:42 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-22 09:05:43 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 09:06:04 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-22 09:06:05 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-22 09:06:08 - django.server - INFO - "GET /active-client-list/ HTTP/1.1" 200 2807
+2024-11-22 09:06:32 - django.server - INFO - "GET /inactive-client-list/ HTTP/1.1" 200 1723
+2024-11-22 09:06:48 - django.server - INFO - "GET /inactive-client-list/ HTTP/1.1" 200 1723
+2024-11-22 09:07:42 - django.server - INFO - "GET /admin/main/user/7/change/ HTTP/1.1" 200 54490
+2024-11-22 09:07:42 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-22 09:07:57 - django.server - INFO - "GET /admin/main/user/ HTTP/1.1" 200 27668
+2024-11-22 09:07:57 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-22 09:08:00 - django.server - INFO - "GET /admin/main/user/24/change/ HTTP/1.1" 200 54468
+2024-11-22 09:08:00 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-22 09:08:32 - django.server - INFO - "POST /admin/main/user/24/change/ HTTP/1.1" 302 0
+2024-11-22 09:08:32 - django.server - INFO - "GET /admin/main/user/ HTTP/1.1" 200 27879
+2024-11-22 09:08:32 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-22 09:08:34 - django.server - INFO - "GET /admin/main/user/24/change/ HTTP/1.1" 200 54468
+2024-11-22 09:08:34 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-22 09:08:38 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 4479
+2024-11-22 09:08:40 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 4479
+2024-11-22 09:08:47 - django.server - INFO - "GET /inactive-client-list/ HTTP/1.1" 200 52
+2024-11-22 09:09:28 - django.server - INFO - "GET /active-client-list/ HTTP/1.1" 200 4479
+2024-11-22 09:10:41 - django.server - INFO - "GET /active-inactive-clients/2/ HTTP/1.1" 200 567
+2024-11-22 09:11:02 - django.server - INFO - "GET /admin/main/user/24/change/ HTTP/1.1" 200 54476
+2024-11-22 09:11:02 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-22 09:11:26 - django.server - INFO - "GET /inactive-client-list/ HTTP/1.1" 200 52
+2024-11-22 09:11:44 - django.server - INFO - "POST /admin/main/user/24/change/ HTTP/1.1" 302 0
+2024-11-22 09:11:44 - django.server - INFO - "GET /admin/main/user/24/change/ HTTP/1.1" 200 54716
+2024-11-22 09:11:44 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-22 09:11:49 - django.server - INFO - "GET /active-inactive-clients/2/ HTTP/1.1" 200 569
+2024-11-22 09:12:06 - django.server - INFO - "GET /admin/main/user/24/change/ HTTP/1.1" 200 54468
+2024-11-22 09:12:06 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-22 09:12:53 - django.server - INFO - "GET /all-subadmins-list/ HTTP/1.1" 200 2765
+2024-11-22 09:13:33 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 4479
+2024-11-22 09:13:44 - main - INFO - Admin:::{user.role.name}
+2024-11-22 09:13:45 - django.server - INFO - "GET /all-subadmins-list/ HTTP/1.1" 200 709
+2024-11-22 09:14:16 - django.server - INFO - "GET /get-client-list/ HTTP/1.1" 200 4479
+2024-11-22 09:14:37 - main - INFO - Admin:::{user.role.name}
+2024-11-22 09:14:37 - django.server - INFO - "GET /all-subadmins-list/ HTTP/1.1" 200 709
+2024-11-22 09:14:54 - django.server - INFO - "GET /admin/main/user/24/change/ HTTP/1.1" 200 54468
+2024-11-22 09:14:57 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 696
+2024-11-22 09:14:57 - django.server - INFO - "GET /get-city-data/ HTTP/1.1" 200 30
+2024-11-22 09:14:57 - django.server - INFO - "GET /user-last-login/ HTTP/1.1" 200 95
+2024-11-22 09:14:57 - django.server - INFO - "GET /get-state-data/ HTTP/1.1" 200 29
+2024-11-22 09:14:57 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 696
+2024-11-22 09:14:57 - django.server - INFO - "GET /get-city-data/ HTTP/1.1" 200 30
+2024-11-22 09:14:57 - django.server - INFO - "GET /user-last-login/ HTTP/1.1" 200 95
+2024-11-22 09:14:57 - django.server - INFO - "GET /get-state-data/ HTTP/1.1" 200 29
+2024-11-22 09:15:25 - django.server - INFO - "GET /admin/main/user/ HTTP/1.1" 200 27668
+2024-11-22 09:15:29 - django.server - INFO - "GET /admin/main/user/2/change/ HTTP/1.1" 200 54424
+2024-11-22 09:15:29 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-22 09:15:50 - django.server - INFO - "POST /admin/main/user/2/change/ HTTP/1.1" 302 0
+2024-11-22 09:15:50 - django.server - INFO - "GET /admin/main/user/ HTTP/1.1" 200 27876
+2024-11-22 09:15:50 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-22 09:15:55 - main - INFO - Admin:::{user.role.name}
+2024-11-22 09:15:55 - django.server - INFO - "GET /all-subadmins-list/ HTTP/1.1" 200 711
+2024-11-22 09:16:02 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 700
+2024-11-22 09:16:02 - django.server - INFO - "GET /user-last-login/ HTTP/1.1" 200 95
+2024-11-22 09:16:02 - django.server - INFO - "GET /get-state-data/ HTTP/1.1" 200 29
+2024-11-22 09:16:02 - django.server - INFO - "GET /get-city-data/ HTTP/1.1" 200 30
+2024-11-22 09:16:02 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 700
+2024-11-22 09:16:03 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 700
+2024-11-22 09:16:19 - django.server - INFO - "GET /admin/main/user/2/change/ HTTP/1.1" 200 54426
+2024-11-22 09:16:19 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-22 09:16:25 - django.server - INFO - "POST /admin/main/user/2/change/ HTTP/1.1" 302 0
+2024-11-22 09:16:25 - django.server - INFO - "GET /admin/main/user/ HTTP/1.1" 200 27873
+2024-11-22 09:16:25 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-22 09:16:32 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 694
+2024-11-22 09:16:32 - django.server - INFO - "GET /get-city-data/ HTTP/1.1" 200 30
+2024-11-22 09:16:32 - django.server - INFO - "GET /user-last-login/ HTTP/1.1" 200 95
+2024-11-22 09:16:32 - django.server - INFO - "GET /get-state-data/ HTTP/1.1" 200 29
+2024-11-22 09:16:32 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 694
+2024-11-22 09:16:32 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 694
+2024-11-22 09:16:57 - django.server - INFO - "POST /logout/ HTTP/1.1" 200 31
+2024-11-22 09:17:16 - django.server - INFO - "POST /login/ HTTP/1.1" 200 738
+2024-11-22 09:17:17 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 681
+2024-11-22 09:17:17 - django.server - INFO - "GET /user-last-login/ HTTP/1.1" 200 95
+2024-11-22 09:17:17 - django.server - INFO - "GET /get-city-data/ HTTP/1.1" 200 30
+2024-11-22 09:17:17 - django.server - INFO - "GET /get-state-data/ HTTP/1.1" 200 29
+2024-11-22 09:17:17 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 681
+2024-11-22 09:17:17 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 681
+2024-11-22 09:17:24 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 2762
+2024-11-22 09:17:24 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 2762
+2024-11-22 09:17:32 - django.server - INFO - "OPTIONS /update-user/2/ HTTP/1.1" 200 0
+2024-11-22 09:17:32 - django.server - INFO - "PUT /update-user/2/ HTTP/1.1" 200 176
+2024-11-22 09:17:32 - django.server - INFO - "OPTIONS /get-roles-list/ HTTP/1.1" 200 0
+2024-11-22 09:17:32 - django.server - INFO - "OPTIONS /user/2/ HTTP/1.1" 200 0
+2024-11-22 09:17:32 - django.server - INFO - "OPTIONS /user/2/ HTTP/1.1" 200 0
+2024-11-22 09:17:32 - django.server - INFO - "OPTIONS /get-roles-list/ HTTP/1.1" 200 0
+2024-11-22 09:17:32 - django.server - INFO - "GET /get-roles-list/ HTTP/1.1" 200 89
+2024-11-22 09:17:32 - django.server - INFO - "GET /user/2/ HTTP/1.1" 200 670
+2024-11-22 09:17:32 - django.server - INFO - "GET /get-roles-list/ HTTP/1.1" 200 89
+2024-11-22 09:17:32 - django.server - INFO - "GET /user/2/ HTTP/1.1" 200 670
+2024-11-22 09:17:40 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 2762
+2024-11-22 09:17:40 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 2762
