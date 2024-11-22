@@ -1478,7 +1478,7 @@ class GetclientbyidPIView(APIView):
     def get(self,request, pk, *args, **kwargs): 
         try:
             user = User.objects.get(pk=pk)  
-            serializer = ClientListSerializer(user)  
+            serializer = ClientListdetailsSerializer(user)  
         except Strategies.DoesNotExist:
             return Response({"detail": "client id not found."}, status=status.HTTP_404_NOT_FOUND)
 
@@ -1802,19 +1802,20 @@ class clientActiveInactiveView(APIView):
         current_date = timezone.now().date()
 
         try:
-            # Retrieve active clients and update client_status to True
+            # Retrieve active clients and set client_status to "active"
             active_clients = user.assigned_users.filter(
                 type_of_user='is_client', is_client=True, end_date_client__gt=current_date
             )
             active_clients.update(client_status=True)
             
+            # Prepare list of active clients
             active_clients_list = [
                 {
                     "id": client.id,
                     "email": client.email,
                     "client_name": client.fullName,
                     "assigned_client_name": user.fullName,
-                    "client_status": "active",  # Should now be True
+                    "client_status": "active",
                     "client_phone": client.phoneNumber
                 }
                 for client in active_clients
@@ -1823,19 +1824,20 @@ class clientActiveInactiveView(APIView):
             return Response({"error": "Error fetching active clients", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
         try:
-            # Retrieve inactive clients and update client_status to False
+            # Retrieve inactive clients and set client_status to "inactive"
             inactive_clients = user.assigned_users.filter(
                 type_of_user='is_client', is_client=True, end_date_client__lte=current_date
             )
             inactive_clients.update(client_status=False)
             
+            # Prepare list of inactive clients
             inactive_clients_list = [
                 {
                     "id": client.id,
                     "email": client.email,
                     "client_name": client.fullName,
                     "assigned_client_name": user.fullName,
-                    "client_status": "inactive",  # Should now be False
+                    "client_status": "inactive",
                     "client_phone": client.phoneNumber
                 }
                 for client in inactive_clients
@@ -1844,11 +1846,36 @@ class clientActiveInactiveView(APIView):
             return Response({"error": "Error fetching inactive clients", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
         try:
-            # Serialize user data with active and inactive clients
+            # Combine active and inactive clients into one list
+            combined_clients_list = active_clients_list + inactive_clients_list
+            
+            # Serialize user data with combined clients list
             user_data = UserclientSerializer(user).data
-            user_data['active_clients'] = active_clients_list
-            user_data['inactive_clients'] = inactive_clients_list
+            user_data['active_inactive_clients'] = combined_clients_list
         except Exception as e:
             return Response({"error": "Error serializing user data", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         return Response(user_data, status=status.HTTP_200_OK)
+
+# clients which are using the  group service
+class ClientsByGroupServiceView(APIView):
+    def get(self, request, group_service_id, *args, **kwargs):
+        group_service = get_object_or_404(GroupService, id=group_service_id)
+
+        clients = User.objects.filter(Group_service=group_service, is_client=True)
+        client_data = [
+            {
+                "id": client.id,
+                "email": client.email,
+                "client_name": client.fullName,
+                "phone_number": client.phoneNumber,
+                "service_name": client.Group_service.group_name if client.Group_service else None,
+                "license": client.license.name if client.license else None, 
+                "client_status": "active" if client.client_status else "inactive",
+                "start_date_client":client.start_date_client,
+                "end_date_client"  :  client.end_date_client,
+            }
+            for client in clients
+        ]
+
+        return Response({"group_service": group_service.group_name, "clients": client_data}, status=status.HTTP_200_OK)

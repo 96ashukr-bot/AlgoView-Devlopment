@@ -101,7 +101,8 @@ urlpatterns = [
  
     path('get-client-segments-list/', UpdateTradeSettingStatusView.as_view(), name='get-trade-settings'),
     # path('get-count-client/',SubAdminAllClientView.as_view(),name='active-inactive-client')
-      path('inactive-clients/<int:id>/', clientActiveInactiveView.as_view(), name='user-detail'),
+    path('active-inactive-clients/<int:id>/', clientActiveInactiveView.as_view(), name='user-detail'),
+    path('clients-by-group-service/<int:group_service_id>/', ClientsByGroupServiceView.as_view(), name='clients-by-group-service'),
 
     ]
 

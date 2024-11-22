@@ -939,7 +939,7 @@ class ClientCreateSerializer(serializers.ModelSerializer):
 class AssignedClientSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'email', 'firstName']
+        fields = ['id', 'email', 'fullName']
 
 class ClientListSerializer(serializers.ModelSerializer):
     assigned_client = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), required=False)
@@ -953,7 +953,18 @@ class ClientListSerializer(serializers.ModelSerializer):
                   'client_key', 'start_date_client','end_date_client','Broker', 'Group_service','license', 'user_license_month','to_month', 'created_by', 'assigned_client',
                   'Strategy','client_status','givenservices_to_month','demate_acc_uid','start_date_client', 'end_date_client','is_enable',
                   ]
-
+class ClientListdetailsSerializer(serializers.ModelSerializer):
+    assigned_client = AssignedClientSerializer(read_only=True)
+    Strategy = StrategySerializer(many=True, read_only=True) 
+    Group_service = GroupServiceSerializer()  # Make sure to match field names
+    license = LicenseSerializer()
+    Broker = GetBrokerSerializer() 
+    class Meta:
+        model = User
+        fields = ['id','email', 'firstName', 'middleName','fullName', 'lastName', 'client_status','phoneNumber',
+                  'client_key', 'start_date_client','end_date_client','Broker', 'Group_service','license', 'user_license_month','to_month', 'created_by', 'assigned_client',
+                  'Strategy','client_status','givenservices_to_month','demate_acc_uid','start_date_client', 'end_date_client','is_enable',
+                  ]
 class ClientupdateListSerializer(serializers.ModelSerializer):
     assigned_client = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), required=False)
     # Strategy = StrategySerializer(many=True, read_only=True)
