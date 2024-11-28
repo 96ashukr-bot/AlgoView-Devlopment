@@ -327,7 +327,8 @@ class SubSegment(models.Model):
     name = models.CharField(max_length=150)
     short_name = models.CharField(max_length=150, null=True, blank=True)
     status = models.BooleanField(default=True)
-
+    token=models.IntegerField(blank=True,null=True)
+    Exchange=models.CharField(max_length=150,blank=True,null=True)
     def __str__(self):
         return f"{self.segment.name} - {self.name}"
 

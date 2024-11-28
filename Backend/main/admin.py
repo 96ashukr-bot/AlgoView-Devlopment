@@ -81,7 +81,7 @@ class SegmentAdmin(admin.ModelAdmin):
     list_display=('id','name')  
 @admin.register(SubSegment)
 class SubSegmentAdmin(admin.ModelAdmin):
-    list_display=('id','segment','name')    
+    list_display=('id','segment','name','token','Exchange')    
 @admin.register(License)
 class LiecensAdmin(admin.ModelAdmin):
     list_display=('id','name',"no_of_days_month",'created_at','updated_at')          

@@ -2297,3 +2297,16 @@ class StrategyClientListView(APIView):
 
         except Exception as e:
             return Response({"error": f"An unexpected error occurred: {str(e)}"}, status=500)
+
+
+class ClientDashboardIView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self,request, *args, **kwargs): 
+        try:
+            user=request.user
+            user = User.objects.get(pk=user.id)  
+            serializer = ClientListdetailsSerializer(user)  
+        except Strategies.DoesNotExist:
+            return Response({"detail": "client id not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)        

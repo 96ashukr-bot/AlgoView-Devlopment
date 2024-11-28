@@ -7718,3 +7718,124 @@ UnboundLocalError: local variable 'status' referenced before assignment
 2024-11-28 04:48:36 - django.server - INFO - "OPTIONS /users-list/ HTTP/1.1" 200 0
 2024-11-28 04:48:36 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 2781
 2024-11-28 04:48:36 - django.server - INFO - "GET /users-list/ HTTP/1.1" 200 2781
+2024-11-28 05:32:10 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-28 05:50:01 - django.server - INFO - "OPTIONS /logout/ HTTP/1.1" 200 0
+2024-11-28 05:50:01 - django.server - INFO - "POST /logout/ HTTP/1.1" 200 31
+2024-11-28 05:50:12 - django.server - INFO - "OPTIONS /login/ HTTP/1.1" 200 0
+2024-11-28 05:50:14 - django.server - INFO - "POST /login/ HTTP/1.1" 200 141
+2024-11-28 05:50:22 - django.server - INFO - "GET /admin/ HTTP/1.1" 200 21990
+2024-11-28 05:50:23 - django.request - WARNING - Not Found: /favicon.ico
+2024-11-28 05:50:23 - django.server - WARNING - "GET /favicon.ico HTTP/1.1" 404 20976
+2024-11-28 05:50:27 - django.server - INFO - "GET /admin/main/otp/ HTTP/1.1" 200 24687
+2024-11-28 05:50:27 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-28 05:50:35 - django.server - INFO - "OPTIONS /verify-otp/ HTTP/1.1" 200 0
+2024-11-28 05:50:36 - django.server - INFO - "POST /verify-otp/ HTTP/1.1" 200 643
+2024-11-28 05:50:36 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 691
+2024-11-28 05:50:37 - django.server - INFO - "GET /get-client-segments-list/?segment=Option HTTP/1.1" 200 1142
+2024-11-28 05:50:37 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 691
+2024-11-28 06:40:11 - django.server - INFO - "GET /admin/main/otp/ HTTP/1.1" 200 24687
+2024-11-28 06:40:11 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-28 06:44:03 - django.server - INFO - "GET /admin/ HTTP/1.1" 200 21990
+2024-11-28 06:45:31 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 691
+2024-11-28 06:45:32 - django.server - INFO - "GET /get-client-segments-list/?segment=Option HTTP/1.1" 200 1142
+2024-11-28 06:45:32 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 691
+2024-11-28 06:47:30 - django.server - INFO - "GET /admin/main/subsegment/ HTTP/1.1" 200 19562
+2024-11-28 06:47:30 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-28 06:47:34 - django.server - INFO - "GET /admin/main/subsegment/add/ HTTP/1.1" 200 19951
+2024-11-28 06:47:35 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-28 06:51:37 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+2024-11-28 06:51:40 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-28 06:53:26 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+2024-11-28 06:53:29 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-28 06:58:21 - django.server - INFO - "OPTIONS /get-client-segments-list/?segment=Option HTTP/1.1" 200 0
+2024-11-28 06:58:22 - django.request - ERROR - Internal Server Error: /get-client-segments-list/
+2024-11-28 06:58:22 - django.server - ERROR - "GET /get-client-segments-list/?segment=Option HTTP/1.1" 500 206
+2024-11-28 07:00:41 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+2024-11-28 07:00:43 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-28 07:03:13 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+2024-11-28 07:03:17 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-28 07:05:25 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-28 07:06:22 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/admin.py changed, reloading.
+2024-11-28 07:06:25 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-28 07:06:40 - django.request - WARNING - Not Found: /
+2024-11-28 07:06:40 - django.server - WARNING - "GET / HTTP/1.1" 404 20925
+2024-11-28 07:06:40 - django.server - INFO - "GET /admin/main/subsegment/ HTTP/1.1" 200 20285
+2024-11-28 07:06:41 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-28 07:07:09 - django.server - INFO - "POST /login/ HTTP/1.1" 200 141
+2024-11-28 07:07:10 - django.server - INFO - "GET /admin/main/ HTTP/1.1" 200 13587
+2024-11-28 07:07:13 - django.server - INFO - "GET /admin/main/otp/ HTTP/1.1" 200 25036
+2024-11-28 07:07:13 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-28 07:07:21 - django.server - INFO - "POST /verify-otp/ HTTP/1.1" 200 643
+2024-11-28 07:07:21 - django.server - INFO - "OPTIONS /user-profile/ HTTP/1.1" 200 0
+2024-11-28 07:07:22 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 691
+2024-11-28 07:07:22 - django.server - INFO - "GET /get-client-segments-list/?segment=Option HTTP/1.1" 200 1200
+2024-11-28 07:07:22 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 691
+2024-11-28 07:07:31 - django.server - INFO - "OPTIONS /get-broker/ HTTP/1.1" 200 0
+2024-11-28 07:07:31 - django.server - INFO - "OPTIONS /get-client-trade-setting/?client=7&segment=14&sub_segment=1 HTTP/1.1" 200 0
+2024-11-28 07:07:31 - django.server - INFO - "OPTIONS /get-strategies/ HTTP/1.1" 200 0
+2024-11-28 07:07:32 - django.server - INFO - "OPTIONS /get-broker/ HTTP/1.1" 200 0
+2024-11-28 07:07:32 - django.server - INFO - "OPTIONS /get-strategies/ HTTP/1.1" 200 0
+2024-11-28 07:07:32 - django.server - INFO - "GET /get-client-trade-setting/?client=7&segment=14&sub_segment=1 HTTP/1.1" 200 356
+2024-11-28 07:07:32 - django.server - INFO - "GET /get-broker/ HTTP/1.1" 200 316
+2024-11-28 07:07:32 - django.server - INFO - "GET /get-client-trade-setting/?client=7&segment=14&sub_segment=1 HTTP/1.1" 200 356
+2024-11-28 07:07:32 - django.server - INFO - "GET /get-broker/ HTTP/1.1" 200 316
+2024-11-28 07:07:32 - django.server - INFO - "GET /get-strategies/ HTTP/1.1" 200 1192
+2024-11-28 07:07:32 - django.server - INFO - "GET /get-strategies/ HTTP/1.1" 200 1192
+2024-11-28 07:08:05 - django.server - INFO - "OPTIONS /user-last-login/ HTTP/1.1" 200 0
+2024-11-28 07:08:05 - django.server - INFO - "OPTIONS /get-state-data/ HTTP/1.1" 200 0
+2024-11-28 07:08:05 - django.server - INFO - "OPTIONS /user-last-login/ HTTP/1.1" 200 0
+2024-11-28 07:08:05 - django.server - INFO - "OPTIONS /get-state-data/ HTTP/1.1" 200 0
+2024-11-28 07:08:05 - django.server - INFO - "OPTIONS /get-city-data/ HTTP/1.1" 200 0
+2024-11-28 07:08:05 - django.server - INFO - "OPTIONS /get-city-data/ HTTP/1.1" 200 0
+2024-11-28 07:08:05 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 691
+2024-11-28 07:08:06 - django.server - INFO - "GET /get-city-data/ HTTP/1.1" 200 30
+2024-11-28 07:08:06 - django.server - INFO - "GET /get-state-data/ HTTP/1.1" 200 29
+2024-11-28 07:08:06 - django.server - INFO - "GET /user-last-login/ HTTP/1.1" 200 95
+2024-11-28 07:08:06 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 691
+2024-11-28 07:08:06 - django.server - INFO - "GET /get-city-data/ HTTP/1.1" 200 30
+2024-11-28 07:08:06 - django.server - INFO - "GET /get-state-data/ HTTP/1.1" 200 29
+2024-11-28 07:08:07 - django.server - INFO - "GET /user-last-login/ HTTP/1.1" 200 95
+2024-11-28 07:08:22 - django.server - INFO - "GET /get-client-segments-list/?segment=Option HTTP/1.1" 200 1200
+2024-11-28 07:08:22 - django.server - INFO - "GET /get-client-segments-list/?segment=Option HTTP/1.1" 200 1200
+2024-11-28 07:08:26 - django.server - INFO - "GET /get-client-trade-setting/?client=7&segment=14&sub_segment=1 HTTP/1.1" 200 356
+2024-11-28 07:08:26 - django.server - INFO - "GET /get-broker/ HTTP/1.1" 200 316
+2024-11-28 07:08:26 - django.server - INFO - "GET /get-strategies/ HTTP/1.1" 200 1192
+2024-11-28 07:08:26 - django.server - INFO - "GET /get-broker/ HTTP/1.1" 200 316
+2024-11-28 07:08:26 - django.server - INFO - "GET /get-client-trade-setting/?client=7&segment=14&sub_segment=1 HTTP/1.1" 200 356
+2024-11-28 07:08:26 - django.server - INFO - "GET /get-strategies/ HTTP/1.1" 200 1192
+2024-11-28 07:08:51 - django.server - INFO - "GET /admin/main/ HTTP/1.1" 200 13587
+2024-11-28 07:08:53 - django.server - INFO - "GET /admin/main/user/ HTTP/1.1" 200 28738
+2024-11-28 07:08:54 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-28 07:08:59 - django.server - INFO - "GET /admin/main/user/7/change/ HTTP/1.1" 200 54885
+2024-11-28 07:08:59 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-28 07:09:38 - django.server - INFO - "GET /get-client-segments-list/?segment=Option HTTP/1.1" 200 1200
+2024-11-28 07:09:38 - django.server - INFO - "GET /get-client-segments-list/?segment=Option HTTP/1.1" 200 1200
+2024-11-28 07:09:51 - django.server - INFO - "GET /get-broker/ HTTP/1.1" 200 316
+2024-11-28 07:09:51 - django.server - INFO - "GET /get-client-trade-setting/?client=7&segment=14&sub_segment=1 HTTP/1.1" 200 356
+2024-11-28 07:09:51 - django.server - INFO - "GET /get-broker/ HTTP/1.1" 200 316
+2024-11-28 07:09:51 - django.server - INFO - "GET /get-client-trade-setting/?client=7&segment=14&sub_segment=1 HTTP/1.1" 200 356
+2024-11-28 07:09:51 - django.server - INFO - "GET /get-strategies/ HTTP/1.1" 200 1192
+2024-11-28 07:09:51 - django.server - INFO - "GET /get-strategies/ HTTP/1.1" 200 1192
+2024-11-28 07:11:39 - django.server - INFO - "GET /get-client-segments-list/?segment=Option HTTP/1.1" 200 1200
+2024-11-28 07:11:39 - django.server - INFO - "GET /get-client-segments-list/?segment=Option HTTP/1.1" 200 1200
+2024-11-28 07:14:26 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-28 07:14:30 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-28 07:14:52 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-11-28 07:14:57 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-28 07:16:23 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/urls.py changed, reloading.
+2024-11-28 07:16:27 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-28 07:16:38 - django.request - WARNING - Unauthorized: /get-client-details/
+2024-11-28 07:16:38 - django.server - WARNING - "GET /get-client-details/ HTTP/1.1" 401 58
+2024-11-28 07:16:55 - django.server - INFO - "GET /get-client-details/ HTTP/1.1" 200 1492
+2024-11-28 08:12:08 - django.server - INFO - "GET /admin/main/user/ HTTP/1.1" 200 28738
+2024-11-28 08:12:08 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-28 08:12:13 - django.server - INFO - "GET /admin/ HTTP/1.1" 200 21990
+2024-11-28 08:17:52 - django.server - INFO - "GET /admin/main/subsegment/ HTTP/1.1" 200 20285
+2024-11-28 08:17:52 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-28 08:18:08 - django.server - INFO - "GET /admin/main/subsegment/add/ HTTP/1.1" 200 21149
+2024-11-28 08:18:08 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-28 08:18:45 - django.server - INFO - "POST /admin/main/subsegment/add/ HTTP/1.1" 302 0
+2024-11-28 08:18:45 - django.server - INFO - "GET /admin/main/subsegment/ HTTP/1.1" 200 20867
+2024-11-28 08:18:46 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-28 08:18:52 - django.server - INFO - "GET /admin/main/subsegment/7/change/ HTTP/1.1" 200 21414
+2024-11-28 08:18:52 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343

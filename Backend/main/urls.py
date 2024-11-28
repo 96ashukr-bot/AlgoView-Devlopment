@@ -109,6 +109,7 @@ urlpatterns = [
     path("order-webhook/",PlaceOrderWebhookView.as_view(),name='create-order-webhook'),
     path("get-client-trade/",GetclientdataView.as_view(),name='get-client-trade'),
     path('strategies/<int:strategy_id>/clients/', StrategyClientListView.as_view(), name='strategy-client-list'),
+    path("get-client-details/",ClientDashboardIView.as_view(),name='get-client-details'),
 ]
 
 if settings.DEBUG:

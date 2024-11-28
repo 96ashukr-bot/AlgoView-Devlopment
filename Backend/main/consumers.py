@@ -71,6 +71,32 @@ class StockTradingConsumer(AsyncWebsocketConsumer):
         self.send(text_data=json.dumps({
             'message': message  # Send the live data as it is
         }))
+    def on_data(self, wsapp, message):
+        try:
+            logger.info(f"Live stock data received: {message}")
+            logger.info("Raw Ticks: {}".format(message))  # Log the raw message
+
+            # If `message` is already a dictionary, process it directly
+            tick_data = message  # Assuming `message` is a dictionary
+
+            # Process tick data if the required keys exist
+            if 'subscription_mode' in tick_data:  # Check for required key
+                if tick_data.get('exchange_type') == 1:  # Currency
+                    price = tick_data.get('last_traded_price', 0) / 100.0
+                else:  # Other instruments
+                    price = tick_data.get('last_traded_price', 0) / 100.0
+
+
+                logger.info(f"Formatted Price: {price:.4f} for token {tick_data.get('token')}")
+
+            # Forward the data received from the external WebSocket to the client
+            self.send(text_data=json.dumps({
+                'message': tick_data  # Forward the processed data
+            }))
+
+        except Exception as e:
+            logger.error(f"Error processing data: {e}")
+    
 
     def on_error(self, wsapp, error):
         logger.error(f"WebSocket error: {error}")
