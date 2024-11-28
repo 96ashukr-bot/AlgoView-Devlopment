@@ -1,4 +1,5 @@
 import json
+import os
 from amqp import NotFound
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
@@ -31,6 +32,15 @@ from django.contrib.auth.signals import user_logged_in, user_logged_out
 from django.dispatch import receiver
 from django.db.models import Q
 from django.db.models import Count, Prefetch
+import pandas as pd
+from datetime import datetime
+from django.core.cache import cache
+import pyotp
+from SmartApi import SmartConnect
+from SmartApi.smartExceptions import DataException
+from time import sleep
+import numpy as np
+
 
 USER_ID=config('USER_ID')
 ALICE_API_KEY=config('ALICE_API_KEY')
@@ -580,233 +590,6 @@ class KYCVerificationView(APIView):
             return Response({"detail": "Invalid action. Use 'approve' or 'reject'."}, status=status.HTTP_400_BAD_REQUEST)
 
 
-# Global variables to store session ID and expiration time
-SESSION_ID = None
-SESSION_EXPIRATION = None
-
-# Place an order using Alice Blue API
-def place_order(alert_data, session_id):
-    all_enable_users=ClientTradeSetting.objects.filter(is_enable=True)
-    sessionID = session_id.get('sessionID')
-    headers = {
-        'Content-Type': 'application/json',
-        'Authorization': f'Bearer {USER_ID} {sessionID}'  # Use Bearer token for authentication
-    }
-    """Place an order using Alice Blue API"""
-    for user in all_enable_users:
-        # ProductType = user.product_type
-        # symbol = user.symbol
-        # strategy=user.strategy
-        order_payload = {
-            "complexty": "regular",
-            "discqty": "0",
-            "exch": "NSE",
-            "pCode": alert_data.get("productType", "MIS"),
-            "prctyp": "MKT",
-            "price": alert_data.get("strikePrice", "0"),
-            "qty": alert_data.get("Lot", 1),
-            "ret": "DAY",
-            "symbol_id": alert_data.get("symbol_id"),
-            "trading_symbol": alert_data.get("trading_symbol"),
-            "transtype": alert_data.get("buy_sell").upper(),
-            "trigPrice": alert_data.get("triggerPrice", ""),
-            "orderTag": alert_data.get("orderTag", "order1")
-        }
-  
-
-        try:
-            response = requests.post(ALICE_ORDER_URL, headers=headers, data=json.dumps([order_payload]))
-            # print(response)
-            logger.info(f"Order placed  for user {user.id} with response {response.status_code}")
-            response.raise_for_status()
-            save_order_log(alert_data, user, status="Success")
-            return response
-        except requests.RequestException as req_err:
-            logger.error(f"Order placement failed for user {user.id}. Reason: {str(req_err)}")
-            save_order_log(alert_data, user, status="Failed", reason=str(req_err))
-
-        except Exception as e:
-            logger.exception(f"Unexpected error occurred while placing order for user {user.id}")
-            save_order_log(alert_data, user, status="Failed", reason=str(e))
-    return {"status": "Orders processed"}
-
-
-# Save the order log to the database
-from django.utils import timezone  
-from datetime import datetime
-def save_order_log(alert_data, user, status, reason=None):
-    """Save order details and status into the log table."""
-    try:
-        
-        OrderLog.objects.create(
-            signal_time=timezone.now(),  # You can change this to the actual signal time
-            order_type=alert_data.get('Type').upper(),  # 'LX' or 'LE'
-            symbol=alert_data.get('trading_symbol'),  # Symbol
-            price=alert_data.get('strikePrice'),  # Order price
-            strategy=alert_data.get('strategy', 'Unknown'),  # Strategy used
-            user=user,  # User placing the order
-            status=status,  # "Success" or "Failed"
-            failure_reason=reason,  # Save failure reason if any (for failed orders)
-            json_data=alert_data
-        )
-        logger.info(f"Order log saved for user {user.id} with status {status}")
-    except Exception as e:
-        logger.error(f"Failed to save order log for user {user.id}. Reason: {str(e)}")
-
-
-from datetime import datetime, timedelta  # For getting current date and time
-# Get or regenerate Alice Blue session ID
-def get_or_regenerate_session_id(USER_ID, ALICE_API_KEY):
-    global SESSION_ID, SESSION_EXPIRATION
-    # Check if the session ID is expired or not set
-    current_time = datetime.now()
-    # Check if the session ID is expired or not set
-    if SESSION_ID is None or SESSION_EXPIRATION is None or current_time >= SESSION_EXPIRATION:
-        logger.info(f"Session ID expired or not found. Regenerating...{USER_ID}")
-        alice = Aliceblue(user_id=USER_ID, api_key=ALICE_API_KEY)
-        SESSION_ID = alice.get_session_id(alice)
-        
-        # Assume the session expires in 24 hours (86400 seconds)
-        SESSION_EXPIRATION = current_time + timedelta(seconds=86400)
-        logger.info(f"New session ID generated: {SESSION_ID}")
-    else:
-        logger.info("Using existing session ID")
-    
-    return SESSION_ID
-
-# Webhook for order trigger
-class TradingViewWebhook(APIView):
-    pagination_class = None
-    def post(self, request, *args, **kwargs):
-        try:
-            alert_data = request.data
-            logger.info(f"Received alert: {alert_data}")
-            #OrderLog.objects.create(json_data=alert_data, signal_time=timezone.now())
-            # Get or regenerate session ID
-            session_id = get_or_regenerate_session_id(USER_ID, ALICE_API_KEY)
-            logger.info(f"Session ID retrieved successfully and user id is :::{USER_ID}")
-
-            # Place the order using the session ID
-            order_response = place_order(alert_data, session_id)
-              # Log and return the order response
-            if isinstance(order_response, dict):
-                logger.info(f"Order response (dict): {order_response}")
-            else:
-                logger.info(f"Order response (object): {order_response}")
-                logger.info(f"Order response JSON: {order_response.json()}")
-            return Response({
-                'order_resp': order_response
-            })
-
-        except json.JSONDecodeError:
-            logger.error("Invalid JSON received")
-            return Response({
-                "status": "error",
-                "message": "Invalid JSON received."
-            }, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            logger.exception("Error occurred while processing the alert")
-            return Response({
-                "status": "error",
-                "message": str(e)
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-# Get Alice-Blue orders  GET_ORDER_BOOK_URL
-class GetAliceOrderBook(APIView):
-    pagination_class = None
-    def get(self, request, *args, **kwargs):
-        # Get or regenerate the session ID
-        session_id_response = get_or_regenerate_session_id(USER_ID, ALICE_API_KEY)
-        # Extract sessionID from the response
-        sessionID = session_id_response.get('sessionID') if isinstance(session_id_response, dict) else None  
-        if not sessionID:
-            return Response({
-                "status": "error",
-                "message": "Failed to obtain a valid session ID."
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        headers = {
-            'Content-Type': 'application/json',
-            'Authorization': f'Bearer {USER_ID} {sessionID}' 
-        }
-        try:
- 
-            response = requests.get(GET_ORDER_BOOK_URL, headers=headers)
-            response.raise_for_status()  
-            return Response({
-                "status": "success",
-                "data": response.json()
-            }, status=status.HTTP_200_OK)
-
-        except requests.RequestException as req_err:
-            return Response({
-                "status": "error",
-                "message": f"Request error: {str(req_err)}"
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-        except Exception as e:
-            # Handle any other exceptions
-            return Response({
-                "status": "error",
-                "message": f"An error occurred: {str(e)}"
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-#Get trad history data GET_TREAD_BOOK_URL
-class GetAliceTreadBook(APIView):
-    pagination_class = None
-    def get(self, request, *args, **kwargs):
-        # Get or regenerate the session ID
-        session_id_response = get_or_regenerate_session_id(USER_ID, ALICE_API_KEY)
-        # Extract sessionID from the response
-        sessionID = session_id_response.get('sessionID') if isinstance(session_id_response, dict) else None  
-        if not sessionID:
-            return Response({
-                "status": "error",
-                "message": "Failed to obtain a valid session ID."
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        # Prepare headers
-        headers = {
-            'Content-Type': 'application/json',
-            'Authorization': f'Bearer {USER_ID} {sessionID}'  # Assuming session ID is used this way
-        }
-        try:
-            # Send a GET request to the order book endpoint
-            response = requests.get(GET_TREAD_BOOK_URL, headers=headers)
-            response.raise_for_status()  # Raise an error for bad responses (4xx or 5xx)
-
-            # Return the successful response data
-            return Response({
-                "status": "success",
-                "data": response.json()
-            }, status=response.status_code)
-
-        except requests.RequestException as req_err:
-            # Handle request exceptions such as timeouts, bad responses, etc.
-            return Response({
-                "status": "error",
-                "message": f"Request error: {str(req_err)}"
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-        except Exception as e:
-            # Handle any other exceptions
-            return Response({
-                "status": "error",
-                "message": f"An error occurred: {str(e)}"
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-#order -logs -list
-class OrderLogListView(APIView):
-    pagination_class = None
-    def get(self, request, *args, **kwargs):
-        # Fetch all the order logs from the database
-        order_logs = OrderLog.objects.all()
-        
-        # Serialize the data
-        serializer = OrderLogSerializer(order_logs, many=True)
-        
-        # Return the serialized data as a JSON response
-        return Response({
-            "status": "success",
-            "data": serializer.data
-        }, status=status.HTTP_200_OK)
 
 #store sssion logs last login
 @receiver(user_logged_in)
@@ -1461,6 +1244,7 @@ class ClientCreateView(APIView):
         except Broker.DoesNotExist:
             return Response({"detail": "client_id not found."}, status=status.HTTP_404_NOT_FOUND)
 class AssignClientToStrategyAPIView(APIView):
+    permission_classes = [IsAuthenticated]
     def put(self, request, pk):
         strategy = get_object_or_404(Strategies, pk=pk)
         serializer = StrategyAssignSerializer(strategy, data=request.data, partial=True)
@@ -1470,7 +1254,24 @@ class AssignClientToStrategyAPIView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    # def put(self, request, pk):
+    #     strategy = get_object_or_404(Strategies, pk=pk)
+        
+    #     # Extract the list of client IDs from the request data
+    #     client_ids = request.data.get('clients', [])
+        
+    #     if not isinstance(client_ids, list):
+    #         return Response(
+    #             {"error": "Invalid format. 'clients' should be a list of client IDs."},
+    #             status=status.HTTP_400_BAD_REQUEST
+    #         )
+        
+    #     # Add new clients to the strategy without removing existing ones
+    #     strategy.clients.add(*client_ids)
 
+    #     # Return the updated strategy with its clients
+    #     serializer = StrategyAssignSerializer(strategy)
+    #     return Response(serializer.data, status=status.HTTP_200_OK)
 class GetclientbyidPIView(APIView):
     permission_classes = [IsAuthenticated]
     def get(self,request, pk, *args, **kwargs): 
@@ -1937,4 +1738,562 @@ class InactiveClientsView(APIView):
         result_page = paginator.paginate_queryset(clients, request)
         serializer = ClientListSerializer(result_page, many=True)
         return paginator.get_paginated_response(serializer.data)
+
+
+#order -logs -list
+class OrderLogListView(APIView):
+    pagination_class = None
+    def get(self, request, *args, **kwargs):
+        # Fetch all the order logs from the database
+        order_logs = OrderLog.objects.all()
+        
+        # Serialize the data
+        serializer = OrderLogSerializer(order_logs, many=True)
+        
+        # Return the serialized data as a JSON response
+        return Response({
+            "status": "success",
+            "data": serializer.data
+        }, status=status.HTTP_200_OK)
+
+# Get Alice-Blue orders  GET_ORDER_BOOK_URL
+class GetAliceOrderBook(APIView):
+    pagination_class = None
+    def get(self, request, *args, **kwargs):
+        # Get or regenerate the session ID
+        session_id_response = get_or_regenerate_session_id(USER_ID, ALICE_API_KEY)
+        # Extract sessionID from the response
+        sessionID = session_id_response.get('sessionID') if isinstance(session_id_response, dict) else None  
+        if not sessionID:
+            return Response({
+                "status": "error",
+                "message": "Failed to obtain a valid session ID."
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': f'Bearer {USER_ID} {sessionID}' 
+        }
+        try:
+ 
+            response = requests.get(GET_ORDER_BOOK_URL, headers=headers)
+            response.raise_for_status()  
+            return Response({
+                "status": "success",
+                "data": response.json()
+            }, status=status.HTTP_200_OK)
+
+        except requests.RequestException as req_err:
+            return Response({
+                "status": "error",
+                "message": f"Request error: {str(req_err)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        except Exception as e:
+            # Handle any other exceptions
+            return Response({
+                "status": "error",
+                "message": f"An error occurred: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+#Get trad history data GET_TREAD_BOOK_URL
+class GetAliceTreadBook(APIView):
+    pagination_class = None
+    def get(self, request, *args, **kwargs):
+        # Get or regenerate the session ID
+        session_id_response = get_or_regenerate_session_id(USER_ID, ALICE_API_KEY)
+        # Extract sessionID from the response
+        sessionID = session_id_response.get('sessionID') if isinstance(session_id_response, dict) else None  
+        if not sessionID:
+            return Response({
+                "status": "error",
+                "message": "Failed to obtain a valid session ID."
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        # Prepare headers
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': f'Bearer {USER_ID} {sessionID}'  # Assuming session ID is used this way
+        }
+        try:
+            # Send a GET request to the order book endpoint
+            response = requests.get(GET_TREAD_BOOK_URL, headers=headers)
+            print("response>>>>>>>>>>>",response)
+            response.raise_for_status()  # Raise an error for bad responses (4xx or 5xx)
+            trade_history = response.json()
+            # Return the successful response data
+            return Response({
+                "status": "success",
+                "data": trade_history
+            }, status=response.status_code)
+
+        except requests.RequestException as req_err:
+            # Handle request exceptions such as timeouts, bad responses, etc.
+            return Response({
+                "status": "error",
+                "message": f"Request error: {str(req_err)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        except Exception as e:
+            # Handle any other exceptions
+            return Response({
+                "status": "error",
+                "message": f"An error occurred: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+# Webhook for order trigger
+# Initialize API credentials and session
+API_KEY = 'Xp6znI3s'  
+USERNAME = 'AAAB519761'  
+PASSWORD = '1234' 
+Totp = "RFFORAS7ASFH7KIZWD7FCSVK2Y"
+
+client = SmartConnect(api_key=API_KEY)
+totp = pyotp.TOTP(Totp).now()
+data = client.generateSession(USERNAME, PASSWORD, totp)
+feedToken = client.getfeedToken()
+
+token_map = None  # Initialize token_map globally
+
+# Initialize directory for logging orders
+log_dir = "order_logs"
+if not os.path.exists(log_dir):
+    os.makedirs(log_dir)
+
+# Initialize Symbol Token Map
+def initializeSymbolTokenMap():
+    global token_map
+    url = "https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json"
+    d = requests.get(url).json()
+    token_map = pd.DataFrame.from_dict(d)
+    token_map['expiry'] = pd.to_datetime(token_map['expiry'], format='%d%b%Y', errors='coerce')
+    token_map = token_map.astype({'strike': float})
+
+initializeSymbolTokenMap()
+
+# Helper function to get token info
+def getTokenInfo(exch_seg, instrumenttype, symbol, pe_ce=None):
+    # print("get token infoooooooooooo",symbol)
+    df = token_map
+    if exch_seg == 'NSE':
+        matched_rows = df[(df['exch_seg'] == exch_seg) & (df['symbol'] == symbol)]
+        return matched_rows.sort_values(by=['symbol'])
+
+    if exch_seg == 'NFO' and instrumenttype == 'OPTIDX':
+        matched_rows = df[
+            (df['exch_seg'] == exch_seg) &
+            (df['instrumenttype'] == instrumenttype) &  
+            (df['name'] == symbol) &
+            (df['symbol'].str.endswith(pe_ce))
+        ]
+        return matched_rows.sort_values(by=['expiry'])
+
+    return None
+
+# Order logging function
+def log_order(data, filename):
+    """Log order details to a CSV file."""
+    file_path = os.path.join(log_dir, filename)
+    df = pd.DataFrame([data])
+    if not os.path.isfile(file_path):
+        df.to_csv(file_path, index=False)
+    else:
+        df.to_csv(file_path, mode='a', header=False, index=False)
+
+# API View to place orders
+class GetclientdataView(APIView):
+    # permission_classes = [IsAuthenticated]
+    def get(self,request, *args, **kwargs): 
+        try:
+            client_list = ClientTradeSetting.objects.filter(is_tread_status=True)
+            print(client_list)
+            serializer = ClientTradeSettingSerializer(client_list,many=True)
+            # print(serializer)
+        
+        except Strategies.DoesNotExist:
+            return Response({"detail": "client id not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)  
+
+
+
+# Save the order log to the database
+from django.utils import timezone  
+
+def save_order_logs(order_type,symbol,price,strategy,user,status,failure_reason,json):
+                                        
+    """Save order details and status into the log table."""
+    try:
+        OrderLog.objects.create(
+            signal_time=timezone.now(),  # You can change this to the actual signal time
+            order_type=order_type,
+            symbol=symbol,
+            price=price,
+            strategy=strategy,
+            user=user,  # Store the client ID here
+            status=status,
+            failure_reason=failure_reason,
+            json_data=json
+        )
+        
+        logger.info(f"Order log saved for user {user.id} with status {status}")
+    except Exception as e:
+        logger.error(f"Failed to save order log for user {user.id}. Reason: {str(e)}")
+
+SESSION_ID = None
+SESSION_EXPIRATION = None
+#Webhook  trade Alert
+class PlaceOrderWebhookView(APIView):
+    def post(self, request):
+        alert_data = request.data
+        logger.info(f"Received alert: {alert_data}")
+        symbol = request.data.get('symbol')
+        exch_seg = request.data.get('exch_seg')
+        producttype = request.data.get('producttype', 'INTRADAY')
+        default_quantity = request.data.get('quantity', 15)
+        default_expiry = request.data.get('expiry', '27/11/2024')
+        default_price = request.data.get('price', 0)
+        default_ordertype = request.data.get('ordertype', 'MARKET')
+        default_transactiontype = request.data.get('buy_sell', 'BUY')
+        triggerPrice = request.data.get('triggerPrice', 0)
+        limitPrice = request.data.get('limitPrice', 0)
+        Type=request.data.get('Type',"CE")
+        all_enable_users = ClientTradeSetting.objects.filter(is_tread_status=True)
+        # today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        # today_end = today_start + timedelta(days=1)
+        order_status=None
+        try:
+            for trade in all_enable_users:
+                symbol = trade.symbol
+                user = trade.client
+                strategy = trade.strategy
+                quantity = trade.quantity or default_quantity
+                product_type = trade.product_type
+                transaction_type = trade.buy_sell or default_transactiontype
+                price = default_price
+                ordertype = default_ordertype
+                expiry = trade.expiry_date or default_expiry
+                trade_limit=trade.trade_limit
+                # Count user's trades for the day
+                today = datetime.today()
+                daily_trade_count = TradingLog.objects.filter(client=user, date=today).count()
+
+                if daily_trade_count >= trade_limit:
+                    logger.warning(f"Trade limit reached for user {user}. No more trades allowed today.")
+                    continue
+
+                logger.info(f"Placing order for user {user}. Trade count: {daily_trade_count}/{trade_limit}")
+
+                if trade.broker == "Angle One":
+                    # print("Brocker is ",trade.broker ,"symbol is",trade.symbol)
+                    logger.info(f"!!!!Placing order for user: {user} Brocker is: {trade.broker} & trading symbol is: {trade.symbol}")
+                    if exch_seg=='NSE':
+                        tokendata = getTokenInfo(exch_seg,None, trade.symbol)
+                        # print(tokendata)
+                        token = tokendata.iloc[0]['token']
+
+                    else:
+                        tokenInfo = getTokenInfo(exch_seg, 'OPTIDX', trade.symbol, 'CE')
+                        # print (tokenInfo)
+                        token = tokenInfo.iloc[1]['token']
+                        symbol = tokenInfo.iloc[1]['symbol']
+                    # Handle Angle One-specific order placement
+                    # token_info = getTokenInfo(trade.segment, 'OPTIDX', trade.symbol)
+                    # token = token_info.iloc[0]['token']
+                    
+                    # Place order for Angle One
+                    order_response = place_Angle_order(
+                        token=token,
+                        symbol=symbol,
+                        exch_seg=exch_seg,
+                        quantity=quantity,
+                        product_type=product_type,
+                        transactiontype=transaction_type,
+                        price=price,
+                        ordertype=ordertype,
+                        expiry=expiry,
+                        user=user,
+                        strategy=strategy,
+                        # lot_size=1
+                    )
+
+                elif trade.broker == "Alice Blue":
+                    
+                    logger.info(f"!!!!Placing order for user: {user} Brocker is: {trade.broker} & trading symbol is: {trade.symbol}")
+                    # Handle Alice Blue-specific order placement
+                    session_id = get_or_regenerate_session_id(USER_ID, ALICE_API_KEY)
+                    instrument=get_instrument(symbol,exch_seg)
+                    trade_symbol=instrument.name
+                    token=instrument.token
+                    # order_response=place_alice_orders(transactiontype,instrument, symbol,quantity, ordertype, product_type,price, triggerPrice, 
+                    #     stop_loss=None, square_off=None, trailing_sl=None, is_amo=False, order_tag='order1',user=user,
+                    #     strategy=strategy,)
+                    order_response = place_alice_order(
+                        session_id=session_id,
+                        token=token,
+                        trade_symbol=trade_symbol,
+                        exch_seg=exch_seg,
+                        quantity=quantity,
+                        producttype=product_type,
+                        transactiontype=transaction_type,
+                        price=price,
+                        ordertype=ordertype,
+                        expiry=expiry,
+                        user=user,
+                        strategy=strategy,
+                        lot_size=0
+                    )
+                print("order repsone>>>>>>>",order_response)
+                # Check order response and log or handle failures
+                if order_response['data']['status'] =="complete":
+                    order_status=f"Order placed successfully for {trade.symbol} with broker {trade.broker}"
+                    TradingLog.objects.create(client=user, date=today, symbol=trade.symbol, strategy=strategy)
+                    logger.info(f"Order placed successfully for {trade.symbol} with broker {trade.broker}")
+                elif order_response['data']['status']=="open":   
+                    order_status=f"Order is place pending for {trade.symbol} with broker {trade.broker}"
+                    logger.error(f"Order place is pending for {trade.symbol} with broker {trade.broker}") 
+                else:
+                    order_status=f"Order placement failed for {trade.symbol} with broker {trade.broker}"
+                    logger.error(f"Order placement failed for {trade.symbol} with broker {trade.broker}")
+        
+            return Response({"status": order_status}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            logger.error(f"Order placement encountered an error: {e}")
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+#place order using Angle one api
+def place_Angle_order(token, symbol, exch_seg, quantity, product_type, transactiontype, price, ordertype, expiry, user=None, strategy=None):
+    try:
+        print("angle oneeeeeeeeeeeeeeee")
+        order_params = {
+            "variety": "NORMAL",
+            "tradingsymbol": symbol,
+            "symboltoken": token,
+            "transactiontype": transactiontype,
+            "exchange": exch_seg,
+            "ordertype": ordertype,
+            "producttype": product_type,
+            "duration": "DAY",
+            "price": price,
+            "squareoff": "0",
+            "triggerprice": "0",
+            "stoploss": "0",
+            "lotsize": "1",
+            "quantity": quantity,
+        }
+        print("order_params...........",order_params)
+
+        logging.info("Sending Order Request: %s", json.dumps(order_params, indent=4))
+        
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                response = client.placeOrderFullResponse(order_params)
+                print("responseeeeeeeeee", response)
+                logging.info("Raw API Response: %s", response)
+                resuniqueId= response['data']['uniqueorderid']
+                print("Order Placed: ", resuniqueId)
+                responsedetails= client.individual_order_details(resuniqueId)
+                # print("Order Details: ::::::", json.dumps(responsedetails,indent=4))
+
+                if responsedetails['data']['status'] =="complete":
+                    order_data = {
+                        "order_id": "data",
+                        "status": "Success",
+                    }
+                    logger.info(f"Order Placed Successfully, Order ID: {response.get('data', 'Unknown')}")
+                    # log_order(order_data, "orders_placed.csv")  
+                    save_order_logs(order_params['transactiontype'], symbol, price, strategy, user, status=responsedetails['data'].get('status'),failure_reason="your order place succesfully", json=order_params)
+                    return responsedetails
+                else:
+                    
+                    rejection_message = responsedetails['data'].get('text', 'Unknown rejection reason')
+                    responsedetails['data'].get('status', 'rejected')
+                    print("Order Rejected!!!:", rejection_message)
+
+                    save_order_logs(order_params['transactiontype'], symbol, price, strategy, user, status=responsedetails['data'].get('status'),
+                                    failure_reason=responsedetails['data'].get('text', 'Unknown rejection reason'),json=order_params)
+
+                    return responsedetails
+            except Exception as e:
+                logging.error("Error while placing order on attempt %d/%d: %s", attempt + 1, max_retries, e)
+                sleep(1)
+        logging.error("Order could not be placed after %d attempts.", max_retries)
+        return None
+
+    except Exception as e:
+        logging.error(f"An unexpected error occurred: {e}")
+        return None
+
+#token Sesiion id for alice blue order
+from datetime import datetime, timedelta
+def get_or_regenerate_session_id(USER_ID, ALICE_API_KEY):
+    global SESSION_ID, SESSION_EXPIRATION
+    current_time = datetime.now()
+    if SESSION_ID is None or SESSION_EXPIRATION is None or current_time >= SESSION_EXPIRATION:
+        logger.info(f"Session ID expired or not found. Regenerating...{USER_ID}")
+        alice = Aliceblue(user_id=USER_ID, api_key=ALICE_API_KEY)
+        SESSION_ID = alice.get_session_id(alice)
+        SESSION_EXPIRATION = current_time + timedelta(seconds=86400)
+        logger.info(f"New session ID generated:")
+    else:
+        logger.info("Using existing session ID")
+    return SESSION_ID
+
+#get instument symbol for alice blue
+alice = Aliceblue(user_id=USER_ID, api_key=ALICE_API_KEY)   
+def get_instrument(symbol, exch):
+    try:
+        instrument = alice.get_instrument_by_symbol(exch, symbol)
+        return instrument
+    except Exception as e:
+        logger.error(f"Error retrieving instrument for {symbol}: {e}")
+        return None
     
+# order place using Alice blue api   
+def place_alice_order(session_id, token, trade_symbol, exch_seg, quantity, producttype, transactiontype, price, ordertype, expiry, user, strategy, lot_size):
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': f'Bearer {USER_ID} {session_id}'  
+    }
+    print("Alice blue trade api called.........")
+    
+    order_payload = {
+        "complexty": "regular",
+        "discqty": "0",
+        "exch": exch_seg,
+        "pCode": producttype,
+        "prctyp": ordertype,
+        "price": price,
+        "qty": quantity,
+        "ret": "DAY",
+        "symbol_id": token,
+        "trading_symbol": trade_symbol,
+        "transtype": transactiontype,
+        "orderTag": "order_tag1"
+    }
+
+    # Convert int64 to int before serializing to JSON
+    order_payload = convert_int64(order_payload)
+# def place_alice_orders(transactiontype, instrument,trade_symbol,quantity, order_type, product_type, price,
+#                 trigger_price=None, stop_loss=None, square_off=None, trailing_sl=None, is_amo=False, order_tag='order1',user=None,strategy=None):
+
+#     # Convert int64 to int before serializing to JSON
+#     # order_payload = convert_int64(order_payload)
+#     product_type_map = {
+#     "INTRADAY": "INTRADAY",
+#     "CNC": "CNC",
+#     "MIS": "MIS"
+# }
+#     try:
+#         order_payload = {
+#             "transaction_type": transaction_type,
+#             "instrument": instrument,
+#             "quantity": quantity,
+#             "order_type": order_type,
+#             "product_type": product_type,
+#             "price": price,
+#             "trigger_price": trigger_price,
+#             "stop_loss": stop_loss,
+#             "square_off": square_off,
+#             "trailing_sl": trailing_sl,
+#             "is_amo": is_amo,
+#             "order_tag": order_tag
+#         }
+#         print("order payloaddd",order_payload)
+#         # order_data_json = json.dumps(order_data, indent=4)
+#         response = alice.place_order(
+#             transaction_type=transaction_type,
+#             instrument=instrument,
+#             quantity=quantity,
+#             order_type=order_type,
+#             product_type=product_type_map.get(product_type, "INTRADAY"),
+#             price=float(price),
+#             trigger_price=float(trigger_price),
+#             stop_loss=stop_loss,
+#             square_off=square_off,
+#             trailing_sl=trailing_sl,
+#             is_amo=is_amo,
+#             order_tag=order_tag
+#         )
+        # response = requests.post(ALICE_ORDER_URL, headers=headers, data=json.dumps([order_payload]))
+         # Check if the request was successful
+    try: 
+        # print(response)
+        response = requests.post(ALICE_ORDER_URL, headers=headers, data=json.dumps([order_payload]))
+         # Check if the request was successful
+        if response.status_code == 200:
+            logger.info(f"Request successful. Response data: {response.text}")  # Prints raw response text
+            try:
+                # Parse the JSON response
+                response_data = response.json()
+                logger.info(f"Parsed JSON response: {json.dumps(response_data, indent=4)}")
+                # Log the order as successful
+                save_order_logs(transactiontype, trade_symbol, price, strategy, user, "Success", failure_reason="no reason", json=order_payload)
+            except ValueError as e:
+                logger.warning(f"Failed to parse response as JSON: {e}")
+                save_order_logs(transactiontype, trade_symbol, price, strategy, user, "Failed", failure_reason="JSON parse error", json=order_payload)
+        else:
+            # If the request failed, log the failure
+            logger.error(f"Request failed. Status code: {response.status_code}. Response: {response.text}")
+            save_order_logs(transactiontype, trade_symbol, price, strategy, user, "Failed", failure_reason="Non-200 status code", json=order_payload)
+        
+        # Return the response object for further handling if needed
+        return response
+
+    except requests.RequestException as req_err:
+        # Handle network-related issues
+        logger.error(f"Order placement failed for user {user.id}. Reason: {str(req_err)}")
+        save_order_logs(transactiontype, trade_symbol, price, strategy, user, "Failed", failure_reason=str(req_err), json=order_payload)
+        return {"status": "Order failed due to a request error"}
+
+    except Exception as e:
+        # Handle any unexpected errors
+        logger.exception(f"Unexpected error occurred while placing order for user {user.id}")
+        save_order_logs(transactiontype, trade_symbol, price, strategy, user, "Failed", failure_reason=str(e), json=order_payload)
+        return {"status": "Order processed with errors"}
+
+
+def convert_int64(obj):
+    if isinstance(obj, np.int64):
+        return int(obj)
+    elif isinstance(obj, dict):
+        return {key: convert_int64(value) for key, value in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_int64(item) for item in obj]
+    return obj
+# Get the strategy using the strategy_id
+class StrategyClientListView(APIView):
+    # permission_classes = [IsAuthenticated]
+
+    def get(self, request, strategy_id, *args, **kwargs):
+        try:
+            strategy = get_object_or_404(Strategies, id=strategy_id)
+            clients = User.objects.filter(is_client=True)
+            if not clients.exists():
+                return Response({
+                    "strategy_id": strategy.id,
+                    "strategy_name": strategy.name,
+                    "clients": []
+                }, status=200)
+
+            # Build the client data list
+            client_data = [
+                {
+                    "client_id": client.id,
+                    "client_name": f"{client.firstName} {client.lastName}",
+                    "is_using_strategy": strategy.clients.filter(id=client.id).exists(),
+                }
+                for client in clients
+            ]
+            return Response({
+                "strategy_id": strategy.id,
+                "strategy_name": strategy.name,
+                "clients": client_data,
+            }, status=200)
+        
+        except NotFound:
+            return Response({"error": "Strategy not found"}, status=404)
+
+        except Exception as e:
+            return Response({"error": f"An unexpected error occurred: {str(e)}"}, status=500)

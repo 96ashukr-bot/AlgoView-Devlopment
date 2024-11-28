@@ -53,7 +53,7 @@ admin.site.register(RolePermission)
 
 @admin.register(OrderLog)
 class OtpAdmin(admin.ModelAdmin):
-    list_display = ['symbol','order_type','strategy','price','created_at','json_data']
+    list_display = ['id','symbol','order_type','user','price','created_at','json_data']
     search_fields = ['order_type',]
     ordering = ['order_type',]       
     
@@ -101,8 +101,12 @@ class categoriesAdmin(admin.ModelAdmin):
 
 @admin.register(ClientTradeSetting)    
 class ClientTradeSettingAdmin(admin.ModelAdmin):
-    list_display=("id",'client','segment','is_tread_status') 
+    list_display=("id",'client','symbol','segment','is_tread_status') 
 
 @admin.register(TradeLog)    
 class TradeLogAdmin(admin.ModelAdmin):
     list_display=("id",'client','is_trade_status') 
+
+@admin.register(TradingLog)    
+class TradeLogAdmin(admin.ModelAdmin):
+    list_display=("id",'date','client')     

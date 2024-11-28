@@ -398,7 +398,11 @@ class TradeLog(models.Model):
 
     def __str__(self):
         return f"Trade log for {self.client.firstName} - {self.symbol} - {self.trade_date}"
-
+class TradingLog(models.Model):
+    client = models.ForeignKey(User, on_delete=models.CASCADE)
+    date = models.DateField(auto_now_add=True,null=True, blank=True)
+    symbol = models.CharField(max_length=50,null=True, blank=True)
+    strategy = models.CharField(max_length=50,null=True, blank=True)
 class ClientTradeSetting(models.Model):
     client = models.ForeignKey('User', on_delete=models.CASCADE, null=True, blank=True)
     segment = models.ForeignKey('Segment', on_delete=models.CASCADE, null=True, blank=True)

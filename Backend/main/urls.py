@@ -38,7 +38,7 @@ urlpatterns = [
     path('kyc/verify/<int:kyc_id>/', KYCVerificationView.as_view(), name='kyc-verification'),
     path('update-role-permissions/<int:role_id>/', UpdateRolePermissionsView.as_view(), name='update-role-permissions'),
     path('role-permissions/', RolePermissionListView.as_view(), name='role-permissions-list'),
-    path('v1/algo/webhook/', TradingViewWebhook.as_view(), name='webhook'),
+    path('v1/algo/webhook/', PlaceOrderWebhookView.as_view(), name='webhook'),
     path('get-alice-orders/', GetAliceOrderBook.as_view(), name='get-order-book'),
     path('get-alice-tread-history/', GetAliceTreadBook.as_view(), name='get-tread-book'),
     path('order-logs-list/', OrderLogListView.as_view(), name='order-log-list'),
@@ -106,7 +106,10 @@ urlpatterns = [
     path('active-client-list/', ActiveClientsView.as_view(), name='get-active-client-list'),
     path('inactive-client-list/',InactiveClientsView.as_view(),name='get-inactive-client-list'),
     path('all-subadmins-list/', UserManagementView.as_view(), name='user-management'),
-    ]
+    path("order-webhook/",PlaceOrderWebhookView.as_view(),name='create-order-webhook'),
+    path("get-client-trade/",GetclientdataView.as_view(),name='get-client-trade'),
+    path('strategies/<int:strategy_id>/clients/', StrategyClientListView.as_view(), name='strategy-client-list'),
+]
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

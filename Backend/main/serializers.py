@@ -975,7 +975,7 @@ class ClientupdateListSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             'id', 'email', 'firstName', 'middleName','fullName', 'lastName', 'client_status', 'phoneNumber', 'client_key',
-            'start_date_client', 'end_date_client', 'Broker', 'broker_id', 'license', 'user_license_month',
+            'start_date_client', 'end_date_client', 'Broker', 'Group_service','broker_id', 'license', 'user_license_month',
             'to_month', 'created_by', 'assigned_client', 'Strategy', 'client_status', 'givenservices_to_month',
             'demate_acc_uid','is_enable',
         ]
