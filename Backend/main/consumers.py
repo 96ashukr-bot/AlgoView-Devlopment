@@ -1,24 +1,18 @@
+import asyncio
 import json
 import logging
 from logzero import logger
 from channels.generic.websocket import AsyncWebsocketConsumer
 from SmartApi.smartWebSocketV2 import SmartWebSocketV2
 from SmartApi import SmartConnect
-import uuid
 import pyotp
-import json
-import asyncio
-import logging
-from channels.generic.websocket import AsyncWebsocketConsumer
-from SmartApi.smartWebSocketV2 import SmartWebSocketV2
 
 
 # Smart API credentials
-API_KEY = 'Xp6znI3s'  
-USERNAME = 'AAAB519761'  
-PASSWORD = '1234' 
-TOTP_SECRET = "RFFORAS7ASFH7KIZWD7FCSVK2Y" 
-
+API_KEY = 'Xp6znI3s'
+USERNAME = 'AAAB519761'
+PASSWORD = '1234'
+TOTP_SECRET = "RFFORAS7ASFH7KIZWD7FCSVK2Y"
 
 obj = SmartConnect(api_key=API_KEY)
 totp = pyotp.TOTP(TOTP_SECRET).now()
@@ -27,24 +21,28 @@ feedToken = obj.getfeedToken()
 FEED_TOKEN = feedToken
 AUTH_TOKEN = data['data']['refreshToken']
 
+correlation_id = "abc123"
+mode = 1  # Subscription mode
 
-correlation_id="abc123"
-mode = 1  
 
 class StockTradingConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.room_name = "stocks"
         self.room_group_name = f"stock_{self.room_name}"
         self.exchange_type = int(self.scope["url_route"]["kwargs"].get("exchange_type", 1))  # Default to 1
-        self.symbol_token = self.scope["url_route"]["kwargs"].get("symbol_token", "default_token")
+        self.symbol_tokens = self.scope["url_route"]["kwargs"].get("symbol_tokens", "").split(",")  # Token list
 
+        # Prepare the token list for subscription
         self.token_list = [{
-                "exchangeType": self.exchange_type,
-                "tokens": [self.symbol_token]
-            }]
+            "exchangeType": self.exchange_type,
+            "tokens": self.symbol_tokens
+        }]
 
         # Accept the WebSocket connection
         await self.accept()
+
+        # Store the current event loop
+        self.event_loop = asyncio.get_event_loop()
 
         # Initialize WebSocket and subscribe
         self.sws = SmartWebSocketV2(AUTH_TOKEN, API_KEY, USERNAME, FEED_TOKEN)
@@ -61,48 +59,36 @@ class StockTradingConsumer(AsyncWebsocketConsumer):
         logger.info("WebSocket connection established.")
         self.sws.subscribe(correlation_id, mode, self.token_list)
 
-    def on_data(self, wsapp, message):
-        logger.info(f"Live stock data received: {message}")
-        
-        # Add logging to verify data reception
-        print(f"Received data: {message}")  # Debugging line
-
-        # Forward the data received from the external WebSocket to the client
-        self.send(text_data=json.dumps({
-            'message': message  # Send the live data as it is
-        }))
-    def on_data(self, wsapp, message):
+    def on_data(self, wsapp, message, *args):
+        """
+        Called when data is received from the external WebSocket.
+        """
         try:
-            logger.info(f"Live stock data received: {message}")
-            logger.info("Raw Ticks: {}".format(message))  # Log the raw message
+            tick_data = message
 
-            # If `message` is already a dictionary, process it directly
-            tick_data = message  # Assuming `message` is a dictionary
+            if 'subscription_mode' in tick_data:
+                price = tick_data['last_traded_price'] / 100.0
+                token = tick_data.get("token")
 
-            # Process tick data if the required keys exist
-            if 'subscription_mode' in tick_data:  # Check for required key
-                if tick_data.get('exchange_type') == 1:  # Currency
-                    price = tick_data.get('last_traded_price', 0) / 100.0
-                else:  # Other instruments
-                    price = tick_data.get('last_traded_price', 0) / 100.0
-
-
-                logger.info(f"Formatted Price: {price:.4f} for token {tick_data.get('token')}")
-
-            # Forward the data received from the external WebSocket to the client
-            self.send(text_data=json.dumps({
-                'message': tick_data  # Forward the processed data
-            }))
-
+                # Schedule the coroutine to send data to the WebSocket client
+                asyncio.run_coroutine_threadsafe(
+                    self.send(text_data=json.dumps({
+                        "token": token,
+                        "price": f"{price:.4f}",
+                        "exchange_type": tick_data['exchange_type'],
+                        "subscription_mode": tick_data['subscription_mode']
+                    })),
+                    self.event_loop  # Use the stored event loop
+                )
+                logger.info(f"Token {token}: Price {price:.4f} sent to client.")
         except Exception as e:
             logger.error(f"Error processing data: {e}")
-    
 
-    def on_error(self, wsapp, error):
+    def on_error(self, wsapp, error, *args):
         logger.error(f"WebSocket error: {error}")
 
-    def on_close(self, wsapp):
-        logger.info("WebSocket connection closed.")
+    def on_close(self, wsapp, close_status_code, close_msg, *args):
+        logger.info(f"WebSocket connection closed. Status code: {close_status_code}, Message: {close_msg}")
 
     async def disconnect(self, close_code):
         logger.info("WebSocket connection closed.")

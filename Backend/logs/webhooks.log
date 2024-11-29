@@ -7839,3 +7839,10 @@ UnboundLocalError: local variable 'status' referenced before assignment
 2024-11-28 08:18:46 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
 2024-11-28 08:18:52 - django.server - INFO - "GET /admin/main/subsegment/7/change/ HTTP/1.1" 200 21414
 2024-11-28 08:18:52 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-11-29 05:05:21 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-11-29 05:06:51 - django.server - INFO - "OPTIONS /user-profile/ HTTP/1.1" 200 0
+2024-11-29 05:06:51 - django.server - INFO - "OPTIONS /user-profile/ HTTP/1.1" 200 0
+2024-11-29 05:06:51 - django.server - INFO - "OPTIONS /get-client-segments-list/?segment=Option HTTP/1.1" 200 0
+2024-11-29 05:06:52 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 691
+2024-11-29 05:06:52 - django.server - INFO - "GET /get-client-segments-list/?segment=Option HTTP/1.1" 200 1200
+2024-11-29 05:06:52 - django.server - INFO - "GET /user-profile/ HTTP/1.1" 200 691
