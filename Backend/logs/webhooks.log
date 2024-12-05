@@ -1589,3 +1589,143 @@ AttributeError: 'User' object has no attribute 'username'
 2024-12-05 05:51:27 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
 2024-12-05 05:51:29 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
 2024-12-05 05:51:35 - django.server - INFO - "GET /get-client-broker-details/ HTTP/1.1" 200 371
+2024-12-05 05:54:00 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-05 05:54:14 - django.server - INFO - "PUT /update-client-broker/ HTTP/1.1" 200 420
+2024-12-05 05:54:32 - django.server - INFO - "PUT /update-client-broker/ HTTP/1.1" 200 420
+2024-12-05 05:55:14 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-05 05:55:17 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-05 05:55:22 - django.server - INFO - "PUT /update-client-broker/ HTTP/1.1" 200 420
+2024-12-05 05:55:27 - django.server - INFO - "PUT /update-client-broker/ HTTP/1.1" 200 420
+2024-12-05 05:55:29 - django.server - INFO - "PUT /update-client-broker/ HTTP/1.1" 200 420
+2024-12-05 05:55:39 - django.server - INFO - "GET /admin/ HTTP/1.1" 200 21980
+2024-12-05 05:55:40 - django.request - WARNING - Not Found: /favicon.ico
+2024-12-05 05:55:40 - django.server - WARNING - "GET /favicon.ico HTTP/1.1" 404 22160
+2024-12-05 05:55:42 - django.server - INFO - "GET /admin/main/broker/ HTTP/1.1" 200 18439
+2024-12-05 05:55:42 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-05 05:55:55 - django.server - INFO - "PUT /update-client-broker/ HTTP/1.1" 200 420
+2024-12-05 05:55:57 - django.server - INFO - "PUT /update-client-broker/ HTTP/1.1" 200 420
+2024-12-05 05:56:21 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-05 05:56:24 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-05 05:56:30 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-12-05 05:56:33 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-05 05:56:36 - django.server - INFO - "PUT /update-client-broker/ HTTP/1.1" 200 420
+2024-12-05 05:56:42 - django.server - INFO - "PUT /update-client-broker/ HTTP/1.1" 200 420
+2024-12-05 05:56:47 - django.server - INFO - "PUT /update-client-broker/ HTTP/1.1" 200 420
+2024-12-05 05:57:00 - django.server - INFO - "PUT /update-client-broker/ HTTP/1.1" 200 420
+2024-12-05 05:57:07 - django.server - INFO - "PUT /update-client-broker/ HTTP/1.1" 200 420
+2024-12-05 05:57:19 - django.server - INFO - "PUT /update-client-broker/ HTTP/1.1" 200 409
+2024-12-05 05:58:57 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-12-05 05:59:00 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-05 05:59:09 - django.server - INFO - "PUT /update-client-broker/ HTTP/1.1" 200 254
+2024-12-05 05:59:25 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-12-05 05:59:28 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-05 06:00:01 - django.server - INFO - "PUT /update-client-broker/ HTTP/1.1" 200 254
+2024-12-05 06:00:04 - django.server - INFO - "PUT /update-client-broker/ HTTP/1.1" 200 254
+2024-12-05 06:00:48 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-05 06:00:51 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-05 06:01:29 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-05 06:01:33 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-05 06:01:48 - django.server - INFO - "PUT /update-client-broker/ HTTP/1.1" 200 254
+2024-12-05 06:02:06 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-12-05 06:02:09 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-05 06:06:54 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-05 06:06:57 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-05 06:07:18 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-12-05 06:07:21 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-05 06:07:28 - django.request - WARNING - Bad Request: /update-client-broker/
+2024-12-05 06:07:28 - django.server - WARNING - "PUT /update-client-broker/ HTTP/1.1" 400 212
+2024-12-05 06:08:00 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-12-05 06:08:02 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-05 06:08:27 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-05 06:08:29 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-05 06:08:33 - django.server - INFO - "PUT /update-client-broker/ HTTP/1.1" 200 254
+2024-12-05 06:08:45 - django.request - WARNING - Bad Request: /update-client-broker/
+2024-12-05 06:08:45 - django.server - WARNING - "PUT /update-client-broker/ HTTP/1.1" 400 111
+2024-12-05 06:08:47 - django.request - WARNING - Bad Request: /update-client-broker/
+2024-12-05 06:08:47 - django.server - WARNING - "PUT /update-client-broker/ HTTP/1.1" 400 111
+2024-12-05 06:08:52 - django.server - INFO - "PUT /update-client-broker/ HTTP/1.1" 200 246
+2024-12-05 06:08:54 - django.server - INFO - "PUT /update-client-broker/ HTTP/1.1" 200 246
+2024-12-05 06:09:13 - django.server - INFO - "PUT /update-client-broker/ HTTP/1.1" 200 254
+2024-12-05 06:09:13 - django.server - INFO - "PUT /update-client-broker/ HTTP/1.1" 200 254
+2024-12-05 06:09:24 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-05 06:09:27 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-05 06:09:51 - django.server - INFO - "PUT /update-client-broker/ HTTP/1.1" 200 254
+2024-12-05 06:09:51 - django.server - INFO - "PUT /update-client-broker/ HTTP/1.1" 200 254
+2024-12-05 06:10:00 - django.request - WARNING - Bad Request: /update-client-broker/
+2024-12-05 06:10:00 - django.server - WARNING - "PUT /update-client-broker/ HTTP/1.1" 400 84
+2024-12-05 06:10:06 - django.server - INFO - "PUT /update-client-broker/ HTTP/1.1" 200 254
+2024-12-05 06:10:14 - django.server - INFO - "PUT /update-client-broker/ HTTP/1.1" 200 246
+2024-12-05 06:11:12 - django.server - INFO - "PUT /update-client-broker/ HTTP/1.1" 200 258
+2024-12-05 06:12:21 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-05 06:12:24 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-05 06:12:41 - django.server - INFO - "PUT /update-client-broker/ HTTP/1.1" 200 258
+2024-12-05 06:14:43 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-05 06:14:46 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-05 06:15:00 - django.server - INFO - "PUT /update-client-broker/ HTTP/1.1" 200 234
+2024-12-05 06:15:14 - django.server - INFO - "PUT /update-client-broker/ HTTP/1.1" 200 234
+2024-12-05 06:15:24 - django.server - INFO - "PUT /update-client-broker/ HTTP/1.1" 200 237
+2024-12-05 06:17:13 - django.server - INFO - "PUT /update-client-broker/ HTTP/1.1" 200 258
+2024-12-05 06:20:36 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-05 06:20:39 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-05 06:20:59 - django.server - INFO - "PUT /update-client-broker/ HTTP/1.1" 200 254
+2024-12-05 06:21:25 - django.request - WARNING - Bad Request: /update-client-broker/
+2024-12-05 06:21:25 - django.server - WARNING - "PUT /update-client-broker/ HTTP/1.1" 400 111
+2024-12-05 06:21:26 - django.request - WARNING - Bad Request: /update-client-broker/
+2024-12-05 06:21:26 - django.server - WARNING - "PUT /update-client-broker/ HTTP/1.1" 400 111
+2024-12-05 06:21:34 - django.server - INFO - "PUT /update-client-broker/ HTTP/1.1" 200 232
+2024-12-05 06:22:43 - django.server - INFO - "PUT /update-client-broker/ HTTP/1.1" 200 232
+2024-12-05 06:23:01 - django.server - INFO - "PUT /update-client-broker/ HTTP/1.1" 200 247
+2024-12-05 06:23:25 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-12-05 06:23:27 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-05 06:23:33 - django.server - INFO - "PUT /update-client-broker/ HTTP/1.1" 200 402
+2024-12-05 06:23:50 - django.server - INFO - "PUT /update-client-broker/ HTTP/1.1" 200 387
+2024-12-05 06:24:09 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-12-05 06:24:13 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-05 06:24:20 - django.server - INFO - "PUT /update-client-broker/ HTTP/1.1" 200 232
+2024-12-05 06:24:35 - django.server - INFO - "GET /admin/main/ HTTP/1.1" 200 13587
+2024-12-05 06:25:44 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/admin.py changed, reloading.
+2024-12-05 06:25:47 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-05 06:25:55 - django.server - INFO - "GET /admin/main/ HTTP/1.1" 200 14067
+2024-12-05 06:26:00 - django.server - INFO - "GET /admin/main/clientbrokerdetails/ HTTP/1.1" 200 18323
+2024-12-05 06:26:00 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-05 06:26:03 - django.request - ERROR - Internal Server Error: /admin/main/clientbrokerdetails/1/change/
+Traceback (most recent call last):
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/venv/lib/python3.8/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/venv/lib/python3.8/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/venv/lib/python3.8/site-packages/django/contrib/admin/options.py", line 688, in wrapper
+    return self.admin_site.admin_view(view)(*args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/venv/lib/python3.8/site-packages/django/utils/decorators.py", line 134, in _wrapper_view
+    response = view_func(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/venv/lib/python3.8/site-packages/django/views/decorators/cache.py", line 62, in _wrapper_view_func
+    response = view_func(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/venv/lib/python3.8/site-packages/django/contrib/admin/sites.py", line 242, in inner
+    return view(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/venv/lib/python3.8/site-packages/django/contrib/admin/options.py", line 1889, in change_view
+    return self.changeform_view(request, object_id, form_url, extra_context)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/venv/lib/python3.8/site-packages/django/utils/decorators.py", line 46, in _wrapper
+    return bound_method(*args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/venv/lib/python3.8/site-packages/django/utils/decorators.py", line 134, in _wrapper_view
+    response = view_func(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/venv/lib/python3.8/site-packages/django/contrib/admin/options.py", line 1747, in changeform_view
+    return self._changeform_view(request, object_id, form_url, extra_context)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/venv/lib/python3.8/site-packages/django/contrib/admin/options.py", line 1855, in _changeform_view
+    "subtitle": str(obj) if obj else None,
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py", line 444, in __str__
+    return f"Trade Setting {self.broker_name} - {self.broker_API_KEY}"
+AttributeError: 'ClientBrokerdetails' object has no attribute 'broker_API_KEY'
+2024-12-05 06:26:03 - django.server - ERROR - "GET /admin/main/clientbrokerdetails/1/change/ HTTP/1.1" 500 118068
+2024-12-05 06:26:41 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+2024-12-05 06:26:44 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-05 06:26:52 - django.server - INFO - "GET /admin/main/clientbrokerdetails/1/change/ HTTP/1.1" 200 24270
+2024-12-05 06:26:52 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-05 06:27:19 - django.server - INFO - "PUT /update-client-broker/ HTTP/1.1" 200 247
+2024-12-05 06:27:24 - django.server - INFO - "GET /admin/main/clientbrokerdetails/1/change/ HTTP/1.1" 200 24304
+2024-12-05 06:27:24 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-05 06:28:17 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-12-05 06:28:20 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-05 06:28:26 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-05 06:28:28 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-05 06:28:34 - django.server - INFO - "PUT /update-client-broker/ HTTP/1.1" 200 247
+2024-12-05 06:28:42 - django.server - INFO - "GET /update-client-broker/ HTTP/1.1" 200 353

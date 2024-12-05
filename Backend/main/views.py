@@ -2608,19 +2608,28 @@ class ClientBrokerDetailsView(APIView):
         except Exception as e:
             return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
     def put(self, request):
+
         """
-        Create or update broker details for a specific client. 
-        Resets fields not provided in the request.
+        Create or update broker details for a specific client.
+        Resets fields not provided in the request to null.
         """
         try:
-            user=request.user
+            user = request.user
+
+            # Fetch or create broker details for the client
             broker_detail, created = ClientBrokerdetails.objects.get_or_create(client_id=user.id)
 
-            for field in ["broker_API_UID"]:
-                if field not in request.data:
-                    setattr(broker_detail, field, None)  
+            # List of all fields in the model
+            all_fields = [field.name for field in ClientBrokerdetails._meta.get_fields()]
 
-            serializer = ClientBrokerDetailsSerializer(broker_detail, data=request.data, partial=True)
+            # Loop through all fields and set them to null if they are not in the request data
+            for field in all_fields:
+                if field != 'id' and field != 'client' and field != 'broker_name':  # Exclude non-updatable fields (like 'id', 'client', 'broker_name')
+                    if field not in request.data:
+                        setattr(broker_detail, field, None)
+
+            # Use the serializer with partial=True to update only provided fields
+            serializer = ClientBrokerDetailsUpdateSerializer(broker_detail, data=request.data, partial=True)
             if serializer.is_valid():
                 serializer.save()
                 message = "Broker details created successfully!" if created else "Broker details updated successfully!"
@@ -2629,6 +2638,8 @@ class ClientBrokerDetailsView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
 #demate status manage api for client trade
 class EnableDisableBrokerView(APIView):
     permission_classes = [IsAuthenticated]

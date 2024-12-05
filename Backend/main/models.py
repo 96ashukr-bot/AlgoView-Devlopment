@@ -441,6 +441,6 @@ class ClientBrokerdetails(models.Model):
     broker_Totp_Authcode=models.CharField(max_length=250,null=True, blank=True)
     broker_pass=models.CharField(max_length=50,null=True, blank=True)
     def __str__(self):
-        return f"Trade Setting {self.broker_name} - {self.broker_API_KEY}"
+        return f"Trade Setting {self.broker_name} - {self.broker_API_SKEY}"
 
     

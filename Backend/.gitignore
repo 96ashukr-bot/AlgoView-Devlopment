@@ -16,3 +16,4 @@ Backend/algoview/__pycache__/
 Backend/logs/webhooks.log
  logs/webhooks.log
 
+Backend/logs/

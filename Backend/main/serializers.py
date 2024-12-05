@@ -1103,18 +1103,13 @@ class UserclientSerializer(serializers.ModelSerializer):
         ]
 
 
+class ClientBrokerDetailsUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ClientBrokerdetails
+        fields = '__all__'
 class ClientBrokerDetailsSerializer(serializers.ModelSerializer):
     broker_name = GetBrokerSerializer(read_only=True) 
     class Meta:
         model = ClientBrokerdetails
-        # fields = '__all__'
-        fields = [
-            'id',
-            'broker_API_SKEY',
-            'broker_API_UID',
-            'broker_Demate_User_Name',
-            'broker_Totp_Authcode',
-            'broker_pass',
-            'client',
-            'broker_name',
-        ]
+        fields = '__all__'
+        
