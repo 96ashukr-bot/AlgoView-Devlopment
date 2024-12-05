@@ -110,6 +110,10 @@ urlpatterns = [
     path("get-client-trade/",GetclientdataView.as_view(),name='get-client-trade'),
     path('strategies/<int:strategy_id>/clients/', StrategyClientListView.as_view(), name='strategy-client-list'),
     path("get-client-details/",ClientDashboardIView.as_view(),name='get-client-details'),
+    path("get-client-Trade-status/",ClientsTradeStatusView.as_view(),name='active-inactive-client'),
+    path("update-client-broker/", ClientBrokerDetailsView.as_view(), name='update-client-broker'),
+    path("enable-disable-broker/", EnableDisableBrokerView.as_view(), name='update-status-broker'),
+
 ]
 
 if settings.DEBUG:

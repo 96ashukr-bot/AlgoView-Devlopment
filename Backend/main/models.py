@@ -432,4 +432,15 @@ class ClientTradeSetting(models.Model):
     
     def __str__(self):
         return f"Trade Setting {self.segment.name} - {self.sub_segment.name}"
+class ClientBrokerdetails(models.Model):
+    client = models.ForeignKey('User', on_delete=models.CASCADE,null=True, blank=True)
+    broker_name =models.ForeignKey(Broker, on_delete=models.CASCADE,null=True, blank=True)
+    broker_API_SKEY = models.CharField(max_length=250,null=True, blank=True)
+    broker_API_UID = models.CharField(max_length=50,null=True, blank=True)
+    broker_Demate_User_Name = models.CharField(max_length=50,null=True, blank=True)
+    broker_Totp_Authcode=models.CharField(max_length=250,null=True, blank=True)
+    broker_pass=models.CharField(max_length=50,null=True, blank=True)
+    def __str__(self):
+        return f"Trade Setting {self.broker_name} - {self.broker_API_KEY}"
+
     
