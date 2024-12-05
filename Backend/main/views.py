@@ -2586,6 +2586,27 @@ class ClientsTradeStatusView(APIView):
 #update client demate account details api
 class ClientBrokerDetailsView(APIView):
     permission_classes = [IsAuthenticated]
+    def get(self, request):
+        """
+        Retrieve broker details for the authenticated client.
+        """
+        try:
+            user = request.user
+            broker_detail = ClientBrokerdetails.objects.filter(client_id=user.id).first()
+
+            if not broker_detail:
+                return Response(
+                    {"error": "Broker details not found for the client."},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+
+            serializer = ClientBrokerDetailsSerializer(broker_detail)
+            return Response(
+                {"data": serializer.data},
+                status=status.HTTP_200_OK
+            )
+        except Exception as e:
+            return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
     def put(self, request):
         """
         Create or update broker details for a specific client. 
@@ -2634,5 +2655,26 @@ class EnableDisableBrokerView(APIView):
         status_message = "enabled" if is_enable else "disabled"
         return Response(
             {"message": f"Broker has been {status_message} for the client."},
+            status=status.HTTP_200_OK
+        )
+    
+    def get(self, request):
+        """
+        Fetch broker status for the authenticated client.
+        """
+        try:
+            user = request.user
+            client = User.objects.get(id=user.id)
+        except User.DoesNotExist:
+            return Response({"error": "Client not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Fetch and return the broker's status
+        return Response(
+            {
+                "id": client.id,
+                "username": client.fullName,
+                "email": client.email,
+                "is_enable": client.is_enable,  # Assuming this field exists in the User model
+            },
             status=status.HTTP_200_OK
         )
