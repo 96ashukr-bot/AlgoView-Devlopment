@@ -40,7 +40,7 @@ from SmartApi import SmartConnect
 from SmartApi.smartExceptions import DataException
 from time import sleep
 import numpy as np
-
+import pytz
 
 USER_ID=config('USER_ID')
 ALICE_API_KEY=config('ALICE_API_KEY')
@@ -1867,10 +1867,10 @@ API_KEY = 'FNqcDPCk'#'Xp6znI3s'
 USERNAME = 'A1420760'
 Totp     = "7DFMHZE3BDRCIHMLFT4N3QVCPU"
 PASSWORD="1986"
-client = SmartConnect(api_key=API_KEY)
+smart_client = SmartConnect(api_key=API_KEY)
 totp = pyotp.TOTP(Totp).now()
-data = client.generateSession(USERNAME, PASSWORD, totp)
-feedToken = client.getfeedToken()
+data = smart_client.generateSession(USERNAME, PASSWORD, totp)
+feedToken = smart_client.getfeedToken()
 
 token_map = None  # Initialize token_map globally
 
@@ -1941,7 +1941,7 @@ class PlaceOrderWebhookView(APIView):
     def post(self, request):
         alert_data = request.data
         logger.info(f"Received alert: {alert_data}")
-        symbol = request.data.get('symbol','NIFTY')
+        symbols = request.data.get('symbol','NIFTY')
         exch_seg = request.data.get('exch_seg','NFO')
         producttype = request.data.get('productType')
         default_quantity = request.data.get('quantity', 15)
@@ -1953,30 +1953,33 @@ class PlaceOrderWebhookView(APIView):
         limitPrice = request.data.get('limitPrice', 0)
         Type=request.data.get('Type',"CE")
         Lots=request.data.get('Lot',"1")
-        all_enable_users = ClientTradeSetting.objects.filter(is_tread_status=True)
-        logger.info(f"symbol>>{symbol}>>expiry>{default_expiry} >>Type>>{Type}>>default_price>>{default_price}")
+        complexty=request.data.get('complexty',"regular")
+        logger.info(f"symbol>>{symbols}>>expiry>{default_expiry} >>Type>>{Type}>>default_price>>{default_price}")
         expiry_date = datetime.strptime(default_expiry, "%d-%m-%Y")
         day = expiry_date.strftime("%d")
         month = expiry_date.strftime("%b").upper() 
         year = expiry_date.strftime("%y") 
         # Concatenate fields to create the trading symbol
-        trading_symbol = f"{symbol}{day}{month}{year}{default_price}{Type}"
+        trading_symbol = f"{symbols}{day}{month}{year}{default_price}{Type}"            
         # Print the result
-        print("Trading Symbol:", trading_symbol)
+        print("Trading Symbol:", trading_symbol,symbols)
         order_status=None
-        print(default_expiry)
+        
+        all_enable_users = ClientTradeSetting.objects.filter(is_tread_status=True,client__is_enable=True)
         try:
             for trade in all_enable_users: 
+                print(">>>>symbol>>>>>.",symbols)
+                
                 trade_expiry_date = trade.expiry_date.date()
                 formatted_trade_expiry_date = trade_expiry_date.strftime("%d-%m-%Y")
 
                 logger.info(f"Trade expiry date: {formatted_trade_expiry_date}")
                 logger.info(f"Trade product type: {trade.product_type.upper()} received type: {producttype.upper()}")
                 logger.info(f"Trade transaction type: {trade.buy_sell.upper()} received transaction type: {buy_sell.upper()}")
-                logger.info(f"Trade symbol: {trade.symbol} received symbol: {symbol}")
+                logger.info(f"Trade symbol: {trade.symbol} received symbol: {symbols}")
 
                 if (
-                    trade.symbol != symbol or
+                    trade.symbol != symbols or
                     trade.product_type.upper() != producttype.upper() or
                     trade.buy_sell.upper() != buy_sell.upper() or
                     formatted_trade_expiry_date != default_expiry
@@ -2036,14 +2039,15 @@ class PlaceOrderWebhookView(APIView):
                         )
     
                     elif trade.broker == "Alice Blue":
-                        
+                        trading_symbol_aliceblue = f"{symbols}{day}{month}{year}{Type[0]}{default_price}"
+                        print("trading_symbol_aliceblue..",trading_symbol_aliceblue)
                         logger.info(f"!!!!Placing order for user: {user} Brocker is: {trade.broker} & trading symbol is: {trade.symbol}")
                         # Handle Alice Blue-specific order placement
                         # session_id = get_or_regenerate_session_id(USER_ID, ALICE_API_KEY)
                         # instrument=get_instrument(symbol,exch_seg)
                         # trade_symbol=instrument.name
                         # token=instrument.token
-                        order_response=place_alice_orders(transaction_type, symbol, quantity,strategy,ordertype,
+                        order_response=place_alice_orders(trading_symbol_aliceblue,transaction_type, symbol, quantity,strategy,ordertype,
                                                         product_type, price,user, Lots,triggerPrice)
                 
                     # Check order response and log or handle failures
@@ -2056,8 +2060,8 @@ class PlaceOrderWebhookView(APIView):
                         order_status=f"Order is place pending for {trade.symbol} with broker {trade.broker}"
                         logger.error(f"Order place is pending for {trade.symbol} with broker {trade.broker}") 
                     elif order_response['data']['status']=="rejected":
-                        order_status=f"Order placement failed for {trade.symbol} with broker {trade.broker}"
-                        logger.error(f"Order placement failed for {trade.symbol} with broker {trade.broker}")
+                        order_status=f"Order is rejected for {trade.symbol} with broker {trade.broker}"
+                        logger.error(f"Order is rejected for {trade.symbol} with broker {trade.broker}")
                     else:
                         order_status=f"Order placement failed for {trade.symbol} with broker {trade.broker}"
                 else:
@@ -2071,7 +2075,14 @@ class PlaceOrderWebhookView(APIView):
 #place order using Angle one api
 def place_Angle_order(token, symbol, exch_seg, quantity, product_type, transactiontype, price, ordertype, expiry,lot_size, user=None, strategy=None):
     try:
-        print("angle oneeeeeeeeeeeeeeee")
+        logger.info(f"Angle one api order placement for user: {user} & trading symbol is: {symbol}")
+        if product_type:
+            if product_type.upper() =="NRML":
+               product_type= "CARRYFORWARD"
+            elif product_type.upper() =="MIS":
+                product_type="INTRADAY"
+            elif product_type.upper() =="CNC":      
+                product_type ="DELIVERY"
         if ordertype=="LIMIT":
             order_params = {
                 "variety": "NORMAL",
@@ -2082,7 +2093,7 @@ def place_Angle_order(token, symbol, exch_seg, quantity, product_type, transacti
                 "ordertype": ordertype,
                 "producttype": product_type,
                 "duration": "DAY",
-                "price": price,
+                # "price": price,
                 "squareoff": "0",
                 "triggerprice": "0",
                 "stoploss": "0",
@@ -2108,16 +2119,16 @@ def place_Angle_order(token, symbol, exch_seg, quantity, product_type, transacti
                 
         print("order_params...........",order_params)
 
-        logging.info("Sending Order Request: %s", json.dumps(order_params, indent=4))
+        # logging.info("Sending Order Request: %s", json.dumps(order_params, indent=4))
         
         # max_retries = 3
         # for attempt in range(max_retries):
         try:
-            response = client.placeOrderFullResponse(order_params)
-            logging.info("Raw API Response: %s", response)
+            print("client typee", smart_client)
+            response = smart_client.placeOrderFullResponse(order_params)
+            logger.info("Raw API Response: %s", response)
             resuniqueId= response['data']['uniqueorderid']
-            print("Order Placed: ", resuniqueId)
-            responsedetails= client.individual_order_details(resuniqueId)
+            responsedetails= smart_client.individual_order_details(resuniqueId)
             print("Order Details: ::::::", json.dumps(responsedetails,indent=4))
 
             if responsedetails['data']['status'] =="complete":
@@ -2144,6 +2155,7 @@ def place_Angle_order(token, symbol, exch_seg, quantity, product_type, transacti
                 # log_order(order_data, "orders_placed.csv")  
                 # send massage email aleart to client your order is trade 
                 from_email = settings.DEFAULT_FROM_EMAIL,
+                
                 status=responsedetails['data']['status'] 
                 # Send rejection email
                 message = responsedetails['data'].get('text', 'Unknown rejection reason')
@@ -2182,26 +2194,27 @@ def place_Angle_order(token, symbol, exch_seg, quantity, product_type, transacti
 
 from pya3 import Aliceblue, TransactionType, OrderType, ProductType
 # from pya3.enums import TransactionType  # Adjust import based on your library
-def place_alice_orders(transaction_type, symbol, quantity, strategy, order_type, product_type, price, user,Lots, trigger_price=None):
+def place_alice_orders(trading_symbol_aliceblue,transaction_type, symbol, quantity, strategy, order_type, product_type, price, user,Lots, trigger_price=None):
     try:
         print(f"Order Type: {order_type}, Price: {price}, Trigger Price: {trigger_price}")
         # # Convert price and trigger price to float if provided
         price = float(price) if price is not None else None
         trigger_price = float(trigger_price) if trigger_price is not None else None
-        symbol = 'INFY'  # Stock symbol
+        # symbol = 'INFY'  # Stock symbol
+        print("symbol",symbol)
         if transaction_type.upper() == "BUY":
            transaction_type = TransactionType.Buy
         elif transaction_type.upper()=="SELL":
             transaction_type=TransactionType.Sell
-        if order_type:    
-            if order_type.upper() =="LIMIT":
-                order_type=OrderType.Limit
-            elif order_type.upper() =="Market":
-                order_type= OrderType.Market
-            elif order_type.upper() =="StopLossLimit":
-                order_type= OrderType.StopLossLimit,      
-            elif order_type.upper() =="StopLossMarket":
-                order_type=OrderType.StopLossMarket
+        # if order_type:    
+        #     if order_type.upper() =="LIMIT":
+        #         order_type=OrderType.Limit
+        #     elif order_type.upper() =="Market":
+        #         order_type= OrderType.Market
+        #     elif order_type.upper() =="StopLossLimit":
+        #         order_type= OrderType.StopLossLimit,      
+        #     elif order_type.upper() =="StopLossMarket":
+        #         order_type=OrderType.StopLossMarket
        
         if product_type:
             if product_type.upper() =="NRML":
@@ -2216,19 +2229,20 @@ def place_alice_orders(transaction_type, symbol, quantity, strategy, order_type,
         # Initialize Aliceblue API
         alice = Aliceblue(user_id=USER_ID, api_key=ALICE_API_KEY)  # Example user attributes
         session_id = alice.get_session_id()
-        print(f"Aliceblue session established. Session ID: {session_id}")
+        # print(f"Aliceblue session established. Session ID: {session_id}")
 
         # Place the order
-        instrument = alice.get_instrument_by_symbol('NSE', symbol)
+        instrument = alice.get_instrument_by_symbol('NFO', trading_symbol_aliceblue)
         if not instrument:
-            raise ValueError(f"Instrument not found for symbol: {symbol}")
+            raise ValueError(f"Instrument not found for symbol: {trading_symbol_aliceblue}")
 
         logger.info("Placing order with parameters:")
         
         logger.info(f"Transaction: {transaction_type}, Instrument: {instrument.symbol}, "
               f"Quantity: {quantity}, Order Type: {order_type}, Product Type: {product_type}, "
               f"Price: {price}, Trigger Price: {trigger_price}")
-
+        response=None
+        print("order_type>>>",order_type)
         if order_type=="LIMIT":
             order_type=OrderType.Limit
             response = alice.place_order(transaction_type = transaction_type,
@@ -2236,8 +2250,9 @@ def place_alice_orders(transaction_type, symbol, quantity, strategy, order_type,
                         quantity = quantity, 
                         order_type = order_type, 
                         product_type = product_type,
-                        price=price,)
-        elif order_type=="Market":
+                        # price=price,
+                        )
+        elif order_type=="MARKET":
             order_type= OrderType.Market
             response = alice.place_order(transaction_type = transaction_type,
                         instrument = instrument, 
@@ -2245,6 +2260,7 @@ def place_alice_orders(transaction_type, symbol, quantity, strategy, order_type,
                         order_type = order_type, 
                         product_type = product_type,
                         trigger_price=trigger_price)
+            print("MARKET ORDER RESP...",response)
         elif order_type=="StopLossLimit":
             order_type= OrderType.StopLossLimit,     
             response = alice.place_order(transaction_type = transaction_type,
@@ -2275,24 +2291,36 @@ def place_alice_orders(transaction_type, symbol, quantity, strategy, order_type,
                         order_tag='order1') 
 
         print(f"Order Response: {response}")
-        if response.get('stat') == 'Not_Ok':
-            rejection_reason = response.get('emsg', 'Unknown error')
-            print(f"Order rejected. Reason: {rejection_reason}")
-            logger.error(f"Order rejected. Reason: {rejection_reason}")
-
-        # Fetch and log order history
-        order_history = alice.get_order_history('')
-        print(f"Order History: {order_history}")
-
         # Log and save order details
         if response.get("stat") == "Ok":
-            logger.info(f"Order placed successfully for user {user}. Response: {response}")
-            save_order_logs(transaction_type, symbol, price, strategy, user, "Success", failure_reason="No issues")
-        else:
-            error_message = response.get("message", "Unknown error")
-            logger.error(f"Order placement failed for user {user}. Error: {error_message}")
-            save_order_logs(transaction_type, symbol, price, strategy, user, "Failed", failure_reason=error_message)
+            order_id=response.get("NOrdNo")
+            order_his=alice.get_order_history(order_id)
+            # Extract the status
+            status = order_his.get('Status', '').lower()  # Retrieve 'Status' key, fallback to '' if not found
 
+            print("history of alice blue order_____________",order_his)
+            print("status......",status)
+            if status == "success":
+                response = {"data": {"status": "completed"}}
+                logger.info(f"Order placed successfully for user {user}. Response: {response}")
+                save_order_logs(transaction_type, symbol, price, strategy, user, "Success", failure_reason="No issues")
+            elif status == "rejected":   
+                from_email = settings.DEFAULT_FROM_EMAIL,
+                message=order_his.get('RejReason', 'not any reason get').lower()
+                send_trade_email_async.delay(user.email, from_email,user.firstName,status, message)
+                response = {"data": {"status": "rejected"}}
+                logger.info(f"Order is rejected  for user {user}. Response :{response}")
+                save_order_logs(transaction_type, symbol, price, strategy, user, "Failed", failure_reason=message)     
+        else:
+            # error_message = response.get("message", "Unknown error")
+            response ={"data": {"status": "Failed"}}
+            error_message="error when placing order"
+            logger.error(f"Order placement failed for user {user}. Error: {error_message}")
+            save_order_logs(transaction_type, symbol, price, strategy, user, "Failed", failure_reason="somthing wrong in order place")
+        # if response.get('stat') == 'Not_Ok':
+        #     rejection_reason = response.get('emsg', 'Unknown error')
+        #     print(f"Order rejected. Reason: {rejection_reason}")
+        #     logger.error(f"Order rejected. Reason: {rejection_reason}")
         return response
 
     except ValueError as val_err:
@@ -2310,8 +2338,8 @@ def place_alice_orders(transaction_type, symbol, quantity, strategy, order_type,
         save_order_logs(transaction_type, symbol, price, strategy, user, "Failed", failure_reason=str(e))
         return {"status": "error", "message": "An unexpected error occurred"}
 
-
 def is_market_open():
+    print("checking market status............")
     """
     Function to check if the market is currently open.
     Returns True if open, False otherwise.
@@ -2321,12 +2349,12 @@ def is_market_open():
     market_close_time = datetime.strptime("15:30", "%H:%M").time()
 
     # Get the current time in the market's timezone (e.g., Asia/Kolkata)
-    market_timezone = timezone("Asia/Kolkata")
+    market_timezone = pytz.timezone("Asia/Kolkata")
     now = datetime.now(market_timezone)
     current_time = now.time()
     current_day = now.weekday()  # Monday = 0, Sunday = 6
 
-    # Check for market holidays (example dates)
+    # Define market holidays
     market_holidays = [
         "2024-12-25",  # Christmas
         "2025-01-01",  # New Year's Day
@@ -2349,17 +2377,7 @@ def is_market_open():
             return True
 
     logger.info("Market is closed.")
-    return False
-
-
-# Example usage
-# if is_market_open():
-#     logger.info("Proceed with the trade.")
-# else:
-#     logger.info("Market is closed. Do not place any trades.")
-
-
-
+    return True
 
 
 #token Sesiion id for alice blue order
@@ -2379,135 +2397,6 @@ def get_or_regenerate_session_id(USER_ID, ALICE_API_KEY):
 
 
 
-
-
-# def get_instrument(symbol, exch):
-#     try:
-#         instrument = alice.get_instrument_by_symbol(exch, symbol)
-#         return instrument
-#     except Exception as e:
-#         logger.error(f"Error retrieving instrument for {symbol}: {e}")
-# #         return None
-# def place_alice_orders(transaction_type, symbol, quantity, strategy,
-#                        order_type, product_type, price, user, trigger_price=None):
-#     try:
-#         print(f"Order Type: {order_type}, Price: {price}, Trigger Price: {trigger_price}")
-
-#         # Normalize the order type
-#         if order_type.upper() == "MARKET":
-#             normalized_order_type = OrderType.Market
-#         elif order_type.upper() == "LIMIT":
-#             normalized_order_type = OrderType.Limit
-#         else:
-#             raise ValueError(f"Invalid order type: {order_type}")
-#                 # Convert product_type to the appropriate enum
-#         if product_type.upper() == "NRML":
-#             normalized_product_type = ProductType.Normal
-#         # elif product_type.upper() == "MIS":
-#         #     normalized_product_type = ProductType.Mis
-#         elif product_type.upper() == "INTRADAY":
-#             normalized_product_type = ProductType.Intraday    
-#         else:
-#             raise ValueError(f"Invalid product type: {product_type}")
-
-#         # Ensure price is set and valid for LIMIT orders
-#         if normalized_order_type == OrderType.Limit:
-#             if price is None:
-#                 raise ValueError("Price is required for LIMIT orders.")
-#             price = float(price)  # Ensure price is a float
-
-#             response = alice.place_order(
-#                 transaction_type=transaction_type,
-#                 instrument=alice.get_instrument_by_symbol('NSE', symbol),
-#                 quantity=quantity,
-#                 order_type=normalized_order_type,
-#                 product_type=normalized_product_type,
-#                 price=price,
-#                 trigger_price=None,
-#                 stop_loss=None,
-#                 square_off=None,
-#                 trailing_sl=None,
-#                 order_tag='order1'
-#             )
-#         elif normalized_order_type == OrderType.Market:
-#             response = alice.place_order(
-#                 transaction_type=transaction_type,
-#                 instrument=alice.get_instrument_by_symbol('NSE', symbol),
-#                 quantity=quantity,
-#                 order_type=normalized_order_type,
-#                 product_type=normalized_product_type
-#             )
-#         elif normalized_order_type == OrderType.StopLossLimit:
-#             if price is None or trigger_price is None:
-#                 raise ValueError("Both price and trigger_price are required for Stop Loss Limit orders.")
-#             response = alice.place_order(
-#                 transaction_type=transaction_type,
-#                 instrument=alice.get_instrument_by_symbol('NSE', symbol),
-#                 quantity=quantity,
-#                 order_type=normalized_order_type,
-#                 product_type=normalized_product_type,
-#                 price=price,
-#                 trigger_price=trigger_price
-#             )
-
-#         elif normalized_order_type == OrderType.StopLossMarket:
-#             if trigger_price is None:
-#                 raise ValueError("Trigger price is required for Stop Loss Market orders.")
-#             response = alice.place_order(
-#                 transaction_type=transaction_type,
-#                 instrument=alice.get_instrument_by_symbol('NSE', symbol),
-#                 quantity=quantity,
-#                 order_type=normalized_order_type,
-#                 product_type=normalized_product_type,
-#                 trigger_price=trigger_price
-#             )
-
-#         else:
-#             raise ValueError(f"Invalid order type: {order_type}")
-
-#         print(response)
-#         # response = requests.post(ALICE_ORDER_URL, headers=headers, data=json.dumps([order_payload]))
-#          # Check if the request was successful
-#         if response.status_code == 200:
-#             logger.info(f"Request successful. Response data: {response.text}")  # Prints raw response text
-#             try:
-#                 # Parse the JSON response
-#                 response_data = response.json()
-#                 logger.info(f"Parsed JSON response: {json.dumps(response_data, indent=4)}")
-#                 # Log the order as successful
-#                 save_order_logs(transaction_type, symbol, price, strategy, user, "Success", failure_reason="no reason") #json=order_payload)
-#             except ValueError as e:
-#                 logger.warning(f"Failed to parse response as JSON: {e}")
-#                 save_order_logs(transaction_type, symbol, price, strategy, user, "Failed", failure_reason="JSON parse error")#, json=order_payload)
-#         else:
-#             # If the request failed, log the failure
-#             logger.error(f"Request failed. Status code: {response.status_code}. Response: {response.text}")
-#             save_order_logs(transaction_type, symbol, price, strategy, user, "Failed", failure_reason="Non-200 status code")#, json=order_payload)
-        
-#         # Return the response object for further handling if needed
-#         return response
-
-#     except requests.RequestException as req_err:
-#         # Handle network-related issues
-#         logger.error(f"Order placement failed for user {user.id}. Reason: {str(req_err)}")
-#         save_order_logs(transaction_type, symbol, price, strategy, user, "Failed", failure_reason=str(req_err))#, json=order_payload)
-#         return {"status": "Order failed due to a request error"}
-
-#     except Exception as e:
-#         # Handle any unexpected errors
-#         logger.exception(f"Unexpected error occurred while placing order for user {user.id}")
-#         save_order_logs(transaction_type, symbol, price, strategy, user, "Failed", failure_reason=str(e))#, json=order_payload)
-#         return {"status": "Order processed with errors"}
-
-
-def convert_int64(obj):
-    if isinstance(obj, np.int64):
-        return int(obj)
-    elif isinstance(obj, dict):
-        return {key: convert_int64(value) for key, value in obj.items()}
-    elif isinstance(obj, list):
-        return [convert_int64(item) for item in obj]
-    return obj
 # Get the strategy using the strategy_id
 class StrategyClientListView(APIView):
     permission_classes = [IsAuthenticated]
