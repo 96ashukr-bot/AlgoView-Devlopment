@@ -117,4 +117,4 @@ class ClientBrokerDetailgAdmin(admin.ModelAdmin):
     
 @admin.register(Tradeorderhistory)    
 class ClientTradeHistoryAdmin(admin.ModelAdmin):
-    list_display=("id",'client','order_id','broker')     
+    list_display=("id",'client','order_id','broker','order_status')     
