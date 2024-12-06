@@ -51,9 +51,9 @@ class OtpAdmin(admin.ModelAdmin):
 admin.site.register(Permission)
 admin.site.register(RolePermission)
 
-@admin.register(OrderLog)
+@admin.register(SignalOrderLog)
 class OtpAdmin(admin.ModelAdmin):
-    list_display = ['id','symbol','order_type','user','price','created_at','json_data']
+    list_display = ['id','symbol','order_type','created_at','json_data']
     search_fields = ['order_type',]
     ordering = ['order_type',]       
     
@@ -81,7 +81,7 @@ class SegmentAdmin(admin.ModelAdmin):
     list_display=('id','name')  
 @admin.register(SubSegment)
 class SubSegmentAdmin(admin.ModelAdmin):
-    list_display=('id','segment','name','token','Exchange')    
+    list_display=('id','name','token','Exchange')    
 @admin.register(License)
 class LiecensAdmin(admin.ModelAdmin):
     list_display=('id','name',"no_of_days_month",'created_at','updated_at')          
@@ -113,4 +113,8 @@ class TradeLogAdmin(admin.ModelAdmin):
 
 @admin.register(ClientBrokerdetails)    
 class ClientBrokerDetailgAdmin(admin.ModelAdmin):
-    list_display=("id",'client','broker_name')         
+    list_display=("id",'client','broker_name')   
+    
+@admin.register(Tradeorderhistory)    
+class ClientTradeHistoryAdmin(admin.ModelAdmin):
+    list_display=("id",'client','order_id','broker')     

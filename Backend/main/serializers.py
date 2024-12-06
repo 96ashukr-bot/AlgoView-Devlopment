@@ -668,8 +668,8 @@ class RolePermissionSerializer(serializers.ModelSerializer):
         return formatted_permissions
 class OrderLogSerializer(serializers.ModelSerializer):
     class Meta:
-        model = OrderLog
-        fields = ['signal_time', 'order_type', 'symbol', 'json_data','price', 'strategy', 'created_at','user','status','failure_reason']
+        model = SignalOrderLog
+        fields = ['signal_time', 'order_type', 'symbol', 'json_data','price', 'strategy', 'created_at']#'user','status','failure_reason']
 class UserActivityLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserActivityLog

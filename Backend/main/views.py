@@ -1198,6 +1198,25 @@ class ClientCreateView(APIView):
             client.set_password(password)  
             client.external_user=False
             client.save() 
+            
+                    # Handle segment and subsegment addition
+            segment_id = data.get("segment")
+            subsegments = data.get("subsegment", [])
+            
+            if segment_id and subsegments:
+                for subsegment_id in subsegments:
+                    trade_settings_data = {
+                        "client": client.id,
+                        "segment": segment_id,
+                        "sub_segment": subsegment_id,
+                        # Add any other fields required for ClientTradeSetting
+                    }
+                    trade_setting_serializer = ClientTradeSettingSerializer(data=trade_settings_data)
+                    if trade_setting_serializer.is_valid():
+                        trade_setting_serializer.save()
+                    else:
+                        print("Trade Setting Error:", trade_setting_serializer.errors)
+        
             end_time = time.time()  # Record the end time
             execution_time = end_time - start_time  # Calculate the total time
             print(f"client create API executed in--------- {execution_time:.4f} seconds") 
@@ -1229,6 +1248,28 @@ class ClientCreateView(APIView):
         
         if serializer.is_valid():
             serializer.save()
+                    # Handle segment and subsegment update
+            segment_id = request.data.get("segment")
+            subsegments = request.data.get("subsegment", [])
+            
+            if segment_id and subsegments:
+                # Clear existing subsegments for this client and segment
+                ClientTradeSetting.objects.filter(client=client, segment=segment_id).delete()
+                
+                # Add the new segment and subsegments
+                for subsegment_id in subsegments:
+                    trade_settings_data = {
+                        "client": client.id,
+                        "segment": segment_id,
+                        "sub_segment": subsegment_id,
+                        # Add any additional fields required
+                    }
+                    trade_setting_serializer = ClientTradeSettingSerializer(data=trade_settings_data)
+                    if trade_setting_serializer.is_valid():
+                        trade_setting_serializer.save()
+                    else:
+                        print("Trade Setting Update Error:", trade_setting_serializer.errors)
+            
             return Response(ClientListSerializer(client).data, status=status.HTTP_201_CREATED)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -1759,7 +1800,7 @@ class OrderLogListView(APIView):
     pagination_class = None
     def get(self, request, *args, **kwargs):
         # Fetch all the order logs from the database
-        order_logs = OrderLog.objects.all()
+        order_logs = SignalOrderLog.objects.all()
         
         # Serialize the data
         serializer = OrderLogSerializer(order_logs, many=True)
@@ -1914,25 +1955,25 @@ def log_order(data, filename):
 # Save the order log to the database
 from django.utils import timezone  
 
-def save_order_logs(order_type,symbol,price,strategy,user,status,failure_reason,json=None):
-                                        
+def save_webhook_signals_logs(order_type,symbol,price,strategy,json=None):#user,status,failure_reason,json=None):
+                                  
     """Save order details and status into the log table."""
     try:
-        OrderLog.objects.create(
+        SignalOrderLog.objects.create(
             signal_time=timezone.now(),  # You can change this to the actual signal time
             order_type=order_type,
             symbol=symbol,
             price=price,
             strategy=strategy,
-            user=user,  # Store the client ID here
-            status=status,
-            failure_reason=failure_reason,
+            # user=user,  # Store the client ID here
+            # status=status,
+            # failure_reason=failure_reason,
             json_data=json
         )
         
-        logger.info(f"Order log saved for user {user.id} with status {status}")
+        logger.info(f"signal order log saved ")
     except Exception as e:
-        logger.error(f"Failed to save order log for user {user.id}. Reason: {str(e)}")
+        logger.error(f"Failed to save webhook signal order log . Reason: {str(e)}")
 
 SESSION_ID = None
 SESSION_EXPIRATION = None
@@ -1953,6 +1994,7 @@ class PlaceOrderWebhookView(APIView):
         limitPrice = request.data.get('limitPrice', 0)
         Type=request.data.get('Type',"CE")
         Lots=request.data.get('Lot',"1")
+        strategy=request.data.get('strategyTag',"ce entry")
         complexty=request.data.get('complexty',"regular")
         logger.info(f"symbol>>{symbols}>>expiry>{default_expiry} >>Type>>{Type}>>default_price>>{default_price}")
         expiry_date = datetime.strptime(default_expiry, "%d-%m-%Y")
@@ -1964,7 +2006,8 @@ class PlaceOrderWebhookView(APIView):
         # Print the result
         print("Trading Symbol:", trading_symbol,symbols)
         order_status=None
-        
+        save_webhook_signals_logs(buy_sell, symbols, default_price, strategy, json=alert_data)
+
         all_enable_users = ClientTradeSetting.objects.filter(is_tread_status=True,client__is_enable=True)
         try:
             for trade in all_enable_users: 
@@ -2034,7 +2077,8 @@ class PlaceOrderWebhookView(APIView):
                             expiry=expiry,
                             lot_size=Lots,
                             user=user,
-                            strategy=strategy
+                            strategy=strategy,
+                            
                             
                         )
     
@@ -2051,10 +2095,10 @@ class PlaceOrderWebhookView(APIView):
                                                         product_type, price,user, Lots,triggerPrice)
                 
                     # Check order response and log or handle failures
-                    print("order repsone>>>>>>>",order_response)
+                    # print("order repsone>>>>>>>",order_response)
                     if order_response['data']['status'] =="complete":
                         order_status=f"Order placed successfully for {trade.symbol} with broker {trade.broker}"
-                        TradingLog.objects.create(client=user, date=today, symbol=trade.symbol, strategy=strategy)
+                        TradingLog.objects.create(client=user, date=today, symbol=trade.symbol, strategy=strategy,)
                         logger.info(f"Order placed successfully for {trade.symbol} with broker {trade.broker}")
                     elif order_response['data']['status']=="open":   
                         order_status=f"Order is place pending for {trade.symbol} with broker {trade.broker}"
@@ -2130,7 +2174,10 @@ def place_Angle_order(token, symbol, exch_seg, quantity, product_type, transacti
             resuniqueId= response['data']['uniqueorderid']
             responsedetails= smart_client.individual_order_details(resuniqueId)
             print("Order Details: ::::::", json.dumps(responsedetails,indent=4))
-
+            status=responsedetails['data']['status'] 
+            responsedetails['data'].get('status', 'complete')
+            order_id=responsedetails['data']['orderid'] 
+            res_data=responsedetails 
             if responsedetails['data']['status'] =="complete":
                 order_data = {
                     "order_id": "data",
@@ -2138,16 +2185,12 @@ def place_Angle_order(token, symbol, exch_seg, quantity, product_type, transacti
                 }
                 logger.info(f"Order Placed Successfully, Order ID: {response.get('data', 'Unknown')}")
                 # log_order(order_data, "orders_placed.csv")  
-                # send massage email aleart to client your order is trade 
-                from_email = settings.DEFAULT_FROM_EMAIL,
-                status=responsedetails['data']['status'] 
-                # Send rejection email
-                message = responsedetails['data'].get('text', 'Unknown rejection reason')
-                responsedetails['data'].get('status', 'complete')
-                print("user.firstName>>>>>",user.firstName)
-                send_trade_email_async.delay(user.email, from_email,user.firstName,status, message)
-                
-                save_order_logs(order_params['transactiontype'], symbol, price, strategy, user, status=responsedetails['data'].get('status'),failure_reason="your order place succesfully", json=order_params)
+                message = responsedetails['data'].get('text', 'completed successfully ')
+
+                save_trade_order_history(user,symbol, order_id, status, res_data, message, order_params,broker="Angle One")
+                # from_email = settings.DEFAULT_FROM_EMAIL,
+                # send_trade_email_async.delay(user.email, from_email,user.firstName,status, message)
+                # save_webhook_signals_logs(order_params['transactiontype'], symbol, price, strategy, user, status=responsedetails['data'].get('status'),failure_reason="your order place succesfully", json=json)
                 return responsedetails
             elif responsedetails['data']['status'] == "open":
                      
@@ -2155,32 +2198,25 @@ def place_Angle_order(token, symbol, exch_seg, quantity, product_type, transacti
                 # log_order(order_data, "orders_placed.csv")  
                 # send massage email aleart to client your order is trade 
                 from_email = settings.DEFAULT_FROM_EMAIL,
-                
-                status=responsedetails['data']['status'] 
                 # Send rejection email
-                message = responsedetails['data'].get('text', 'Unknown rejection reason')
+                message = responsedetails['data'].get('text', 'Unknown  reason')
                 responsedetails['data'].get('status', 'pending')
                 print("user.firstName>>>>>",user.firstName)
                 send_trade_email_async.delay(user.email, from_email,user.firstName,status, message)
                 logger.info(f"Order is pending or in process reason is !!!::{message}")
-                save_order_logs(order_params['transactiontype'], symbol, price, strategy, user, status=responsedetails['data'].get('status'),failure_reason="your order is  pending", json=order_params)
+                save_trade_order_history(user,symbol, order_id, status, res_data, message,order_params, broker="Angle One")
                 return responsedetails
                 
             else:
-                
                 rejection_message = responsedetails['data'].get('text', 'Unknown rejection reason')
                 responsedetails['data'].get('status', 'rejected')
                 logger.info(f"Order Rejected reason!!!::{rejection_message}")
                 from_email = settings.DEFAULT_FROM_EMAIL,
                 # Send rejection email
-                
                 print("user.firstName>>>>>",user.firstName)
-                status=responsedetails['data']['status'] 
-                print("status>>>>>>>>>>>>>",status)
                 send_trade_email_async.delay(user.email, from_email,user.firstName,status, rejection_message)
-                save_order_logs(order_params['transactiontype'], symbol, price, strategy, user, status=responsedetails['data'].get('status'),
-                                failure_reason=responsedetails['data'].get('text', 'Unknown rejection reason'),json=order_params)
-
+                save_trade_order_history(user,symbol, order_id, status, res_data, rejection_message,order_params ,broker="Angle One")
+                # save_webhook_signals_logs(order_params['transactiontype'], symbol, price, strategy, user, status=responsedetails['data'].get('status'),
                 return responsedetails
         except Exception as e:
             logging.error(f"Order could not be placed  !!!!!!!!!!!{e}")
@@ -2201,20 +2237,19 @@ def place_alice_orders(trading_symbol_aliceblue,transaction_type, symbol, quanti
         price = float(price) if price is not None else None
         trigger_price = float(trigger_price) if trigger_price is not None else None
         # symbol = 'INFY'  # Stock symbol
+        order_params = {
+        "transactiontype": transaction_type,
+        "quantity": quantity,
+        "ordertype": order_type,
+        "producttype": product_type,
+        "price": price,
+        "triggerprice": trigger_price
+    }
         print("symbol",symbol)
         if transaction_type.upper() == "BUY":
            transaction_type = TransactionType.Buy
         elif transaction_type.upper()=="SELL":
             transaction_type=TransactionType.Sell
-        # if order_type:    
-        #     if order_type.upper() =="LIMIT":
-        #         order_type=OrderType.Limit
-        #     elif order_type.upper() =="Market":
-        #         order_type= OrderType.Market
-        #     elif order_type.upper() =="StopLossLimit":
-        #         order_type= OrderType.StopLossLimit,      
-        #     elif order_type.upper() =="StopLossMarket":
-        #         order_type=OrderType.StopLossMarket
        
         if product_type:
             if product_type.upper() =="NRML":
@@ -2237,7 +2272,12 @@ def place_alice_orders(trading_symbol_aliceblue,transaction_type, symbol, quanti
             raise ValueError(f"Instrument not found for symbol: {trading_symbol_aliceblue}")
 
         logger.info("Placing order with parameters:")
-        
+
+
+        # Convert the dictionary to a JSON string if needed
+        order_params_json = json.dumps(order_params, indent=4)
+        logger.info(f"order payload for alice blue...",order_params)
+                
         logger.info(f"Transaction: {transaction_type}, Instrument: {instrument.symbol}, "
               f"Quantity: {quantity}, Order Type: {order_type}, Product Type: {product_type}, "
               f"Price: {price}, Trigger Price: {trigger_price}")
@@ -2297,26 +2337,32 @@ def place_alice_orders(trading_symbol_aliceblue,transaction_type, symbol, quanti
             order_his=alice.get_order_history(order_id)
             # Extract the status
             status = order_his.get('Status', '').lower()  # Retrieve 'Status' key, fallback to '' if not found
-
-            print("history of alice blue order_____________",order_his)
-            print("status......",status)
+            res_data=order_his
+            logger.info(f"history of alice blue order_____________{order_his}")
+            logger.info(f"status......{status}")
             if status == "success":
                 response = {"data": {"status": "completed"}}
                 logger.info(f"Order placed successfully for user {user}. Response: {response}")
-                save_order_logs(transaction_type, symbol, price, strategy, user, "Success", failure_reason="No issues")
+                save_trade_order_history(user,symbol, order_id, status, res_data, message,order_params, broker="Angle One")
+              
             elif status == "rejected":   
                 from_email = settings.DEFAULT_FROM_EMAIL,
                 message=order_his.get('RejReason', 'not any reason get').lower()
                 send_trade_email_async.delay(user.email, from_email,user.firstName,status, message)
                 response = {"data": {"status": "rejected"}}
                 logger.info(f"Order is rejected  for user {user}. Response :{response}")
-                save_order_logs(transaction_type, symbol, price, strategy, user, "Failed", failure_reason=message)     
+                save_trade_order_history(user,symbol, order_id, status, res_data, message,order_params, broker="Angle One")
         else:
             # error_message = response.get("message", "Unknown error")
             response ={"data": {"status": "Failed"}}
             error_message="error when placing order"
+            order_id=None
+            status="Failed"
+            res_data="Not any reponse failed"
             logger.error(f"Order placement failed for user {user}. Error: {error_message}")
-            save_order_logs(transaction_type, symbol, price, strategy, user, "Failed", failure_reason="somthing wrong in order place")
+            save_trade_order_history(user,symbol, order_id, status, res_data, message, order_params,broker="Angle One")
+              
+            # save_webhook_signals_logs(transaction_type, symbol, price, strategy, user, "Failed", failure_reason="somthing wrong in order place",json=json)
         # if response.get('stat') == 'Not_Ok':
         #     rejection_reason = response.get('emsg', 'Unknown error')
         #     print(f"Order rejected. Reason: {rejection_reason}")
@@ -2325,18 +2371,42 @@ def place_alice_orders(trading_symbol_aliceblue,transaction_type, symbol, quanti
 
     except ValueError as val_err:
         logger.error(f"Validation error: {val_err}")
-        save_order_logs(transaction_type, symbol, price, strategy, user, "Failed", failure_reason=str(val_err))
+        # save_webhook_signals_logs(transaction_type, symbol, price, strategy, user, "Failed", failure_reason=str(val_err),json=json)
         return {"status": "error", "message": str(val_err)}
 
     except AttributeError as attr_err:
         logger.error(f"Attribute error: {attr_err}")
-        save_order_logs(transaction_type, symbol, price, strategy, user, "Failed", failure_reason="Invalid API usage")
+        # save_webhook_signals_logs(transaction_type, symbol, price, strategy, user, "Failed", failure_reason="Invalid API usage",json=json)
         return {"status": "error", "message": str(attr_err)}
 
     except Exception as e:
         logger.exception(f"Unexpected error while placing order for user {user}")
-        save_order_logs(transaction_type, symbol, price, strategy, user, "Failed", failure_reason=str(e))
+        # save_webhook_signals_logs(transaction_type, symbol, price, strategy, user, "Failed", failure_reason=str(e),json=json)
         return {"status": "error", "message": "An unexpected error occurred"}
+
+def save_trade_order_history(client, trading_symbol, order_id, order_status, response_data, failure_reason, order_params=None,broker=None):
+    try:
+        # Create a new Tradeorderhistory record
+        trade_history = Tradeorderhistory.objects.create(
+            client=client,
+            trading_symbol=trading_symbol,
+            order_id=order_id,
+            order_status=order_status,
+            response_data=response_data,
+            failure_reason=failure_reason,
+            broker=broker,
+            order_params=order_params
+        )
+        # Log success (optional)
+        logger.info(f"Order history saved successfully for Order ID: {order_id}")
+        return trade_history  # Return the created record, if needed
+    except Exception as e:
+        # Handle any exceptions that may occur during the save process
+        logger.error(f"Error saving order history for Order ID: {order_id}. Error: {e}")
+        return None  # Or handle the error as needed
+
+
+
 
 def is_market_open():
     print("checking market status............")
@@ -2377,7 +2447,7 @@ def is_market_open():
             return True
 
     logger.info("Market is closed.")
-    return True
+    return False
 
 
 #token Sesiion id for alice blue order

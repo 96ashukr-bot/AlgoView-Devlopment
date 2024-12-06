@@ -2917,3 +2917,891 @@ UnboundLocalError: local variable 'error_message' referenced before assignment
 2024-12-05 12:11:19 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
 2024-12-05 12:14:27 - django.server - INFO - "GET /admin/main/orderlog/141/change/ HTTP/1.1" 200 25620
 2024-12-05 12:14:30 - django.server - INFO - "GET /admin/main/orderlog/ HTTP/1.1" 200 103762
+2024-12-06 06:35:48 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 06:39:03 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 06:39:07 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 06:39:41 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 06:39:56 - main - INFO - Received alert: {'Alert_Key': 'option_alert_1', 'buy_sell': 'BUY', 'data_type': 'option', 'expiry': '29-01-2025', 'IntType': 1, 'limitPrice': 160, 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'strategyTag': 'ce entry', 'strikePrice': 53400, 'symbol': 'BANKNIFTY', 'triggerPrice': 10, 'tsl': 0, 'Type': 'CE', 'complexty': 'regular', 'discqty': '2', 'exch_seg': 'NFO'}
+2024-12-06 06:39:56 - main - INFO - symbol>>BANKNIFTY>>expiry>29-01-2025 >>Type>>CE>>default_price>>53400
+2024-12-06 06:39:56 - main - INFO - Trade expiry date: 29-01-2025
+2024-12-06 06:39:56 - main - INFO - Trade product type: NRML received type: NRML
+2024-12-06 06:39:56 - main - INFO - Trade transaction type: BUY received transaction type: BUY
+2024-12-06 06:39:56 - main - INFO - Trade symbol: BANKNIFTY received symbol: BANKNIFTY
+2024-12-06 06:39:56 - main - INFO - Placing order for user sumit@yopmail.com. Trade count: 0/5.00
+2024-12-06 06:39:56 - main - INFO - Current date and time: 2024-12-06 12:09:56.208370+05:30
+2024-12-06 06:39:56 - main - INFO - Market open time: 09:15:00, Market close time: 15:30:00
+2024-12-06 06:39:56 - main - INFO - Today is: Friday
+2024-12-06 06:39:56 - main - INFO - Market is open.
+2024-12-06 06:39:56 - main - INFO - Market is open. Proceed with the trade.
+2024-12-06 06:39:56 - main - INFO - !!!!Placing order for user: sumit@yopmail.com Brocker is: Alice Blue & trading symbol is: BANKNIFTY
+2024-12-06 06:39:57 - main - INFO - Placing order with parameters:
+2024-12-06 06:39:57 - main - INFO - Transaction: TransactionType.Buy, Instrument: BANKNIFTY, Quantity: 15, Order Type: MARKET, Product Type: ProductType.Normal, Price: 53400.0, Trigger Price: 10.0
+2024-12-06 06:39:58 - main - INFO - history of alice blue order_____________
+2024-12-06 06:39:59 - main - INFO - Order is rejected  for user sumit@yopmail.com. Response :{'data': {'status': 'rejected'}}
+2024-12-06 06:39:59 - main - ERROR - Failed to save order log for user 23. Reason: value too long for type character varying(10)
+
+2024-12-06 06:39:59 - main - ERROR - Order is rejected for BANKNIFTY with broker Alice Blue
+2024-12-06 06:39:59 - main - INFO - Trade expiry date: 29-01-2025
+2024-12-06 06:39:59 - main - INFO - Trade product type: NRML received type: NRML
+2024-12-06 06:39:59 - main - INFO - Trade transaction type: BUY received transaction type: BUY
+2024-12-06 06:39:59 - main - INFO - Trade symbol: BANKNIFTY received symbol: BANKNIFTY
+2024-12-06 06:39:59 - main - INFO - Placing order for user sumit@yopmail.com. Trade count: 0/5.00
+2024-12-06 06:39:59 - main - INFO - Current date and time: 2024-12-06 12:09:59.410029+05:30
+2024-12-06 06:39:59 - main - INFO - Market open time: 09:15:00, Market close time: 15:30:00
+2024-12-06 06:39:59 - main - INFO - Today is: Friday
+2024-12-06 06:39:59 - main - INFO - Market is open.
+2024-12-06 06:39:59 - main - INFO - Market is open. Proceed with the trade.
+2024-12-06 06:39:59 - main - INFO - !!!!Placing order for user: sumit@yopmail.com Brocker is: Angle One & trading symbol is: BANKNIFTY
+2024-12-06 06:41:10 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 06:41:14 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 06:41:40 - main - INFO - Received alert: {'Alert_Key': 'option_alert_1', 'buy_sell': 'BUY', 'data_type': 'option', 'expiry': '29-01-2025', 'IntType': 1, 'limitPrice': 160, 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'strategyTag': 'ce entry', 'strikePrice': 53400, 'symbol': 'BANKNIFTY', 'triggerPrice': 10, 'tsl': 0, 'Type': 'CE', 'complexty': 'regular', 'discqty': '2', 'exch_seg': 'NFO'}
+2024-12-06 06:41:40 - main - INFO - symbol>>BANKNIFTY>>expiry>29-01-2025 >>Type>>CE>>default_price>>53400
+2024-12-06 06:41:40 - main - INFO - Trade expiry date: 29-01-2025
+2024-12-06 06:41:40 - main - INFO - Trade product type: NRML received type: NRML
+2024-12-06 06:41:40 - main - INFO - Trade transaction type: BUY received transaction type: BUY
+2024-12-06 06:41:40 - main - INFO - Trade symbol: BANKNIFTY received symbol: BANKNIFTY
+2024-12-06 06:41:40 - main - INFO - Placing order for user sumit@yopmail.com. Trade count: 0/5.00
+2024-12-06 06:41:40 - main - INFO - Current date and time: 2024-12-06 12:11:40.779292+05:30
+2024-12-06 06:41:40 - main - INFO - Market open time: 09:15:00, Market close time: 15:30:00
+2024-12-06 06:41:40 - main - INFO - Today is: Friday
+2024-12-06 06:41:40 - main - INFO - Market is open.
+2024-12-06 06:41:40 - main - INFO - Market is open. Proceed with the trade.
+2024-12-06 06:41:40 - main - INFO - !!!!Placing order for user: sumit@yopmail.com Brocker is: Alice Blue & trading symbol is: BANKNIFTY
+2024-12-06 06:41:41 - main - INFO - Placing order with parameters:
+2024-12-06 06:41:41 - main - INFO - Transaction: TransactionType.Buy, Instrument: BANKNIFTY, Quantity: 15, Order Type: MARKET, Product Type: ProductType.Normal, Price: 53400.0, Trigger Price: 10.0
+2024-12-06 06:41:42 - main - INFO - history of alice blue order_____________{'Prc': '0.00', 'RequestID': '1', 'Cancelqty': 0, 'discQtyPerc': 'NA', 'customText': 'NA', 'Mktpro': 'NA', 'defmktproval': '', 'optionType': 'CE', 'usecs': 'NA', 'mpro': '', 'Qty': 15, 'ordergenerationtype': '--', 'Unfilledsize': 0, 'orderAuthStatus': '', 'Usercomments': 'NA', 'ticksize': '0.05', 'Prctype': 'MKT', 'Status': 'rejected', 'Minqty': 0, 'orderCriteria': 'NA', 'Exseg': 'nse_fo', 'Sym': 'BANKNIFTY', 'multiplier': '1', 'ExchOrdID': None, 'ExchConfrmtime': '--', 'Pcode': 'NRML', 'SyomOrderId': '', 'Dscqty': 0, 'Exchange': 'NFO', 'Ordvaldate': 'NA', 'accountId': '857958', 'exchangeuserinfo': 'NA', 'Avgprc': '0.00', 'Trgprc': '00.00', 'Trantype': 'B', 'bqty': '15', 'Trsym': 'BANKNIFTY29JAN25C53400', 'Fillshares': 0, 'AlgoCategory': 'NA', 'sipindicator': 'NA', 'strikePrice': '53400', 'reporttype': 'NA', 'AlgoID': 'NA', 'noMktPro': '', 'BrokerClient': '--', 'OrderUserMessage': '--', 'decprec': 'NA', 'ExpDate': '29 Jan, 2025', 'COPercentage': 0.0, 'marketprotectionpercentage': '--', 'Nstordno': '24120600123183', 'ExpSsbDate': 'NA', 'OrderedTime': '06/12/2024 12:11:12', 'RejReason': 'ORA:Exchange NFO not enabled for User 857958', 'modifiedBy': '--', 'Scripname': 'BANKNIFTY29JAN25C53400', 'stat': 'Ok', 'orderentrytime': 'Dec 06 2024 12:11:12', 'PriceDenomenator': '1', 'panNo': 'NA', 'RefLmtPrice': 0.0, 'PriceNumerator': '1', 'token': '39621', 'ordersource': 'NA', 'Validity': 'DAY', 'GeneralDenomenator': '1', 'series': '', 'InstName': 'OPTIDX', 'GeneralNumerator': '1', 'user': '857958', 'remarks': '--', 'iSinceBOE': 0}
+2024-12-06 06:41:42 - main - INFO - status......rejected
+2024-12-06 06:41:42 - main - INFO - Order is rejected  for user sumit@yopmail.com. Response :{'data': {'status': 'rejected'}}
+2024-12-06 06:41:42 - main - ERROR - Failed to save order log for user 23. Reason: value too long for type character varying(10)
+
+2024-12-06 06:41:42 - main - ERROR - Order is rejected for BANKNIFTY with broker Alice Blue
+2024-12-06 06:41:42 - main - INFO - Trade expiry date: 29-01-2025
+2024-12-06 06:41:42 - main - INFO - Trade product type: NRML received type: NRML
+2024-12-06 06:41:42 - main - INFO - Trade transaction type: BUY received transaction type: BUY
+2024-12-06 06:41:42 - main - INFO - Trade symbol: BANKNIFTY received symbol: BANKNIFTY
+2024-12-06 06:41:42 - main - INFO - Placing order for user sumit@yopmail.com. Trade count: 0/5.00
+2024-12-06 06:41:42 - main - INFO - Current date and time: 2024-12-06 12:11:42.353751+05:30
+2024-12-06 06:41:42 - main - INFO - Market open time: 09:15:00, Market close time: 15:30:00
+2024-12-06 06:41:42 - main - INFO - Today is: Friday
+2024-12-06 06:41:42 - main - INFO - Market is open.
+2024-12-06 06:41:42 - main - INFO - Market is open. Proceed with the trade.
+2024-12-06 06:41:42 - main - INFO - !!!!Placing order for user: sumit@yopmail.com Brocker is: Angle One & trading symbol is: BANKNIFTY
+2024-12-06 06:41:52 - main - INFO - Angle one api order placement for user: sumit@yopmail.com & trading symbol is: BANKNIFTY29JAN2553400CE
+2024-12-06 06:41:53 - main - INFO - Raw API Response: {'status': True, 'message': 'SUCCESS', 'errorcode': '', 'data': {'script': 'BANKNIFTY29JAN2553400CE', 'orderid': '241206000687642', 'uniqueorderid': '41428aac-54c7-4f72-8159-600a678c936e'}}
+2024-12-06 06:41:53 - main - INFO - Order Rejected reason!!!::Your order has been rejected due to Insufficient Funds. Available funds - Rs. 0.00 . You require Rs. 24118.25 funds to execute this order.
+2024-12-06 06:41:53 - main - INFO - Order log saved for user 23 with status rejected
+2024-12-06 06:41:53 - main - ERROR - Order is rejected for BANKNIFTY with broker Angle One
+2024-12-06 06:41:53 - django.server - INFO - "POST /v1/algo/webhook/ HTTP/1.1" 200 66
+2024-12-06 06:44:45 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 06:44:48 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 06:45:02 - django.server - INFO - "GET /admin/ HTTP/1.1" 302 0
+2024-12-06 06:45:02 - django.server - INFO - "GET /admin/login/?next=/admin/ HTTP/1.1" 200 4178
+2024-12-06 06:45:02 - django.server - INFO - "GET /static/admin/css/login.css HTTP/1.1" 200 958
+2024-12-06 06:45:03 - django.request - WARNING - Not Found: /favicon.ico
+2024-12-06 06:45:03 - django.server - WARNING - "GET /favicon.ico HTTP/1.1" 404 22160
+2024-12-06 06:45:09 - django.request - WARNING - Not Found: /
+2024-12-06 06:45:09 - django.server - WARNING - "GET / HTTP/1.1" 404 22109
+2024-12-06 06:45:17 - django.server - INFO - "GET /admin/ HTTP/1.1" 302 0
+2024-12-06 06:45:17 - django.server - INFO - "GET /admin/login/?next=/admin/ HTTP/1.1" 200 4178
+2024-12-06 06:45:21 - django.server - INFO - "POST /admin/login/?next=/admin/ HTTP/1.1" 200 4353
+2024-12-06 06:45:31 - django.server - INFO - "POST /admin/login/?next=/admin/ HTTP/1.1" 302 0
+2024-12-06 06:45:31 - django.server - INFO - "GET /admin/ HTTP/1.1" 200 22381
+2024-12-06 06:45:41 - django.server - INFO - "GET /admin/main/clienttradesetting/ HTTP/1.1" 200 21777
+2024-12-06 06:45:41 - django.server - INFO - "GET /static/admin/js/vendor/jquery/jquery.js HTTP/1.1" 200 292458
+2024-12-06 06:45:41 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-06 06:45:44 - django.server - INFO - "GET /admin/main/clienttradesetting/5/change/ HTTP/1.1" 200 31444
+2024-12-06 06:45:45 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-06 06:45:47 - django.server - INFO - "GET /admin/main/clienttradesetting/ HTTP/1.1" 200 21777
+2024-12-06 06:45:47 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-06 06:45:50 - django.server - INFO - "GET /admin/main/clienttradesetting/2/change/ HTTP/1.1" 200 31490
+2024-12-06 06:45:50 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-06 06:45:53 - django.server - INFO - "GET /admin/main/clienttradesetting/ HTTP/1.1" 200 21777
+2024-12-06 06:45:56 - django.server - INFO - "GET /admin/main/clienttradesetting/3/change/ HTTP/1.1" 200 31431
+2024-12-06 06:45:56 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-06 06:45:59 - django.server - INFO - "POST /admin/main/clienttradesetting/3/change/ HTTP/1.1" 302 0
+2024-12-06 06:46:00 - django.server - INFO - "GET /admin/main/clienttradesetting/ HTTP/1.1" 200 22027
+2024-12-06 06:46:00 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-06 06:46:07 - main - INFO - Received alert: {'Alert_Key': 'option_alert_1', 'buy_sell': 'BUY', 'data_type': 'option', 'expiry': '29-01-2025', 'IntType': 1, 'limitPrice': 160, 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'strategyTag': 'ce entry', 'strikePrice': 53400, 'symbol': 'BANKNIFTY', 'triggerPrice': 10, 'tsl': 0, 'Type': 'CE', 'complexty': 'regular', 'discqty': '2', 'exch_seg': 'NFO'}
+2024-12-06 06:46:07 - main - INFO - symbol>>BANKNIFTY>>expiry>29-01-2025 >>Type>>CE>>default_price>>53400
+2024-12-06 06:46:07 - main - INFO - Trade expiry date: 29-01-2025
+2024-12-06 06:46:07 - main - INFO - Trade product type: NRML received type: NRML
+2024-12-06 06:46:07 - main - INFO - Trade transaction type: BUY received transaction type: BUY
+2024-12-06 06:46:07 - main - INFO - Trade symbol: BANKNIFTY received symbol: BANKNIFTY
+2024-12-06 06:46:07 - main - INFO - Placing order for user sumit@yopmail.com. Trade count: 0/5.00
+2024-12-06 06:46:07 - main - INFO - Current date and time: 2024-12-06 12:16:07.356192+05:30
+2024-12-06 06:46:07 - main - INFO - Market open time: 09:15:00, Market close time: 15:30:00
+2024-12-06 06:46:07 - main - INFO - Today is: Friday
+2024-12-06 06:46:07 - main - INFO - Market is open.
+2024-12-06 06:46:07 - main - INFO - Market is open. Proceed with the trade.
+2024-12-06 06:46:07 - main - INFO - !!!!Placing order for user: sumit@yopmail.com Brocker is: Alice Blue & trading symbol is: BANKNIFTY
+2024-12-06 06:46:09 - main - INFO - Placing order with parameters:
+2024-12-06 06:46:09 - main - INFO - Transaction: TransactionType.Buy, Instrument: BANKNIFTY, Quantity: 15, Order Type: MARKET, Product Type: ProductType.Normal, Price: 53400.0, Trigger Price: 10.0
+2024-12-06 06:46:10 - main - INFO - history of alice blue order_____________{'Prc': '0.00', 'RequestID': '1', 'Cancelqty': 0, 'discQtyPerc': 'NA', 'customText': 'NA', 'Mktpro': 'NA', 'defmktproval': '', 'optionType': 'CE', 'usecs': 'NA', 'mpro': '', 'Qty': 15, 'ordergenerationtype': '--', 'Unfilledsize': 0, 'orderAuthStatus': '', 'Usercomments': 'NA', 'ticksize': '0.05', 'Prctype': 'MKT', 'Status': 'rejected', 'Minqty': 0, 'orderCriteria': 'NA', 'Exseg': 'nse_fo', 'Sym': 'BANKNIFTY', 'multiplier': '1', 'ExchOrdID': None, 'ExchConfrmtime': '--', 'Pcode': 'NRML', 'SyomOrderId': '', 'Dscqty': 0, 'Exchange': 'NFO', 'Ordvaldate': 'NA', 'accountId': '857958', 'exchangeuserinfo': 'NA', 'Avgprc': '0.00', 'Trgprc': '00.00', 'Trantype': 'B', 'bqty': '15', 'Trsym': 'BANKNIFTY29JAN25C53400', 'Fillshares': 0, 'AlgoCategory': 'NA', 'sipindicator': 'NA', 'strikePrice': '53400', 'reporttype': 'NA', 'AlgoID': 'NA', 'noMktPro': '', 'BrokerClient': '--', 'OrderUserMessage': '--', 'decprec': 'NA', 'ExpDate': '29 Jan, 2025', 'COPercentage': 0.0, 'marketprotectionpercentage': '--', 'Nstordno': '24120600124628', 'ExpSsbDate': 'NA', 'OrderedTime': '06/12/2024 12:15:39', 'RejReason': 'ORA:Exchange NFO not enabled for User 857958', 'modifiedBy': '--', 'Scripname': 'BANKNIFTY29JAN25C53400', 'stat': 'Ok', 'orderentrytime': 'Dec 06 2024 12:15:39', 'PriceDenomenator': '1', 'panNo': 'NA', 'RefLmtPrice': 0.0, 'PriceNumerator': '1', 'token': '39621', 'ordersource': 'NA', 'Validity': 'DAY', 'GeneralDenomenator': '1', 'series': '', 'InstName': 'OPTIDX', 'GeneralNumerator': '1', 'user': '857958', 'remarks': '--', 'iSinceBOE': 0}
+2024-12-06 06:46:10 - main - INFO - status......rejected
+2024-12-06 06:46:11 - main - INFO - Order is rejected  for user sumit@yopmail.com. Response :{'data': {'status': 'rejected'}}
+2024-12-06 06:46:11 - main - ERROR - Failed to save order log for user 23. Reason: value too long for type character varying(10)
+
+2024-12-06 06:46:11 - main - ERROR - Order is rejected for BANKNIFTY with broker Alice Blue
+2024-12-06 06:46:11 - django.server - INFO - "POST /v1/algo/webhook/ HTTP/1.1" 200 67
+2024-12-06 06:50:25 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+2024-12-06 06:50:28 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 07:16:19 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 07:16:52 - main - INFO - Received alert: {'Alert_Key': 'option_alert_1', 'buy_sell': 'BUY', 'data_type': 'option', 'expiry': '29-01-2025', 'IntType': 1, 'limitPrice': 160, 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'strategyTag': 'ce entry', 'strikePrice': 53400, 'symbol': 'BANKNIFTY', 'triggerPrice': 10, 'tsl': 0, 'Type': 'CE', 'complexty': 'regular', 'discqty': '2', 'exch_seg': 'NFO'}
+2024-12-06 07:16:52 - main - INFO - symbol>>BANKNIFTY>>expiry>29-01-2025 >>Type>>CE>>default_price>>53400
+2024-12-06 07:16:52 - main - INFO - Trade expiry date: 29-01-2025
+2024-12-06 07:16:52 - main - INFO - Trade product type: NRML received type: NRML
+2024-12-06 07:16:52 - main - INFO - Trade transaction type: BUY received transaction type: BUY
+2024-12-06 07:16:52 - main - INFO - Trade symbol: BANKNIFTY received symbol: BANKNIFTY
+2024-12-06 07:16:52 - main - INFO - Placing order for user sumit@yopmail.com. Trade count: 0/5.00
+2024-12-06 07:16:52 - main - INFO - Current date and time: 2024-12-06 12:46:52.537758+05:30
+2024-12-06 07:16:52 - main - INFO - Market open time: 09:15:00, Market close time: 15:30:00
+2024-12-06 07:16:52 - main - INFO - Today is: Friday
+2024-12-06 07:16:52 - main - INFO - Market is open.
+2024-12-06 07:16:52 - main - INFO - Market is open. Proceed with the trade.
+2024-12-06 07:16:52 - main - INFO - !!!!Placing order for user: sumit@yopmail.com Brocker is: Alice Blue & trading symbol is: BANKNIFTY
+2024-12-06 07:16:53 - main - INFO - Placing order with parameters:
+2024-12-06 07:16:53 - main - INFO - Transaction: TransactionType.Buy, Instrument: BANKNIFTY, Quantity: 15, Order Type: MARKET, Product Type: ProductType.Normal, Price: 53400.0, Trigger Price: 10.0
+2024-12-06 07:16:53 - main - INFO - history of alice blue order_____________{'Prc': '0.00', 'RequestID': '1', 'Cancelqty': 0, 'discQtyPerc': 'NA', 'customText': 'NA', 'Mktpro': 'NA', 'defmktproval': '', 'optionType': 'CE', 'usecs': 'NA', 'mpro': '', 'Qty': 15, 'ordergenerationtype': '--', 'Unfilledsize': 0, 'orderAuthStatus': '', 'Usercomments': 'NA', 'ticksize': '0.05', 'Prctype': 'MKT', 'Status': 'rejected', 'Minqty': 0, 'orderCriteria': 'NA', 'Exseg': 'nse_fo', 'Sym': 'BANKNIFTY', 'multiplier': '1', 'ExchOrdID': None, 'ExchConfrmtime': '--', 'Pcode': 'NRML', 'SyomOrderId': '', 'Dscqty': 0, 'Exchange': 'NFO', 'Ordvaldate': 'NA', 'accountId': '857958', 'exchangeuserinfo': 'NA', 'Avgprc': '0.00', 'Trgprc': '00.00', 'Trantype': 'B', 'bqty': '15', 'Trsym': 'BANKNIFTY29JAN25C53400', 'Fillshares': 0, 'AlgoCategory': 'NA', 'sipindicator': 'NA', 'strikePrice': '53400', 'reporttype': 'NA', 'AlgoID': 'NA', 'noMktPro': '', 'BrokerClient': '--', 'OrderUserMessage': '--', 'decprec': 'NA', 'ExpDate': '29 Jan, 2025', 'COPercentage': 0.0, 'marketprotectionpercentage': '--', 'Nstordno': '24120600134639', 'ExpSsbDate': 'NA', 'OrderedTime': '06/12/2024 12:46:24', 'RejReason': 'ORA:Exchange NFO not enabled for User 857958', 'modifiedBy': '--', 'Scripname': 'BANKNIFTY29JAN25C53400', 'stat': 'Ok', 'orderentrytime': 'Dec 06 2024 12:46:24', 'PriceDenomenator': '1', 'panNo': 'NA', 'RefLmtPrice': 0.0, 'PriceNumerator': '1', 'token': '39621', 'ordersource': 'NA', 'Validity': 'DAY', 'GeneralDenomenator': '1', 'series': '', 'InstName': 'OPTIDX', 'GeneralNumerator': '1', 'user': '857958', 'remarks': '--', 'iSinceBOE': 0}
+2024-12-06 07:16:53 - main - INFO - status......rejected
+2024-12-06 07:16:54 - main - INFO - Order is rejected  for user sumit@yopmail.com. Response :{'data': {'status': 'rejected'}}
+2024-12-06 07:16:54 - main - INFO - Order log saved for user 23 with status Failed
+2024-12-06 07:16:54 - main - ERROR - Order is rejected for BANKNIFTY with broker Alice Blue
+2024-12-06 07:16:54 - django.server - INFO - "POST /v1/algo/webhook/ HTTP/1.1" 200 67
+2024-12-06 07:22:17 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 07:22:20 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 07:22:47 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 07:22:50 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 07:23:07 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 07:23:10 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 07:23:54 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 07:23:57 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 07:24:03 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 07:24:06 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 07:24:54 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 07:24:57 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 07:25:11 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 07:25:14 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 07:27:49 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 07:27:53 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 07:29:06 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+2024-12-06 07:29:09 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 07:29:15 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+2024-12-06 07:29:17 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 08:35:53 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+2024-12-06 08:35:55 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 08:37:30 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+2024-12-06 08:37:32 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 08:47:41 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+2024-12-06 08:47:44 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 08:49:16 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+2024-12-06 08:49:18 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 08:57:09 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+2024-12-06 08:57:11 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 08:57:48 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+2024-12-06 08:57:51 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 08:59:27 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+2024-12-06 08:59:30 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:03:47 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:05:30 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/admin.py changed, reloading.
+2024-12-06 09:05:32 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:06:53 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+2024-12-06 09:06:56 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:07:04 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+2024-12-06 09:07:06 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:07:24 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/admin.py changed, reloading.
+2024-12-06 09:07:26 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:07:57 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:08:10 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/admin.py changed, reloading.
+2024-12-06 09:08:13 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:09:21 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 09:09:23 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:10:05 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 09:10:08 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:11:00 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 09:11:02 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:11:11 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 09:11:14 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:11:19 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 09:11:22 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:12:35 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 09:12:38 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:14:27 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 09:14:30 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:14:54 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/admin.py changed, reloading.
+2024-12-06 09:14:57 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:15:11 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+2024-12-06 09:15:13 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:15:34 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 09:15:38 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:16:00 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 09:16:03 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:16:16 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 09:16:19 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:16:53 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 09:16:56 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:22:04 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:23:00 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 09:23:02 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:23:22 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 09:23:25 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:23:48 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 09:23:52 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:25:02 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 09:25:04 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:26:34 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 09:26:36 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:26:45 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 09:26:49 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:26:57 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 09:27:00 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:28:33 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 09:28:36 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:28:46 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 09:28:49 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:29:11 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 09:29:14 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:31:44 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 09:31:48 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:31:55 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 09:31:57 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:33:53 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+2024-12-06 09:33:55 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:34:18 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:34:44 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 09:34:47 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:35:42 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 09:35:45 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:37:31 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 09:37:34 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:37:47 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 09:37:49 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:38:31 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 09:38:33 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:38:49 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 09:38:52 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:39:14 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 09:39:16 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:40:01 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 09:40:03 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:40:52 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 09:40:54 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:42:31 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 09:42:33 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:43:59 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 09:44:02 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:44:30 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 09:44:33 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:45:22 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 09:45:26 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:46:48 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 09:46:50 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:46:56 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 09:46:58 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:47:24 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 09:47:27 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:48:06 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 09:48:08 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:49:04 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 09:49:07 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:49:30 - main - INFO - Received alert: {'Alert_Key': 'option_alert_1', 'buy_sell': 'BUY', 'data_type': 'option', 'expiry': '29-01-2025', 'IntType': 1, 'limitPrice': 160, 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'strategyTag': 'ce entry', 'strikePrice': 53400, 'symbol': 'BANKNIFTY', 'triggerPrice': 10, 'tsl': 0, 'Type': 'CE', 'complexty': 'regular', 'discqty': '2', 'exch_seg': 'NFO'}
+2024-12-06 09:49:30 - main - INFO - symbol>>BANKNIFTY>>expiry>29-01-2025 >>Type>>CE>>default_price>>53400
+2024-12-06 09:49:30 - django.request - ERROR - Internal Server Error: /v1/algo/webhook/
+Traceback (most recent call last):
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/venv/lib/python3.8/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/venv/lib/python3.8/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/venv/lib/python3.8/site-packages/django/views/decorators/csrf.py", line 56, in wrapper_view
+    return view_func(*args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/venv/lib/python3.8/site-packages/django/views/generic/base.py", line 104, in view
+    return self.dispatch(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/venv/lib/python3.8/site-packages/rest_framework/views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/venv/lib/python3.8/site-packages/rest_framework/views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/venv/lib/python3.8/site-packages/rest_framework/views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/venv/lib/python3.8/site-packages/rest_framework/views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py", line 1968, in post
+    save_webhook_signals_logs(buy_sell, symbols, default_price, strategy, json=json)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py", line 1918, in save_webhook_signals_logs
+    print("failure_reason>>",failure_reason)
+NameError: name 'failure_reason' is not defined
+2024-12-06 09:49:30 - django.server - ERROR - "POST /v1/algo/webhook/ HTTP/1.1" 500 106018
+2024-12-06 09:49:58 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 09:50:00 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:50:55 - main - INFO - Received alert: {'Alert_Key': 'option_alert_1', 'buy_sell': 'BUY', 'data_type': 'option', 'expiry': '29-01-2025', 'IntType': 1, 'limitPrice': 160, 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'strategyTag': 'ce entry', 'strikePrice': 53400, 'symbol': 'BANKNIFTY', 'triggerPrice': 10, 'tsl': 0, 'Type': 'CE', 'complexty': 'regular', 'discqty': '2', 'exch_seg': 'NFO'}
+2024-12-06 09:50:55 - main - INFO - symbol>>BANKNIFTY>>expiry>29-01-2025 >>Type>>CE>>default_price>>53400
+2024-12-06 09:50:56 - django.request - ERROR - Internal Server Error: /v1/algo/webhook/
+Traceback (most recent call last):
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py", line 1921, in save_webhook_signals_logs
+    SignalOrderLog.objects.create(
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/venv/lib/python3.8/site-packages/django/db/models/manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/venv/lib/python3.8/site-packages/django/db/models/query.py", line 658, in create
+    obj.save(force_insert=True, using=self.db)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/venv/lib/python3.8/site-packages/django/db/models/base.py", line 814, in save
+    self.save_base(
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/venv/lib/python3.8/site-packages/django/db/models/base.py", line 877, in save_base
+    updated = self._save_table(
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/venv/lib/python3.8/site-packages/django/db/models/base.py", line 1020, in _save_table
+    results = self._do_insert(
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/venv/lib/python3.8/site-packages/django/db/models/base.py", line 1061, in _do_insert
+    return manager._insert(
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/venv/lib/python3.8/site-packages/django/db/models/manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/venv/lib/python3.8/site-packages/django/db/models/query.py", line 1805, in _insert
+    return query.get_compiler(using=using).execute_sql(returning_fields)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/venv/lib/python3.8/site-packages/django/db/models/sql/compiler.py", line 1822, in execute_sql
+    cursor.execute(sql, params)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/venv/lib/python3.8/site-packages/django/db/backends/utils.py", line 102, in execute
+    return super().execute(sql, params)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/venv/lib/python3.8/site-packages/django/db/backends/utils.py", line 67, in execute
+    return self._execute_with_wrappers(
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/venv/lib/python3.8/site-packages/django/db/backends/utils.py", line 80, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/venv/lib/python3.8/site-packages/django/db/backends/utils.py", line 89, in _execute
+    return self.cursor.execute(sql, params)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/venv/lib/python3.8/site-packages/psycopg2/_json.py", line 78, in getquoted
+    s = self.dumps(self.adapted)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/venv/lib/python3.8/site-packages/psycopg2/_json.py", line 72, in dumps
+    return self._dumps(obj)
+  File "/usr/local/lib/python3.8/json/__init__.py", line 231, in dumps
+    return _default_encoder.encode(obj)
+  File "/usr/local/lib/python3.8/json/encoder.py", line 199, in encode
+    chunks = self.iterencode(o, _one_shot=True)
+  File "/usr/local/lib/python3.8/json/encoder.py", line 257, in iterencode
+    return _iterencode(o, 0)
+  File "/usr/local/lib/python3.8/json/encoder.py", line 179, in default
+    raise TypeError(f'Object of type {o.__class__.__name__} '
+TypeError: Object of type module is not JSON serializable
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/venv/lib/python3.8/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/venv/lib/python3.8/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/venv/lib/python3.8/site-packages/django/views/decorators/csrf.py", line 56, in wrapper_view
+    return view_func(*args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/venv/lib/python3.8/site-packages/django/views/generic/base.py", line 104, in view
+    return self.dispatch(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/venv/lib/python3.8/site-packages/rest_framework/views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/venv/lib/python3.8/site-packages/rest_framework/views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/venv/lib/python3.8/site-packages/rest_framework/views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/venv/lib/python3.8/site-packages/rest_framework/views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py", line 1968, in post
+    save_webhook_signals_logs(buy_sell, symbols, default_price, strategy, json=json)
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py", line 1935, in save_webhook_signals_logs
+    logger.error(f"Failed to save order log for user {user.id}. Reason: {str(e)}")
+NameError: name 'user' is not defined
+2024-12-06 09:50:56 - django.server - ERROR - "POST /v1/algo/webhook/ HTTP/1.1" 500 207957
+2024-12-06 09:51:50 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 09:51:53 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:52:01 - main - INFO - Received alert: {'Alert_Key': 'option_alert_1', 'buy_sell': 'BUY', 'data_type': 'option', 'expiry': '29-01-2025', 'IntType': 1, 'limitPrice': 160, 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'strategyTag': 'ce entry', 'strikePrice': 53400, 'symbol': 'BANKNIFTY', 'triggerPrice': 10, 'tsl': 0, 'Type': 'CE', 'complexty': 'regular', 'discqty': '2', 'exch_seg': 'NFO'}
+2024-12-06 09:52:01 - main - INFO - symbol>>BANKNIFTY>>expiry>29-01-2025 >>Type>>CE>>default_price>>53400
+2024-12-06 09:52:01 - main - ERROR - Failed to save webhook signal order log . Reason: Object of type module is not JSON serializable
+2024-12-06 09:52:01 - main - INFO - Trade expiry date: 29-01-2025
+2024-12-06 09:52:01 - main - INFO - Trade product type: NRML received type: NRML
+2024-12-06 09:52:01 - main - INFO - Trade transaction type: BUY received transaction type: BUY
+2024-12-06 09:52:01 - main - INFO - Trade symbol: BANKNIFTY received symbol: BANKNIFTY
+2024-12-06 09:52:01 - main - INFO - Placing order for user sumit@yopmail.com. Trade count: 0/5.00
+2024-12-06 09:52:01 - main - INFO - Current date and time: 2024-12-06 15:22:01.444704+05:30
+2024-12-06 09:52:01 - main - INFO - Market open time: 09:15:00, Market close time: 15:30:00
+2024-12-06 09:52:01 - main - INFO - Today is: Friday
+2024-12-06 09:52:01 - main - INFO - Market is open.
+2024-12-06 09:52:01 - main - INFO - Market is open. Proceed with the trade.
+2024-12-06 09:52:01 - main - INFO - !!!!Placing order for user: sumit@yopmail.com Brocker is: Alice Blue & trading symbol is: BANKNIFTY
+2024-12-06 09:52:02 - main - INFO - Placing order with parameters:
+2024-12-06 09:52:02 - main - ERROR - Attribute error: 'dict' object has no attribute 'dumps'
+2024-12-06 09:52:02 - main - ERROR - Order placement encountered an error: 'data'
+2024-12-06 09:52:02 - django.request - ERROR - Internal Server Error: /v1/algo/webhook/
+2024-12-06 09:52:02 - django.server - ERROR - "POST /v1/algo/webhook/ HTTP/1.1" 500 18
+2024-12-06 09:52:29 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 09:52:32 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:52:40 - main - INFO - Received alert: {'Alert_Key': 'option_alert_1', 'buy_sell': 'BUY', 'data_type': 'option', 'expiry': '29-01-2025', 'IntType': 1, 'limitPrice': 160, 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'strategyTag': 'ce entry', 'strikePrice': 53400, 'symbol': 'BANKNIFTY', 'triggerPrice': 10, 'tsl': 0, 'Type': 'CE', 'complexty': 'regular', 'discqty': '2', 'exch_seg': 'NFO'}
+2024-12-06 09:52:40 - main - INFO - symbol>>BANKNIFTY>>expiry>29-01-2025 >>Type>>CE>>default_price>>53400
+2024-12-06 09:52:40 - main - ERROR - Failed to save webhook signal order log . Reason: Object of type module is not JSON serializable
+2024-12-06 09:52:40 - main - INFO - Trade expiry date: 29-01-2025
+2024-12-06 09:52:40 - main - INFO - Trade product type: NRML received type: NRML
+2024-12-06 09:52:40 - main - INFO - Trade transaction type: BUY received transaction type: BUY
+2024-12-06 09:52:40 - main - INFO - Trade symbol: BANKNIFTY received symbol: BANKNIFTY
+2024-12-06 09:52:40 - main - INFO - Placing order for user sumit@yopmail.com. Trade count: 0/5.00
+2024-12-06 09:52:41 - main - INFO - Current date and time: 2024-12-06 15:22:41.286425+05:30
+2024-12-06 09:52:41 - main - INFO - Market open time: 09:15:00, Market close time: 15:30:00
+2024-12-06 09:52:41 - main - INFO - Today is: Friday
+2024-12-06 09:52:41 - main - INFO - Market is open.
+2024-12-06 09:52:41 - main - INFO - Market is open. Proceed with the trade.
+2024-12-06 09:52:41 - main - INFO - !!!!Placing order for user: sumit@yopmail.com Brocker is: Alice Blue & trading symbol is: BANKNIFTY
+2024-12-06 09:52:42 - main - INFO - Placing order with parameters:
+2024-12-06 09:52:42 - main - INFO - order payload for alice blue...
+2024-12-06 09:52:44 - main - INFO - history of alice blue order_____________{'Prc': '0.00', 'RequestID': '1', 'Cancelqty': 0, 'discQtyPerc': 'NA', 'customText': 'NA', 'Mktpro': 'NA', 'defmktproval': '', 'optionType': 'CE', 'usecs': 'NA', 'mpro': '', 'Qty': 15, 'ordergenerationtype': '--', 'Unfilledsize': 0, 'orderAuthStatus': '', 'Usercomments': 'NA', 'ticksize': '0.05', 'Prctype': 'MKT', 'Status': 'rejected', 'Minqty': 0, 'orderCriteria': 'NA', 'Exseg': 'nse_fo', 'Sym': 'BANKNIFTY', 'multiplier': '1', 'ExchOrdID': None, 'ExchConfrmtime': '--', 'Pcode': 'NRML', 'SyomOrderId': '', 'Dscqty': 0, 'Exchange': 'NFO', 'Ordvaldate': 'NA', 'accountId': '857958', 'exchangeuserinfo': 'NA', 'Avgprc': '0.00', 'Trgprc': '00.00', 'Trantype': 'B', 'bqty': '15', 'Trsym': 'BANKNIFTY29JAN25C53400', 'Fillshares': 0, 'AlgoCategory': 'NA', 'sipindicator': 'NA', 'strikePrice': '53400', 'reporttype': 'NA', 'AlgoID': 'NA', 'noMktPro': '', 'BrokerClient': '--', 'OrderUserMessage': '--', 'decprec': 'NA', 'ExpDate': '29 Jan, 2025', 'COPercentage': 0.0, 'marketprotectionpercentage': '--', 'Nstordno': '24120600202173', 'ExpSsbDate': 'NA', 'OrderedTime': '06/12/2024 15:22:13', 'RejReason': 'ORA:Exchange NFO not enabled for User 857958', 'modifiedBy': '--', 'Scripname': 'BANKNIFTY29JAN25C53400', 'stat': 'Ok', 'orderentrytime': 'Dec 06 2024 15:22:13', 'PriceDenomenator': '1', 'panNo': 'NA', 'RefLmtPrice': 0.0, 'PriceNumerator': '1', 'token': '39621', 'ordersource': 'NA', 'Validity': 'DAY', 'GeneralDenomenator': '1', 'series': '', 'InstName': 'OPTIDX', 'GeneralNumerator': '1', 'user': '857958', 'remarks': '--', 'iSinceBOE': 0}
+2024-12-06 09:52:44 - main - INFO - status......rejected
+2024-12-06 09:52:44 - main - INFO - Order is rejected  for user sumit@yopmail.com. Response :{'data': {'status': 'rejected'}}
+2024-12-06 09:52:44 - main - ERROR - Error saving order history for Order ID: 24120600202173. Error: Object of type TransactionType is not JSON serializable
+2024-12-06 09:52:44 - main - ERROR - Order is rejected for BANKNIFTY with broker Alice Blue
+2024-12-06 09:52:45 - django.server - INFO - "POST /v1/algo/webhook/ HTTP/1.1" 200 67
+2024-12-06 09:52:56 - django.server - INFO - "GET /admin/main/ HTTP/1.1" 200 14567
+2024-12-06 09:53:07 - django.server - INFO - "GET /admin/main/tradeorderhistory/ HTTP/1.1" 200 17096
+2024-12-06 09:53:07 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-06 09:57:33 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 09:57:36 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:57:49 - main - INFO - Received alert: {'Alert_Key': 'option_alert_1', 'buy_sell': 'BUY', 'data_type': 'option', 'expiry': '29-01-2025', 'IntType': 1, 'limitPrice': 160, 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'strategyTag': 'ce entry', 'strikePrice': 53400, 'symbol': 'BANKNIFTY', 'triggerPrice': 10, 'tsl': 0, 'Type': 'CE', 'complexty': 'regular', 'discqty': '2', 'exch_seg': 'NFO'}
+2024-12-06 09:57:49 - main - INFO - symbol>>BANKNIFTY>>expiry>29-01-2025 >>Type>>CE>>default_price>>53400
+2024-12-06 09:57:49 - main - ERROR - Failed to save webhook signal order log . Reason: Object of type module is not JSON serializable
+2024-12-06 09:57:49 - main - INFO - Trade expiry date: 29-01-2025
+2024-12-06 09:57:49 - main - INFO - Trade product type: NRML received type: NRML
+2024-12-06 09:57:49 - main - INFO - Trade transaction type: BUY received transaction type: BUY
+2024-12-06 09:57:49 - main - INFO - Trade symbol: BANKNIFTY received symbol: BANKNIFTY
+2024-12-06 09:57:49 - main - INFO - Placing order for user sumit@yopmail.com. Trade count: 0/5.00
+2024-12-06 09:57:49 - main - INFO - Current date and time: 2024-12-06 15:27:49.963917+05:30
+2024-12-06 09:57:49 - main - INFO - Market open time: 09:15:00, Market close time: 15:30:00
+2024-12-06 09:57:49 - main - INFO - Today is: Friday
+2024-12-06 09:57:49 - main - INFO - Market is open.
+2024-12-06 09:57:49 - main - INFO - Market is open. Proceed with the trade.
+2024-12-06 09:57:49 - main - INFO - !!!!Placing order for user: sumit@yopmail.com Brocker is: Alice Blue & trading symbol is: BANKNIFTY
+2024-12-06 09:57:51 - main - INFO - Placing order with parameters:
+2024-12-06 09:57:51 - main - ERROR - Attribute error: 'dict' object has no attribute 'dumps'
+2024-12-06 09:57:51 - main - ERROR - Order placement encountered an error: 'data'
+2024-12-06 09:57:51 - django.request - ERROR - Internal Server Error: /v1/algo/webhook/
+2024-12-06 09:57:51 - django.server - ERROR - "POST /v1/algo/webhook/ HTTP/1.1" 500 18
+2024-12-06 09:58:28 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 09:58:32 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 09:59:04 - main - INFO - Received alert: {'Alert_Key': 'option_alert_1', 'buy_sell': 'BUY', 'data_type': 'option', 'expiry': '29-01-2025', 'IntType': 1, 'limitPrice': 160, 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'strategyTag': 'ce entry', 'strikePrice': 53400, 'symbol': 'BANKNIFTY', 'triggerPrice': 10, 'tsl': 0, 'Type': 'CE', 'complexty': 'regular', 'discqty': '2', 'exch_seg': 'NFO'}
+2024-12-06 09:59:04 - main - INFO - symbol>>BANKNIFTY>>expiry>29-01-2025 >>Type>>CE>>default_price>>53400
+2024-12-06 09:59:04 - main - ERROR - Failed to save webhook signal order log . Reason: Object of type module is not JSON serializable
+2024-12-06 09:59:04 - main - INFO - Trade expiry date: 29-01-2025
+2024-12-06 09:59:04 - main - INFO - Trade product type: NRML received type: NRML
+2024-12-06 09:59:04 - main - INFO - Trade transaction type: BUY received transaction type: BUY
+2024-12-06 09:59:04 - main - INFO - Trade symbol: BANKNIFTY received symbol: BANKNIFTY
+2024-12-06 09:59:04 - main - INFO - Placing order for user sumit@yopmail.com. Trade count: 0/5.00
+2024-12-06 09:59:05 - main - INFO - Current date and time: 2024-12-06 15:29:05.027296+05:30
+2024-12-06 09:59:05 - main - INFO - Market open time: 09:15:00, Market close time: 15:30:00
+2024-12-06 09:59:05 - main - INFO - Today is: Friday
+2024-12-06 09:59:05 - main - INFO - Market is open.
+2024-12-06 09:59:05 - main - INFO - Market is open. Proceed with the trade.
+2024-12-06 09:59:05 - main - INFO - !!!!Placing order for user: sumit@yopmail.com Brocker is: Alice Blue & trading symbol is: BANKNIFTY
+2024-12-06 09:59:05 - main - INFO - Placing order with parameters:
+2024-12-06 09:59:05 - main - ERROR - Attribute error: 'dict' object has no attribute 'dumps'
+2024-12-06 09:59:05 - main - ERROR - Order placement encountered an error: 'data'
+2024-12-06 09:59:05 - django.request - ERROR - Internal Server Error: /v1/algo/webhook/
+2024-12-06 09:59:05 - django.server - ERROR - "POST /v1/algo/webhook/ HTTP/1.1" 500 18
+2024-12-06 09:59:56 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 10:00:00 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 10:00:11 - main - INFO - Received alert: {'Alert_Key': 'option_alert_1', 'buy_sell': 'BUY', 'data_type': 'option', 'expiry': '29-01-2025', 'IntType': 1, 'limitPrice': 160, 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'strategyTag': 'ce entry', 'strikePrice': 53400, 'symbol': 'BANKNIFTY', 'triggerPrice': 10, 'tsl': 0, 'Type': 'CE', 'complexty': 'regular', 'discqty': '2', 'exch_seg': 'NFO'}
+2024-12-06 10:00:11 - main - INFO - symbol>>BANKNIFTY>>expiry>29-01-2025 >>Type>>CE>>default_price>>53400
+2024-12-06 10:00:11 - main - ERROR - Failed to save webhook signal order log . Reason: Object of type module is not JSON serializable
+2024-12-06 10:00:11 - main - INFO - Trade expiry date: 29-01-2025
+2024-12-06 10:00:11 - main - INFO - Trade product type: NRML received type: NRML
+2024-12-06 10:00:11 - main - INFO - Trade transaction type: BUY received transaction type: BUY
+2024-12-06 10:00:11 - main - INFO - Trade symbol: BANKNIFTY received symbol: BANKNIFTY
+2024-12-06 10:00:11 - main - INFO - Placing order for user sumit@yopmail.com. Trade count: 0/5.00
+2024-12-06 10:00:11 - main - INFO - Current date and time: 2024-12-06 15:30:11.630676+05:30
+2024-12-06 10:00:11 - main - INFO - Market open time: 09:15:00, Market close time: 15:30:00
+2024-12-06 10:00:11 - main - INFO - Today is: Friday
+2024-12-06 10:00:11 - main - INFO - Market is closed.
+2024-12-06 10:00:11 - main - INFO - Market is open. Proceed with the trade.
+2024-12-06 10:00:11 - main - INFO - !!!!Placing order for user: sumit@yopmail.com Brocker is: Alice Blue & trading symbol is: BANKNIFTY
+2024-12-06 10:00:12 - main - INFO - Placing order with parameters:
+2024-12-06 10:00:12 - main - ERROR - Attribute error: 'dict' object has no attribute 'dumps'
+2024-12-06 10:00:12 - main - ERROR - Order placement encountered an error: 'data'
+2024-12-06 10:00:12 - django.request - ERROR - Internal Server Error: /v1/algo/webhook/
+2024-12-06 10:00:12 - django.server - ERROR - "POST /v1/algo/webhook/ HTTP/1.1" 500 18
+2024-12-06 10:01:31 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 10:01:34 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 10:01:54 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 10:01:57 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 10:02:06 - main - INFO - Received alert: {'Alert_Key': 'option_alert_1', 'buy_sell': 'BUY', 'data_type': 'option', 'expiry': '29-01-2025', 'IntType': 1, 'limitPrice': 160, 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'strategyTag': 'ce entry', 'strikePrice': 53400, 'symbol': 'BANKNIFTY', 'triggerPrice': 10, 'tsl': 0, 'Type': 'CE', 'complexty': 'regular', 'discqty': '2', 'exch_seg': 'NFO'}
+2024-12-06 10:02:06 - main - INFO - symbol>>BANKNIFTY>>expiry>29-01-2025 >>Type>>CE>>default_price>>53400
+2024-12-06 10:02:06 - main - ERROR - Failed to save webhook signal order log . Reason: Object of type module is not JSON serializable
+2024-12-06 10:02:06 - main - INFO - Trade expiry date: 29-01-2025
+2024-12-06 10:02:06 - main - INFO - Trade product type: NRML received type: NRML
+2024-12-06 10:02:06 - main - INFO - Trade transaction type: BUY received transaction type: BUY
+2024-12-06 10:02:06 - main - INFO - Trade symbol: BANKNIFTY received symbol: BANKNIFTY
+2024-12-06 10:02:07 - main - INFO - Placing order for user sumit@yopmail.com. Trade count: 0/5.00
+2024-12-06 10:02:07 - main - INFO - Current date and time: 2024-12-06 15:32:07.100150+05:30
+2024-12-06 10:02:07 - main - INFO - Market open time: 09:15:00, Market close time: 15:30:00
+2024-12-06 10:02:07 - main - INFO - Today is: Friday
+2024-12-06 10:02:07 - main - INFO - Market is closed.
+2024-12-06 10:02:07 - main - INFO - Market is open. Proceed with the trade.
+2024-12-06 10:02:07 - main - INFO - !!!!Placing order for user: sumit@yopmail.com Brocker is: Alice Blue & trading symbol is: BANKNIFTY
+2024-12-06 10:02:08 - main - INFO - Placing order with parameters:
+2024-12-06 10:02:08 - main - ERROR - Unexpected error while placing order for user sumit@yopmail.com
+Traceback (most recent call last):
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py", line 2238, in place_alice_orders
+    order_params_json = json.dumps(order_params, indent=4)
+  File "/usr/local/lib/python3.8/json/__init__.py", line 234, in dumps
+    return cls(
+  File "/usr/local/lib/python3.8/json/encoder.py", line 201, in encode
+    chunks = list(chunks)
+  File "/usr/local/lib/python3.8/json/encoder.py", line 431, in _iterencode
+    yield from _iterencode_dict(o, _current_indent_level)
+  File "/usr/local/lib/python3.8/json/encoder.py", line 405, in _iterencode_dict
+    yield from chunks
+  File "/usr/local/lib/python3.8/json/encoder.py", line 438, in _iterencode
+    o = _default(o)
+  File "/usr/local/lib/python3.8/json/encoder.py", line 179, in default
+    raise TypeError(f'Object of type {o.__class__.__name__} '
+TypeError: Object of type TransactionType is not JSON serializable
+2024-12-06 10:02:08 - main - ERROR - Order placement encountered an error: 'data'
+2024-12-06 10:02:08 - django.request - ERROR - Internal Server Error: /v1/algo/webhook/
+2024-12-06 10:02:08 - django.server - ERROR - "POST /v1/algo/webhook/ HTTP/1.1" 500 18
+2024-12-06 10:03:35 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 10:03:38 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 10:03:47 - main - INFO - Received alert: {'Alert_Key': 'option_alert_1', 'buy_sell': 'BUY', 'data_type': 'option', 'expiry': '29-01-2025', 'IntType': 1, 'limitPrice': 160, 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'strategyTag': 'ce entry', 'strikePrice': 53400, 'symbol': 'BANKNIFTY', 'triggerPrice': 10, 'tsl': 0, 'Type': 'CE', 'complexty': 'regular', 'discqty': '2', 'exch_seg': 'NFO'}
+2024-12-06 10:03:47 - main - INFO - symbol>>BANKNIFTY>>expiry>29-01-2025 >>Type>>CE>>default_price>>53400
+2024-12-06 10:03:47 - main - ERROR - Failed to save webhook signal order log . Reason: Object of type module is not JSON serializable
+2024-12-06 10:03:47 - main - INFO - Trade expiry date: 29-01-2025
+2024-12-06 10:03:47 - main - INFO - Trade product type: NRML received type: NRML
+2024-12-06 10:03:47 - main - INFO - Trade transaction type: BUY received transaction type: BUY
+2024-12-06 10:03:47 - main - INFO - Trade symbol: BANKNIFTY received symbol: BANKNIFTY
+2024-12-06 10:03:47 - main - INFO - Placing order for user sumit@yopmail.com. Trade count: 0/5.00
+2024-12-06 10:03:47 - main - INFO - Current date and time: 2024-12-06 15:33:47.222350+05:30
+2024-12-06 10:03:47 - main - INFO - Market open time: 09:15:00, Market close time: 15:30:00
+2024-12-06 10:03:47 - main - INFO - Today is: Friday
+2024-12-06 10:03:47 - main - INFO - Market is closed.
+2024-12-06 10:03:47 - main - INFO - Market is open. Proceed with the trade.
+2024-12-06 10:03:47 - main - INFO - !!!!Placing order for user: sumit@yopmail.com Brocker is: Alice Blue & trading symbol is: BANKNIFTY
+2024-12-06 10:03:48 - main - INFO - Placing order with parameters:
+2024-12-06 10:03:48 - main - INFO - history of alice blue order_____________{'Prc': '0.00', 'RequestID': '1', 'Cancelqty': 0, 'discQtyPerc': 'NA', 'customText': 'NA', 'Mktpro': 'NA', 'defmktproval': '', 'optionType': 'CE', 'usecs': 'NA', 'mpro': '', 'Qty': 15, 'ordergenerationtype': '--', 'Unfilledsize': 0, 'orderAuthStatus': '', 'Usercomments': 'NA', 'ticksize': '0.05', 'Prctype': 'MKT', 'Status': 'rejected', 'Minqty': 0, 'orderCriteria': 'NA', 'Exseg': 'nse_fo', 'Sym': 'BANKNIFTY', 'multiplier': '1', 'ExchOrdID': None, 'ExchConfrmtime': '--', 'Pcode': 'NRML', 'SyomOrderId': '', 'Dscqty': 0, 'Exchange': 'NFO', 'Ordvaldate': 'NA', 'accountId': '857958', 'exchangeuserinfo': 'NA', 'Avgprc': '0.00', 'Trgprc': '00.00', 'Trantype': 'B', 'bqty': '15', 'Trsym': 'BANKNIFTY29JAN25C53400', 'Fillshares': 0, 'AlgoCategory': 'NA', 'sipindicator': 'NA', 'strikePrice': '53400', 'reporttype': 'NA', 'AlgoID': 'NA', 'noMktPro': '', 'BrokerClient': '--', 'OrderUserMessage': '--', 'decprec': 'NA', 'ExpDate': '29 Jan, 2025', 'COPercentage': 0.0, 'marketprotectionpercentage': '--', 'Nstordno': '24120600205193', 'ExpSsbDate': 'NA', 'OrderedTime': '06/12/2024 15:33:18', 'RejReason': 'ORA:Exchange NFO not enabled for User 857958', 'modifiedBy': '--', 'Scripname': 'BANKNIFTY29JAN25C53400', 'stat': 'Ok', 'orderentrytime': 'Dec 06 2024 15:33:18', 'PriceDenomenator': '1', 'panNo': 'NA', 'RefLmtPrice': 0.0, 'PriceNumerator': '1', 'token': '39621', 'ordersource': 'NA', 'Validity': 'DAY', 'GeneralDenomenator': '1', 'series': '', 'InstName': 'OPTIDX', 'GeneralNumerator': '1', 'user': '857958', 'remarks': '--', 'iSinceBOE': 0}
+2024-12-06 10:03:48 - main - INFO - status......rejected
+2024-12-06 10:03:49 - main - INFO - Order is rejected  for user sumit@yopmail.com. Response :{'data': {'status': 'rejected'}}
+2024-12-06 10:03:49 - main - INFO - Order history saved successfully for Order ID: 24120600205193
+2024-12-06 10:03:49 - main - ERROR - Order is rejected for BANKNIFTY with broker Alice Blue
+2024-12-06 10:03:49 - django.server - INFO - "POST /v1/algo/webhook/ HTTP/1.1" 200 67
+2024-12-06 10:03:59 - django.server - INFO - "GET /admin/main/tradeorderhistory/ HTTP/1.1" 200 18821
+2024-12-06 10:03:59 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-06 10:04:03 - django.server - INFO - "GET /admin/main/tradeorderhistory/1/change/ HTTP/1.1" 200 27078
+2024-12-06 10:04:03 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-06 10:04:18 - django.server - INFO - "GET /admin/main/tradeorderhistory/ HTTP/1.1" 200 18821
+2024-12-06 10:05:56 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 10:05:56 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 10:06:34 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 10:06:35 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 10:06:40 - main - INFO - Received alert: {'Alert_Key': 'option_alert_1', 'buy_sell': 'BUY', 'data_type': 'option', 'expiry': '29-01-2025', 'IntType': 1, 'limitPrice': 160, 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'strategyTag': 'ce entry', 'strikePrice': 53400, 'symbol': 'BANKNIFTY', 'triggerPrice': 10, 'tsl': 0, 'Type': 'CE', 'complexty': 'regular', 'discqty': '2', 'exch_seg': 'NFO'}
+2024-12-06 10:06:40 - main - INFO - symbol>>BANKNIFTY>>expiry>29-01-2025 >>Type>>CE>>default_price>>53400
+2024-12-06 10:06:40 - main - ERROR - Failed to save webhook signal order log . Reason: Object of type module is not JSON serializable
+2024-12-06 10:06:40 - main - INFO - Trade expiry date: 29-01-2025
+2024-12-06 10:06:40 - main - INFO - Trade product type: NRML received type: NRML
+2024-12-06 10:06:40 - main - INFO - Trade transaction type: BUY received transaction type: BUY
+2024-12-06 10:06:40 - main - INFO - Trade symbol: BANKNIFTY received symbol: BANKNIFTY
+2024-12-06 10:06:40 - main - INFO - Placing order for user sumit@yopmail.com. Trade count: 0/5.00
+2024-12-06 10:06:40 - main - INFO - Current date and time: 2024-12-06 15:36:40.461509+05:30
+2024-12-06 10:06:40 - main - INFO - Market open time: 09:15:00, Market close time: 15:30:00
+2024-12-06 10:06:40 - main - INFO - Today is: Friday
+2024-12-06 10:06:40 - main - INFO - Market is closed.
+2024-12-06 10:06:40 - main - INFO - Market is open. Proceed with the trade.
+2024-12-06 10:06:40 - main - INFO - !!!!Placing order for user: sumit@yopmail.com Brocker is: Alice Blue & trading symbol is: BANKNIFTY
+2024-12-06 10:06:40 - main - INFO - Placing order with parameters:
+2024-12-06 10:06:40 - main - INFO - order payload for alice blue...
+2024-12-06 10:06:40 - main - INFO - Transaction: TransactionType.Buy, Instrument: BANKNIFTY, Quantity: 15, Order Type: MARKET, Product Type: ProductType.Normal, Price: 53400.0, Trigger Price: 10.0
+2024-12-06 10:06:41 - main - INFO - history of alice blue order_____________{'Prc': '0.00', 'RequestID': '1', 'Cancelqty': 0, 'discQtyPerc': 'NA', 'customText': 'NA', 'Mktpro': 'NA', 'defmktproval': '', 'optionType': 'CE', 'usecs': 'NA', 'mpro': '', 'Qty': 15, 'ordergenerationtype': '--', 'Unfilledsize': 0, 'orderAuthStatus': '', 'Usercomments': 'NA', 'ticksize': '0.05', 'Prctype': 'MKT', 'Status': 'rejected', 'Minqty': 0, 'orderCriteria': 'NA', 'Exseg': 'nse_fo', 'Sym': 'BANKNIFTY', 'multiplier': '1', 'ExchOrdID': None, 'ExchConfrmtime': '--', 'Pcode': 'NRML', 'SyomOrderId': '', 'Dscqty': 0, 'Exchange': 'NFO', 'Ordvaldate': 'NA', 'accountId': '857958', 'exchangeuserinfo': 'NA', 'Avgprc': '0.00', 'Trgprc': '00.00', 'Trantype': 'B', 'bqty': '15', 'Trsym': 'BANKNIFTY29JAN25C53400', 'Fillshares': 0, 'AlgoCategory': 'NA', 'sipindicator': 'NA', 'strikePrice': '53400', 'reporttype': 'NA', 'AlgoID': 'NA', 'noMktPro': '', 'BrokerClient': '--', 'OrderUserMessage': '--', 'decprec': 'NA', 'ExpDate': '29 Jan, 2025', 'COPercentage': 0.0, 'marketprotectionpercentage': '--', 'Nstordno': '24120600205352', 'ExpSsbDate': 'NA', 'OrderedTime': '06/12/2024 15:36:11', 'RejReason': 'ORA:Exchange NFO not enabled for User 857958', 'modifiedBy': '--', 'Scripname': 'BANKNIFTY29JAN25C53400', 'stat': 'Ok', 'orderentrytime': 'Dec 06 2024 15:36:11', 'PriceDenomenator': '1', 'panNo': 'NA', 'RefLmtPrice': 0.0, 'PriceNumerator': '1', 'token': '39621', 'ordersource': 'NA', 'Validity': 'DAY', 'GeneralDenomenator': '1', 'series': '', 'InstName': 'OPTIDX', 'GeneralNumerator': '1', 'user': '857958', 'remarks': '--', 'iSinceBOE': 0}
+2024-12-06 10:06:41 - main - INFO - status......rejected
+2024-12-06 10:06:41 - main - INFO - Order is rejected  for user sumit@yopmail.com. Response :{'data': {'status': 'rejected'}}
+2024-12-06 10:06:41 - main - INFO - Order history saved successfully for Order ID: 24120600205352
+2024-12-06 10:06:41 - main - ERROR - Order is rejected for BANKNIFTY with broker Alice Blue
+2024-12-06 10:06:41 - django.server - INFO - "POST /v1/algo/webhook/ HTTP/1.1" 200 67
+2024-12-06 10:06:52 - django.server - INFO - "GET /admin/main/ HTTP/1.1" 200 14567
+2024-12-06 10:07:08 - django.server - INFO - "GET /admin/main/tradeorderhistory/ HTTP/1.1" 200 19166
+2024-12-06 10:07:08 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-06 10:07:13 - django.server - INFO - "GET /admin/main/tradeorderhistory/1/change/ HTTP/1.1" 200 27078
+2024-12-06 10:07:13 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-06 10:07:25 - django.server - INFO - "POST /admin/main/tradeorderhistory/1/change/ HTTP/1.1" 302 0
+2024-12-06 10:07:26 - django.server - INFO - "GET /admin/main/tradeorderhistory/ HTTP/1.1" 200 19423
+2024-12-06 10:07:26 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-06 10:07:28 - django.server - INFO - "GET /admin/main/tradeorderhistory/1/change/ HTTP/1.1" 200 27079
+2024-12-06 10:07:28 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-06 10:07:35 - django.server - INFO - "GET /admin/main/tradeorderhistory/ HTTP/1.1" 200 19167
+2024-12-06 10:07:37 - django.server - INFO - "GET /admin/main/tradeorderhistory/2/change/ HTTP/1.1" 200 27078
+2024-12-06 10:07:37 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-06 10:07:48 - django.server - INFO - "POST /admin/main/tradeorderhistory/2/change/ HTTP/1.1" 302 0
+2024-12-06 10:07:48 - django.server - INFO - "GET /admin/main/tradeorderhistory/ HTTP/1.1" 200 19424
+2024-12-06 10:07:48 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-06 10:08:31 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 10:08:31 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 10:08:50 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 10:08:50 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 10:09:11 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 10:09:11 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 10:09:31 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 10:09:31 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 10:10:18 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 10:10:18 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 10:10:32 - django.server - INFO - "GET /admin/main/ HTTP/1.1" 200 14567
+2024-12-06 10:10:59 - django.server - INFO - "GET /admin/main/clienttradesetting/ HTTP/1.1" 200 22132
+2024-12-06 10:10:59 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-06 10:11:06 - django.server - INFO - "GET /admin/main/clienttradesetting/5/change/ HTTP/1.1" 200 31799
+2024-12-06 10:11:06 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-06 10:11:23 - django.server - INFO - "GET /admin/main/ HTTP/1.1" 200 14567
+2024-12-06 10:11:25 - django.server - INFO - "GET /admin/main/clienttradesetting/ HTTP/1.1" 200 22132
+2024-12-06 10:11:25 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-06 10:11:28 - django.server - INFO - "GET /admin/main/clienttradesetting/3/change/ HTTP/1.1" 200 31778
+2024-12-06 10:11:28 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-06 10:11:31 - django.server - INFO - "POST /admin/main/clienttradesetting/3/change/ HTTP/1.1" 302 0
+2024-12-06 10:11:31 - django.server - INFO - "GET /admin/main/clienttradesetting/ HTTP/1.1" 200 22382
+2024-12-06 10:11:31 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-06 10:11:38 - main - INFO - Received alert: {'Alert_Key': 'option_alert_1', 'buy_sell': 'BUY', 'data_type': 'option', 'expiry': '29-01-2025', 'IntType': 1, 'limitPrice': 160, 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'strategyTag': 'ce entry', 'strikePrice': 53400, 'symbol': 'BANKNIFTY', 'triggerPrice': 10, 'tsl': 0, 'Type': 'CE', 'complexty': 'regular', 'discqty': '2', 'exch_seg': 'NFO'}
+2024-12-06 10:11:38 - main - INFO - symbol>>BANKNIFTY>>expiry>29-01-2025 >>Type>>CE>>default_price>>53400
+2024-12-06 10:11:38 - main - ERROR - Failed to save webhook signal order log . Reason: Object of type module is not JSON serializable
+2024-12-06 10:11:39 - main - INFO - Trade expiry date: 29-01-2025
+2024-12-06 10:11:39 - main - INFO - Trade product type: NRML received type: NRML
+2024-12-06 10:11:39 - main - INFO - Trade transaction type: BUY received transaction type: BUY
+2024-12-06 10:11:39 - main - INFO - Trade symbol: BANKNIFTY received symbol: BANKNIFTY
+2024-12-06 10:11:39 - main - INFO - Placing order for user sumit@yopmail.com. Trade count: 0/5.00
+2024-12-06 10:11:39 - main - INFO - Current date and time: 2024-12-06 15:41:39.022100+05:30
+2024-12-06 10:11:39 - main - INFO - Market open time: 09:15:00, Market close time: 15:30:00
+2024-12-06 10:11:39 - main - INFO - Today is: Friday
+2024-12-06 10:11:39 - main - INFO - Market is closed.
+2024-12-06 10:11:39 - main - INFO - Market is open. Proceed with the trade.
+2024-12-06 10:11:39 - main - INFO - !!!!Placing order for user: sumit@yopmail.com Brocker is: Alice Blue & trading symbol is: BANKNIFTY
+2024-12-06 10:11:39 - main - INFO - Placing order with parameters:
+2024-12-06 10:11:39 - main - INFO - order payload for alice blue...
+2024-12-06 10:11:39 - main - INFO - Transaction: TransactionType.Buy, Instrument: BANKNIFTY, Quantity: 15, Order Type: MARKET, Product Type: ProductType.Normal, Price: 53400.0, Trigger Price: 10.0
+2024-12-06 10:11:40 - main - INFO - history of alice blue order_____________{'Prc': '0.00', 'RequestID': '1', 'Cancelqty': 0, 'discQtyPerc': 'NA', 'customText': 'NA', 'Mktpro': 'NA', 'defmktproval': '', 'optionType': 'CE', 'usecs': 'NA', 'mpro': '', 'Qty': 15, 'ordergenerationtype': '--', 'Unfilledsize': 0, 'orderAuthStatus': '', 'Usercomments': 'NA', 'ticksize': '0.05', 'Prctype': 'MKT', 'Status': 'rejected', 'Minqty': 0, 'orderCriteria': 'NA', 'Exseg': 'nse_fo', 'Sym': 'BANKNIFTY', 'multiplier': '1', 'ExchOrdID': None, 'ExchConfrmtime': '--', 'Pcode': 'NRML', 'SyomOrderId': '', 'Dscqty': 0, 'Exchange': 'NFO', 'Ordvaldate': 'NA', 'accountId': '857958', 'exchangeuserinfo': 'NA', 'Avgprc': '0.00', 'Trgprc': '00.00', 'Trantype': 'B', 'bqty': '15', 'Trsym': 'BANKNIFTY29JAN25C53400', 'Fillshares': 0, 'AlgoCategory': 'NA', 'sipindicator': 'NA', 'strikePrice': '53400', 'reporttype': 'NA', 'AlgoID': 'NA', 'noMktPro': '', 'BrokerClient': '--', 'OrderUserMessage': '--', 'decprec': 'NA', 'ExpDate': '29 Jan, 2025', 'COPercentage': 0.0, 'marketprotectionpercentage': '--', 'Nstordno': '24120600205535', 'ExpSsbDate': 'NA', 'OrderedTime': '06/12/2024 15:41:10', 'RejReason': 'ORA:Exchange NFO not enabled for User 857958', 'modifiedBy': '--', 'Scripname': 'BANKNIFTY29JAN25C53400', 'stat': 'Ok', 'orderentrytime': 'Dec 06 2024 15:41:10', 'PriceDenomenator': '1', 'panNo': 'NA', 'RefLmtPrice': 0.0, 'PriceNumerator': '1', 'token': '39621', 'ordersource': 'NA', 'Validity': 'DAY', 'GeneralDenomenator': '1', 'series': '', 'InstName': 'OPTIDX', 'GeneralNumerator': '1', 'user': '857958', 'remarks': '--', 'iSinceBOE': 0}
+2024-12-06 10:11:40 - main - INFO - status......rejected
+2024-12-06 10:11:40 - main - INFO - Order is rejected  for user sumit@yopmail.com. Response :{'data': {'status': 'rejected'}}
+2024-12-06 10:11:40 - main - INFO - Order history saved successfully for Order ID: 24120600205535
+2024-12-06 10:11:40 - main - ERROR - Order is rejected for BANKNIFTY with broker Alice Blue
+2024-12-06 10:11:40 - main - INFO - Trade expiry date: 29-01-2025
+2024-12-06 10:11:40 - main - INFO - Trade product type: NRML received type: NRML
+2024-12-06 10:11:40 - main - INFO - Trade transaction type: BUY received transaction type: BUY
+2024-12-06 10:11:40 - main - INFO - Trade symbol: BANKNIFTY received symbol: BANKNIFTY
+2024-12-06 10:11:40 - main - INFO - Placing order for user sumit@yopmail.com. Trade count: 0/5.00
+2024-12-06 10:11:40 - main - INFO - Current date and time: 2024-12-06 15:41:40.463113+05:30
+2024-12-06 10:11:40 - main - INFO - Market open time: 09:15:00, Market close time: 15:30:00
+2024-12-06 10:11:40 - main - INFO - Today is: Friday
+2024-12-06 10:11:40 - main - INFO - Market is closed.
+2024-12-06 10:11:40 - main - INFO - Market is open. Proceed with the trade.
+2024-12-06 10:11:40 - main - INFO - !!!!Placing order for user: sumit@yopmail.com Brocker is: Angle One & trading symbol is: BANKNIFTY
+2024-12-06 10:12:14 - django.server - INFO - "GET /admin/main/ HTTP/1.1" 200 14567
+2024-12-06 10:12:17 - django.server - INFO - "GET /admin/main/signalorderlog/ HTTP/1.1" 200 95666
+2024-12-06 10:12:17 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-06 10:12:33 - django.server - INFO - "GET /admin/main/signalorderlog/144/change/ HTTP/1.1" 200 22205
+2024-12-06 10:12:33 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-06 10:12:41 - django.server - INFO - "GET /admin/main/signalorderlog/ HTTP/1.1" 200 95666
+2024-12-06 10:14:11 - main - INFO - Angle one api order placement for user: sumit@yopmail.com & trading symbol is: BANKNIFTY29JAN2553400CE
+2024-12-06 10:14:12 - main - INFO - Raw API Response: {'status': True, 'message': 'SUCCESS', 'errorcode': '', 'data': {'script': 'BANKNIFTY29JAN2553400CE', 'orderid': '241206001155128', 'uniqueorderid': '8ca5252d-8ee8-4fe7-ad22-334d945e901b'}}
+2024-12-06 10:14:13 - main - INFO - Order Rejected reason!!!::Your order has been rejected due to Insufficient Funds. Available funds - Rs. 0.00 . You require Rs. 23446.25 funds to execute this order.
+2024-12-06 10:14:14 - main - ERROR - Order placement encountered an error: 'NameError' object is not subscriptable
+2024-12-06 10:14:14 - django.request - ERROR - Internal Server Error: /v1/algo/webhook/
+2024-12-06 10:14:14 - django.server - ERROR - "POST /v1/algo/webhook/ HTTP/1.1" 500 51
+2024-12-06 10:15:13 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 10:15:14 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 10:16:02 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 10:16:03 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 10:16:15 - main - INFO - Received alert: {'Alert_Key': 'option_alert_1', 'buy_sell': 'BUY', 'data_type': 'option', 'expiry': '29-01-2025', 'IntType': 1, 'limitPrice': 160, 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'strategyTag': 'ce entry', 'strikePrice': 53400, 'symbol': 'BANKNIFTY', 'triggerPrice': 10, 'tsl': 0, 'Type': 'CE', 'complexty': 'regular', 'discqty': '2', 'exch_seg': 'NFO'}
+2024-12-06 10:16:15 - main - INFO - symbol>>BANKNIFTY>>expiry>29-01-2025 >>Type>>CE>>default_price>>53400
+2024-12-06 10:16:16 - main - ERROR - Failed to save webhook signal order log . Reason: Object of type module is not JSON serializable
+2024-12-06 10:16:16 - main - INFO - Trade expiry date: 29-01-2025
+2024-12-06 10:16:16 - main - INFO - Trade product type: NRML received type: NRML
+2024-12-06 10:16:16 - main - INFO - Trade transaction type: BUY received transaction type: BUY
+2024-12-06 10:16:16 - main - INFO - Trade symbol: BANKNIFTY received symbol: BANKNIFTY
+2024-12-06 10:16:16 - main - INFO - Placing order for user sumit@yopmail.com. Trade count: 0/5.00
+2024-12-06 10:16:16 - main - INFO - Current date and time: 2024-12-06 15:46:16.032257+05:30
+2024-12-06 10:16:16 - main - INFO - Market open time: 09:15:00, Market close time: 15:30:00
+2024-12-06 10:16:16 - main - INFO - Today is: Friday
+2024-12-06 10:16:16 - main - INFO - Market is closed.
+2024-12-06 10:16:16 - main - INFO - Market is open. Proceed with the trade.
+2024-12-06 10:16:16 - main - INFO - !!!!Placing order for user: sumit@yopmail.com Brocker is: Alice Blue & trading symbol is: BANKNIFTY
+2024-12-06 10:16:16 - main - INFO - Placing order with parameters:
+2024-12-06 10:16:16 - main - INFO - order payload for alice blue...
+2024-12-06 10:16:16 - main - INFO - Transaction: TransactionType.Buy, Instrument: BANKNIFTY, Quantity: 15, Order Type: MARKET, Product Type: ProductType.Normal, Price: 53400.0, Trigger Price: 10.0
+2024-12-06 10:16:17 - main - INFO - history of alice blue order_____________{'Prc': '0.00', 'RequestID': '1', 'Cancelqty': 0, 'discQtyPerc': 'NA', 'customText': 'NA', 'Mktpro': 'NA', 'defmktproval': '', 'optionType': 'CE', 'usecs': 'NA', 'mpro': '', 'Qty': 15, 'ordergenerationtype': '--', 'Unfilledsize': 0, 'orderAuthStatus': '', 'Usercomments': 'NA', 'ticksize': '0.05', 'Prctype': 'MKT', 'Status': 'rejected', 'Minqty': 0, 'orderCriteria': 'NA', 'Exseg': 'nse_fo', 'Sym': 'BANKNIFTY', 'multiplier': '1', 'ExchOrdID': None, 'ExchConfrmtime': '--', 'Pcode': 'NRML', 'SyomOrderId': '', 'Dscqty': 0, 'Exchange': 'NFO', 'Ordvaldate': 'NA', 'accountId': '857958', 'exchangeuserinfo': 'NA', 'Avgprc': '0.00', 'Trgprc': '00.00', 'Trantype': 'B', 'bqty': '15', 'Trsym': 'BANKNIFTY29JAN25C53400', 'Fillshares': 0, 'AlgoCategory': 'NA', 'sipindicator': 'NA', 'strikePrice': '53400', 'reporttype': 'NA', 'AlgoID': 'NA', 'noMktPro': '', 'BrokerClient': '--', 'OrderUserMessage': '--', 'decprec': 'NA', 'ExpDate': '29 Jan, 2025', 'COPercentage': 0.0, 'marketprotectionpercentage': '--', 'Nstordno': '24120600205748', 'ExpSsbDate': 'NA', 'OrderedTime': '06/12/2024 15:45:47', 'RejReason': 'ORA:Exchange NFO not enabled for User 857958', 'modifiedBy': '--', 'Scripname': 'BANKNIFTY29JAN25C53400', 'stat': 'Ok', 'orderentrytime': 'Dec 06 2024 15:45:47', 'PriceDenomenator': '1', 'panNo': 'NA', 'RefLmtPrice': 0.0, 'PriceNumerator': '1', 'token': '39621', 'ordersource': 'NA', 'Validity': 'DAY', 'GeneralDenomenator': '1', 'series': '', 'InstName': 'OPTIDX', 'GeneralNumerator': '1', 'user': '857958', 'remarks': '--', 'iSinceBOE': 0}
+2024-12-06 10:16:17 - main - INFO - status......rejected
+2024-12-06 10:16:17 - main - INFO - Order is rejected  for user sumit@yopmail.com. Response :{'data': {'status': 'rejected'}}
+2024-12-06 10:16:17 - main - INFO - Order history saved successfully for Order ID: 24120600205748
+2024-12-06 10:16:17 - main - ERROR - Order is rejected for BANKNIFTY with broker Alice Blue
+2024-12-06 10:16:17 - main - INFO - Trade expiry date: 29-01-2025
+2024-12-06 10:16:17 - main - INFO - Trade product type: NRML received type: NRML
+2024-12-06 10:16:17 - main - INFO - Trade transaction type: BUY received transaction type: BUY
+2024-12-06 10:16:17 - main - INFO - Trade symbol: BANKNIFTY received symbol: BANKNIFTY
+2024-12-06 10:16:17 - main - INFO - Placing order for user sumit@yopmail.com. Trade count: 0/5.00
+2024-12-06 10:16:17 - main - INFO - Current date and time: 2024-12-06 15:46:17.800027+05:30
+2024-12-06 10:16:17 - main - INFO - Market open time: 09:15:00, Market close time: 15:30:00
+2024-12-06 10:16:17 - main - INFO - Today is: Friday
+2024-12-06 10:16:17 - main - INFO - Market is closed.
+2024-12-06 10:16:17 - main - INFO - Market is open. Proceed with the trade.
+2024-12-06 10:16:17 - main - INFO - !!!!Placing order for user: sumit@yopmail.com Brocker is: Angle One & trading symbol is: BANKNIFTY
+2024-12-06 10:17:18 - django.server - INFO - "GET /admin/main/signalorderlog/ HTTP/1.1" 200 95666
+2024-12-06 10:17:18 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-06 10:18:43 - main - INFO - Angle one api order placement for user: sumit@yopmail.com & trading symbol is: BANKNIFTY29JAN2553400CE
+2024-12-06 10:18:43 - main - INFO - Raw API Response: {'status': True, 'message': 'SUCCESS', 'errorcode': '', 'data': {'script': 'BANKNIFTY29JAN2553400CE', 'orderid': '241206001155732', 'uniqueorderid': '23672b55-5a62-4491-8520-b9d81960e805'}}
+2024-12-06 10:18:44 - main - INFO - Order Rejected reason!!!::Your order has been rejected due to Insufficient Funds. Available funds - Rs. 0.00 . You require Rs. 23446.25 funds to execute this order.
+2024-12-06 10:18:44 - main - INFO - Order history saved successfully for Order ID: 241206001155732
+2024-12-06 10:18:44 - main - ERROR - Order is rejected for BANKNIFTY with broker Angle One
+2024-12-06 10:18:44 - django.server - INFO - "POST /v1/algo/webhook/ HTTP/1.1" 200 66
+2024-12-06 10:20:10 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 10:20:11 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 10:20:22 - main - INFO - Received alert: {'Alert_Key': 'option_alert_1', 'buy_sell': 'BUY', 'data_type': 'option', 'expiry': '29-01-2025', 'IntType': 1, 'limitPrice': 160, 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'strategyTag': 'ce entry', 'strikePrice': 53400, 'symbol': 'BANKNIFTY', 'triggerPrice': 10, 'tsl': 0, 'Type': 'CE', 'complexty': 'regular', 'discqty': '2', 'exch_seg': 'NFO'}
+2024-12-06 10:20:22 - main - INFO - symbol>>BANKNIFTY>>expiry>29-01-2025 >>Type>>CE>>default_price>>53400
+2024-12-06 10:20:22 - main - INFO - signal order log saved 
+2024-12-06 10:20:23 - main - INFO - Trade expiry date: 29-01-2025
+2024-12-06 10:20:23 - main - INFO - Trade product type: NRML received type: NRML
+2024-12-06 10:20:23 - main - INFO - Trade transaction type: BUY received transaction type: BUY
+2024-12-06 10:20:23 - main - INFO - Trade symbol: BANKNIFTY received symbol: BANKNIFTY
+2024-12-06 10:20:23 - main - INFO - Placing order for user sumit@yopmail.com. Trade count: 0/5.00
+2024-12-06 10:20:23 - main - INFO - Current date and time: 2024-12-06 15:50:23.064106+05:30
+2024-12-06 10:20:23 - main - INFO - Market open time: 09:15:00, Market close time: 15:30:00
+2024-12-06 10:20:23 - main - INFO - Today is: Friday
+2024-12-06 10:20:23 - main - INFO - Market is closed.
+2024-12-06 10:20:23 - main - INFO - Market is open. Proceed with the trade.
+2024-12-06 10:20:23 - main - INFO - !!!!Placing order for user: sumit@yopmail.com Brocker is: Alice Blue & trading symbol is: BANKNIFTY
+2024-12-06 10:20:24 - main - INFO - Placing order with parameters:
+2024-12-06 10:20:24 - main - INFO - order payload for alice blue...
+2024-12-06 10:20:24 - main - INFO - Transaction: TransactionType.Buy, Instrument: BANKNIFTY, Quantity: 15, Order Type: MARKET, Product Type: ProductType.Normal, Price: 53400.0, Trigger Price: 10.0
+2024-12-06 10:20:24 - main - INFO - history of alice blue order_____________{'Prc': '0.00', 'RequestID': '1', 'Cancelqty': 0, 'discQtyPerc': 'NA', 'customText': 'NA', 'Mktpro': 'NA', 'defmktproval': '', 'optionType': 'CE', 'usecs': 'NA', 'mpro': '', 'Qty': 15, 'ordergenerationtype': '--', 'Unfilledsize': 0, 'orderAuthStatus': '', 'Usercomments': 'NA', 'ticksize': '0.05', 'Prctype': 'MKT', 'Status': 'rejected', 'Minqty': 0, 'orderCriteria': 'NA', 'Exseg': 'nse_fo', 'Sym': 'BANKNIFTY', 'multiplier': '1', 'ExchOrdID': None, 'ExchConfrmtime': '--', 'Pcode': 'NRML', 'SyomOrderId': '', 'Dscqty': 0, 'Exchange': 'NFO', 'Ordvaldate': 'NA', 'accountId': '857958', 'exchangeuserinfo': 'NA', 'Avgprc': '0.00', 'Trgprc': '00.00', 'Trantype': 'B', 'bqty': '15', 'Trsym': 'BANKNIFTY29JAN25C53400', 'Fillshares': 0, 'AlgoCategory': 'NA', 'sipindicator': 'NA', 'strikePrice': '53400', 'reporttype': 'NA', 'AlgoID': 'NA', 'noMktPro': '', 'BrokerClient': '--', 'OrderUserMessage': '--', 'decprec': 'NA', 'ExpDate': '29 Jan, 2025', 'COPercentage': 0.0, 'marketprotectionpercentage': '--', 'Nstordno': '24120600205874', 'ExpSsbDate': 'NA', 'OrderedTime': '06/12/2024 15:49:55', 'RejReason': 'ORA:Exchange NFO not enabled for User 857958', 'modifiedBy': '--', 'Scripname': 'BANKNIFTY29JAN25C53400', 'stat': 'Ok', 'orderentrytime': 'Dec 06 2024 15:49:55', 'PriceDenomenator': '1', 'panNo': 'NA', 'RefLmtPrice': 0.0, 'PriceNumerator': '1', 'token': '39621', 'ordersource': 'NA', 'Validity': 'DAY', 'GeneralDenomenator': '1', 'series': '', 'InstName': 'OPTIDX', 'GeneralNumerator': '1', 'user': '857958', 'remarks': '--', 'iSinceBOE': 0}
+2024-12-06 10:20:24 - main - INFO - status......rejected
+2024-12-06 10:20:25 - main - INFO - Order is rejected  for user sumit@yopmail.com. Response :{'data': {'status': 'rejected'}}
+2024-12-06 10:20:25 - main - INFO - Order history saved successfully for Order ID: 24120600205874
+2024-12-06 10:20:25 - main - ERROR - Order is rejected for BANKNIFTY with broker Alice Blue
+2024-12-06 10:20:25 - main - INFO - Trade expiry date: 29-01-2025
+2024-12-06 10:20:25 - main - INFO - Trade product type: NRML received type: NRML
+2024-12-06 10:20:25 - main - INFO - Trade transaction type: BUY received transaction type: BUY
+2024-12-06 10:20:25 - main - INFO - Trade symbol: BANKNIFTY received symbol: BANKNIFTY
+2024-12-06 10:20:25 - main - INFO - Placing order for user sumit@yopmail.com. Trade count: 0/5.00
+2024-12-06 10:20:25 - main - INFO - Current date and time: 2024-12-06 15:50:25.111481+05:30
+2024-12-06 10:20:25 - main - INFO - Market open time: 09:15:00, Market close time: 15:30:00
+2024-12-06 10:20:25 - main - INFO - Today is: Friday
+2024-12-06 10:20:25 - main - INFO - Market is closed.
+2024-12-06 10:20:25 - main - INFO - Market is open. Proceed with the trade.
+2024-12-06 10:20:25 - main - INFO - !!!!Placing order for user: sumit@yopmail.com Brocker is: Angle One & trading symbol is: BANKNIFTY
+2024-12-06 10:20:37 - django.server - INFO - "GET /admin/main/signalorderlog/ HTTP/1.1" 200 95748
+2024-12-06 10:20:37 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-06 10:20:39 - django.server - INFO - "GET /admin/main/signalorderlog/146/change/ HTTP/1.1" 200 22282
+2024-12-06 10:20:39 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-06 10:20:50 - django.server - INFO - "GET /admin/main/ HTTP/1.1" 200 14567
+2024-12-06 10:21:43 - main - INFO - Angle one api order placement for user: sumit@yopmail.com & trading symbol is: BANKNIFTY29JAN2553400CE
+2024-12-06 10:21:43 - main - INFO - Raw API Response: {'status': True, 'message': 'SUCCESS', 'errorcode': '', 'data': {'script': 'BANKNIFTY29JAN2553400CE', 'orderid': '241206001156038', 'uniqueorderid': '0b60c629-73dc-444e-b08f-45bea403794d'}}
+2024-12-06 10:21:47 - main - INFO - Order Rejected reason!!!::Your order has been rejected due to Insufficient Funds. Available funds - Rs. 0.00 . You require Rs. 23446.25 funds to execute this order.
+2024-12-06 10:21:47 - main - INFO - Order history saved successfully for Order ID: 241206001156038
+2024-12-06 10:21:47 - main - ERROR - Order is rejected for BANKNIFTY with broker Angle One
+2024-12-06 10:21:47 - django.server - INFO - "POST /v1/algo/webhook/ HTTP/1.1" 200 66
+2024-12-06 10:23:20 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 10:23:20 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 10:23:31 - main - INFO - Received alert: {'Alert_Key': 'option_alert_1', 'buy_sell': 'BUY', 'data_type': 'option', 'expiry': '29-01-2025', 'IntType': 1, 'limitPrice': 160, 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'strategyTag': 'ce entry', 'strikePrice': 53400, 'symbol': 'BANKNIFTY', 'triggerPrice': 10, 'tsl': 0, 'Type': 'CE', 'complexty': 'regular', 'discqty': '2', 'exch_seg': 'NFO'}
+2024-12-06 10:23:31 - main - INFO - symbol>>BANKNIFTY>>expiry>29-01-2025 >>Type>>CE>>default_price>>53400
+2024-12-06 10:23:31 - main - INFO - signal order log saved 
+2024-12-06 10:23:31 - main - INFO - Trade expiry date: 29-01-2025
+2024-12-06 10:23:31 - main - INFO - Trade product type: NRML received type: NRML
+2024-12-06 10:23:31 - main - INFO - Trade transaction type: BUY received transaction type: BUY
+2024-12-06 10:23:31 - main - INFO - Trade symbol: BANKNIFTY received symbol: BANKNIFTY
+2024-12-06 10:23:31 - main - INFO - Placing order for user sumit@yopmail.com. Trade count: 0/5.00
+2024-12-06 10:23:31 - main - INFO - Current date and time: 2024-12-06 15:53:31.203168+05:30
+2024-12-06 10:23:31 - main - INFO - Market open time: 09:15:00, Market close time: 15:30:00
+2024-12-06 10:23:31 - main - INFO - Today is: Friday
+2024-12-06 10:23:31 - main - INFO - Market is closed.
+2024-12-06 10:23:31 - main - INFO - Market is closed. Do not proceed with the trade.
+2024-12-06 10:23:31 - main - INFO - Trade expiry date: 29-01-2025
+2024-12-06 10:23:31 - main - INFO - Trade product type: NRML received type: NRML
+2024-12-06 10:23:31 - main - INFO - Trade transaction type: BUY received transaction type: BUY
+2024-12-06 10:23:31 - main - INFO - Trade symbol: BANKNIFTY received symbol: BANKNIFTY
+2024-12-06 10:23:31 - main - INFO - Placing order for user sumit@yopmail.com. Trade count: 0/5.00
+2024-12-06 10:23:31 - main - INFO - Current date and time: 2024-12-06 15:53:31.207036+05:30
+2024-12-06 10:23:31 - main - INFO - Market open time: 09:15:00, Market close time: 15:30:00
+2024-12-06 10:23:31 - main - INFO - Today is: Friday
+2024-12-06 10:23:31 - main - INFO - Market is closed.
+2024-12-06 10:23:31 - main - INFO - Market is closed. Do not proceed with the trade.
+2024-12-06 10:23:31 - django.server - INFO - "POST /v1/algo/webhook/ HTTP/1.1" 200 93
+2024-12-06 10:50:27 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 10:50:28 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 10:50:53 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 10:50:54 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 10:52:49 - django.request - WARNING - Bad Request: /login/
+2024-12-06 10:52:49 - django.server - WARNING - "POST /login/ HTTP/1.1" 400 44
+2024-12-06 10:52:59 - django.request - WARNING - Bad Request: /login/
+2024-12-06 10:52:59 - django.server - WARNING - "POST /login/ HTTP/1.1" 400 44
+2024-12-06 10:53:12 - django.request - WARNING - Bad Request: /login/
+2024-12-06 10:53:12 - django.server - WARNING - "POST /login/ HTTP/1.1" 400 44
+2024-12-06 10:53:16 - django.server - INFO - "POST /login/ HTTP/1.1" 200 738
+2024-12-06 10:53:34 - django.request - WARNING - Bad Request: /create-client/
+2024-12-06 10:53:34 - django.server - WARNING - "POST /create-client/ HTTP/1.1" 400 123
+2024-12-06 10:53:59 - django.server - INFO - "POST /create-client/ HTTP/1.1" 201 1491
+2024-12-06 10:54:17 - django.server - INFO - "GET /admin/main/clienttradesetting/ HTTP/1.1" 200 22132
+2024-12-06 10:54:17 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-06 10:55:22 - django.server - INFO - "POST /create-client/ HTTP/1.1" 201 1486
+2024-12-06 10:55:33 - django.server - INFO - "GET /admin/main/clienttradesetting/ HTTP/1.1" 200 22132
+2024-12-06 10:55:33 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-06 10:55:34 - django.server - INFO - "GET /admin/main/clienttradesetting/ HTTP/1.1" 200 22132
+2024-12-06 10:55:34 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-06 10:55:51 - django.server - INFO - "GET /admin/main/ HTTP/1.1" 200 14567
+2024-12-06 10:55:56 - django.server - INFO - "GET /admin/main/strategies/ HTTP/1.1" 200 18599
+2024-12-06 10:55:56 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-06 10:55:59 - django.server - INFO - "GET /admin/main/ HTTP/1.1" 200 14567
+2024-12-06 10:56:21 - django.request - WARNING - Bad Request: /create-client/
+2024-12-06 10:56:21 - django.server - WARNING - "POST /create-client/ HTTP/1.1" 400 59
+2024-12-06 10:56:29 - django.server - INFO - "POST /create-client/ HTTP/1.1" 201 1492
+2024-12-06 10:56:34 - django.server - INFO - "GET /admin/main/clienttradesetting/ HTTP/1.1" 200 22132
+2024-12-06 10:56:35 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-06 10:56:52 - django.server - INFO - "GET /admin/main/ HTTP/1.1" 200 14567
+2024-12-06 10:56:54 - django.server - INFO - "GET /admin/main/user/ HTTP/1.1" 200 31711
+2024-12-06 10:56:54 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-06 10:57:03 - django.server - INFO - "POST /admin/main/user/ HTTP/1.1" 200 17561
+2024-12-06 10:57:03 - django.server - INFO - "GET /static/admin/js/cancel.js HTTP/1.1" 200 884
+2024-12-06 10:57:05 - django.server - INFO - "POST /admin/main/user/ HTTP/1.1" 302 0
+2024-12-06 10:57:05 - django.server - INFO - "GET /admin/main/user/ HTTP/1.1" 200 30328
+2024-12-06 10:57:05 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-06 10:57:38 - django.server - INFO - "GET /admin/main/ HTTP/1.1" 200 14567
+2024-12-06 10:57:43 - django.server - INFO - "GET /admin/main/segment/ HTTP/1.1" 200 19042
+2024-12-06 10:57:43 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-06 10:57:52 - django.server - INFO - "POST /create-client/ HTTP/1.1" 201 1492
+2024-12-06 10:57:56 - django.server - INFO - "GET /admin/main/ HTTP/1.1" 200 14567
+2024-12-06 10:57:58 - django.server - INFO - "GET /admin/main/clienttradesetting/ HTTP/1.1" 200 23046
+2024-12-06 10:57:58 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-06 10:58:01 - django.server - INFO - "GET /admin/main/clienttradesetting/9/change/ HTTP/1.1" 200 31755
+2024-12-06 10:58:01 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-06 10:58:56 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+2024-12-06 10:58:56 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 10:59:10 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/admin.py changed, reloading.
+2024-12-06 10:59:11 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 11:00:25 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 11:00:55 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+2024-12-06 11:00:55 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 11:01:00 - django.server - INFO - "GET /admin/main/clienttradesetting/9/change/ HTTP/1.1" 200 31683
+2024-12-06 11:01:00 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-06 11:01:02 - django.server - INFO - "GET /admin/main/clienttradesetting/9/change/ HTTP/1.1" 200 31683
+2024-12-06 11:01:02 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-06 11:01:08 - django.server - INFO - "GET /admin/main/clienttradesetting/ HTTP/1.1" 200 23046
+2024-12-06 11:01:08 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-06 11:01:16 - django.server - INFO - "GET /admin/main/clienttradesetting/6/change/ HTTP/1.1" 200 31859
+2024-12-06 11:01:16 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-06 11:01:20 - django.server - INFO - "GET /admin/main/clienttradesetting/ HTTP/1.1" 200 23046
+2024-12-06 11:01:21 - django.server - INFO - "GET /admin/main/ HTTP/1.1" 200 14567
+2024-12-06 11:01:24 - django.server - INFO - "GET /admin/main/subsegment/ HTTP/1.1" 200 21138
+2024-12-06 11:01:24 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-06 11:03:30 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-06 11:03:31 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 11:05:49 - django.server - INFO - "GET /admin/main/ HTTP/1.1" 200 14567
+2024-12-06 11:05:52 - django.server - INFO - "GET /admin/main/user/ HTTP/1.1" 200 30954
+2024-12-06 11:05:52 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-06 11:05:57 - django.server - INFO - "GET /admin/main/user/32/change/ HTTP/1.1" 200 55720
+2024-12-06 11:05:57 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-06 11:06:23 - django.server - INFO - "PUT /update-client/32/ HTTP/1.1" 201 1486
+2024-12-06 11:06:29 - django.server - INFO - "GET /admin/main/ HTTP/1.1" 200 14567
+2024-12-06 11:06:33 - django.server - INFO - "GET /admin/main/clienttradesetting/ HTTP/1.1" 200 23515
+2024-12-06 11:06:33 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-06 11:06:45 - django.server - INFO - "PUT /update-client/32/ HTTP/1.1" 201 1486
+2024-12-06 11:06:47 - django.server - INFO - "GET /admin/main/clienttradesetting/ HTTP/1.1" 200 23052
+2024-12-06 11:06:47 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-06 11:06:59 - django.server - INFO - "GET /admin/main/clienttradesetting/14/change/ HTTP/1.1" 200 31691
+2024-12-06 11:06:59 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-06 11:07:02 - django.server - INFO - "PUT /update-client/32/ HTTP/1.1" 201 1486
+2024-12-06 11:07:05 - django.server - INFO - "GET /admin/main/clienttradesetting/14/change/ HTTP/1.1" 200 31691
+2024-12-06 11:07:05 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-06 11:07:08 - django.server - INFO - "GET /admin/main/clienttradesetting/14/change/ HTTP/1.1" 200 31691
+2024-12-06 11:07:08 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-06 11:07:10 - django.server - INFO - "GET /admin/main/clienttradesetting/14/change/ HTTP/1.1" 200 31691
+2024-12-06 11:07:10 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-06 11:07:11 - django.server - INFO - "GET /admin/main/ HTTP/1.1" 200 14567
+2024-12-06 11:07:12 - django.server - INFO - "GET /admin/main/clienttradesetting/ HTTP/1.1" 200 23975
+2024-12-06 11:07:12 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-06 11:07:14 - django.server - INFO - "GET /admin/main/clienttradesetting/16/change/ HTTP/1.1" 200 31691
+2024-12-06 11:07:14 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-06 11:25:10 - django.request - WARNING - Unauthorized: /get-client-Trade-status/
+2024-12-06 11:25:10 - django.server - WARNING - "GET /get-client-Trade-status/ HTTP/1.1" 401 183
+2024-12-06 11:25:22 - django.server - INFO - "GET /get-client-Trade-status/ HTTP/1.1" 200 2323

@@ -246,16 +246,16 @@ class RolePermission(models.Model):
         return f"{self.role.name} - Permissions" 
     
 #order-logs
-class OrderLog(models.Model):
+class SignalOrderLog(models.Model):
     signal_time = models.DateTimeField()  # Time of the signal
-    order_type = models.CharField(max_length=10,null=True, blank=True)  # 'LX' or 'LE' (Type)
+    order_type = models.CharField(max_length=250,null=True, blank=True)  # 'LX' or 'LE' (Type)
     symbol = models.CharField(max_length=100,null=True, blank=True)  # Symbol (e.g., BANKNIFTY)
-    price = models.DecimalField(max_digits=10, decimal_places=2,null=True, blank=True)  # Price
+    price = models.DecimalField(max_digits=50, decimal_places=2,null=True, blank=True)  # Price
     strategy = models.CharField(max_length=100,null=True, blank=True)  # Strategy (e.g., Support & Resistance)
     created_at = models.DateTimeField(auto_now_add=True)
-    user = models.ForeignKey(User, on_delete=models.SET_NULL,null=True, blank=True,related_name='user_log')
-    status = models.CharField(max_length=20, default="Pending")  # "Success", "Failed"
-    failure_reason = models.TextField(null=True, blank=True)  # Reason for failure (optional)
+    # user = models.ForeignKey(User, on_delete=models.SET_NULL,null=True, blank=True,related_name='user_log')
+    # status = models.CharField(max_length=20, default="Pending")  # "Success", "Failed"
+    # failure_reason = models.TextField(null=True, blank=True)  # Reason for failure (optional)
     json_data = models.JSONField(null=True, blank=True)
     def __str__(self):
         return f"{self.signal_time} - {self.order_type} - {self.symbol} - {self.price}"   
@@ -323,14 +323,14 @@ class Segment(models.Model):
     def __str__(self):
         return self.name  
 class SubSegment(models.Model):
-    segment = models.ForeignKey(Segment, on_delete=models.CASCADE, related_name='sub_segments')
+    # segment = models.ForeignKey(Segment, on_delete=models.CASCADE, related_name='sub_segments')
     name = models.CharField(max_length=150)
     short_name = models.CharField(max_length=150, null=True, blank=True)
     status = models.BooleanField(default=True)
     token=models.IntegerField(blank=True,null=True)
     Exchange=models.CharField(max_length=150,blank=True,null=True)
     def __str__(self):
-        return f"{self.segment.name} - {self.name}"
+        return f" {self.name}"
 
 
     
@@ -442,5 +442,17 @@ class ClientBrokerdetails(models.Model):
     broker_pass=models.CharField(max_length=50,null=True, blank=True)
     def __str__(self):
         return f"Trade Setting {self.broker_name} - {self.broker_API_SKEY}"
-
     
+class Tradeorderhistory(models.Model):
+    client = models.ForeignKey('User', on_delete=models.CASCADE)
+    date = models.DateField(auto_now_add=True, null=True, blank=True)
+    trading_symbol = models.CharField(max_length=50, null=True, blank=True)
+    order_id = models.CharField(max_length=50, null=True, blank=True)  # Changed to CharField for order ID, it could be alphanumeric
+    order_status = models.CharField(max_length=15, null=True, blank=True)
+    response_data = models.JSONField(null=True, blank=True)  # Store the full response as JSON
+    failure_reason = models.TextField(null=True, blank=True)  # Store failure reason if any
+    broker=models.CharField(max_length=15, null=True, blank=True)
+    order_params= models.JSONField(null=True, blank=True) 
+    
+    def __str__(self):
+        return f"Order ID: {self.order_id}, Status: {self.order_status}"
