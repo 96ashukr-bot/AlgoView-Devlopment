@@ -115,8 +115,10 @@ urlpatterns = [
     path("update-client-broker/", ClientBrokerDetailsView.as_view(), name='update-client-broker'),
     path("enable-disable-broker/", EnableDisableBrokerView.as_view(), name='update-status-broker'),
     path("get-client-api-status/", EnableDisableBrokerView.as_view(), name='get-status-broker'),
-
+    path('get-sub-segments-by-segment/', SubSegmentsListView.as_view(), name='sub-segments-list'),
 ]
+
+
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

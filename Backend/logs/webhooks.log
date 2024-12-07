@@ -3911,3 +3911,117 @@ TypeError: Object of type TransactionType is not JSON serializable
 2024-12-06 13:17:39 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
 2024-12-06 13:18:43 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/urls.py changed, reloading.
 2024-12-06 13:18:44 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-06 13:19:39 - django.server - INFO - "GET /sub-segments-list/ HTTP/1.1" 200 846
+2024-12-07 05:50:45 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-07 05:51:11 - django.server - INFO - "POST /create-client/ HTTP/1.1" 201 1492
+2024-12-07 05:51:20 - django.server - INFO - "GET /admin/ HTTP/1.1" 200 22797
+2024-12-07 05:51:20 - django.request - WARNING - Not Found: /favicon.ico
+2024-12-07 05:51:20 - django.server - WARNING - "GET /favicon.ico HTTP/1.1" 404 22165
+2024-12-07 05:51:22 - django.server - INFO - "GET /admin/main/clienttradesetting/ HTTP/1.1" 200 24435
+2024-12-07 05:51:22 - django.server - INFO - "GET /static/admin/js/vendor/jquery/jquery.js HTTP/1.1" 200 292458
+2024-12-07 05:51:22 - django.server - INFO - "GET /static/admin/js/vendor/xregexp/xregexp.js HTTP/1.1" 200 232381
+2024-12-07 05:51:22 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-07 05:51:30 - django.server - INFO - "GET /admin/main/clienttradesetting/17/change/ HTTP/1.1" 200 31733
+2024-12-07 05:51:30 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-07 05:51:36 - django.server - INFO - "GET /admin/main/clienttradesetting/ HTTP/1.1" 200 24435
+2024-12-07 06:28:21 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/models.py changed, reloading.
+2024-12-07 06:28:25 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-07 07:01:19 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-07 07:01:27 - django.server - INFO - "GET /admin/main/ HTTP/1.1" 200 14567
+2024-12-07 07:02:38 - django.server - INFO - "GET /admin/main/subsegment/ HTTP/1.1" 200 21138
+2024-12-07 07:02:38 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-07 07:02:45 - django.server - INFO - "POST /admin/main/subsegment/ HTTP/1.1" 200 23043
+2024-12-07 07:02:49 - django.server - INFO - "POST /admin/main/subsegment/ HTTP/1.1" 302 0
+2024-12-07 07:02:50 - django.server - INFO - "GET /admin/main/subsegment/ HTTP/1.1" 200 17194
+2024-12-07 07:02:50 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-07 07:03:31 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-07 07:03:43 - django.server - INFO - "GET /admin/main/subsegment/ HTTP/1.1" 200 17052
+2024-12-07 07:03:43 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-07 07:03:49 - django.server - INFO - "GET /admin/main/subsegment/add/ HTTP/1.1" 200 21881
+2024-12-07 07:03:49 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-07 07:08:39 - django.server - INFO - "POST /admin/main/subsegment/add/ HTTP/1.1" 302 0
+2024-12-07 07:08:39 - django.server - INFO - "GET /admin/main/subsegment/ HTTP/1.1" 200 18939
+2024-12-07 07:08:39 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-07 07:08:42 - django.server - INFO - "GET /admin/main/subsegment/add/ HTTP/1.1" 200 21881
+2024-12-07 07:08:42 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-07 07:12:01 - django.server - INFO - "POST /admin/main/subsegment/add/ HTTP/1.1" 302 0
+2024-12-07 07:12:02 - django.server - INFO - "GET /admin/main/subsegment/ HTTP/1.1" 200 19264
+2024-12-07 07:12:02 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-07 07:12:42 - django.server - INFO - "GET /admin/main/ HTTP/1.1" 200 14567
+2024-12-07 07:12:44 - django.server - INFO - "GET /admin/main/clienttradesetting/ HTTP/1.1" 200 17113
+2024-12-07 07:12:45 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-07 07:12:48 - django.server - INFO - "GET /admin/main/clienttradesetting/add/ HTTP/1.1" 200 31150
+2024-12-07 07:12:48 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-07 07:13:01 - django.server - INFO - "POST /admin/main/clienttradesetting/add/ HTTP/1.1" 302 0
+2024-12-07 07:13:01 - django.server - INFO - "GET /admin/main/clienttradesetting/ HTTP/1.1" 200 19508
+2024-12-07 07:13:01 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-07 07:13:06 - django.server - INFO - "GET /admin/main/clienttradesetting/add/ HTTP/1.1" 200 31150
+2024-12-07 07:13:06 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-07 07:13:22 - django.server - INFO - "POST /admin/main/clienttradesetting/add/ HTTP/1.1" 302 0
+2024-12-07 07:13:22 - django.server - INFO - "GET /admin/main/clienttradesetting/ HTTP/1.1" 200 19978
+2024-12-07 07:13:22 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-07 07:20:35 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-07 07:20:39 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-07 07:21:01 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-07 07:21:05 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-07 07:21:17 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-07 07:21:20 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-07 07:23:21 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-07 07:23:24 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-07 07:24:19 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-07 07:24:22 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-07 07:25:27 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-07 07:25:31 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-07 07:26:49 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-07 07:26:53 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-07 07:28:07 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-07 07:28:11 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-07 07:28:37 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-07 07:28:41 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-07 07:30:12 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-07 07:30:16 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-07 07:30:38 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-07 07:30:44 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-07 08:35:33 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-07 08:35:40 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-07 08:36:35 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/urls.py changed, reloading.
+2024-12-07 08:36:38 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-07 08:36:58 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/urls.py changed, reloading.
+2024-12-07 08:37:01 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-07 08:37:37 - django.request - WARNING - Not Found: /sub-segments/
+2024-12-07 08:37:37 - django.server - WARNING - "GET /sub-segments/?segment=1 HTTP/1.1" 404 22382
+2024-12-07 08:37:56 - django.request - WARNING - Unauthorized: /get-sub-segments-by-segment/
+2024-12-07 08:37:56 - django.server - WARNING - "GET /get-sub-segments-by-segment/?segment=1 HTTP/1.1" 401 58
+2024-12-07 08:38:34 - django.request - WARNING - Not Found: /get-sub-segments-by-segment/
+2024-12-07 08:38:34 - django.server - WARNING - "GET /get-sub-segments-by-segment/?segment=1 HTTP/1.1" 404 31
+2024-12-07 08:38:44 - django.server - INFO - "GET /get-sub-segments-by-segment/?segment=14 HTTP/1.1" 200 245
+2024-12-07 08:45:04 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-12-07 08:45:11 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-07 08:45:23 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2024-12-07 08:45:27 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-07 08:46:03 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-07 08:46:07 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-07 08:46:34 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/urls.py changed, reloading.
+2024-12-07 08:46:40 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-07 08:46:51 - django.server - INFO - "GET /segments/ HTTP/1.1" 200 858
+2024-12-07 08:47:03 - django.server - INFO - "GET /admin/main/ HTTP/1.1" 200 14567
+2024-12-07 08:47:07 - django.server - INFO - "GET /admin/main/segment/ HTTP/1.1" 200 19042
+2024-12-07 08:47:07 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-07 08:47:11 - django.server - INFO - "GET /admin/main/ HTTP/1.1" 200 14567
+2024-12-07 08:47:16 - django.server - INFO - "GET /admin/main/subsegment/ HTTP/1.1" 200 19046
+2024-12-07 08:47:16 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-07 08:47:19 - django.server - INFO - "GET /admin/main/subsegment/add/ HTTP/1.1" 200 21881
+2024-12-07 08:47:19 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-07 08:49:52 - django.server - INFO - "GET /get-sub-segments-by-segment/?segment=14 HTTP/1.1" 200 245
+2024-12-07 08:53:26 - django.server - INFO - "GET /segments/ HTTP/1.1" 200 858
+2024-12-07 08:56:34 - django.server - INFO - "GET /get-segments/ HTTP/1.1" 200 895
+2024-12-07 08:57:06 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/urls.py changed, reloading.
+2024-12-07 08:57:13 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-07 08:57:44 - django.server - INFO - "GET /get-segments/ HTTP/1.1" 200 895
+2024-12-07 08:58:23 - django.server - INFO - "POST /admin/main/subsegment/add/ HTTP/1.1" 302 0
+2024-12-07 08:58:24 - django.server - INFO - "GET /admin/main/subsegment/ HTTP/1.1" 200 19573
+2024-12-07 08:58:24 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-07 08:58:27 - django.server - INFO - "GET /get-segments/ HTTP/1.1" 200 992
+2024-12-07 08:59:43 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/urls.py changed, reloading.
+2024-12-07 08:59:47 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-07 09:00:20 - django.server - INFO - "GET /get-sub-segments-by-segment/?segment=14 HTTP/1.1" 200 245

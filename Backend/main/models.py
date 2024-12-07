@@ -323,7 +323,7 @@ class Segment(models.Model):
     def __str__(self):
         return self.name  
 class SubSegment(models.Model):
-    # segment = models.ForeignKey(Segment, on_delete=models.CASCADE, related_name='sub_segments')
+    segment = models.ForeignKey(Segment, on_delete=models.CASCADE, related_name='sub_segments')
     name = models.CharField(max_length=150)
     short_name = models.CharField(max_length=150, null=True, blank=True)
     status = models.BooleanField(default=True)

@@ -1113,3 +1113,5 @@ class ClientBrokerDetailsSerializer(serializers.ModelSerializer):
         model = ClientBrokerdetails
         fields = '__all__'
         
+
+

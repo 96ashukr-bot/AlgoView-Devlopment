@@ -1983,7 +1983,7 @@ class PlaceOrderWebhookView(APIView):
                 quantity = trade.quantity or default_quantity
                 product_type = trade.product_type
                 transaction_type = trade.buy_sell 
-                price = default_price
+                price = limitPrice
                 ordertype = default_ordertype
                 expiry = trade.expiry_date or default_expiry
                 trade_limit=trade.trade_limit
@@ -2283,3 +2283,42 @@ class EnableDisableBrokerView(APIView):
             },
             status=status.HTTP_200_OK
         )
+        
+class SubSegmentsListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        try:
+            # Get the 'segment' parameter from the query string
+            segment_id = request.query_params.get('segment', None)
+
+            # Check if the segment_id is provided
+            if not segment_id:
+                return Response(
+                    {"detail": "Segment ID is required."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Get the Segment object
+            option_segment = Segment.objects.get(id=segment_id)
+
+            # Retrieve all related sub-segments
+            related_sub_segments = option_segment.sub_segments.all()
+
+            # Serialize the related sub-segments
+            serializer = SubSegmentSerializer(related_sub_segments, many=True)
+            return Response(
+                {"client_segment_list": serializer.data},
+                status=status.HTTP_200_OK
+            )
+
+        except Segment.DoesNotExist:
+            return Response(
+                {"detail": "Segment not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {"detail": f"An error occurred: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
