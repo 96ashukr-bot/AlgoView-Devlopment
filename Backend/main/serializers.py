@@ -974,10 +974,10 @@ class ClientupdateListSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'id', 'email', 'firstName', 'middleName','fullName', 'lastName', 'client_status', 'phoneNumber',# 'client_key','Broker','broker_id''demate_acc_uid','is_enable',
+            'id', 'email', 'firstName', 'middleName','fullName', 'lastName', 'client_status', 'phoneNumber',# 'client_key','Broker','broker_id''demate_acc_uid',
             'start_date_client', 'end_date_client', 'Group_service', 'license', 'user_license_month',
             'to_month', 'created_by', 'assigned_client', 'Strategy', 'client_status', 'givenservices_to_month',
-            
+            'is_enable',
         ]
     
     def update(self, instance, validated_data):
@@ -1113,5 +1113,25 @@ class ClientBrokerDetailsSerializer(serializers.ModelSerializer):
         model = ClientBrokerdetails
         fields = '__all__'
         
+class ClientTradeSegementSerializer(serializers.ModelSerializer):
+    segment = serializers.StringRelatedField()  # To display the name of the segment
+    sub_segment = serializers.StringRelatedField()  # To display the name of the sub-segment
 
+    class Meta:
+        model = ClientTradeSetting
+        fields ='__all__'
 
+class ClientListdetailsSerializer(serializers.ModelSerializer):
+    assigned_client = AssignedClientSerializer(read_only=True)
+    Strategy = StrategySerializer(many=True, read_only=True) 
+    Group_service = GroupServiceSerializer()  # Make sure to match field names
+    license = LicenseSerializer()
+    Broker = GetBrokerSerializer() 
+    client_trade_settings = ClientTradeSegementSerializer(many=True, read_only=True, source='clienttradesetting_set')
+
+    class Meta:
+        model = User
+        fields = ['id','email', 'firstName', 'middleName','fullName', 'lastName', 'client_status','phoneNumber',
+                  'client_key', 'start_date_client','end_date_client','Broker', 'Group_service','license', 'user_license_month','to_month', 'created_by', 'assigned_client',
+                  'Strategy','client_status','givenservices_to_month','demate_acc_uid','start_date_client', 'end_date_client','is_enable',
+                  'client_trade_settings']
