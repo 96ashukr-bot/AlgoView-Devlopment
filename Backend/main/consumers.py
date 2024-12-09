@@ -1,7 +1,9 @@
 import asyncio
 import json
 import logging
-from logzero import logger
+# from logzero import logger
+import logging
+logger = logging.getLogger('main')
 from channels.generic.websocket import AsyncWebsocketConsumer
 from SmartApi.smartWebSocketV2 import SmartWebSocketV2
 from SmartApi import SmartConnect

@@ -1923,7 +1923,7 @@ def save_webhook_signals_logs(order_type,symbol,price,strategy,json=None):#user,
 
 SESSION_ID = None
 SESSION_EXPIRATION = None
-#Webhook  trade Alert
+# Webhook  trade Alert
 class PlaceOrderWebhookView(APIView):
     def post(self, request):
         alert_data = request.data
@@ -1955,11 +1955,12 @@ class PlaceOrderWebhookView(APIView):
         save_webhook_signals_logs(buy_sell, symbols, default_price, strategy, json=alert_data)
 
         all_enable_users = ClientTradeSetting.objects.filter(is_tread_status=True,client__is_enable=True)
+        print("all_enable_users>>",all_enable_users)
         try:
             for trade in all_enable_users: 
                 print(">>>>symbol>>>>>.",symbols)
-                
                 trade_expiry_date = trade.expiry_date.date()
+                print("trade expiry date..",trade_expiry_date)
                 formatted_trade_expiry_date = trade_expiry_date.strftime("%d-%m-%Y")
 
                 logger.info(f"Trade expiry date: {formatted_trade_expiry_date}")
@@ -2000,7 +2001,19 @@ class PlaceOrderWebhookView(APIView):
                     logger.info("Market is open. Proceed with the trade.")
                         
                     if trade.broker == "Angle One":
-                        # print("Brocker is ",trade.broker ,"symbol is",trade.symbol)
+                        # Fetch client broker details
+                        # client_broker = ClientBrokerdetails.objects.filter(client=trade.client, broker_name__broker_name=trade.broker).first()
+                        # if not client_broker:
+                        #     logger.error(f"No broker details found for client {trade.client} and broker {trade.broker}")
+                        #     continue
+
+                        # api_key = client_broker.broker_API_SKEY
+                        # demate_user_name = client_broker.broker_Demate_User_Name
+                        # totp = client_broker.broker_Totp_Authcode
+                        # angle_pass = client_broker.broker_pass
+
+                        # logger.info(f"Fetched API credentials for {trade.broker}: SKEY={api_key}, USER={demate_user_name}")
+        
                         logger.info(f"!!!!Placing order for user: {user} Brocker is: {trade.broker} & trading symbol is: {trade.symbol}")
 
                         tokendata = get_token_details(trading_symbol)  
@@ -2012,6 +2025,10 @@ class PlaceOrderWebhookView(APIView):
 
                         # Place order for Angle One
                         order_response = place_Angle_order(
+                            # api_key=api_key,
+                            # demate_user_name=demate_user_name,
+                            # totp=totp,
+                            # angle_pass=angle_pass,
                             token=token,
                             symbol=symbol,
                             exch_seg=exch_seg,
@@ -2029,6 +2046,16 @@ class PlaceOrderWebhookView(APIView):
                         )
     
                     elif trade.broker == "Alice Blue":
+                          # Fetch client broker details
+                        # client_broker = ClientBrokerdetails.objects.filter(client=trade.client, broker_name__broker_name=trade.broker).first()
+                        # if not client_broker:
+                        #     logger.error(f"No broker details found for client {trade.client} and broker {trade.broker}")
+                        #     continue
+
+                        # api_skey = client_broker.broker_API_SKEY
+                        # api_uid = client_broker.broker_API_UID
+                        # logger.info(f"Fetched API credentials for {trade.broker}: SKEY={api_skey}, UID={api_uid}")
+        
                         trading_symbol_aliceblue = f"{symbols}{day}{month}{year}{Type[0]}{default_price}"
                         print("trading_symbol_aliceblue..",trading_symbol_aliceblue)
                         logger.info(f"!!!!Placing order for user: {user} Brocker is: {trade.broker} & trading symbol is: {trade.symbol}")
@@ -2039,6 +2066,8 @@ class PlaceOrderWebhookView(APIView):
                         # token=instrument.token
                         order_response=place_alice_orders(trading_symbol_aliceblue,transaction_type, symbol, quantity,strategy,ordertype,
                                                         product_type, price,user, Lots,triggerPrice)
+                        # order_response=place_alice_orders(api_skey,api_uid,trading_symbol_aliceblue,transaction_type, symbol, quantity,strategy,ordertype,
+                        #                                 product_type, price,user, Lots,triggerPrice)
                 
                     # Check order response and log or handle failures
                     # print("order repsone>>>>>>>",order_response)

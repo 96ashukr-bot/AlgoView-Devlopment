@@ -49,9 +49,9 @@ def place_alice_orders(trading_symbol_aliceblue,transaction_type, symbol, quanti
                 product_type = ProductType.Intraday
         else:
             product_type=None
-
         # Initialize Aliceblue API
-        alice = Aliceblue(user_id=USER_ID, api_key=ALICE_API_KEY)  # Example user attributes
+        alice = Aliceblue(user_id=USER_ID, api_key=ALICE_API_KEY)
+        # alice = Aliceblue(user_id=api_uid, api_key=api_skey)  # Example user attributes
         session_id = alice.get_session_id()
         # print(f"Aliceblue session established. Session ID: {session_id}")
 
@@ -195,10 +195,15 @@ def save_trade_order_history(client, trading_symbol, order_id, order_status, res
         return None  # Or handle the error as needed
 
 
+import holidays
+from datetime import datetime
+import pytz
+import logging
 
+logger = logging.getLogger(__name__)
 
 def is_market_open():
-    print("checking market status............")
+    print("Checking market status...")
     """
     Function to check if the market is currently open.
     Returns True if open, False otherwise.
@@ -213,19 +218,16 @@ def is_market_open():
     current_time = now.time()
     current_day = now.weekday()  # Monday = 0, Sunday = 6
 
-    # Define market holidays
-    market_holidays = [
-        "2024-12-25",  # Christmas
-        "2025-01-01",  # New Year's Day
-    ]
-
+    # Fetch holidays for India for the current year
+    market_holidays = holidays.India(years=now.year)
+    print("market_holidays>>",market_holidays)
     # Log current state
     logger.info(f"Current date and time: {now}")
     logger.info(f"Market open time: {market_open_time}, Market close time: {market_close_time}")
     logger.info(f"Today is: {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][current_day]}")
 
     # Check if the market is closed for a holiday
-    if now.strftime("%Y-%m-%d") in market_holidays:
+    if now.date() in market_holidays:
         logger.info("Market is closed due to a holiday.")
         return False
 
@@ -237,3 +239,47 @@ def is_market_open():
 
     logger.info("Market is closed.")
     return False
+
+
+
+
+# def is_market_open():
+#     print("checking market status............")
+#     """
+#     Function to check if the market is currently open.
+#     Returns True if open, False otherwise.
+#     """
+#     # Define market hours (e.g., 9:15 AM to 3:30 PM for Indian stock markets)
+#     market_open_time = datetime.strptime("09:15", "%H:%M").time()
+#     market_close_time = datetime.strptime("15:30", "%H:%M").time()
+
+#     # Get the current time in the market's timezone (e.g., Asia/Kolkata)
+#     market_timezone = pytz.timezone("Asia/Kolkata")
+#     now = datetime.now(market_timezone)
+#     current_time = now.time()
+#     current_day = now.weekday()  # Monday = 0, Sunday = 6
+
+#     # Define market holidays
+#     market_holidays = [
+#         "2024-12-25",  # Christmas
+#         "2025-01-01",  # New Year's Day
+#     ]
+
+#     # Log current state
+#     logger.info(f"Current date and time: {now}")
+#     logger.info(f"Market open time: {market_open_time}, Market close time: {market_close_time}")
+#     logger.info(f"Today is: {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][current_day]}")
+
+#     # Check if the market is closed for a holiday
+#     if now.strftime("%Y-%m-%d") in market_holidays:
+#         logger.info("Market is closed due to a holiday.")
+#         return False
+
+#     # Check if today is a weekday and time is within market hours
+#     if current_day >= 0 and current_day <= 4:  # Monday to Friday
+#         if market_open_time <= current_time <= market_close_time:
+#             logger.info("Market is open.")
+#             return True
+
+#     logger.info("Market is closed.")
+#     return False

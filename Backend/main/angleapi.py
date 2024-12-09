@@ -37,7 +37,7 @@ def generate_session_with_retry(username, password, totp, retries=3, delay=1):
 # Attempt to generate session
 data = generate_session_with_retry(USERNAME, PASSWORD, totp)
 feedToken = smart_client.getfeedToken()
-
+# api_key,demate_user_name,totp,angle_pass,
 #place order using Angle one api
 def place_Angle_order(token, symbol, exch_seg, quantity, product_type, transactiontype, price, ordertype, expiry,lot_size, user=None, strategy=None):
     try:
