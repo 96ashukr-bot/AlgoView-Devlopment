@@ -38,7 +38,7 @@ urlpatterns = [
     path('kyc/verify/<int:kyc_id>/', KYCVerificationView.as_view(), name='kyc-verification'),
     path('update-role-permissions/<int:role_id>/', UpdateRolePermissionsView.as_view(), name='update-role-permissions'),
     path('role-permissions/', RolePermissionListView.as_view(), name='role-permissions-list'),
-    path('v1/algo/webhook/', TradingViewWebhook.as_view(), name='webhook'),
+    path('v1/algo/webhook/', PlaceOrderWebhookView.as_view(), name='webhook'),
     path('get-alice-orders/', GetAliceOrderBook.as_view(), name='get-order-book'),
     path('get-alice-tread-history/', GetAliceTreadBook.as_view(), name='get-tread-book'),
     path('order-logs-list/', OrderLogListView.as_view(), name='order-log-list'),
@@ -93,7 +93,7 @@ urlpatterns = [
     path('get-client-services/<int:pk>/', ClientTreadSettingView.as_view(), name='get-client-services'),
     path('update-client-trading-setting/<int:pk>/', ClientTreadSettingView.as_view(), name='update-client-trading'),
     path('expiry-clients-list/', ClientsDataView.as_view(), name='expiry-clients'),
-    path('api/segments/', SubSegmentsView.as_view(), name='sub_segments'),
+    path('sub-segments-list/', SubSegmentsView.as_view(), name='sub_segments'),
     path('update-trade-status/', UpdateTradeSettingStatusView.as_view(), name='update_client_setting'),
     path('client-trade-settings/update/', UpdateClientTradeSettingAPIView.as_view(), name='update-trade-setting'),
     path('get-client-trade-setting/', GetTradeSettingAPIView.as_view(), name='get-trade-settings'),
@@ -106,7 +106,19 @@ urlpatterns = [
     path('active-client-list/', ActiveClientsView.as_view(), name='get-active-client-list'),
     path('inactive-client-list/',InactiveClientsView.as_view(),name='get-inactive-client-list'),
     path('all-subadmins-list/', UserManagementView.as_view(), name='user-management'),
-    ]
+    path("order-webhook/",PlaceOrderWebhookView.as_view(),name='create-order-webhook'),
+    path("get-client-trade/",GetclientdataView.as_view(),name='get-client-trade'),
+    path('strategies/<int:strategy_id>/clients/', StrategyClientListView.as_view(), name='strategy-client-list'),
+    path("get-client-details/",ClientDashboardIView.as_view(),name='get-client-details'),
+    path("get-client-Trade-status/",ClientsTradeStatusView.as_view(),name='active-inactive-client'),
+    path("get-client-broker-details/", ClientBrokerDetailsView.as_view(), name='get-client-broker'),
+    path("update-client-broker/", ClientBrokerDetailsView.as_view(), name='update-client-broker'),
+    path("enable-disable-broker/", EnableDisableBrokerView.as_view(), name='update-status-broker'),
+    path("get-client-api-status/", EnableDisableBrokerView.as_view(), name='get-status-broker'),
+    path('get-sub-segments-by-segment/', SubSegmentsListView.as_view(), name='sub-segments-list'),
+]
+
+
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

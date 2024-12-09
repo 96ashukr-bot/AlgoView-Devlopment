@@ -100,3 +100,30 @@ def send_kyc_email_async(email, from_email, user_name, action, reason):
     email_message.attach_alternative(html_message, "text/html")
     email_message.send()
     
+
+
+
+
+@shared_task
+def send_trade_email_async(email, from_email, user_name, status, reason):
+    if isinstance(email, list):
+        email = email[0]  
+    if isinstance(from_email, list):
+        from_email = from_email[0]
+    subject="email for trade order!!!!!!!!!!!!"
+    context = {
+        'user_name': user_name,
+        'status':status,
+        'reason': reason,
+        'support_email': support_email,
+        'help_center': help_center_link,
+        'company_website': company_website,
+        'contact_number': contact_number
+    }
+    html_message = render_to_string('trade.html', context)
+  
+    # Create the email with an HTML alternative
+    email_message = EmailMultiAlternatives(subject, "", from_email, [email])
+    email_message.attach_alternative(html_message, "text/html")
+    email_message.send()
+    

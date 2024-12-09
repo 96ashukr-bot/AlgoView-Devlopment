@@ -1,4 +1,5 @@
 import json
+import os
 from amqp import NotFound
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
@@ -15,8 +16,9 @@ from django.core.mail import send_mail
 from django.conf import settings
 import time
 from rest_framework.generics import ListAPIView,UpdateAPIView
+from main.angleapi import get_token_details, place_Angle_order
 from main.permissions import  IsAdminRole
-from main.tasks import send_kyc_email_async
+from main.tasks import send_kyc_email_async, send_trade_email_async
 from .models import *
 from .serializers import *
 from django.core.exceptions import ObjectDoesNotExist
@@ -24,13 +26,22 @@ from rest_framework.views import APIView
 from django.contrib import messages
 from pya3 import *
 from decouple import config
-from main.Alice_Blue_Api import ALICE_ORDER_URL,GET_ORDER_BOOK_URL,GET_TREAD_BOOK_URL
+from main.Alice_Blue_Api import ALICE_ORDER_URL,GET_ORDER_BOOK_URL,GET_TREAD_BOOK_URL, is_market_open, place_alice_orders
 from rest_framework.pagination import PageNumberPagination        
 from main.email import EmailService
 from django.contrib.auth.signals import user_logged_in, user_logged_out
 from django.dispatch import receiver
 from django.db.models import Q
 from django.db.models import Count, Prefetch
+import pandas as pd
+from datetime import datetime
+from django.core.cache import cache
+import pyotp
+# from SmartApi import SmartConnect
+# from SmartApi.smartExceptions import DataException
+# from time import sleep
+import numpy as np
+import pytz
 
 USER_ID=config('USER_ID')
 ALICE_API_KEY=config('ALICE_API_KEY')
@@ -437,7 +448,7 @@ class UserManagementView(APIView):
         print(messages.success(request, 'User deleted successfully.'))
         return Response({"msg": "User deleted successfully."},status=status.HTTP_204_NO_CONTENT)
         
-#user profile api crud oprations        
+#sub-admin user profile api crud oprations        
 class UserProfileView(APIView):
     pagination_class = None
     permission_classes = [IsAuthenticated]
@@ -580,233 +591,6 @@ class KYCVerificationView(APIView):
             return Response({"detail": "Invalid action. Use 'approve' or 'reject'."}, status=status.HTTP_400_BAD_REQUEST)
 
 
-# Global variables to store session ID and expiration time
-SESSION_ID = None
-SESSION_EXPIRATION = None
-
-# Place an order using Alice Blue API
-def place_order(alert_data, session_id):
-    all_enable_users=ClientTradeSetting.objects.filter(is_enable=True)
-    sessionID = session_id.get('sessionID')
-    headers = {
-        'Content-Type': 'application/json',
-        'Authorization': f'Bearer {USER_ID} {sessionID}'  # Use Bearer token for authentication
-    }
-    """Place an order using Alice Blue API"""
-    for user in all_enable_users:
-        # ProductType = user.product_type
-        # symbol = user.symbol
-        # strategy=user.strategy
-        order_payload = {
-            "complexty": "regular",
-            "discqty": "0",
-            "exch": "NSE",
-            "pCode": alert_data.get("productType", "MIS"),
-            "prctyp": "MKT",
-            "price": alert_data.get("strikePrice", "0"),
-            "qty": alert_data.get("Lot", 1),
-            "ret": "DAY",
-            "symbol_id": alert_data.get("symbol_id"),
-            "trading_symbol": alert_data.get("trading_symbol"),
-            "transtype": alert_data.get("buy_sell").upper(),
-            "trigPrice": alert_data.get("triggerPrice", ""),
-            "orderTag": alert_data.get("orderTag", "order1")
-        }
-  
-
-        try:
-            response = requests.post(ALICE_ORDER_URL, headers=headers, data=json.dumps([order_payload]))
-            # print(response)
-            logger.info(f"Order placed  for user {user.id} with response {response.status_code}")
-            response.raise_for_status()
-            save_order_log(alert_data, user, status="Success")
-            return response
-        except requests.RequestException as req_err:
-            logger.error(f"Order placement failed for user {user.id}. Reason: {str(req_err)}")
-            save_order_log(alert_data, user, status="Failed", reason=str(req_err))
-
-        except Exception as e:
-            logger.exception(f"Unexpected error occurred while placing order for user {user.id}")
-            save_order_log(alert_data, user, status="Failed", reason=str(e))
-    return {"status": "Orders processed"}
-
-
-# Save the order log to the database
-from django.utils import timezone  
-from datetime import datetime
-def save_order_log(alert_data, user, status, reason=None):
-    """Save order details and status into the log table."""
-    try:
-        
-        OrderLog.objects.create(
-            signal_time=timezone.now(),  # You can change this to the actual signal time
-            order_type=alert_data.get('Type').upper(),  # 'LX' or 'LE'
-            symbol=alert_data.get('trading_symbol'),  # Symbol
-            price=alert_data.get('strikePrice'),  # Order price
-            strategy=alert_data.get('strategy', 'Unknown'),  # Strategy used
-            user=user,  # User placing the order
-            status=status,  # "Success" or "Failed"
-            failure_reason=reason,  # Save failure reason if any (for failed orders)
-            json_data=alert_data
-        )
-        logger.info(f"Order log saved for user {user.id} with status {status}")
-    except Exception as e:
-        logger.error(f"Failed to save order log for user {user.id}. Reason: {str(e)}")
-
-
-from datetime import datetime, timedelta  # For getting current date and time
-# Get or regenerate Alice Blue session ID
-def get_or_regenerate_session_id(USER_ID, ALICE_API_KEY):
-    global SESSION_ID, SESSION_EXPIRATION
-    # Check if the session ID is expired or not set
-    current_time = datetime.now()
-    # Check if the session ID is expired or not set
-    if SESSION_ID is None or SESSION_EXPIRATION is None or current_time >= SESSION_EXPIRATION:
-        logger.info(f"Session ID expired or not found. Regenerating...{USER_ID}")
-        alice = Aliceblue(user_id=USER_ID, api_key=ALICE_API_KEY)
-        SESSION_ID = alice.get_session_id(alice)
-        
-        # Assume the session expires in 24 hours (86400 seconds)
-        SESSION_EXPIRATION = current_time + timedelta(seconds=86400)
-        logger.info(f"New session ID generated: {SESSION_ID}")
-    else:
-        logger.info("Using existing session ID")
-    
-    return SESSION_ID
-
-# Webhook for order trigger
-class TradingViewWebhook(APIView):
-    pagination_class = None
-    def post(self, request, *args, **kwargs):
-        try:
-            alert_data = request.data
-            logger.info(f"Received alert: {alert_data}")
-            #OrderLog.objects.create(json_data=alert_data, signal_time=timezone.now())
-            # Get or regenerate session ID
-            session_id = get_or_regenerate_session_id(USER_ID, ALICE_API_KEY)
-            logger.info(f"Session ID retrieved successfully and user id is :::{USER_ID}")
-
-            # Place the order using the session ID
-            order_response = place_order(alert_data, session_id)
-              # Log and return the order response
-            if isinstance(order_response, dict):
-                logger.info(f"Order response (dict): {order_response}")
-            else:
-                logger.info(f"Order response (object): {order_response}")
-                logger.info(f"Order response JSON: {order_response.json()}")
-            return Response({
-                'order_resp': order_response
-            })
-
-        except json.JSONDecodeError:
-            logger.error("Invalid JSON received")
-            return Response({
-                "status": "error",
-                "message": "Invalid JSON received."
-            }, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            logger.exception("Error occurred while processing the alert")
-            return Response({
-                "status": "error",
-                "message": str(e)
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-# Get Alice-Blue orders  GET_ORDER_BOOK_URL
-class GetAliceOrderBook(APIView):
-    pagination_class = None
-    def get(self, request, *args, **kwargs):
-        # Get or regenerate the session ID
-        session_id_response = get_or_regenerate_session_id(USER_ID, ALICE_API_KEY)
-        # Extract sessionID from the response
-        sessionID = session_id_response.get('sessionID') if isinstance(session_id_response, dict) else None  
-        if not sessionID:
-            return Response({
-                "status": "error",
-                "message": "Failed to obtain a valid session ID."
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        headers = {
-            'Content-Type': 'application/json',
-            'Authorization': f'Bearer {USER_ID} {sessionID}' 
-        }
-        try:
- 
-            response = requests.get(GET_ORDER_BOOK_URL, headers=headers)
-            response.raise_for_status()  
-            return Response({
-                "status": "success",
-                "data": response.json()
-            }, status=status.HTTP_200_OK)
-
-        except requests.RequestException as req_err:
-            return Response({
-                "status": "error",
-                "message": f"Request error: {str(req_err)}"
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-        except Exception as e:
-            # Handle any other exceptions
-            return Response({
-                "status": "error",
-                "message": f"An error occurred: {str(e)}"
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-#Get trad history data GET_TREAD_BOOK_URL
-class GetAliceTreadBook(APIView):
-    pagination_class = None
-    def get(self, request, *args, **kwargs):
-        # Get or regenerate the session ID
-        session_id_response = get_or_regenerate_session_id(USER_ID, ALICE_API_KEY)
-        # Extract sessionID from the response
-        sessionID = session_id_response.get('sessionID') if isinstance(session_id_response, dict) else None  
-        if not sessionID:
-            return Response({
-                "status": "error",
-                "message": "Failed to obtain a valid session ID."
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        # Prepare headers
-        headers = {
-            'Content-Type': 'application/json',
-            'Authorization': f'Bearer {USER_ID} {sessionID}'  # Assuming session ID is used this way
-        }
-        try:
-            # Send a GET request to the order book endpoint
-            response = requests.get(GET_TREAD_BOOK_URL, headers=headers)
-            response.raise_for_status()  # Raise an error for bad responses (4xx or 5xx)
-
-            # Return the successful response data
-            return Response({
-                "status": "success",
-                "data": response.json()
-            }, status=response.status_code)
-
-        except requests.RequestException as req_err:
-            # Handle request exceptions such as timeouts, bad responses, etc.
-            return Response({
-                "status": "error",
-                "message": f"Request error: {str(req_err)}"
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-        except Exception as e:
-            # Handle any other exceptions
-            return Response({
-                "status": "error",
-                "message": f"An error occurred: {str(e)}"
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-#order -logs -list
-class OrderLogListView(APIView):
-    pagination_class = None
-    def get(self, request, *args, **kwargs):
-        # Fetch all the order logs from the database
-        order_logs = OrderLog.objects.all()
-        
-        # Serialize the data
-        serializer = OrderLogSerializer(order_logs, many=True)
-        
-        # Return the serialized data as a JSON response
-        return Response({
-            "status": "success",
-            "data": serializer.data
-        }, status=status.HTTP_200_OK)
 
 #store sssion logs last login
 @receiver(user_logged_in)
@@ -1415,6 +1199,25 @@ class ClientCreateView(APIView):
             client.set_password(password)  
             client.external_user=False
             client.save() 
+            
+                    # Handle segment and subsegment addition
+            segment_id = data.get("segment")
+            subsegments = data.get("subsegment", [])
+            
+            if segment_id and subsegments:
+                for subsegment_id in subsegments:
+                    trade_settings_data = {
+                        "client": client.id,
+                        "segment": segment_id,
+                        "sub_segment": subsegment_id,
+                        # Add any other fields required for ClientTradeSetting
+                    }
+                    trade_setting_serializer = ClientTradeSettingSerializer(data=trade_settings_data)
+                    if trade_setting_serializer.is_valid():
+                        trade_setting_serializer.save()
+                    else:
+                        print("Trade Setting Error:", trade_setting_serializer.errors)
+        
             end_time = time.time()  # Record the end time
             execution_time = end_time - start_time  # Calculate the total time
             print(f"client create API executed in--------- {execution_time:.4f} seconds") 
@@ -1446,6 +1249,28 @@ class ClientCreateView(APIView):
         
         if serializer.is_valid():
             serializer.save()
+                    # Handle segment and subsegment update
+            segment_id = request.data.get("segment")
+            subsegments = request.data.get("subsegment", [])
+            
+            if segment_id and subsegments:
+                # Clear existing subsegments for this client and segment
+                ClientTradeSetting.objects.filter(client=client, segment=segment_id).delete()
+                
+                # Add the new segment and subsegments
+                for subsegment_id in subsegments:
+                    trade_settings_data = {
+                        "client": client.id,
+                        "segment": segment_id,
+                        "sub_segment": subsegment_id,
+                        # Add any additional fields required
+                    }
+                    trade_setting_serializer = ClientTradeSettingSerializer(data=trade_settings_data)
+                    if trade_setting_serializer.is_valid():
+                        trade_setting_serializer.save()
+                    else:
+                        print("Trade Setting Update Error:", trade_setting_serializer.errors)
+            
             return Response(ClientListSerializer(client).data, status=status.HTTP_201_CREATED)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -1461,6 +1286,7 @@ class ClientCreateView(APIView):
         except Broker.DoesNotExist:
             return Response({"detail": "client_id not found."}, status=status.HTTP_404_NOT_FOUND)
 class AssignClientToStrategyAPIView(APIView):
+    permission_classes = [IsAuthenticated]
     def put(self, request, pk):
         strategy = get_object_or_404(Strategies, pk=pk)
         serializer = StrategyAssignSerializer(strategy, data=request.data, partial=True)
@@ -1470,7 +1296,24 @@ class AssignClientToStrategyAPIView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    # def put(self, request, pk):
+    #     strategy = get_object_or_404(Strategies, pk=pk)
+        
+    #     # Extract the list of client IDs from the request data
+    #     client_ids = request.data.get('clients', [])
+        
+    #     if not isinstance(client_ids, list):
+    #         return Response(
+    #             {"error": "Invalid format. 'clients' should be a list of client IDs."},
+    #             status=status.HTTP_400_BAD_REQUEST
+    #         )
+        
+    #     # Add new clients to the strategy without removing existing ones
+    #     strategy.clients.add(*client_ids)
 
+    #     # Return the updated strategy with its clients
+    #     serializer = StrategyAssignSerializer(strategy)
+    #     return Response(serializer.data, status=status.HTTP_200_OK)
 class GetclientbyidPIView(APIView):
     permission_classes = [IsAuthenticated]
     def get(self,request, pk, *args, **kwargs): 
@@ -1552,23 +1395,23 @@ class ClientsDataView(APIView):
 
 
 class SubSegmentsView(APIView):
-    def get(self, request):     # Get the segment name from query parameters
-        segment_name = request.query_params.get('segment', None)
+    def get(self, request):
+        # segment_name = request.query_params.get('segment', None)
         
-        if not segment_name:
-            return Response({"error": "Segment name is required"}, status=status.HTTP_400_BAD_REQUEST)
+        # if not segment_name:
+        #     return Response({"error": "Segment name is required"}, status=status.HTTP_400_BAD_REQUEST)
         
         # Filter the segment based on the provided name
         try:
-            segment = Segment.objects.get(name=segment_name)
-        except Segment.DoesNotExist:
+            segment = SubSegment.objects.all()
+        except SubSegment.DoesNotExist:
             return Response({"error": "Segment not found"}, status=status.HTTP_404_NOT_FOUND)
         
-        # Get all sub-segments associated with the segment
-        sub_segments = segment.sub_segments.all()  # Assuming `sub_segments` is the related name
+        # # Get all sub-segments associated with the segment
+        # sub_segments = segment.sub_segments.all()  # Assuming `sub_segments` is the related name
         
         # Serialize the sub-segments
-        serializer = SubSegmentSerializer(sub_segments, many=True)
+        serializer = SubSegmentSerializer(segment, many=True)
         
         return Response({"sub_segments": serializer.data}, status=status.HTTP_200_OK)
 
@@ -1937,4 +1780,574 @@ class InactiveClientsView(APIView):
         result_page = paginator.paginate_queryset(clients, request)
         serializer = ClientListSerializer(result_page, many=True)
         return paginator.get_paginated_response(serializer.data)
+
+
+class GetclientdataView(APIView):
+    # permission_classes = [IsAuthenticated]
+    def get(self,request, *args, **kwargs): 
+        try:
+            client_list = ClientTradeSetting.objects.filter(is_tread_status=True)
+            print(client_list)
+            serializer = ClientTradeSettingSerializer(client_list,many=True)
+            # print(serializer)
+        
+        except Strategies.DoesNotExist:
+            return Response({"detail": "client id not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)  
+
+#order -logs -list
+class OrderLogListView(APIView):
+    pagination_class = None
+    def get(self, request, *args, **kwargs):
+        # Fetch all the order logs from the database
+        order_logs = SignalOrderLog.objects.all()
+        
+        # Serialize the data
+        serializer = OrderLogSerializer(order_logs, many=True)
+        
+        # Return the serialized data as a JSON response
+        return Response({
+            "status": "success",
+            "data": serializer.data
+        }, status=status.HTTP_200_OK)
+
+# Get Alice-Blue orders  GET_ORDER_BOOK_URL
+class GetAliceOrderBook(APIView):
+    pagination_class = None
+    def get(self, request, *args, **kwargs):
+        # Get or regenerate the session ID
+        session_id_response = get_or_regenerate_session_id(USER_ID, ALICE_API_KEY)
+        # Extract sessionID from the response
+        sessionID = session_id_response.get('sessionID') if isinstance(session_id_response, dict) else None  
+        if not sessionID:
+            return Response({
+                "status": "error",
+                "message": "Failed to obtain a valid session ID."
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': f'Bearer {USER_ID} {sessionID}' 
+        }
+        try:
+ 
+            response = requests.get(GET_ORDER_BOOK_URL, headers=headers)
+            response.raise_for_status()  
+            return Response({
+                "status": "success",
+                "data": response.json()
+            }, status=status.HTTP_200_OK)
+
+        except requests.RequestException as req_err:
+            return Response({
+                "status": "error",
+                "message": f"Request error: {str(req_err)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        except Exception as e:
+            # Handle any other exceptions
+            return Response({
+                "status": "error",
+                "message": f"An error occurred: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+#Get trad history data GET_TREAD_BOOK_URL
+class GetAliceTreadBook(APIView):
+    pagination_class = None
+    def get(self, request, *args, **kwargs):
+        # Get or regenerate the session ID
+        session_id_response = get_or_regenerate_session_id(USER_ID, ALICE_API_KEY)
+        # Extract sessionID from the response
+        sessionID = session_id_response.get('sessionID') if isinstance(session_id_response, dict) else None  
+        if not sessionID:
+            return Response({
+                "status": "error",
+                "message": "Failed to obtain a valid session ID."
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        # Prepare headers
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': f'Bearer {USER_ID} {sessionID}'  # Assuming session ID is used this way
+        }
+        try:
+            # Send a GET request to the order book endpoint
+            response = requests.get(GET_TREAD_BOOK_URL, headers=headers)
+            print("response>>>>>>>>>>>",response)
+            response.raise_for_status()  # Raise an error for bad responses (4xx or 5xx)
+            trade_history = response.json()
+            # Return the successful response data
+            return Response({
+                "status": "success",
+                "data": trade_history
+            }, status=response.status_code)
+
+        except requests.RequestException as req_err:
+            # Handle request exceptions such as timeouts, bad responses, etc.
+            return Response({
+                "status": "error",
+                "message": f"Request error: {str(req_err)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        except Exception as e:
+            # Handle any other exceptions
+            return Response({
+                "status": "error",
+                "message": f"An error occurred: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+# Save the order log to the database
+from django.utils import timezone  
+
+def save_webhook_signals_logs(order_type,symbol,price,strategy,json=None):#user,status,failure_reason,json=None):
+                                  
+    """Save order details and status into the log table."""
+    try:
+        SignalOrderLog.objects.create(
+            signal_time=timezone.now(),  # You can change this to the actual signal time
+            order_type=order_type,
+            symbol=symbol,
+            price=price,
+            strategy=strategy,
+            # user=user,  # Store the client ID here
+            # status=status,
+            # failure_reason=failure_reason,
+            json_data=json
+        )
+        
+        logger.info(f"signal order log saved ")
+    except Exception as e:
+        logger.error(f"Failed to save webhook signal order log . Reason: {str(e)}")
+
+SESSION_ID = None
+SESSION_EXPIRATION = None
+# Webhook  trade Alert
+class PlaceOrderWebhookView(APIView):
+    def post(self, request):
+        alert_data = request.data
+        logger.info(f"Received alert: {alert_data}")
+        symbols = request.data.get('symbol','NIFTY')
+        exch_seg = request.data.get('exch_seg','NFO')
+        producttype = request.data.get('productType')
+        default_quantity = request.data.get('quantity', 15)
+        default_expiry = request.data.get('expiry', '27-12-2024')
+        default_price = request.data.get('strikePrice', 0)
+        default_ordertype = request.data.get('orderType', 'MARKET')
+        buy_sell = request.data.get('buy_sell', 'BUY')
+        triggerPrice = request.data.get('triggerPrice', 0)
+        limitPrice = request.data.get('limitPrice', 0)
+        Type=request.data.get('Type',"CE")
+        Lots=request.data.get('Lot',"1")
+        strategy=request.data.get('strategyTag',"ce entry")
+        complexty=request.data.get('complexty',"regular")
+        logger.info(f"symbol>>{symbols}>>expiry>{default_expiry} >>Type>>{Type}>>default_price>>{default_price}")
+        expiry_date = datetime.strptime(default_expiry, "%d-%m-%Y")
+        day = expiry_date.strftime("%d")
+        month = expiry_date.strftime("%b").upper() 
+        year = expiry_date.strftime("%y") 
+        # Concatenate fields to create the trading symbol
+        trading_symbol = f"{symbols}{day}{month}{year}{default_price}{Type}"            
+        # Print the result
+        print("Trading Symbol:", trading_symbol,symbols)
+        order_status=None
+        save_webhook_signals_logs(buy_sell, symbols, default_price, strategy, json=alert_data)
+
+        all_enable_users = ClientTradeSetting.objects.filter(is_tread_status=True,client__is_enable=True)
+        print("all_enable_users>>",all_enable_users)
+        try:
+            for trade in all_enable_users: 
+                print(">>>>symbol>>>>>.",symbols)
+                trade_expiry_date = trade.expiry_date.date()
+                print("trade expiry date..",trade_expiry_date)
+                formatted_trade_expiry_date = trade_expiry_date.strftime("%d-%m-%Y")
+
+                logger.info(f"Trade expiry date: {formatted_trade_expiry_date}")
+                logger.info(f"Trade product type: {trade.product_type.upper()} received type: {producttype.upper()}")
+                logger.info(f"Trade transaction type: {trade.buy_sell.upper()} received transaction type: {buy_sell.upper()}")
+                logger.info(f"Trade symbol: {trade.symbol} received symbol: {symbols}")
+
+                if (
+                    trade.symbol != symbols or
+                    trade.product_type.upper() != producttype.upper() or
+                    trade.buy_sell.upper() != buy_sell.upper() or
+                    formatted_trade_expiry_date != default_expiry
+                ):
+                    logger.info(f"Skipping client {trade.client}: criteria mismatch.")
+                    continue
+
+                # Extract user-specific configurations
+                symbol = trade.symbol
+                user = trade.client
+                strategy = trade.strategy
+                quantity = trade.quantity or default_quantity
+                product_type = trade.product_type
+                transaction_type = trade.buy_sell 
+                price = limitPrice
+                ordertype = default_ordertype
+                expiry = trade.expiry_date or default_expiry
+                trade_limit=trade.trade_limit
+                # Count user's trades for the day
+                today = datetime.today()
+                daily_trade_count = TradingLog.objects.filter(client=user, date=today).count()
+
+                if daily_trade_count >= trade_limit:
+                    logger.warning(f"Trade limit reached for user {user}. No more trades allowed today.")
+                    continue
+
+                logger.info(f"Placing order for user {user}. Trade count: {daily_trade_count}/{trade_limit}")
+                if is_market_open():
+                    logger.info("Market is open. Proceed with the trade.")
+                        
+                    if trade.broker == "Angle One":
+                        # Fetch client broker details
+                        # client_broker = ClientBrokerdetails.objects.filter(client=trade.client, broker_name__broker_name=trade.broker).first()
+                        # if not client_broker:
+                        #     logger.error(f"No broker details found for client {trade.client} and broker {trade.broker}")
+                        #     continue
+
+                        # api_key = client_broker.broker_API_SKEY
+                        # demate_user_name = client_broker.broker_Demate_User_Name
+                        # totp = client_broker.broker_Totp_Authcode
+                        # angle_pass = client_broker.broker_pass
+
+                        # logger.info(f"Fetched API credentials for {trade.broker}: SKEY={api_key}, USER={demate_user_name}")
+        
+                        logger.info(f"!!!!Placing order for user: {user} Brocker is: {trade.broker} & trading symbol is: {trade.symbol}")
+
+                        tokendata = get_token_details(trading_symbol)  
+                        if  tokendata:  
+                            token = tokendata.get("token") 
+                            symbol = tokendata.get("symbol")  
+                        else:
+                            logger.info(f"No token data found for trading symbol: {trading_symbol}")
+
+                        # Place order for Angle One
+                        order_response = place_Angle_order(
+                            # api_key=api_key,
+                            # demate_user_name=demate_user_name,
+                            # totp=totp,
+                            # angle_pass=angle_pass,
+                            token=token,
+                            symbol=symbol,
+                            exch_seg=exch_seg,
+                            quantity=quantity,
+                            product_type=product_type,
+                            transactiontype=transaction_type,
+                            price=price,
+                            ordertype=ordertype,
+                            expiry=expiry,
+                            lot_size=Lots,
+                            user=user,
+                            strategy=strategy,
+                            
+                            
+                        )
     
+                    elif trade.broker == "Alice Blue":
+                          # Fetch client broker details
+                        # client_broker = ClientBrokerdetails.objects.filter(client=trade.client, broker_name__broker_name=trade.broker).first()
+                        # if not client_broker:
+                        #     logger.error(f"No broker details found for client {trade.client} and broker {trade.broker}")
+                        #     continue
+
+                        # api_skey = client_broker.broker_API_SKEY
+                        # api_uid = client_broker.broker_API_UID
+                        # logger.info(f"Fetched API credentials for {trade.broker}: SKEY={api_skey}, UID={api_uid}")
+        
+                        trading_symbol_aliceblue = f"{symbols}{day}{month}{year}{Type[0]}{default_price}"
+                        print("trading_symbol_aliceblue..",trading_symbol_aliceblue)
+                        logger.info(f"!!!!Placing order for user: {user} Brocker is: {trade.broker} & trading symbol is: {trade.symbol}")
+                        # Handle Alice Blue-specific order placement
+                        # session_id = get_or_regenerate_session_id(USER_ID, ALICE_API_KEY)
+                        # instrument=get_instrument(symbol,exch_seg)
+                        # trade_symbol=instrument.name
+                        # token=instrument.token
+                        order_response=place_alice_orders(trading_symbol_aliceblue,transaction_type, symbol, quantity,strategy,ordertype,
+                                                        product_type, price,user, Lots,triggerPrice)
+                        # order_response=place_alice_orders(api_skey,api_uid,trading_symbol_aliceblue,transaction_type, symbol, quantity,strategy,ordertype,
+                        #                                 product_type, price,user, Lots,triggerPrice)
+                
+                    # Check order response and log or handle failures
+                    # print("order repsone>>>>>>>",order_response)
+                    if order_response['data']['status'] =="complete":
+                        order_status=f"Order placed successfully for {trade.symbol} with broker {trade.broker}"
+                        TradingLog.objects.create(client=user, date=today, symbol=trade.symbol, strategy=strategy,)
+                        logger.info(f"Order placed successfully for {trade.symbol} with broker {trade.broker}")
+                    elif order_response['data']['status']=="open":   
+                        order_status=f"Order is place pending for {trade.symbol} with broker {trade.broker}"
+                        logger.error(f"Order place is pending for {trade.symbol} with broker {trade.broker}") 
+                    elif order_response['data']['status']=="rejected":
+                        order_status=f"Order is rejected for {trade.symbol} with broker {trade.broker}"
+                        logger.error(f"Order is rejected for {trade.symbol} with broker {trade.broker}")
+                    else:
+                        order_status=f"Order placement failed for {trade.symbol} with broker {trade.broker}"
+                else:
+                    logger.info("Market is closed. Do not proceed with the trade.") 
+                    order_status=f" can not Trade Order becouse the Market is closed. Do not proceed with the trade"                  
+            return Response({"status": order_status})#, status=status.HTTP_200_OK)
+        except Exception as e:
+            logger.error(f"Order placement encountered an error: {e}")
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+def save_trade_order_history(client, trading_symbol, order_id, order_status, response_data, failure_reason, order_params=None,broker=None):
+    try:
+        # Create a new Tradeorderhistory record
+        trade_history = Tradeorderhistory.objects.create(
+            client=client,
+            trading_symbol=trading_symbol,
+            order_id=order_id,
+            order_status=order_status,
+            response_data=response_data,
+            failure_reason=failure_reason,
+            broker=broker,
+            order_params=order_params
+        )
+        # Log success (optional)
+        logger.info(f"Order history saved successfully for Order ID: {order_id}")
+        return trade_history  # Return the created record, if needed
+    except Exception as e:
+        # Handle any exceptions that may occur during the save process
+        logger.error(f"Error saving order history for Order ID: {order_id}. Error: {e}")
+        return None  # Or handle the error as needed
+
+
+
+#token Sesiion id for alice blue order
+from datetime import datetime, timedelta
+def get_or_regenerate_session_id(USER_ID, ALICE_API_KEY):
+    global SESSION_ID, SESSION_EXPIRATION
+    current_time = datetime.now()
+    if SESSION_ID is None or SESSION_EXPIRATION is None or current_time >= SESSION_EXPIRATION:
+        logger.info(f"Session ID expired or not found. Regenerating...{USER_ID}")
+        alice = Aliceblue(user_id=USER_ID, api_key=ALICE_API_KEY)
+        SESSION_ID = alice.get_session_id(alice)
+        SESSION_EXPIRATION = current_time + timedelta(seconds=86400)
+        logger.info(f"New session ID generated:")
+    else:
+        logger.info("Using existing session ID")
+    return SESSION_ID
+
+
+
+# Get the strategy using the strategy_id
+class StrategyClientListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, strategy_id, *args, **kwargs):
+        try:
+            strategy = get_object_or_404(Strategies, id=strategy_id)
+            clients = User.objects.filter(is_client=True)
+            if not clients.exists():
+                return Response({
+                    "strategy_id": strategy.id,
+                    "strategy_name": strategy.name,
+                    "clients": []
+                }, status=200)
+
+            # Build the client data list
+            client_data = [
+                {
+                    "client_id": client.id,
+                    "client_name": f"{client.firstName} {client.lastName}",
+                    "is_using_strategy": strategy.clients.filter(id=client.id).exists(),
+                }
+                for client in clients
+            ]
+            return Response({
+                "strategy_id": strategy.id,
+                "strategy_name": strategy.name,
+                "clients": client_data,
+            }, status=200)
+        
+        except NotFound:
+            return Response({"error": "Strategy not found"}, status=404)
+
+        except Exception as e:
+            return Response({"error": f"An unexpected error occurred: {str(e)}"}, status=500)
+
+
+class ClientDashboardIView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self,request, *args, **kwargs): 
+        try:
+            user=request.user
+            user = User.objects.get(pk=user.id)  
+            serializer = ClientListdetailsSerializer(user)  
+        except Strategies.DoesNotExist:
+            return Response({"detail": "client id not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)        
+class ClientsTradeStatusView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request, *args, **kwargs):
+        user = request.user
+        current_date = timezone.now().date()
+
+        if user.role and user.role.name.lower() == 'super-admin':
+            clients = User.objects.filter(
+                type_of_user='is_client', is_client=True).order_by('-id')
+        else:
+            # clients =User.objects.filter(
+            #     type_of_user='is_client', is_client=True, end_date_client__gt=current_date,created_by=user
+            # ).order_by('-id')
+            clients = User.objects.filter(
+                Q(type_of_user='is_client') & Q(is_client=True) &
+                (Q(created_by=user) | Q(assigned_client=user))
+            ).order_by('-id')
+        
+        # Apply pagination and serialize the data
+        paginator = CustomPageNumberPagination()
+        result_page = paginator.paginate_queryset(clients, request)
+        serializer = UserclientSerializer(result_page, many=True)
+        return paginator.get_paginated_response(serializer.data)
+
+
+
+#update client demate account details api
+class ClientBrokerDetailsView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        """
+        Retrieve broker details for the authenticated client.
+        """
+        try:
+            user = request.user
+            broker_detail = ClientBrokerdetails.objects.filter(client_id=user.id).first()
+
+            if not broker_detail:
+                return Response(
+                    {"error": "Broker details not found for the client."},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+
+            serializer = ClientBrokerDetailsSerializer(broker_detail)
+            return Response(
+                {"data": serializer.data},
+                status=status.HTTP_200_OK
+            )
+        except Exception as e:
+            return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    def put(self, request):
+
+        """
+        Create or update broker details for a specific client.
+        Resets fields not provided in the request to null.
+        """
+        try:
+            user = request.user
+
+            # Fetch or create broker details for the client
+            broker_detail, created = ClientBrokerdetails.objects.get_or_create(client_id=user.id)
+
+            # List of all fields in the model
+            all_fields = [field.name for field in ClientBrokerdetails._meta.get_fields()]
+
+            # Loop through all fields and set them to null if they are not in the request data
+            for field in all_fields:
+                if field != 'id' and field != 'client' and field != 'broker_name':  # Exclude non-updatable fields (like 'id', 'client', 'broker_name')
+                    if field not in request.data:
+                        setattr(broker_detail, field, None)
+
+            # Use the serializer with partial=True to update only provided fields
+            serializer = ClientBrokerDetailsUpdateSerializer(broker_detail, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                message = "Broker details created successfully!" if created else "Broker details updated successfully!"
+                return Response({"message": message, "data": serializer.data}, status=status.HTTP_200_OK)
+
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+#demate status manage api for client trade
+class EnableDisableBrokerView(APIView):
+    permission_classes = [IsAuthenticated]
+    def put(self, request):
+        """
+        Enable or disable broker for a specific client.
+        """
+        # Fetch the client (User)
+        try:
+            user=request.user
+            client = User.objects.get(id=user.id)
+        except User.DoesNotExist:
+            return Response({"error": "Client not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Ensure 'is_enable' is provided in the request data
+        is_enable = request.data.get("is_enable")
+        if is_enable is None:
+            return Response({"error": "Missing 'is_enable' field in request."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Update the 'is_enable' field
+        client.is_enable = is_enable
+        client.save()
+
+        status_message = "enabled" if is_enable else "disabled"
+        return Response(
+            {"message": f"Broker has been {status_message} for the client."},
+            status=status.HTTP_200_OK
+        )
+    
+    def get(self, request):
+        """
+        Fetch broker status for the authenticated client.
+        """
+        try:
+            user = request.user
+            client = User.objects.get(id=user.id)
+        except User.DoesNotExist:
+            return Response({"error": "Client not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Fetch and return the broker's status
+        return Response(
+            {
+                "id": client.id,
+                "username": client.fullName,
+                "email": client.email,
+                "is_enable": client.is_enable,  # Assuming this field exists in the User model
+            },
+            status=status.HTTP_200_OK
+        )
+        
+class SubSegmentsListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        try:
+            # Get the 'segment' parameter from the query string
+            segment_id = request.query_params.get('segment', None)
+
+            # Check if the segment_id is provided
+            if not segment_id:
+                return Response(
+                    {"detail": "Segment ID is required."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Get the Segment object
+            option_segment = Segment.objects.get(id=segment_id)
+
+            # Retrieve all related sub-segments
+            related_sub_segments = option_segment.sub_segments.all()
+
+            # Serialize the related sub-segments
+            serializer = SubSegmentSerializer(related_sub_segments, many=True)
+            return Response(
+                {"client_segment_list": serializer.data},
+                status=status.HTTP_200_OK
+            )
+
+        except Segment.DoesNotExist:
+            return Response(
+                {"detail": "Segment not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {"detail": f"An error occurred: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

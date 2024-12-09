@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     'main',
     'corsheaders',
     'rest_framework_simplejwt.token_blacklist',
+     'channels',
 ]
 
 MIDDLEWARE = [
@@ -94,6 +95,8 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'algoview.wsgi.application'
+
+ASGI_APPLICATION = 'algoview.asgi.application'
 
 
 # Database

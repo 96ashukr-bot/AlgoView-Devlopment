@@ -436,7 +436,7 @@ class UserProfileRetrieveSerializer(serializers.ModelSerializer):
             'permanent_state', 'permanent_country', 'permanent_zip_code','is_address_same',
             # Current Address Fields
             'current_add_line_1', 'current_add_line_2', 'current_city', 
-            'current_state', 'current_country', 'current_zip_code','role','is_enable','start_date_client','end_date_client',]
+            'current_state', 'current_country', 'current_zip_code','role','start_date_client','end_date_client',]
 
     def get_role(self, obj):
         if obj.role:
@@ -451,7 +451,7 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['email','firstName', 'lastName', 'fullName', 'middleName','phoneNumber', 'profilePicture', 'PANEL_CLIENT_KEY', 'start_date', 'end_date', 'client_type','is_enable',
+        fields = ['email','firstName', 'lastName', 'fullName', 'middleName','phoneNumber', 'profilePicture', 'PANEL_CLIENT_KEY', 'start_date', 'end_date', 'client_type',
             # Permanent Address Fields
             'permanent_add_line_1', 'permanent_add_line_2', 'permanent_city', 
             'permanent_state', 'permanent_country', 'permanent_zip_code','is_address_same',
@@ -498,7 +498,7 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
         instance.start_date = validated_data.get('start_date', instance.start_date)
         instance.end_date = validated_data.get('end_date', instance.end_date)
         instance.client_type = validated_data.get('client_type', instance.client_type)
-        instance.is_enable = validated_data.get('is_enable', instance.is_enable)
+        # instance.is_enable = validated_data.get('is_enable', instance.is_enable)
 
         # Update address fields
         instance.current_add_line_1 = validated_data.get('current_add_line_1', instance.current_add_line_1)
@@ -668,8 +668,8 @@ class RolePermissionSerializer(serializers.ModelSerializer):
         return formatted_permissions
 class OrderLogSerializer(serializers.ModelSerializer):
     class Meta:
-        model = OrderLog
-        fields = ['signal_time', 'order_type', 'symbol', 'json_data','price', 'strategy', 'created_at','user','status','failure_reason']
+        model = SignalOrderLog
+        fields = ['signal_time', 'order_type', 'symbol', 'json_data','price', 'strategy', 'created_at']#'user','status','failure_reason']
 class UserActivityLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserActivityLog
@@ -837,8 +837,8 @@ class ClientCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id','email', 'firstName', 'lastName', 'phoneNumber', 'fullName', 'middleName','client_key',
-                  'Group_service', 'Broker', 'license', 'user_license_month','to_month', 'created_by', 'assigned_client',
-                  'Strategy','client_status','givenservices_to_month','demate_acc_uid','start_date_client','end_date_client']
+                  'Group_service', 'license', 'user_license_month','to_month', 'created_by', 'assigned_client',
+                  'Strategy','client_status','givenservices_to_month','start_date_client','end_date_client']
     # Phone number validation
     def validate_phoneNumber(self, value):
         # Check if the phone number is in a valid format
@@ -969,15 +969,15 @@ class ClientupdateListSerializer(serializers.ModelSerializer):
     assigned_client = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), required=False)
     # Strategy = StrategySerializer(many=True, read_only=True)
     # Broker = GetBrokerSerializer(read_only=True)  # For reading broker data
-    broker_id = serializers.PrimaryKeyRelatedField(source='Broker', queryset=Broker.objects.all(), write_only=True)  # For writing broker data as an ID
+    # broker_id = serializers.PrimaryKeyRelatedField(source='Broker', queryset=Broker.objects.all(), write_only=True)  # For writing broker data as an ID
     fullName = serializers.CharField(required=True)
     class Meta:
         model = User
         fields = [
-            'id', 'email', 'firstName', 'middleName','fullName', 'lastName', 'client_status', 'phoneNumber', 'client_key',
-            'start_date_client', 'end_date_client', 'Broker', 'broker_id', 'license', 'user_license_month',
+            'id', 'email', 'firstName', 'middleName','fullName', 'lastName', 'client_status', 'phoneNumber',# 'client_key','Broker','broker_id''demate_acc_uid',
+            'start_date_client', 'end_date_client', 'Group_service', 'license', 'user_license_month',
             'to_month', 'created_by', 'assigned_client', 'Strategy', 'client_status', 'givenservices_to_month',
-            'demate_acc_uid','is_enable',
+            'is_enable',
         ]
     
     def update(self, instance, validated_data):
@@ -1099,6 +1099,39 @@ class UserclientSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             'id', 'email', 'firstName', 'middleName', 'lastName', 'fullName', 'phoneNumber','assigned_client', 
-            'is_enable', 'is_active', 
+            'is_enable', 'is_active', 'start_date_client','end_date_client','client_status'
         ]
+
+
+class ClientBrokerDetailsUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ClientBrokerdetails
+        fields = '__all__'
+class ClientBrokerDetailsSerializer(serializers.ModelSerializer):
+    broker_name = GetBrokerSerializer(read_only=True) 
+    class Meta:
+        model = ClientBrokerdetails
+        fields = '__all__'
         
+class ClientTradeSegementSerializer(serializers.ModelSerializer):
+    segment = serializers.StringRelatedField()  # To display the name of the segment
+    sub_segment = serializers.StringRelatedField()  # To display the name of the sub-segment
+
+    class Meta:
+        model = ClientTradeSetting
+        fields ='__all__'
+
+class ClientListdetailsSerializer(serializers.ModelSerializer):
+    assigned_client = AssignedClientSerializer(read_only=True)
+    Strategy = StrategySerializer(many=True, read_only=True) 
+    Group_service = GroupServiceSerializer()  # Make sure to match field names
+    license = LicenseSerializer()
+    Broker = GetBrokerSerializer() 
+    client_trade_settings = ClientTradeSegementSerializer(many=True, read_only=True, source='clienttradesetting_set')
+
+    class Meta:
+        model = User
+        fields = ['id','email', 'firstName', 'middleName','fullName', 'lastName', 'client_status','phoneNumber',
+                  'client_key', 'start_date_client','end_date_client','Broker', 'Group_service','license', 'user_license_month','to_month', 'created_by', 'assigned_client',
+                  'Strategy','client_status','givenservices_to_month','demate_acc_uid','start_date_client', 'end_date_client','is_enable',
+                  'client_trade_settings']

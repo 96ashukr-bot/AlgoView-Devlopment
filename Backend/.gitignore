@@ -1,6 +1,8 @@
 .env
 venv
 /venv
+myenv
+/myenv
 env
 __pycache__
 /__pycache__
@@ -12,3 +14,7 @@ main/__pycache__
 Backend/algoview/__pycache__/
 /localenv
 Backend/logs/webhooks.log
+ logs/webhooks.log
+
+Backend/logs/
+NFO.csv
