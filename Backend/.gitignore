@@ -15,6 +15,8 @@ Backend/algoview/__pycache__/
 /localenv
 Backend/logs/webhooks.log
  logs/webhooks.log
-
+ Backend/media/strategy/
+  Backend/media/kyc_documents/
+  Backend/media/profile_pictures
 Backend/logs/
 NFO.csv
