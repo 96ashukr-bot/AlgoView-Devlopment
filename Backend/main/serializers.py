@@ -1115,7 +1115,7 @@ class ClientBrokerDetailsSerializer(serializers.ModelSerializer):
         
 class ClientTradeSegementSerializer(serializers.ModelSerializer):
     segment = serializers.StringRelatedField()  # To display the name of the segment
-    sub_segment = serializers.StringRelatedField()  # To display the name of the sub-segment
+    sub_segment = SubSegmentSerializer()#serializers.StringRelatedField()  # To display the name of the sub-segment
 
     class Meta:
         model = ClientTradeSetting

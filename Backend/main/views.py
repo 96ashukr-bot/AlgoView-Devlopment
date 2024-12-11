@@ -19,6 +19,7 @@ from rest_framework.generics import ListAPIView,UpdateAPIView
 from main.angleapi import get_token_details, place_Angle_order
 from main.permissions import  IsAdminRole
 from main.tasks import send_kyc_email_async, send_trade_email_async
+from main.utils import get_symbol
 from .models import *
 from .serializers import *
 from django.core.exceptions import ObjectDoesNotExist
@@ -1394,7 +1395,62 @@ class ClientsDataView(APIView):
             return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)        
 
 
+
 class SubSegmentsView(APIView):
+    def post(self, request):
+        
+        """
+        Create a new SubSegment.
+        """
+        serializer = SubSegmentSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    # def post(self, request, *args, **kwargs):
+    #     data = request.data
+
+    #     print("Data saved to nse_stock_list.csv")
+
+    #     segment = Segment.objects.get(id=data.get("segment_id"))
+
+    #     sub_segment = SubSegment.objects.create(
+    #         segment=segment,
+    #         name=data["name"],
+    #         short_name=data.get("short_name"),
+    #         status=data.get("status", True),
+    #         token=data.get("token"),
+    #         Exchange=data.get("Exchange"),
+    #     )
+        
+    #     return Response({
+    #         "id": sub_segment.id,
+    #         "name": sub_segment.name,
+    #         "segment": sub_segment.segment.name,
+    #         "short_name": sub_segment.short_name,
+    #         "status": sub_segment.status,
+    #         "symbol": get_symbol(sub_segment.name),  # Add symbol here
+    #         "token": sub_segment.token,
+    #         "exchange": sub_segment.Exchange,
+    #     })
+    def put(self, request, pk):
+        """
+        Update an existing SubSegment by ID.
+        """
+        sub_segment = get_object_or_404(SubSegment, pk=pk)
+        serializer = SubSegmentSerializer(sub_segment, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):
+        """
+        Delete a SubSegment by ID.
+        """
+        sub_segment = get_object_or_404(SubSegment, pk=pk)
+        sub_segment.delete()
+        return Response({"message": "SubSegment deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
     def get(self, request):
         # segment_name = request.query_params.get('segment', None)
         
