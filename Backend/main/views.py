@@ -19,7 +19,7 @@ from rest_framework.generics import ListAPIView,UpdateAPIView
 from main.angleapi import get_token_details, place_Angle_order
 from main.permissions import  IsAdminRole
 from main.tasks import send_kyc_email_async, send_trade_email_async
-from main.utils import get_symbol
+
 from .models import *
 from .serializers import *
 from django.core.exceptions import ObjectDoesNotExist
