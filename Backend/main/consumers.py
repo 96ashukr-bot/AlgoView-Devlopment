@@ -11,11 +11,14 @@ import pyotp
 from urllib.parse import parse_qs
 
 # Smart API credentials
-API_KEY = 'FNqcDPCk'#'Xp6znI3s'
-USERNAME = 'A1420760'
-TOTP_SECRET= "7DFMHZE3BDRCIHMLFT4N3QVCPU"
-PASSWORD="1986"
-
+# API_KEY = 'FNqcDPCk'#'Xp6znI3s'
+# USERNAME = 'A1420760'
+# TOTP_SECRET= "7DFMHZE3BDRCIHMLFT4N3QVCPU"
+# PASSWORD="1986"
+API_KEY = 'StvD7EVL'  
+USERNAME = 'AAAB519761'  
+PASSWORD = '1234' 
+TOTP_SECRET = "RFFORAS7ASFH7KIZWD7FCSVK2Y" 
 obj = SmartConnect(api_key=API_KEY)
 totp = pyotp.TOTP(TOTP_SECRET).now()
 data = obj.generateSession(USERNAME, PASSWORD, totp)

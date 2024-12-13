@@ -999,3 +999,635 @@ KeyError: 'exchange'
 2024-12-11 10:18:36 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
 2024-12-11 10:18:53 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
 2024-12-11 10:18:58 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-13 06:33:52 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-13 06:45:31 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-13 06:45:32 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-13 06:48:26 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-13 06:48:26 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-13 06:48:30 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-13 06:48:31 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-13 07:00:19 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-13 07:00:20 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-13 07:08:26 - django.server - INFO - "OPTIONS /user-profile/ HTTP/1.1" 200 0
+2024-12-13 07:08:26 - django.server - INFO - "OPTIONS /user-profile/ HTTP/1.1" 200 0
+2024-12-13 07:08:26 - django.server - INFO - "OPTIONS /user-profile/ HTTP/1.1" 200 0
+2024-12-13 07:08:26 - django.server - INFO - "OPTIONS /user-profile/ HTTP/1.1" 200 0
+2024-12-13 07:08:26 - django.server - INFO - "OPTIONS /all-subadmins-list/ HTTP/1.1" 200 0
+2024-12-13 07:08:26 - django.request - WARNING - Unauthorized: /user-profile/
+2024-12-13 07:08:26 - django.server - WARNING - "GET /user-profile/ HTTP/1.1" 401 183
+2024-12-13 07:08:26 - django.request - WARNING - Unauthorized: /all-subadmins-list/
+2024-12-13 07:08:26 - django.server - WARNING - "GET /all-subadmins-list/ HTTP/1.1" 401 183
+2024-12-13 07:08:26 - django.request - WARNING - Unauthorized: /user-profile/
+2024-12-13 07:08:26 - django.server - WARNING - "GET /user-profile/ HTTP/1.1" 401 183
+2024-12-13 07:08:26 - django.request - WARNING - Unauthorized: /user-profile/
+2024-12-13 07:08:26 - django.server - WARNING - "GET /user-profile/ HTTP/1.1" 401 183
+2024-12-13 07:08:26 - django.server - INFO - "OPTIONS /token/refresh/ HTTP/1.1" 200 0
+2024-12-13 07:08:26 - django.server - INFO - "OPTIONS /token/refresh/ HTTP/1.1" 200 0
+2024-12-13 07:08:26 - django.request - WARNING - Unauthorized: /token/refresh/
+2024-12-13 07:08:26 - django.server - WARNING - "POST /token/refresh/ HTTP/1.1" 401 65
+2024-12-13 07:08:26 - django.request - WARNING - Unauthorized: /user-profile/
+2024-12-13 07:08:26 - django.server - WARNING - "GET /user-profile/ HTTP/1.1" 401 183
+2024-12-13 07:08:26 - django.request - WARNING - Unauthorized: /token/refresh/
+2024-12-13 07:08:26 - django.server - WARNING - "POST /token/refresh/ HTTP/1.1" 401 65
+2024-12-13 07:08:26 - django.request - WARNING - Unauthorized: /token/refresh/
+2024-12-13 07:08:26 - django.request - WARNING - Unauthorized: /token/refresh/
+2024-12-13 07:08:26 - django.server - WARNING - "POST /token/refresh/ HTTP/1.1" 401 65
+2024-12-13 07:08:26 - django.server - WARNING - "POST /token/refresh/ HTTP/1.1" 401 65
+2024-12-13 07:51:41 - main - INFO - WebSocket connection established.
+2024-12-13 07:51:42 - main - INFO - WebSocket connection closed.
+2024-12-13 07:51:52 - main - INFO - WebSocket connection established.
+2024-12-13 07:53:33 - main - INFO - WebSocket connection established.
+2024-12-13 09:00:18 - main - INFO - WebSocket connection established.
+2024-12-13 09:14:29 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-13 09:14:30 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-13 09:14:44 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/Alice_Blue_Api.py changed, reloading.
+2024-12-13 09:14:44 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-13 09:14:47 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/Alice_Blue_Api.py changed, reloading.
+2024-12-13 09:14:48 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-13 09:14:55 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/Alice_Blue_Api.py changed, reloading.
+2024-12-13 09:14:55 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-13 09:15:36 - main - INFO - Received alert: {'Alert_Key': 'option_alert_1', 'buy_sell': 'BUY', 'data_type': 'option', 'expiry': '29-01-2025', 'IntType': 1, 'limitPrice': 160, 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'strategyTag': 'ce entry', 'strikePrice': 53400, 'symbol': 'BANKNIFTY', 'triggerPrice': 10, 'tsl': 0, 'Type': 'CE', 'complexty': 'regular', 'discqty': '2', 'exch_seg': 'NFO'}
+2024-12-13 09:15:36 - main - INFO - symbol>>BANKNIFTY>>expiry>29-01-2025 >>Type>>CE>>default_price>>53400
+2024-12-13 09:15:36 - main - INFO - signal order log saved 
+2024-12-13 09:15:36 - main - INFO - Trade expiry date: 29-01-2025
+2024-12-13 09:15:36 - main - INFO - Trade product type: NRML received type: NRML
+2024-12-13 09:15:36 - main - INFO - Trade transaction type: BUY received transaction type: BUY
+2024-12-13 09:15:36 - main - INFO - Trade symbol: BANKNIFTY received symbol: BANKNIFTY
+2024-12-13 09:15:36 - main - INFO - Placing order for user sumit@yopmail.com. Trade count: 0/5.00
+2024-12-13 09:15:36 - main.Alice_Blue_Api - INFO - Current date and time: 2024-12-13 14:45:36.742520+05:30
+2024-12-13 09:15:36 - main.Alice_Blue_Api - INFO - Market open time: 09:15:00, Market close time: 15:30:00
+2024-12-13 09:15:36 - main.Alice_Blue_Api - INFO - Today is: Friday
+2024-12-13 09:15:36 - main.Alice_Blue_Api - INFO - Market is open.
+2024-12-13 09:15:36 - main - INFO - Market is open. Proceed with the trade.
+2024-12-13 09:15:36 - main - INFO - Fetched API credentials for Alice Blue: SKEY=hFSWodPXI0yJXnXcYBZnfFLqJM0YQm6t9mvn5WmtQrkcvXFcZRpq8tK3BKueJQDI4vSOHVYUzi2kLiKdWCnsO0SyfsSMsGFL3US3fikNU8cFGVXVXH8682zjvK7qLulP, UID=857958
+2024-12-13 09:15:36 - main - INFO - !!!!Placing order for user: sumit@yopmail.com Brocker is: Alice Blue & trading symbol is: BANKNIFTY
+2024-12-13 09:15:37 - main.Alice_Blue_Api - INFO - Placing order with parameters:
+2024-12-13 09:15:37 - main.Alice_Blue_Api - INFO - order payload for alice blue...
+2024-12-13 09:15:37 - main.Alice_Blue_Api - INFO - Transaction: TransactionType.Buy, Instrument: BANKNIFTY, Quantity: 1, Order Type: MARKET, Product Type: ProductType.Normal, Price: 160.0, Trigger Price: 10.0
+2024-12-13 09:15:37 - main.Alice_Blue_Api - INFO - history of alice blue order_____________{'Prc': '0.00', 'RequestID': '1', 'Cancelqty': 0, 'discQtyPerc': 'NA', 'customText': 'NA', 'Mktpro': 'NA', 'defmktproval': '', 'optionType': 'CE', 'usecs': 'NA', 'mpro': '', 'Qty': 1, 'ordergenerationtype': '--', 'Unfilledsize': 0, 'orderAuthStatus': '', 'Usercomments': 'NA', 'ticksize': '0.05', 'Prctype': 'MKT', 'Status': 'rejected', 'Minqty': 0, 'orderCriteria': 'NA', 'Exseg': 'nse_fo', 'Sym': 'BANKNIFTY', 'multiplier': '1', 'ExchOrdID': None, 'ExchConfrmtime': '--', 'Pcode': 'NRML', 'SyomOrderId': '', 'Dscqty': 0, 'Exchange': 'NFO', 'Ordvaldate': 'NA', 'accountId': '857958', 'exchangeuserinfo': 'NA', 'Avgprc': '0.00', 'Trgprc': '00.00', 'Trantype': 'B', 'bqty': '1', 'Trsym': 'BANKNIFTY29JAN25C53400', 'Fillshares': 0, 'AlgoCategory': 'NA', 'sipindicator': 'NA', 'strikePrice': '53400', 'reporttype': 'NA', 'AlgoID': 'NA', 'noMktPro': '', 'BrokerClient': '--', 'OrderUserMessage': '--', 'decprec': 'NA', 'ExpDate': '29 Jan, 2025', 'COPercentage': 0.0, 'marketprotectionpercentage': '--', 'Nstordno': '24121300231062', 'ExpSsbDate': 'NA', 'OrderedTime': '13/12/2024 14:45:37', 'RejReason': 'ORA: NFO Exchange info NA is invalid for the user 857958', 'modifiedBy': '--', 'Scripname': 'BANKNIFTY29JAN25C53400', 'stat': 'Ok', 'orderentrytime': 'Dec 13 2024 14:45:37', 'PriceDenomenator': '1', 'panNo': 'NA', 'RefLmtPrice': 0.0, 'PriceNumerator': '1', 'token': '39621', 'ordersource': 'NA', 'Validity': 'DAY', 'GeneralDenomenator': '1', 'series': '', 'InstName': 'OPTIDX', 'GeneralNumerator': '1', 'user': '857958', 'remarks': '--', 'iSinceBOE': 0}
+2024-12-13 09:15:37 - main.Alice_Blue_Api - INFO - status......rejected
+2024-12-13 09:15:37 - main.Alice_Blue_Api - INFO - Order is rejected  for user sumit@yopmail.com. Response :{'data': {'status': 'rejected'}}
+2024-12-13 09:15:37 - main.Alice_Blue_Api - INFO - Order history saved successfully for Order ID: 24121300231062
+2024-12-13 09:15:37 - main - ERROR - Order is rejected for BANKNIFTY with broker Alice Blue
+2024-12-13 09:15:37 - main - INFO - Trade expiry date: 29-01-2025
+2024-12-13 09:15:37 - main - INFO - Trade product type: NRML received type: NRML
+2024-12-13 09:15:37 - main - INFO - Trade transaction type: BUY received transaction type: BUY
+2024-12-13 09:15:37 - main - INFO - Trade symbol: BANKNIFTY received symbol: BANKNIFTY
+2024-12-13 09:15:37 - main - INFO - Placing order for user algoclient@yopmail.com. Trade count: 0/5.00
+2024-12-13 09:15:37 - main.Alice_Blue_Api - INFO - Current date and time: 2024-12-13 14:45:37.821013+05:30
+2024-12-13 09:15:37 - main.Alice_Blue_Api - INFO - Market open time: 09:15:00, Market close time: 15:30:00
+2024-12-13 09:15:37 - main.Alice_Blue_Api - INFO - Today is: Friday
+2024-12-13 09:15:37 - main.Alice_Blue_Api - INFO - Market is open.
+2024-12-13 09:15:37 - main - INFO - Market is open. Proceed with the trade.
+2024-12-13 09:15:37 - main - INFO - !!!!Placing order for user: algoclient@yopmail.com Brocker is: Angle One & trading symbol is: BANKNIFTY
+2024-12-13 09:15:47 - main - INFO - Angle one api order placement for user: algoclient@yopmail.com & trading symbol is: BANKNIFTY29JAN2553400CE
+2024-12-13 09:15:47 - main - INFO - Raw API Response: {'status': True, 'message': 'SUCCESS', 'errorcode': '', 'data': {'script': 'BANKNIFTY29JAN2553400CE', 'orderid': '241213001291346', 'uniqueorderid': '2eda7f97-62a5-4d1f-97ab-cb6891e423b5'}}
+2024-12-13 09:15:47 - main - INFO - Order Rejected reason!!!::Your order has been rejected due to Insufficient Funds. Available funds - Rs. 0.00 . You require Rs. 20518.25 funds to execute this order.
+2024-12-13 09:15:47 - main.Alice_Blue_Api - INFO - Order history saved successfully for Order ID: 241213001291346
+2024-12-13 09:15:47 - main - ERROR - Order is rejected for BANKNIFTY with broker Angle One
+2024-12-13 09:15:47 - django.server - INFO - "POST /v1/algo/webhook/ HTTP/1.1" 200 66
+2024-12-13 09:17:17 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/Alice_Blue_Api.py changed, reloading.
+2024-12-13 09:17:18 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-13 09:18:07 - django.server - INFO - "GET /admin/login/ HTTP/1.1" 200 4165
+2024-12-13 09:18:07 - django.server - INFO - "GET /static/admin/css/base.css HTTP/1.1" 200 21310
+2024-12-13 09:18:07 - django.server - INFO - "GET /static/admin/css/dark_mode.css HTTP/1.1" 200 2929
+2024-12-13 09:18:07 - django.server - INFO - "GET /static/admin/css/nav_sidebar.css HTTP/1.1" 200 2694
+2024-12-13 09:18:07 - django.server - INFO - "GET /static/admin/js/nav_sidebar.js HTTP/1.1" 200 3063
+2024-12-13 09:18:07 - django.server - INFO - "GET /static/admin/css/login.css HTTP/1.1" 200 958
+2024-12-13 09:18:07 - django.server - INFO - "GET /static/admin/css/responsive.css HTTP/1.1" 200 18559
+2024-12-13 09:18:07 - django.server - INFO - "GET /static/admin/js/theme.js HTTP/1.1" 200 1943
+2024-12-13 09:18:07 - django.request - WARNING - Not Found: /favicon.ico
+2024-12-13 09:18:07 - django.server - WARNING - "GET /favicon.ico HTTP/1.1" 404 22366
+2024-12-13 09:18:19 - django.request - WARNING - Not Found: /
+2024-12-13 09:18:19 - django.server - WARNING - "GET / HTTP/1.1" 404 22315
+2024-12-13 09:18:19 - django.request - WARNING - Not Found: /favicon.ico
+2024-12-13 09:18:19 - django.server - WARNING - "GET /favicon.ico HTTP/1.1" 404 22366
+2024-12-13 09:18:21 - django.server - INFO - "GET /admin/ HTTP/1.1" 302 0
+2024-12-13 09:18:21 - django.server - INFO - "GET /admin/login/?next=/admin/ HTTP/1.1" 200 4178
+2024-12-13 09:18:21 - django.server - INFO - "GET /static/admin/css/login.css HTTP/1.1" 304 0
+2024-12-13 09:18:25 - django.server - INFO - "POST /admin/login/?next=/admin/ HTTP/1.1" 302 0
+2024-12-13 09:18:25 - django.server - INFO - "GET /admin/ HTTP/1.1" 200 22317
+2024-12-13 09:18:32 - django.server - INFO - "GET /admin/main/clienttradesetting/ HTTP/1.1" 200 20220
+2024-12-13 09:18:32 - django.server - INFO - "GET /static/admin/js/vendor/xregexp/xregexp.js HTTP/1.1" 200 232381
+2024-12-13 09:18:32 - django.server - INFO - "GET /static/admin/js/vendor/jquery/jquery.js HTTP/1.1" 200 292458
+2024-12-13 09:18:32 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-13 09:18:35 - django.server - INFO - "GET /admin/main/clienttradesetting/19/change/ HTTP/1.1" 200 31668
+2024-12-13 09:18:35 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-13 09:18:38 - django.server - INFO - "GET /admin/main/ HTTP/1.1" 200 14567
+2024-12-13 09:18:39 - django.server - INFO - "GET /admin/main/clientbrokerdetails/ HTTP/1.1" 200 18996
+2024-12-13 09:18:39 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-13 09:18:43 - django.server - INFO - "GET /admin/main/clientbrokerdetails/1/change/ HTTP/1.1" 200 25303
+2024-12-13 09:18:43 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-13 09:18:48 - django.server - INFO - "POST /admin/main/clientbrokerdetails/1/change/ HTTP/1.1" 302 0
+2024-12-13 09:18:48 - django.server - INFO - "GET /admin/main/clientbrokerdetails/ HTTP/1.1" 200 19370
+2024-12-13 09:18:48 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-13 09:18:54 - main - INFO - Received alert: {'Alert_Key': 'option_alert_1', 'buy_sell': 'BUY', 'data_type': 'option', 'expiry': '29-01-2025', 'IntType': 1, 'limitPrice': 160, 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'strategyTag': 'ce entry', 'strikePrice': 53400, 'symbol': 'BANKNIFTY', 'triggerPrice': 10, 'tsl': 0, 'Type': 'CE', 'complexty': 'regular', 'discqty': '2', 'exch_seg': 'NFO'}
+2024-12-13 09:18:54 - main - INFO - symbol>>BANKNIFTY>>expiry>29-01-2025 >>Type>>CE>>default_price>>53400
+2024-12-13 09:18:54 - main - INFO - signal order log saved 
+2024-12-13 09:18:54 - main - INFO - Trade expiry date: 29-01-2025
+2024-12-13 09:18:54 - main - INFO - Trade product type: NRML received type: NRML
+2024-12-13 09:18:54 - main - INFO - Trade transaction type: BUY received transaction type: BUY
+2024-12-13 09:18:54 - main - INFO - Trade symbol: BANKNIFTY received symbol: BANKNIFTY
+2024-12-13 09:18:54 - main - INFO - Placing order for user sumit@yopmail.com. Trade count: 0/5.00
+2024-12-13 09:18:54 - main.Alice_Blue_Api - INFO - Current date and time: 2024-12-13 14:48:54.811656+05:30
+2024-12-13 09:18:54 - main.Alice_Blue_Api - INFO - Market open time: 09:15:00, Market close time: 15:30:00
+2024-12-13 09:18:54 - main.Alice_Blue_Api - INFO - Today is: Friday
+2024-12-13 09:18:54 - main.Alice_Blue_Api - INFO - Market is open.
+2024-12-13 09:18:54 - main - INFO - Market is open. Proceed with the trade.
+2024-12-13 09:18:54 - main - INFO - Fetched API credentials for Alice Blue: SKEY=hFSWodPXI0yJXnXcYBZnfFLqJM0YQm6t9mvn5WmtQrkcvXFcZRpq8tK3BKueJQDI4vSOHVYUzi2kLiKdWCnsO0SyfsSMsGFL3US3fikNU8cFGVXVXH8682zjvK7qLulP, UID=85795822
+2024-12-13 09:18:54 - main - INFO - !!!!Placing order for user: sumit@yopmail.com Brocker is: Alice Blue & trading symbol is: BANKNIFTY
+2024-12-13 09:18:55 - main.Alice_Blue_Api - INFO - Placing order with parameters:
+2024-12-13 09:18:55 - main.Alice_Blue_Api - INFO - order payload for alice blue...
+2024-12-13 09:18:55 - main.Alice_Blue_Api - INFO - Transaction: TransactionType.Buy, Instrument: BANKNIFTY, Quantity: 1, Order Type: MARKET, Product Type: ProductType.Normal, Price: 160.0, Trigger Price: 10.0
+2024-12-13 09:18:55 - main.Alice_Blue_Api - ERROR - Order placement failed for user sumit@yopmail.com. Error: error when placing order
+2024-12-13 09:18:55 - main.Alice_Blue_Api - ERROR - Unexpected error while placing order for user sumit@yopmail.com
+Traceback (most recent call last):
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/Alice_Blue_Api.py", line 152, in place_alice_orders
+    save_trade_order_history(user,symbol, order_id, status, res_data, message, order_params,broker="Angle One")
+UnboundLocalError: local variable 'message' referenced before assignment
+2024-12-13 09:18:55 - main - ERROR - Order placement encountered an error: 'data'
+2024-12-13 09:18:55 - django.request - ERROR - Internal Server Error: /v1/algo/webhook/
+2024-12-13 09:18:55 - django.server - ERROR - "POST /v1/algo/webhook/ HTTP/1.1" 500 18
+2024-12-13 09:20:23 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-13 09:20:27 - main - INFO - Received alert: {'Alert_Key': 'option_alert_1', 'buy_sell': 'BUY', 'data_type': 'option', 'expiry': '29-01-2025', 'IntType': 1, 'limitPrice': 160, 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'strategyTag': 'ce entry', 'strikePrice': 53400, 'symbol': 'BANKNIFTY', 'triggerPrice': 10, 'tsl': 0, 'Type': 'CE', 'complexty': 'regular', 'discqty': '2', 'exch_seg': 'NFO'}
+2024-12-13 09:20:27 - main - INFO - symbol>>BANKNIFTY>>expiry>29-01-2025 >>Type>>CE>>default_price>>53400
+2024-12-13 09:20:27 - main - INFO - signal order log saved 
+2024-12-13 09:20:27 - main - INFO - Trade expiry date: 29-01-2025
+2024-12-13 09:20:27 - main - INFO - Trade product type: NRML received type: NRML
+2024-12-13 09:20:27 - main - INFO - Trade transaction type: BUY received transaction type: BUY
+2024-12-13 09:20:27 - main - INFO - Trade symbol: BANKNIFTY received symbol: BANKNIFTY
+2024-12-13 09:20:27 - main - INFO - Placing order for user sumit@yopmail.com. Trade count: 0/5.00
+2024-12-13 09:20:28 - main.Alice_Blue_Api - INFO - Current date and time: 2024-12-13 14:50:27.951759+05:30
+2024-12-13 09:20:28 - main.Alice_Blue_Api - INFO - Market open time: 09:15:00, Market close time: 15:30:00
+2024-12-13 09:20:28 - main.Alice_Blue_Api - INFO - Today is: Friday
+2024-12-13 09:20:28 - main.Alice_Blue_Api - INFO - Market is open.
+2024-12-13 09:20:28 - main - INFO - Market is open. Proceed with the trade.
+2024-12-13 09:20:28 - main - INFO - Fetched API credentials for Alice Blue: SKEY=hFSWodPXI0yJXnXcYBZnfFLqJM0YQm6t9mvn5WmtQrkcvXFcZRpq8tK3BKueJQDI4vSOHVYUzi2kLiKdWCnsO0SyfsSMsGFL3US3fikNU8cFGVXVXH8682zjvK7qLulP, UID=85795822
+2024-12-13 09:20:28 - main - INFO - !!!!Placing order for user: sumit@yopmail.com Brocker is: Alice Blue & trading symbol is: BANKNIFTY
+2024-12-13 09:20:28 - main.Alice_Blue_Api - INFO - Placing order with parameters:
+2024-12-13 09:20:28 - main.Alice_Blue_Api - INFO - order payload for alice blue...
+2024-12-13 09:20:28 - main.Alice_Blue_Api - INFO - Transaction: TransactionType.Buy, Instrument: BANKNIFTY, Quantity: 1, Order Type: MARKET, Product Type: ProductType.Normal, Price: 160.0, Trigger Price: 10.0
+2024-12-13 09:20:28 - main.Alice_Blue_Api - ERROR - Order placement failed for user sumit@yopmail.com. Error: error when placing order
+2024-12-13 09:20:28 - main.Alice_Blue_Api - ERROR - Unexpected error while placing order for user sumit@yopmail.com
+Traceback (most recent call last):
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/Alice_Blue_Api.py", line 153, in place_alice_orders
+    save_trade_order_history(user,symbol, order_id, status, res_data, message, order_params,broker="Angle One")
+UnboundLocalError: local variable 'message' referenced before assignment
+2024-12-13 09:20:28 - main - ERROR - Order placement encountered an error: 'data'
+2024-12-13 09:20:28 - django.request - ERROR - Internal Server Error: /v1/algo/webhook/
+2024-12-13 09:20:28 - django.server - ERROR - "POST /v1/algo/webhook/ HTTP/1.1" 500 18
+2024-12-13 09:21:17 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2024-12-13 09:21:18 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-13 09:21:25 - main - INFO - Received alert: {'Alert_Key': 'option_alert_1', 'buy_sell': 'BUY', 'data_type': 'option', 'expiry': '29-01-2025', 'IntType': 1, 'limitPrice': 160, 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'strategyTag': 'ce entry', 'strikePrice': 53400, 'symbol': 'BANKNIFTY', 'triggerPrice': 10, 'tsl': 0, 'Type': 'CE', 'complexty': 'regular', 'discqty': '2', 'exch_seg': 'NFO'}
+2024-12-13 09:21:25 - main - INFO - symbol>>BANKNIFTY>>expiry>29-01-2025 >>Type>>CE>>default_price>>53400
+2024-12-13 09:21:25 - main - INFO - signal order log saved 
+2024-12-13 09:21:25 - main - INFO - Trade expiry date: 29-01-2025
+2024-12-13 09:21:25 - main - INFO - Trade product type: NRML received type: NRML
+2024-12-13 09:21:25 - main - INFO - Trade transaction type: BUY received transaction type: BUY
+2024-12-13 09:21:25 - main - INFO - Trade symbol: BANKNIFTY received symbol: BANKNIFTY
+2024-12-13 09:21:25 - main - INFO - Placing order for user sumit@yopmail.com. Trade count: 0/5.00
+2024-12-13 09:21:25 - main.Alice_Blue_Api - INFO - Current date and time: 2024-12-13 14:51:25.611077+05:30
+2024-12-13 09:21:25 - main.Alice_Blue_Api - INFO - Market open time: 09:15:00, Market close time: 15:30:00
+2024-12-13 09:21:25 - main.Alice_Blue_Api - INFO - Today is: Friday
+2024-12-13 09:21:25 - main.Alice_Blue_Api - INFO - Market is open.
+2024-12-13 09:21:25 - main - INFO - Market is open. Proceed with the trade.
+2024-12-13 09:21:25 - main - INFO - Fetched API credentials for Alice Blue: SKEY=hFSWodPXI0yJXnXcYBZnfFLqJM0YQm6t9mvn5WmtQrkcvXFcZRpq8tK3BKueJQDI4vSOHVYUzi2kLiKdWCnsO0SyfsSMsGFL3US3fikNU8cFGVXVXH8682zjvK7qLulP, UID=85795822
+2024-12-13 09:21:25 - main - INFO - !!!!Placing order for user: sumit@yopmail.com Brocker is: Alice Blue & trading symbol is: BANKNIFTY
+2024-12-13 09:21:25 - main.Alice_Blue_Api - INFO - Placing order with parameters:
+2024-12-13 09:21:25 - main.Alice_Blue_Api - INFO - order payload for alice blue...
+2024-12-13 09:21:25 - main.Alice_Blue_Api - INFO - Transaction: TransactionType.Buy, Instrument: BANKNIFTY, Quantity: 1, Order Type: MARKET, Product Type: ProductType.Normal, Price: 160.0, Trigger Price: 10.0
+2024-12-13 09:21:26 - main.Alice_Blue_Api - ERROR - Order placement failed for user sumit@yopmail.com. Error: error when placing order
+2024-12-13 09:21:26 - main.Alice_Blue_Api - ERROR - Unexpected error while placing order for user sumit@yopmail.com
+Traceback (most recent call last):
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/Alice_Blue_Api.py", line 153, in place_alice_orders
+    save_trade_order_history(user,symbol, order_id, status, res_data, message, order_params,broker="Angle One")
+UnboundLocalError: local variable 'message' referenced before assignment
+2024-12-13 09:21:26 - main - ERROR - Order placement encountered an error: 'data'
+2024-12-13 09:21:26 - django.request - ERROR - Internal Server Error: /v1/algo/webhook/
+2024-12-13 09:21:26 - django.server - ERROR - "POST /v1/algo/webhook/ HTTP/1.1" 500 18
+2024-12-13 09:22:22 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/Alice_Blue_Api.py changed, reloading.
+2024-12-13 09:22:22 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-13 09:23:25 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/Alice_Blue_Api.py changed, reloading.
+2024-12-13 09:23:25 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-13 09:25:23 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/Alice_Blue_Api.py changed, reloading.
+2024-12-13 09:25:23 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-13 09:25:35 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/Alice_Blue_Api.py changed, reloading.
+2024-12-13 09:25:36 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-13 09:25:42 - main - INFO - Received alert: {'Alert_Key': 'option_alert_1', 'buy_sell': 'BUY', 'data_type': 'option', 'expiry': '29-01-2025', 'IntType': 1, 'limitPrice': 160, 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'strategyTag': 'ce entry', 'strikePrice': 53400, 'symbol': 'BANKNIFTY', 'triggerPrice': 10, 'tsl': 0, 'Type': 'CE', 'complexty': 'regular', 'discqty': '2', 'exch_seg': 'NFO'}
+2024-12-13 09:25:42 - main - INFO - symbol>>BANKNIFTY>>expiry>29-01-2025 >>Type>>CE>>default_price>>53400
+2024-12-13 09:25:42 - main - INFO - signal order log saved 
+2024-12-13 09:25:42 - main - INFO - Trade expiry date: 29-01-2025
+2024-12-13 09:25:42 - main - INFO - Trade product type: NRML received type: NRML
+2024-12-13 09:25:42 - main - INFO - Trade transaction type: BUY received transaction type: BUY
+2024-12-13 09:25:42 - main - INFO - Trade symbol: BANKNIFTY received symbol: BANKNIFTY
+2024-12-13 09:25:42 - main - INFO - Placing order for user sumit@yopmail.com. Trade count: 0/5.00
+2024-12-13 09:25:42 - main.Alice_Blue_Api - INFO - Current date and time: 2024-12-13 14:55:42.084087+05:30
+2024-12-13 09:25:42 - main.Alice_Blue_Api - INFO - Market open time: 09:15:00, Market close time: 15:30:00
+2024-12-13 09:25:42 - main.Alice_Blue_Api - INFO - Today is: Friday
+2024-12-13 09:25:42 - main.Alice_Blue_Api - INFO - Market is open.
+2024-12-13 09:25:42 - main - INFO - Market is open. Proceed with the trade.
+2024-12-13 09:25:42 - main - INFO - Fetched API credentials for Alice Blue: SKEY=hFSWodPXI0yJXnXcYBZnfFLqJM0YQm6t9mvn5WmtQrkcvXFcZRpq8tK3BKueJQDI4vSOHVYUzi2kLiKdWCnsO0SyfsSMsGFL3US3fikNU8cFGVXVXH8682zjvK7qLulP, UID=85795822
+2024-12-13 09:25:42 - main - INFO - !!!!Placing order for user: sumit@yopmail.com Brocker is: Alice Blue & trading symbol is: BANKNIFTY
+2024-12-13 09:25:42 - main.Alice_Blue_Api - INFO - Placing order with parameters:
+2024-12-13 09:25:42 - main.Alice_Blue_Api - INFO - order payload for alice blue...
+2024-12-13 09:25:42 - main.Alice_Blue_Api - INFO - Transaction: TransactionType.Buy, Instrument: BANKNIFTY, Quantity: 1, Order Type: MARKET, Product Type: ProductType.Normal, Price: 160.0, Trigger Price: 10.0
+2024-12-13 09:25:42 - main.Alice_Blue_Api - ERROR - Order placement failed for user sumit@yopmail.com. Error: error when placing order
+2024-12-13 09:25:42 - main.Alice_Blue_Api - ERROR - Unexpected error while placing order for user sumit@yopmail.com
+Traceback (most recent call last):
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/Alice_Blue_Api.py", line 164, in place_alice_orders
+    save_trade_order_history(user,symbol, order_id, status, res_data, message, order_params,broker="Angle One")
+UnboundLocalError: local variable 'message' referenced before assignment
+2024-12-13 09:25:42 - main - ERROR - Order placement encountered an error: 'data'
+2024-12-13 09:25:42 - django.request - ERROR - Internal Server Error: /v1/algo/webhook/
+2024-12-13 09:25:42 - django.server - ERROR - "POST /v1/algo/webhook/ HTTP/1.1" 500 18
+2024-12-13 09:27:17 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/Alice_Blue_Api.py changed, reloading.
+2024-12-13 09:27:17 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-13 09:27:31 - main - INFO - Received alert: {'Alert_Key': 'option_alert_1', 'buy_sell': 'BUY', 'data_type': 'option', 'expiry': '29-01-2025', 'IntType': 1, 'limitPrice': 160, 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'strategyTag': 'ce entry', 'strikePrice': 53400, 'symbol': 'BANKNIFTY', 'triggerPrice': 10, 'tsl': 0, 'Type': 'CE', 'complexty': 'regular', 'discqty': '2', 'exch_seg': 'NFO'}
+2024-12-13 09:27:31 - main - INFO - symbol>>BANKNIFTY>>expiry>29-01-2025 >>Type>>CE>>default_price>>53400
+2024-12-13 09:27:31 - main - INFO - signal order log saved 
+2024-12-13 09:27:31 - main - INFO - Trade expiry date: 29-01-2025
+2024-12-13 09:27:31 - main - INFO - Trade product type: NRML received type: NRML
+2024-12-13 09:27:31 - main - INFO - Trade transaction type: BUY received transaction type: BUY
+2024-12-13 09:27:31 - main - INFO - Trade symbol: BANKNIFTY received symbol: BANKNIFTY
+2024-12-13 09:27:31 - main - INFO - Placing order for user sumit@yopmail.com. Trade count: 0/5.00
+2024-12-13 09:27:31 - main.Alice_Blue_Api - INFO - Current date and time: 2024-12-13 14:57:31.711433+05:30
+2024-12-13 09:27:31 - main.Alice_Blue_Api - INFO - Market open time: 09:15:00, Market close time: 15:30:00
+2024-12-13 09:27:31 - main.Alice_Blue_Api - INFO - Today is: Friday
+2024-12-13 09:27:31 - main.Alice_Blue_Api - INFO - Market is open.
+2024-12-13 09:27:31 - main - INFO - Market is open. Proceed with the trade.
+2024-12-13 09:27:31 - main - INFO - Fetched API credentials for Alice Blue: SKEY=hFSWodPXI0yJXnXcYBZnfFLqJM0YQm6t9mvn5WmtQrkcvXFcZRpq8tK3BKueJQDI4vSOHVYUzi2kLiKdWCnsO0SyfsSMsGFL3US3fikNU8cFGVXVXH8682zjvK7qLulP, UID=85795822
+2024-12-13 09:27:31 - main - INFO - !!!!Placing order for user: sumit@yopmail.com Brocker is: Alice Blue & trading symbol is: BANKNIFTY
+2024-12-13 09:27:32 - main.Alice_Blue_Api - INFO - Placing order with parameters:
+2024-12-13 09:27:32 - main.Alice_Blue_Api - INFO - order payload for alice blue...
+2024-12-13 09:27:32 - main.Alice_Blue_Api - INFO - Transaction: TransactionType.Buy, Instrument: BANKNIFTY, Quantity: 1, Order Type: MARKET, Product Type: ProductType.Normal, Price: 160.0, Trigger Price: 10.0
+2024-12-13 09:27:32 - main.Alice_Blue_Api - ERROR - Order placement failed for user sumit@yopmail.com. Error: error when placing order
+2024-12-13 09:27:32 - main.Alice_Blue_Api - ERROR - Unexpected error while placing order for user sumit@yopmail.com
+Traceback (most recent call last):
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/Alice_Blue_Api.py", line 164, in place_alice_orders
+    save_trade_order_history(user,symbol, order_id, status, res_data, message, order_params,broker="Angle One")
+UnboundLocalError: local variable 'message' referenced before assignment
+2024-12-13 09:27:32 - main - ERROR - Order placement encountered an error: 'data'
+2024-12-13 09:27:32 - django.request - ERROR - Internal Server Error: /v1/algo/webhook/
+2024-12-13 09:27:32 - django.server - ERROR - "POST /v1/algo/webhook/ HTTP/1.1" 500 18
+2024-12-13 09:27:57 - django.server - INFO - "GET /admin/main/clientbrokerdetails/1/change/ HTTP/1.1" 200 25305
+2024-12-13 09:27:57 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-13 09:28:08 - django.server - INFO - "POST /admin/main/clientbrokerdetails/1/change/ HTTP/1.1" 302 0
+2024-12-13 09:28:08 - django.server - INFO - "GET /admin/main/clientbrokerdetails/1/change/ HTTP/1.1" 200 25718
+2024-12-13 09:28:08 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-13 09:28:18 - main - INFO - Received alert: {'Alert_Key': 'option_alert_1', 'buy_sell': 'BUY', 'data_type': 'option', 'expiry': '29-01-2025', 'IntType': 1, 'limitPrice': 160, 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'strategyTag': 'ce entry', 'strikePrice': 53400, 'symbol': 'BANKNIFTY', 'triggerPrice': 10, 'tsl': 0, 'Type': 'CE', 'complexty': 'regular', 'discqty': '2', 'exch_seg': 'NFO'}
+2024-12-13 09:28:18 - main - INFO - symbol>>BANKNIFTY>>expiry>29-01-2025 >>Type>>CE>>default_price>>53400
+2024-12-13 09:28:18 - main - INFO - signal order log saved 
+2024-12-13 09:28:18 - main - INFO - Trade expiry date: 29-01-2025
+2024-12-13 09:28:18 - main - INFO - Trade product type: NRML received type: NRML
+2024-12-13 09:28:18 - main - INFO - Trade transaction type: BUY received transaction type: BUY
+2024-12-13 09:28:18 - main - INFO - Trade symbol: BANKNIFTY received symbol: BANKNIFTY
+2024-12-13 09:28:18 - main - INFO - Placing order for user sumit@yopmail.com. Trade count: 0/5.00
+2024-12-13 09:28:18 - main.Alice_Blue_Api - INFO - Current date and time: 2024-12-13 14:58:18.444738+05:30
+2024-12-13 09:28:18 - main.Alice_Blue_Api - INFO - Market open time: 09:15:00, Market close time: 15:30:00
+2024-12-13 09:28:18 - main.Alice_Blue_Api - INFO - Today is: Friday
+2024-12-13 09:28:18 - main.Alice_Blue_Api - INFO - Market is open.
+2024-12-13 09:28:18 - main - INFO - Market is open. Proceed with the trade.
+2024-12-13 09:28:18 - main - INFO - Fetched API credentials for Alice Blue: SKEY=wwhFSWodPXI0yJXnXcYBZnfFLqJM0YQm6t9mvn5WmtQrkcvXFcZRpq8tK3BKueJQDI4vSOHVYUzi2kLiKdWCnsO0SyfsSMsGFL3US3fikNU8cFGVXVXH8682zjvK7qLulP, UID=85795822
+2024-12-13 09:28:18 - main - INFO - !!!!Placing order for user: sumit@yopmail.com Brocker is: Alice Blue & trading symbol is: BANKNIFTY
+2024-12-13 09:28:18 - main.Alice_Blue_Api - INFO - Placing order with parameters:
+2024-12-13 09:28:18 - main.Alice_Blue_Api - INFO - order payload for alice blue...
+2024-12-13 09:28:18 - main.Alice_Blue_Api - INFO - Transaction: TransactionType.Buy, Instrument: BANKNIFTY, Quantity: 1, Order Type: MARKET, Product Type: ProductType.Normal, Price: 160.0, Trigger Price: 10.0
+2024-12-13 09:28:18 - main.Alice_Blue_Api - ERROR - Order placement failed for user sumit@yopmail.com. Error: error when placing order
+2024-12-13 09:28:18 - main.Alice_Blue_Api - ERROR - Unexpected error while placing order for user sumit@yopmail.com
+Traceback (most recent call last):
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/Alice_Blue_Api.py", line 164, in place_alice_orders
+    save_trade_order_history(user,symbol, order_id, status, res_data, message, order_params,broker="Angle One")
+UnboundLocalError: local variable 'message' referenced before assignment
+2024-12-13 09:28:18 - main - ERROR - Order placement encountered an error: 'data'
+2024-12-13 09:28:18 - django.request - ERROR - Internal Server Error: /v1/algo/webhook/
+2024-12-13 09:28:18 - django.server - ERROR - "POST /v1/algo/webhook/ HTTP/1.1" 500 18
+2024-12-13 09:31:38 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/Alice_Blue_Api.py changed, reloading.
+2024-12-13 09:31:39 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-13 09:32:23 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/Alice_Blue_Api.py changed, reloading.
+2024-12-13 09:32:24 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-13 09:33:20 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/Alice_Blue_Api.py changed, reloading.
+2024-12-13 09:33:21 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-13 09:33:40 - main - INFO - Received alert: {'Alert_Key': 'option_alert_1', 'buy_sell': 'BUY', 'data_type': 'option', 'expiry': '29-01-2025', 'IntType': 1, 'limitPrice': 160, 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'strategyTag': 'ce entry', 'strikePrice': 53400, 'symbol': 'BANKNIFTY', 'triggerPrice': 10, 'tsl': 0, 'Type': 'CE', 'complexty': 'regular', 'discqty': '2', 'exch_seg': 'NFO'}
+2024-12-13 09:33:40 - main - INFO - symbol>>BANKNIFTY>>expiry>29-01-2025 >>Type>>CE>>default_price>>53400
+2024-12-13 09:33:40 - main - INFO - signal order log saved 
+2024-12-13 09:33:40 - main - INFO - Trade expiry date: 29-01-2025
+2024-12-13 09:33:40 - main - INFO - Trade product type: NRML received type: NRML
+2024-12-13 09:33:40 - main - INFO - Trade transaction type: BUY received transaction type: BUY
+2024-12-13 09:33:40 - main - INFO - Trade symbol: BANKNIFTY received symbol: BANKNIFTY
+2024-12-13 09:33:40 - main - INFO - Placing order for user sumit@yopmail.com. Trade count: 0/5.00
+2024-12-13 09:33:40 - main.Alice_Blue_Api - INFO - Current date and time: 2024-12-13 15:03:40.165032+05:30
+2024-12-13 09:33:40 - main.Alice_Blue_Api - INFO - Market open time: 09:15:00, Market close time: 15:30:00
+2024-12-13 09:33:40 - main.Alice_Blue_Api - INFO - Today is: Friday
+2024-12-13 09:33:40 - main.Alice_Blue_Api - INFO - Market is open.
+2024-12-13 09:33:40 - main - INFO - Market is open. Proceed with the trade.
+2024-12-13 09:33:40 - main - INFO - Fetched API credentials for Alice Blue: SKEY=wwhFSWodPXI0yJXnXcYBZnfFLqJM0YQm6t9mvn5WmtQrkcvXFcZRpq8tK3BKueJQDI4vSOHVYUzi2kLiKdWCnsO0SyfsSMsGFL3US3fikNU8cFGVXVXH8682zjvK7qLulP, UID=85795822
+2024-12-13 09:33:40 - main - INFO - !!!!Placing order for user: sumit@yopmail.com Brocker is: Alice Blue & trading symbol is: BANKNIFTY
+2024-12-13 09:33:40 - main.Alice_Blue_Api - INFO - Placing order with parameters:
+2024-12-13 09:33:40 - main.Alice_Blue_Api - INFO - order payload for alice blue...
+2024-12-13 09:33:40 - main.Alice_Blue_Api - INFO - Transaction: TransactionType.Buy, Instrument: BANKNIFTY, Quantity: 1, Order Type: MARKET, Product Type: ProductType.Normal, Price: 160.0, Trigger Price: 10.0
+2024-12-13 09:33:40 - main.Alice_Blue_Api - ERROR - Order placement failed for user sumit@yopmail.com. Error: error when placing order
+2024-12-13 09:33:40 - main.Alice_Blue_Api - ERROR - Unexpected error while placing order for user sumit@yopmail.com
+Traceback (most recent call last):
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/Alice_Blue_Api.py", line 168, in place_alice_orders
+    save_trade_order_history(user,symbol, order_id, status, res_data, message, order_params,broker="Angle One")
+UnboundLocalError: local variable 'message' referenced before assignment
+2024-12-13 09:33:40 - main - ERROR - Order placement encountered an error: 'data'
+2024-12-13 09:33:40 - django.request - ERROR - Internal Server Error: /v1/algo/webhook/
+2024-12-13 09:33:40 - django.server - ERROR - "POST /v1/algo/webhook/ HTTP/1.1" 500 18
+2024-12-13 09:34:51 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/Alice_Blue_Api.py changed, reloading.
+2024-12-13 09:34:52 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-13 09:35:02 - main - INFO - Received alert: {'Alert_Key': 'option_alert_1', 'buy_sell': 'BUY', 'data_type': 'option', 'expiry': '29-01-2025', 'IntType': 1, 'limitPrice': 160, 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'strategyTag': 'ce entry', 'strikePrice': 53400, 'symbol': 'BANKNIFTY', 'triggerPrice': 10, 'tsl': 0, 'Type': 'CE', 'complexty': 'regular', 'discqty': '2', 'exch_seg': 'NFO'}
+2024-12-13 09:35:02 - main - INFO - symbol>>BANKNIFTY>>expiry>29-01-2025 >>Type>>CE>>default_price>>53400
+2024-12-13 09:35:02 - main - INFO - signal order log saved 
+2024-12-13 09:35:02 - main - INFO - Trade expiry date: 29-01-2025
+2024-12-13 09:35:02 - main - INFO - Trade product type: NRML received type: NRML
+2024-12-13 09:35:02 - main - INFO - Trade transaction type: BUY received transaction type: BUY
+2024-12-13 09:35:02 - main - INFO - Trade symbol: BANKNIFTY received symbol: BANKNIFTY
+2024-12-13 09:35:02 - main - INFO - Placing order for user sumit@yopmail.com. Trade count: 0/5.00
+2024-12-13 09:35:02 - main.Alice_Blue_Api - INFO - Current date and time: 2024-12-13 15:05:02.514449+05:30
+2024-12-13 09:35:02 - main.Alice_Blue_Api - INFO - Market open time: 09:15:00, Market close time: 15:30:00
+2024-12-13 09:35:02 - main.Alice_Blue_Api - INFO - Today is: Friday
+2024-12-13 09:35:02 - main.Alice_Blue_Api - INFO - Market is open.
+2024-12-13 09:35:02 - main - INFO - Market is open. Proceed with the trade.
+2024-12-13 09:35:02 - main - INFO - Fetched API credentials for Alice Blue: SKEY=wwhFSWodPXI0yJXnXcYBZnfFLqJM0YQm6t9mvn5WmtQrkcvXFcZRpq8tK3BKueJQDI4vSOHVYUzi2kLiKdWCnsO0SyfsSMsGFL3US3fikNU8cFGVXVXH8682zjvK7qLulP, UID=85795822
+2024-12-13 09:35:02 - main - INFO - !!!!Placing order for user: sumit@yopmail.com Brocker is: Alice Blue & trading symbol is: BANKNIFTY
+2024-12-13 09:35:02 - main.Alice_Blue_Api - ERROR - Attribute error: 'dict' object has no attribute 'sessionID'
+2024-12-13 09:35:02 - main - ERROR - Order placement encountered an error: 'data'
+2024-12-13 09:35:02 - django.request - ERROR - Internal Server Error: /v1/algo/webhook/
+2024-12-13 09:35:02 - django.server - ERROR - "POST /v1/algo/webhook/ HTTP/1.1" 500 18
+2024-12-13 09:36:37 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/Alice_Blue_Api.py changed, reloading.
+2024-12-13 09:36:37 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-13 09:36:49 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-13 09:36:54 - main - INFO - Received alert: {'Alert_Key': 'option_alert_1', 'buy_sell': 'BUY', 'data_type': 'option', 'expiry': '29-01-2025', 'IntType': 1, 'limitPrice': 160, 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'strategyTag': 'ce entry', 'strikePrice': 53400, 'symbol': 'BANKNIFTY', 'triggerPrice': 10, 'tsl': 0, 'Type': 'CE', 'complexty': 'regular', 'discqty': '2', 'exch_seg': 'NFO'}
+2024-12-13 09:36:54 - main - INFO - symbol>>BANKNIFTY>>expiry>29-01-2025 >>Type>>CE>>default_price>>53400
+2024-12-13 09:36:54 - main - INFO - signal order log saved 
+2024-12-13 09:36:54 - main - INFO - Trade expiry date: 29-01-2025
+2024-12-13 09:36:54 - main - INFO - Trade product type: NRML received type: NRML
+2024-12-13 09:36:54 - main - INFO - Trade transaction type: BUY received transaction type: BUY
+2024-12-13 09:36:54 - main - INFO - Trade symbol: BANKNIFTY received symbol: BANKNIFTY
+2024-12-13 09:36:54 - main - INFO - Placing order for user sumit@yopmail.com. Trade count: 0/5.00
+2024-12-13 09:36:54 - main.Alice_Blue_Api - INFO - Current date and time: 2024-12-13 15:06:54.869096+05:30
+2024-12-13 09:36:54 - main.Alice_Blue_Api - INFO - Market open time: 09:15:00, Market close time: 15:30:00
+2024-12-13 09:36:54 - main.Alice_Blue_Api - INFO - Today is: Friday
+2024-12-13 09:36:54 - main.Alice_Blue_Api - INFO - Market is open.
+2024-12-13 09:36:54 - main - INFO - Market is open. Proceed with the trade.
+2024-12-13 09:36:54 - main - INFO - Fetched API credentials for Alice Blue: SKEY=wwhFSWodPXI0yJXnXcYBZnfFLqJM0YQm6t9mvn5WmtQrkcvXFcZRpq8tK3BKueJQDI4vSOHVYUzi2kLiKdWCnsO0SyfsSMsGFL3US3fikNU8cFGVXVXH8682zjvK7qLulP, UID=85795822
+2024-12-13 09:36:54 - main - INFO - !!!!Placing order for user: sumit@yopmail.com Brocker is: Alice Blue & trading symbol is: BANKNIFTY
+2024-12-13 09:36:55 - main.Alice_Blue_Api - ERROR - Attribute error: 'dict' object has no attribute 'emsg'
+2024-12-13 09:36:55 - main - ERROR - Order placement encountered an error: 'data'
+2024-12-13 09:36:55 - django.request - ERROR - Internal Server Error: /v1/algo/webhook/
+2024-12-13 09:36:55 - django.server - ERROR - "POST /v1/algo/webhook/ HTTP/1.1" 500 18
+2024-12-13 09:37:36 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/Alice_Blue_Api.py changed, reloading.
+2024-12-13 09:37:37 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-13 09:37:41 - main - INFO - Received alert: {'Alert_Key': 'option_alert_1', 'buy_sell': 'BUY', 'data_type': 'option', 'expiry': '29-01-2025', 'IntType': 1, 'limitPrice': 160, 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'strategyTag': 'ce entry', 'strikePrice': 53400, 'symbol': 'BANKNIFTY', 'triggerPrice': 10, 'tsl': 0, 'Type': 'CE', 'complexty': 'regular', 'discqty': '2', 'exch_seg': 'NFO'}
+2024-12-13 09:37:41 - main - INFO - symbol>>BANKNIFTY>>expiry>29-01-2025 >>Type>>CE>>default_price>>53400
+2024-12-13 09:37:41 - main - INFO - signal order log saved 
+2024-12-13 09:37:41 - main - INFO - Trade expiry date: 29-01-2025
+2024-12-13 09:37:41 - main - INFO - Trade product type: NRML received type: NRML
+2024-12-13 09:37:41 - main - INFO - Trade transaction type: BUY received transaction type: BUY
+2024-12-13 09:37:41 - main - INFO - Trade symbol: BANKNIFTY received symbol: BANKNIFTY
+2024-12-13 09:37:41 - main - INFO - Placing order for user sumit@yopmail.com. Trade count: 0/5.00
+2024-12-13 09:37:41 - main.Alice_Blue_Api - INFO - Current date and time: 2024-12-13 15:07:41.303756+05:30
+2024-12-13 09:37:41 - main.Alice_Blue_Api - INFO - Market open time: 09:15:00, Market close time: 15:30:00
+2024-12-13 09:37:41 - main.Alice_Blue_Api - INFO - Today is: Friday
+2024-12-13 09:37:41 - main.Alice_Blue_Api - INFO - Market is open.
+2024-12-13 09:37:41 - main - INFO - Market is open. Proceed with the trade.
+2024-12-13 09:37:41 - main - INFO - Fetched API credentials for Alice Blue: SKEY=wwhFSWodPXI0yJXnXcYBZnfFLqJM0YQm6t9mvn5WmtQrkcvXFcZRpq8tK3BKueJQDI4vSOHVYUzi2kLiKdWCnsO0SyfsSMsGFL3US3fikNU8cFGVXVXH8682zjvK7qLulP, UID=85795822
+2024-12-13 09:37:41 - main - INFO - !!!!Placing order for user: sumit@yopmail.com Brocker is: Alice Blue & trading symbol is: BANKNIFTY
+2024-12-13 09:37:42 - main.Alice_Blue_Api - INFO - Placing order with parameters:
+2024-12-13 09:37:42 - main.Alice_Blue_Api - INFO - order payload for alice blue...
+2024-12-13 09:37:42 - main.Alice_Blue_Api - INFO - Transaction: TransactionType.Buy, Instrument: BANKNIFTY, Quantity: 1, Order Type: MARKET, Product Type: ProductType.Normal, Price: 160.0, Trigger Price: 10.0
+2024-12-13 09:37:42 - main.Alice_Blue_Api - ERROR - Order placement failed for user sumit@yopmail.com. Error: error when placing order
+2024-12-13 09:37:42 - main.Alice_Blue_Api - ERROR - Unexpected error while placing order for user sumit@yopmail.com
+Traceback (most recent call last):
+  File "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/Alice_Blue_Api.py", line 168, in place_alice_orders
+    save_trade_order_history(user,symbol, order_id, status, res_data, message, order_params,broker="Angle One")
+UnboundLocalError: local variable 'message' referenced before assignment
+2024-12-13 09:37:42 - main - ERROR - Order placement encountered an error: 'data'
+2024-12-13 09:37:42 - django.request - ERROR - Internal Server Error: /v1/algo/webhook/
+2024-12-13 09:37:42 - django.server - ERROR - "POST /v1/algo/webhook/ HTTP/1.1" 500 18
+2024-12-13 09:40:38 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/Alice_Blue_Api.py changed, reloading.
+2024-12-13 09:40:38 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-13 09:41:08 - main - INFO - Received alert: {'Alert_Key': 'option_alert_1', 'buy_sell': 'BUY', 'data_type': 'option', 'expiry': '29-01-2025', 'IntType': 1, 'limitPrice': 160, 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'strategyTag': 'ce entry', 'strikePrice': 53400, 'symbol': 'BANKNIFTY', 'triggerPrice': 10, 'tsl': 0, 'Type': 'CE', 'complexty': 'regular', 'discqty': '2', 'exch_seg': 'NFO'}
+2024-12-13 09:41:08 - main - INFO - symbol>>BANKNIFTY>>expiry>29-01-2025 >>Type>>CE>>default_price>>53400
+2024-12-13 09:41:08 - main - INFO - signal order log saved 
+2024-12-13 09:41:08 - main - INFO - Trade expiry date: 29-01-2025
+2024-12-13 09:41:08 - main - INFO - Trade product type: NRML received type: NRML
+2024-12-13 09:41:08 - main - INFO - Trade transaction type: BUY received transaction type: BUY
+2024-12-13 09:41:08 - main - INFO - Trade symbol: BANKNIFTY received symbol: BANKNIFTY
+2024-12-13 09:41:08 - main - INFO - Placing order for user sumit@yopmail.com. Trade count: 0/5.00
+2024-12-13 09:41:08 - main.Alice_Blue_Api - INFO - Current date and time: 2024-12-13 15:11:08.688523+05:30
+2024-12-13 09:41:08 - main.Alice_Blue_Api - INFO - Market open time: 09:15:00, Market close time: 15:30:00
+2024-12-13 09:41:08 - main.Alice_Blue_Api - INFO - Today is: Friday
+2024-12-13 09:41:08 - main.Alice_Blue_Api - INFO - Market is open.
+2024-12-13 09:41:08 - main - INFO - Market is open. Proceed with the trade.
+2024-12-13 09:41:08 - main - INFO - Fetched API credentials for Alice Blue: SKEY=wwhFSWodPXI0yJXnXcYBZnfFLqJM0YQm6t9mvn5WmtQrkcvXFcZRpq8tK3BKueJQDI4vSOHVYUzi2kLiKdWCnsO0SyfsSMsGFL3US3fikNU8cFGVXVXH8682zjvK7qLulP, UID=85795822
+2024-12-13 09:41:08 - main - INFO - !!!!Placing order for user: sumit@yopmail.com Brocker is: Alice Blue & trading symbol is: BANKNIFTY
+2024-12-13 09:41:08 - main.Alice_Blue_Api - ERROR - Unauthorized access for user sumit@yopmail.com. Reason: API key not available. Please generate API key
+2024-12-13 09:41:08 - main - INFO - Trade expiry date: 29-01-2025
+2024-12-13 09:41:08 - main - INFO - Trade product type: NRML received type: NRML
+2024-12-13 09:41:08 - main - INFO - Trade transaction type: BUY received transaction type: BUY
+2024-12-13 09:41:08 - main - INFO - Trade symbol: BANKNIFTY received symbol: BANKNIFTY
+2024-12-13 09:41:08 - main - INFO - Placing order for user algoclient@yopmail.com. Trade count: 0/5.00
+2024-12-13 09:41:08 - main.Alice_Blue_Api - INFO - Current date and time: 2024-12-13 15:11:08.940030+05:30
+2024-12-13 09:41:08 - main.Alice_Blue_Api - INFO - Market open time: 09:15:00, Market close time: 15:30:00
+2024-12-13 09:41:08 - main.Alice_Blue_Api - INFO - Today is: Friday
+2024-12-13 09:41:08 - main.Alice_Blue_Api - INFO - Market is open.
+2024-12-13 09:41:08 - main - INFO - Market is open. Proceed with the trade.
+2024-12-13 09:41:08 - main - INFO - !!!!Placing order for user: algoclient@yopmail.com Brocker is: Angle One & trading symbol is: BANKNIFTY
+2024-12-13 09:41:11 - main - INFO - Angle one api order placement for user: algoclient@yopmail.com & trading symbol is: BANKNIFTY29JAN2553400CE
+2024-12-13 09:41:12 - main - INFO - Raw API Response: {'status': True, 'message': 'SUCCESS', 'errorcode': '', 'data': {'script': 'BANKNIFTY29JAN2553400CE', 'orderid': '241213001385379', 'uniqueorderid': 'c21ebd67-782a-419c-9192-3cdc33488af2'}}
+2024-12-13 09:41:12 - main - INFO - Order Rejected reason!!!::Your order has been rejected due to Insufficient Funds. Available funds - Rs. 0.00 . You require Rs. 21441.50 funds to execute this order.
+2024-12-13 09:41:12 - main.Alice_Blue_Api - INFO - Order history saved successfully for Order ID: 241213001385379
+2024-12-13 09:41:12 - main - ERROR - Order is rejected for BANKNIFTY with broker Angle One
+2024-12-13 09:41:12 - django.server - INFO - "POST /v1/algo/webhook/ HTTP/1.1" 200 66
+2024-12-13 09:41:59 - django.utils.autoreload - INFO - /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/Alice_Blue_Api.py changed, reloading.
+2024-12-13 09:42:00 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-12-13 09:44:18 - django.server - INFO - "GET /admin/main/ HTTP/1.1" 200 14567
+2024-12-13 09:44:20 - django.server - INFO - "GET /admin/main/clientbrokerdetails/ HTTP/1.1" 200 18996
+2024-12-13 09:44:20 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-13 09:44:22 - django.server - INFO - "GET /admin/main/clientbrokerdetails/add/ HTTP/1.1" 200 24504
+2024-12-13 09:44:22 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-13 09:44:32 - django.server - INFO - "POST /admin/main/clientbrokerdetails/add/ HTTP/1.1" 302 0
+2024-12-13 09:44:32 - django.server - INFO - "GET /admin/main/clientbrokerdetails/3/change/ HTTP/1.1" 200 25704
+2024-12-13 09:44:32 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-13 09:44:43 - main - INFO - Received alert: {'Alert_Key': 'option_alert_1', 'buy_sell': 'BUY', 'data_type': 'option', 'expiry': '29-01-2025', 'IntType': 1, 'limitPrice': 160, 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'strategyTag': 'ce entry', 'strikePrice': 53400, 'symbol': 'BANKNIFTY', 'triggerPrice': 10, 'tsl': 0, 'Type': 'CE', 'complexty': 'regular', 'discqty': '2', 'exch_seg': 'NFO'}
+2024-12-13 09:44:43 - main - INFO - symbol>>BANKNIFTY>>expiry>29-01-2025 >>Type>>CE>>default_price>>53400
+2024-12-13 09:44:43 - main - INFO - signal order log saved 
+2024-12-13 09:44:43 - main - INFO - Trade expiry date: 29-01-2025
+2024-12-13 09:44:43 - main - INFO - Trade product type: NRML received type: NRML
+2024-12-13 09:44:43 - main - INFO - Trade transaction type: BUY received transaction type: BUY
+2024-12-13 09:44:43 - main - INFO - Trade symbol: BANKNIFTY received symbol: BANKNIFTY
+2024-12-13 09:44:43 - main - INFO - Placing order for user sumit@yopmail.com. Trade count: 0/5.00
+2024-12-13 09:44:43 - main.Alice_Blue_Api - INFO - Current date and time: 2024-12-13 15:14:43.849474+05:30
+2024-12-13 09:44:43 - main.Alice_Blue_Api - INFO - Market open time: 09:15:00, Market close time: 15:30:00
+2024-12-13 09:44:43 - main.Alice_Blue_Api - INFO - Today is: Friday
+2024-12-13 09:44:43 - main.Alice_Blue_Api - INFO - Market is open.
+2024-12-13 09:44:43 - main - INFO - Market is open. Proceed with the trade.
+2024-12-13 09:44:43 - main - INFO - Fetched API credentials for Alice Blue: SKEY=wwhFSWodPXI0yJXnXcYBZnfFLqJM0YQm6t9mvn5WmtQrkcvXFcZRpq8tK3BKueJQDI4vSOHVYUzi2kLiKdWCnsO0SyfsSMsGFL3US3fikNU8cFGVXVXH8682zjvK7qLulP, UID=85795822
+2024-12-13 09:44:43 - main - INFO - !!!!Placing order for user: sumit@yopmail.com Brocker is: Alice Blue & trading symbol is: BANKNIFTY
+2024-12-13 09:44:44 - main.Alice_Blue_Api - ERROR - Unauthorized access for user sumit@yopmail.com. Reason: API key not available. Please generate API key
+2024-12-13 09:44:44 - main - INFO - Trade expiry date: 29-01-2025
+2024-12-13 09:44:44 - main - INFO - Trade product type: NRML received type: NRML
+2024-12-13 09:44:44 - main - INFO - Trade transaction type: BUY received transaction type: BUY
+2024-12-13 09:44:44 - main - INFO - Trade symbol: BANKNIFTY received symbol: BANKNIFTY
+2024-12-13 09:44:44 - main - INFO - Placing order for user algoclient@yopmail.com. Trade count: 0/5.00
+2024-12-13 09:44:44 - main.Alice_Blue_Api - INFO - Current date and time: 2024-12-13 15:14:44.209301+05:30
+2024-12-13 09:44:44 - main.Alice_Blue_Api - INFO - Market open time: 09:15:00, Market close time: 15:30:00
+2024-12-13 09:44:44 - main.Alice_Blue_Api - INFO - Today is: Friday
+2024-12-13 09:44:44 - main.Alice_Blue_Api - INFO - Market is open.
+2024-12-13 09:44:44 - main - INFO - Market is open. Proceed with the trade.
+2024-12-13 09:44:44 - main - INFO - !!!!Placing order for user: algoclient@yopmail.com Brocker is: Angle One & trading symbol is: BANKNIFTY
+2024-12-13 09:44:50 - main - INFO - Angle one api order placement for user: algoclient@yopmail.com & trading symbol is: BANKNIFTY29JAN2553400CE
+2024-12-13 09:44:50 - main - INFO - Raw API Response: {'status': True, 'message': 'SUCCESS', 'errorcode': '', 'data': {'script': 'BANKNIFTY29JAN2553400CE', 'orderid': '241213001400764', 'uniqueorderid': 'bf11029c-05e0-4870-9fe7-144677fcbc91'}}
+2024-12-13 09:44:50 - main - INFO - Order Rejected reason!!!::Your order has been rejected due to Insufficient Funds. Available funds - Rs. 0.00 . You require Rs. 21387.50 funds to execute this order.
+2024-12-13 09:44:50 - main.Alice_Blue_Api - INFO - Order history saved successfully for Order ID: 241213001400764
+2024-12-13 09:44:50 - main - ERROR - Order is rejected for BANKNIFTY with broker Angle One
+2024-12-13 09:44:50 - django.server - INFO - "POST /v1/algo/webhook/ HTTP/1.1" 200 66
+2024-12-13 09:45:11 - main - INFO - Received alert: {'Alert_Key': 'option_alert_1', 'buy_sell': 'BUY', 'data_type': 'option', 'expiry': '29-01-2025', 'IntType': 1, 'limitPrice': 160, 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'strategyTag': 'ce entry', 'strikePrice': 53400, 'symbol': 'BANKNIFTY', 'triggerPrice': 10, 'tsl': 0, 'Type': 'CE', 'complexty': 'regular', 'discqty': '2', 'exch_seg': 'NFO'}
+2024-12-13 09:45:11 - main - INFO - symbol>>BANKNIFTY>>expiry>29-01-2025 >>Type>>CE>>default_price>>53400
+2024-12-13 09:45:11 - main - INFO - signal order log saved 
+2024-12-13 09:45:11 - main - INFO - Trade expiry date: 29-01-2025
+2024-12-13 09:45:11 - main - INFO - Trade product type: NRML received type: NRML
+2024-12-13 09:45:11 - main - INFO - Trade transaction type: BUY received transaction type: BUY
+2024-12-13 09:45:11 - main - INFO - Trade symbol: BANKNIFTY received symbol: BANKNIFTY
+2024-12-13 09:45:11 - main - INFO - Placing order for user sumit@yopmail.com. Trade count: 0/5.00
+2024-12-13 09:45:11 - main.Alice_Blue_Api - INFO - Current date and time: 2024-12-13 15:15:11.778444+05:30
+2024-12-13 09:45:11 - main.Alice_Blue_Api - INFO - Market open time: 09:15:00, Market close time: 15:30:00
+2024-12-13 09:45:11 - main.Alice_Blue_Api - INFO - Today is: Friday
+2024-12-13 09:45:11 - main.Alice_Blue_Api - INFO - Market is open.
+2024-12-13 09:45:11 - main - INFO - Market is open. Proceed with the trade.
+2024-12-13 09:45:11 - main - INFO - Fetched API credentials for Alice Blue: SKEY=wwhFSWodPXI0yJXnXcYBZnfFLqJM0YQm6t9mvn5WmtQrkcvXFcZRpq8tK3BKueJQDI4vSOHVYUzi2kLiKdWCnsO0SyfsSMsGFL3US3fikNU8cFGVXVXH8682zjvK7qLulP, UID=85795822
+2024-12-13 09:45:11 - main - INFO - !!!!Placing order for user: sumit@yopmail.com Brocker is: Alice Blue & trading symbol is: BANKNIFTY
+2024-12-13 09:45:12 - main.Alice_Blue_Api - ERROR - Unauthorized access for user sumit@yopmail.com. Reason: API key not available. Please generate API key
+2024-12-13 09:45:12 - main - INFO - Trade expiry date: 29-01-2025
+2024-12-13 09:45:12 - main - INFO - Trade product type: NRML received type: NRML
+2024-12-13 09:45:12 - main - INFO - Trade transaction type: BUY received transaction type: BUY
+2024-12-13 09:45:12 - main - INFO - Trade symbol: BANKNIFTY received symbol: BANKNIFTY
+2024-12-13 09:45:12 - main - INFO - Placing order for user algoclient@yopmail.com. Trade count: 0/5.00
+2024-12-13 09:45:12 - main.Alice_Blue_Api - INFO - Current date and time: 2024-12-13 15:15:12.039195+05:30
+2024-12-13 09:45:12 - main.Alice_Blue_Api - INFO - Market open time: 09:15:00, Market close time: 15:30:00
+2024-12-13 09:45:12 - main.Alice_Blue_Api - INFO - Today is: Friday
+2024-12-13 09:45:12 - main.Alice_Blue_Api - INFO - Market is open.
+2024-12-13 09:45:12 - main - INFO - Market is open. Proceed with the trade.
+2024-12-13 09:45:12 - main - INFO - !!!!Placing order for user: algoclient@yopmail.com Brocker is: Angle One & trading symbol is: BANKNIFTY
+2024-12-13 09:45:17 - main - INFO - Angle one api order placement for user: algoclient@yopmail.com & trading symbol is: BANKNIFTY29JAN2553400CE
+2024-12-13 09:45:18 - main - INFO - Raw API Response: {'status': True, 'message': 'SUCCESS', 'errorcode': '', 'data': {'script': 'BANKNIFTY29JAN2553400CE', 'orderid': '241213001402401', 'uniqueorderid': '8f993e56-9d3c-491a-80a6-afa54c25acd3'}}
+2024-12-13 09:45:18 - main - INFO - Order Rejected reason!!!::Your order has been rejected due to Insufficient Funds. Available funds - Rs. 0.00 . You require Rs. 21206.75 funds to execute this order.
+2024-12-13 09:45:18 - main.Alice_Blue_Api - INFO - Order history saved successfully for Order ID: 241213001402401
+2024-12-13 09:45:18 - main - ERROR - Order is rejected for BANKNIFTY with broker Angle One
+2024-12-13 09:45:18 - django.server - INFO - "POST /v1/algo/webhook/ HTTP/1.1" 200 66
+2024-12-13 09:46:35 - django.server - INFO - "GET /admin/main/clientbrokerdetails/ HTTP/1.1" 200 19314
+2024-12-13 09:46:35 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-13 09:46:39 - django.server - INFO - "GET /admin/main/clientbrokerdetails/2/change/ HTTP/1.1" 200 24870
+2024-12-13 09:46:39 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-13 09:46:44 - django.server - INFO - "POST /admin/main/clientbrokerdetails/2/change/ HTTP/1.1" 302 0
+2024-12-13 09:46:44 - django.server - INFO - "GET /admin/main/clientbrokerdetails/ HTTP/1.1" 200 19564
+2024-12-13 09:46:44 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-13 09:46:52 - main - INFO - Received alert: {'Alert_Key': 'option_alert_1', 'buy_sell': 'BUY', 'data_type': 'option', 'expiry': '29-01-2025', 'IntType': 1, 'limitPrice': 160, 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'strategyTag': 'ce entry', 'strikePrice': 53400, 'symbol': 'BANKNIFTY', 'triggerPrice': 10, 'tsl': 0, 'Type': 'CE', 'complexty': 'regular', 'discqty': '2', 'exch_seg': 'NFO'}
+2024-12-13 09:46:52 - main - INFO - symbol>>BANKNIFTY>>expiry>29-01-2025 >>Type>>CE>>default_price>>53400
+2024-12-13 09:46:52 - main - INFO - signal order log saved 
+2024-12-13 09:46:52 - main - INFO - Trade expiry date: 29-01-2025
+2024-12-13 09:46:52 - main - INFO - Trade product type: NRML received type: NRML
+2024-12-13 09:46:52 - main - INFO - Trade transaction type: BUY received transaction type: BUY
+2024-12-13 09:46:52 - main - INFO - Trade symbol: BANKNIFTY received symbol: BANKNIFTY
+2024-12-13 09:46:52 - main - INFO - Placing order for user sumit@yopmail.com. Trade count: 0/5.00
+2024-12-13 09:46:52 - main.Alice_Blue_Api - INFO - Current date and time: 2024-12-13 15:16:52.615500+05:30
+2024-12-13 09:46:52 - main.Alice_Blue_Api - INFO - Market open time: 09:15:00, Market close time: 15:30:00
+2024-12-13 09:46:52 - main.Alice_Blue_Api - INFO - Today is: Friday
+2024-12-13 09:46:52 - main.Alice_Blue_Api - INFO - Market is open.
+2024-12-13 09:46:52 - main - INFO - Market is open. Proceed with the trade.
+2024-12-13 09:46:52 - main - INFO - Fetched API credentials for Alice Blue: SKEY=wwhFSWodPXI0yJXnXcYBZnfFLqJM0YQm6t9mvn5WmtQrkcvXFcZRpq8tK3BKueJQDI4vSOHVYUzi2kLiKdWCnsO0SyfsSMsGFL3US3fikNU8cFGVXVXH8682zjvK7qLulP, UID=85795822
+2024-12-13 09:46:52 - main - INFO - !!!!Placing order for user: sumit@yopmail.com Brocker is: Alice Blue & trading symbol is: BANKNIFTY
+2024-12-13 09:46:52 - main.Alice_Blue_Api - ERROR - Unauthorized access for user sumit@yopmail.com. Reason: API key not available. Please generate API key
+2024-12-13 09:46:52 - main - INFO - Trade expiry date: 29-01-2025
+2024-12-13 09:46:52 - main - INFO - Trade product type: NRML received type: NRML
+2024-12-13 09:46:52 - main - INFO - Trade transaction type: BUY received transaction type: BUY
+2024-12-13 09:46:52 - main - INFO - Trade symbol: BANKNIFTY received symbol: BANKNIFTY
+2024-12-13 09:46:52 - main - INFO - Placing order for user algoclient@yopmail.com. Trade count: 0/5.00
+2024-12-13 09:46:52 - main.Alice_Blue_Api - INFO - Current date and time: 2024-12-13 15:16:52.810791+05:30
+2024-12-13 09:46:52 - main.Alice_Blue_Api - INFO - Market open time: 09:15:00, Market close time: 15:30:00
+2024-12-13 09:46:52 - main.Alice_Blue_Api - INFO - Today is: Friday
+2024-12-13 09:46:52 - main.Alice_Blue_Api - INFO - Market is open.
+2024-12-13 09:46:52 - main - INFO - Market is open. Proceed with the trade.
+2024-12-13 09:46:52 - main - INFO - !!!!Placing order for user: algoclient@yopmail.com Brocker is: Angle One & trading symbol is: BANKNIFTY
+2024-12-13 09:46:56 - main - INFO - Angle one api order placement for user: algoclient@yopmail.com & trading symbol is: BANKNIFTY29JAN2553400CE
+2024-12-13 09:46:57 - main - INFO - Raw API Response: {'status': True, 'message': 'SUCCESS', 'errorcode': '', 'data': {'script': 'BANKNIFTY29JAN2553400CE', 'orderid': '241213001408552', 'uniqueorderid': '7537cbb8-93cb-40fd-8529-8a5871b1b3cc'}}
+2024-12-13 09:46:57 - main - INFO - Order Rejected reason!!!::Your order has been rejected due to Insufficient Funds. Available funds - Rs. 0.00 . You require Rs. 21074.00 funds to execute this order.
+2024-12-13 09:46:57 - main.Alice_Blue_Api - INFO - Order history saved successfully for Order ID: 241213001408552
+2024-12-13 09:46:57 - main - ERROR - Order is rejected for BANKNIFTY with broker Angle One
+2024-12-13 09:46:57 - django.server - INFO - "POST /v1/algo/webhook/ HTTP/1.1" 200 66
+2024-12-13 09:47:05 - django.server - INFO - "GET /admin/main/ HTTP/1.1" 200 14567
+2024-12-13 09:47:06 - django.server - INFO - "GET /admin/main/clienttradesetting/ HTTP/1.1" 200 20220
+2024-12-13 09:47:06 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-13 09:47:12 - django.server - INFO - "GET /admin/main/clienttradesetting/18/change/ HTTP/1.1" 200 31668
+2024-12-13 09:47:12 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-13 09:47:15 - django.server - INFO - "POST /admin/main/clienttradesetting/18/change/ HTTP/1.1" 302 0
+2024-12-13 09:47:15 - django.server - INFO - "GET /admin/main/clienttradesetting/ HTTP/1.1" 200 20471
+2024-12-13 09:47:15 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-13 09:47:17 - django.server - INFO - "GET /admin/main/clienttradesetting/20/change/ HTTP/1.1" 200 31551
+2024-12-13 09:47:17 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-13 09:47:41 - django.server - INFO - "GET /static/admin/img/calendar-icons.svg HTTP/1.1" 304 0
+2024-12-13 09:47:49 - django.server - INFO - "POST /admin/main/clienttradesetting/20/change/ HTTP/1.1" 302 0
+2024-12-13 09:47:49 - django.server - INFO - "GET /admin/main/clienttradesetting/ HTTP/1.1" 200 20488
+2024-12-13 09:47:49 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-13 09:47:58 - main - INFO - Received alert: {'Alert_Key': 'option_alert_1', 'buy_sell': 'BUY', 'data_type': 'option', 'expiry': '29-01-2025', 'IntType': 1, 'limitPrice': 160, 'Lot': 1, 'orderType': 'MARKET', 'productType': 'NRML', 'strategyTag': 'ce entry', 'strikePrice': 53400, 'symbol': 'BANKNIFTY', 'triggerPrice': 10, 'tsl': 0, 'Type': 'CE', 'complexty': 'regular', 'discqty': '2', 'exch_seg': 'NFO'}
+2024-12-13 09:47:58 - main - INFO - symbol>>BANKNIFTY>>expiry>29-01-2025 >>Type>>CE>>default_price>>53400
+2024-12-13 09:47:58 - main - INFO - signal order log saved 
+2024-12-13 09:47:58 - main - INFO - Trade expiry date: 29-01-2025
+2024-12-13 09:47:58 - main - INFO - Trade product type: NRML received type: NRML
+2024-12-13 09:47:58 - main - INFO - Trade transaction type: BUY received transaction type: BUY
+2024-12-13 09:47:58 - main - INFO - Trade symbol: BANKNIFTY received symbol: BANKNIFTY
+2024-12-13 09:47:58 - main - INFO - Placing order for user sumit@yopmail.com. Trade count: 0/5.00
+2024-12-13 09:47:58 - main.Alice_Blue_Api - INFO - Current date and time: 2024-12-13 15:17:58.049373+05:30
+2024-12-13 09:47:58 - main.Alice_Blue_Api - INFO - Market open time: 09:15:00, Market close time: 15:30:00
+2024-12-13 09:47:58 - main.Alice_Blue_Api - INFO - Today is: Friday
+2024-12-13 09:47:58 - main.Alice_Blue_Api - INFO - Market is open.
+2024-12-13 09:47:58 - main - INFO - Market is open. Proceed with the trade.
+2024-12-13 09:47:58 - main - INFO - Fetched API credentials for Alice Blue: SKEY=wwhFSWodPXI0yJXnXcYBZnfFLqJM0YQm6t9mvn5WmtQrkcvXFcZRpq8tK3BKueJQDI4vSOHVYUzi2kLiKdWCnsO0SyfsSMsGFL3US3fikNU8cFGVXVXH8682zjvK7qLulP, UID=85795822
+2024-12-13 09:47:58 - main - INFO - !!!!Placing order for user: sumit@yopmail.com Brocker is: Alice Blue & trading symbol is: BANKNIFTY
+2024-12-13 09:47:58 - main.Alice_Blue_Api - ERROR - Unauthorized access for user sumit@yopmail.com. Reason: API key not available. Please generate API key
+2024-12-13 09:47:58 - main - INFO - Trade expiry date: 29-01-2025
+2024-12-13 09:47:58 - main - INFO - Trade product type: NRML received type: NRML
+2024-12-13 09:47:58 - main - INFO - Trade transaction type: BUY received transaction type: BUY
+2024-12-13 09:47:58 - main - INFO - Trade symbol: BANKNIFTY received symbol: BANKNIFTY
+2024-12-13 09:47:58 - main - INFO - Placing order for user algoclient@yopmail.com. Trade count: 0/5.00
+2024-12-13 09:47:58 - main.Alice_Blue_Api - INFO - Current date and time: 2024-12-13 15:17:58.312736+05:30
+2024-12-13 09:47:58 - main.Alice_Blue_Api - INFO - Market open time: 09:15:00, Market close time: 15:30:00
+2024-12-13 09:47:58 - main.Alice_Blue_Api - INFO - Today is: Friday
+2024-12-13 09:47:58 - main.Alice_Blue_Api - INFO - Market is open.
+2024-12-13 09:47:58 - main - INFO - Market is open. Proceed with the trade.
+2024-12-13 09:47:58 - main - INFO - Fetched API credentials for Alice Blue: SKEY=hFSWodPXI0yJXnXcYBZnfFLqJM0YQm6t9mvn5WmtQrkcvXFcZRpq8tK3BKueJQDI4vSOHVYUzi2kLiKdWCnsO0SyfsSMsGFL3US3fikNU8cFGVXVXH8682zjvK7qLulP, UID=857958
+2024-12-13 09:47:58 - main - INFO - !!!!Placing order for user: algoclient@yopmail.com Brocker is: Alice Blue & trading symbol is: BANKNIFTY
+2024-12-13 09:47:59 - main.Alice_Blue_Api - INFO - Placing order with parameters:
+2024-12-13 09:47:59 - main.Alice_Blue_Api - INFO - order payload for alice blue...
+2024-12-13 09:47:59 - main.Alice_Blue_Api - INFO - Transaction: TransactionType.Buy, Instrument: BANKNIFTY, Quantity: 1, Order Type: MARKET, Product Type: ProductType.Normal, Price: 160.0, Trigger Price: 10.0
+2024-12-13 09:47:59 - main.Alice_Blue_Api - INFO - history of alice blue order_____________{'Prc': '0.00', 'RequestID': '1', 'Cancelqty': 0, 'discQtyPerc': 'NA', 'customText': 'NA', 'Mktpro': 'NA', 'defmktproval': '', 'optionType': 'CE', 'usecs': 'NA', 'mpro': '', 'Qty': 1, 'ordergenerationtype': '--', 'Unfilledsize': 0, 'orderAuthStatus': '', 'Usercomments': 'NA', 'ticksize': '0.05', 'Prctype': 'MKT', 'Status': 'rejected', 'Minqty': 0, 'orderCriteria': 'NA', 'Exseg': 'nse_fo', 'Sym': 'BANKNIFTY', 'multiplier': '1', 'ExchOrdID': None, 'ExchConfrmtime': '--', 'Pcode': 'NRML', 'SyomOrderId': '', 'Dscqty': 0, 'Exchange': 'NFO', 'Ordvaldate': 'NA', 'accountId': '857958', 'exchangeuserinfo': 'NA', 'Avgprc': '0.00', 'Trgprc': '00.00', 'Trantype': 'B', 'bqty': '1', 'Trsym': 'BANKNIFTY29JAN25C53400', 'Fillshares': 0, 'AlgoCategory': 'NA', 'sipindicator': 'NA', 'strikePrice': '53400', 'reporttype': 'NA', 'AlgoID': 'NA', 'noMktPro': '', 'BrokerClient': '--', 'OrderUserMessage': '--', 'decprec': 'NA', 'ExpDate': '29 Jan, 2025', 'COPercentage': 0.0, 'marketprotectionpercentage': '--', 'Nstordno': '24121300250157', 'ExpSsbDate': 'NA', 'OrderedTime': '13/12/2024 15:17:59', 'RejReason': 'ORA: NFO Exchange info NA is invalid for the user 857958', 'modifiedBy': '--', 'Scripname': 'BANKNIFTY29JAN25C53400', 'stat': 'Ok', 'orderentrytime': 'Dec 13 2024 15:17:59', 'PriceDenomenator': '1', 'panNo': 'NA', 'RefLmtPrice': 0.0, 'PriceNumerator': '1', 'token': '39621', 'ordersource': 'NA', 'Validity': 'DAY', 'GeneralDenomenator': '1', 'series': '', 'InstName': 'OPTIDX', 'GeneralNumerator': '1', 'user': '857958', 'remarks': '--', 'iSinceBOE': 0}
+2024-12-13 09:47:59 - main.Alice_Blue_Api - INFO - status......rejected
+2024-12-13 09:47:59 - main.Alice_Blue_Api - INFO - Order is rejected  for user algoclient@yopmail.com. Response :{'data': {'status': 'rejected'}}
+2024-12-13 09:47:59 - main.Alice_Blue_Api - INFO - Order history saved successfully for Order ID: 24121300250157
+2024-12-13 09:47:59 - main - ERROR - Order is rejected for BANKNIFTY with broker Alice Blue
+2024-12-13 09:47:59 - django.server - INFO - "POST /v1/algo/webhook/ HTTP/1.1" 200 67
+2024-12-13 09:49:39 - django.server - INFO - "GET /admin/main/clienttradesetting/20/change/ HTTP/1.1" 200 31668
+2024-12-13 09:49:39 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-13 09:49:42 - django.server - INFO - "POST /admin/main/clienttradesetting/20/change/ HTTP/1.1" 302 0
+2024-12-13 09:49:42 - django.server - INFO - "GET /admin/main/clienttradesetting/ HTTP/1.1" 200 20488
+2024-12-13 09:49:42 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-13 09:49:50 - django.server - INFO - "GET /admin/main/ HTTP/1.1" 200 14567
+2024-12-13 09:49:52 - django.server - INFO - "GET /admin/main/clientbrokerdetails/ HTTP/1.1" 200 19311
+2024-12-13 09:49:52 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-13 09:49:56 - django.server - INFO - "GET /admin/main/clientbrokerdetails/3/change/ HTTP/1.1" 200 25303
+2024-12-13 09:49:56 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-13 09:50:00 - django.server - INFO - "POST /admin/main/clientbrokerdetails/3/change/ HTTP/1.1" 302 0
+2024-12-13 09:50:00 - django.server - INFO - "GET /admin/main/clientbrokerdetails/ HTTP/1.1" 200 19682
+2024-12-13 09:50:01 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-13 09:50:03 - django.server - INFO - "GET /admin/main/clientbrokerdetails/2/change/ HTTP/1.1" 200 24870
+2024-12-13 09:50:03 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-13 09:50:06 - django.server - INFO - "POST /admin/main/clientbrokerdetails/2/change/ HTTP/1.1" 302 0
+2024-12-13 09:50:06 - django.server - INFO - "GET /admin/main/clientbrokerdetails/ HTTP/1.1" 200 19561
+2024-12-13 09:50:06 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-13 09:50:08 - django.server - INFO - "GET /admin/main/clientbrokerdetails/1/change/ HTTP/1.1" 200 25313
+2024-12-13 09:50:08 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343
+2024-12-13 09:50:15 - django.server - INFO - "POST /admin/main/clientbrokerdetails/1/change/ HTTP/1.1" 302 0
+2024-12-13 09:50:15 - django.server - INFO - "GET /admin/main/clientbrokerdetails/ HTTP/1.1" 200 19682
+2024-12-13 09:50:15 - django.server - INFO - "GET /admin/jsi18n/ HTTP/1.1" 200 3343

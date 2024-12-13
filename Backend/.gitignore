@@ -13,9 +13,10 @@ main/__pycache__
  Backend/algoview/__pycache__/
 Backend/algoview/__pycache__/
 /localenv
-/logs/webhooks.log
-# Backend/logs/webhooks.log
- logs/webhooks.log
+/logs/
+
+Backend/logs/
+#  logs/webhooks.log
  Backend/media/strategy/
   Backend/media/kyc_documents/
   Backend/media/profile_pictures

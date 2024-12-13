@@ -290,7 +290,9 @@ class PasswordResetRequestView(generics.GenericAPIView):
             # reset_link = request.build_absolute_uri(
             #     f'/password-reset-confirm/?uidb64={uid}&token={token}'
             # )
-            reset_link = f'http://localhost:3000/pages/authentication/reset-password/:{uid}/:{token}/:layout'
+            
+            reset_link = f'http://103.120.178.54:4000/pages/authentication/reset-password/:{uid}/:{token}/:layout'
+            # reset_link = f'http://localhost:3000/pages/authentication/reset-password/:{uid}/:{token}/:layout'
             subject = "Password Reset Request"
             print("reset_link",reset_link)
             message = (
@@ -2103,14 +2105,14 @@ class PlaceOrderWebhookView(APIView):
     
                     elif trade.broker == "Alice Blue":
                           # Fetch client broker details
-                        # client_broker = ClientBrokerdetails.objects.filter(client=trade.client, broker_name__broker_name=trade.broker).first()
-                        # if not client_broker:
-                        #     logger.error(f"No broker details found for client {trade.client} and broker {trade.broker}")
-                        #     continue
+                        client_broker = ClientBrokerdetails.objects.filter(client=trade.client, broker_name__broker_name=trade.broker).first()
+                        if not client_broker:
+                            logger.error(f"No broker details found for client {trade.client} and broker {trade.broker}")
+                            continue
 
-                        # api_skey = client_broker.broker_API_SKEY
-                        # api_uid = client_broker.broker_API_UID
-                        # logger.info(f"Fetched API credentials for {trade.broker}: SKEY={api_skey}, UID={api_uid}")
+                        api_skey = client_broker.broker_API_SKEY
+                        api_uid = client_broker.broker_API_UID
+                        logger.info(f"Fetched API credentials for {trade.broker}: SKEY={api_skey}, UID={api_uid}")
         
                         trading_symbol_aliceblue = f"{symbols}{day}{month}{year}{Type[0]}{default_price}"
                         print("trading_symbol_aliceblue..",trading_symbol_aliceblue)
@@ -2120,13 +2122,13 @@ class PlaceOrderWebhookView(APIView):
                         # instrument=get_instrument(symbol,exch_seg)
                         # trade_symbol=instrument.name
                         # token=instrument.token
-                        order_response=place_alice_orders(trading_symbol_aliceblue,transaction_type, symbol, quantity,strategy,ordertype,
-                                                        product_type, price,user, Lots,triggerPrice)
-                        # order_response=place_alice_orders(api_skey,api_uid,trading_symbol_aliceblue,transaction_type, symbol, quantity,strategy,ordertype,
+                        # order_response=place_alice_orders(trading_symbol_aliceblue,transaction_type, symbol, quantity,strategy,ordertype,
                         #                                 product_type, price,user, Lots,triggerPrice)
+                        order_response=place_alice_orders(api_skey,api_uid,trading_symbol_aliceblue,transaction_type, symbol, quantity,strategy,ordertype,
+                                                        product_type, price,user, Lots,triggerPrice)
                 
                     # Check order response and log or handle failures
-                    # print("order repsone>>>>>>>",order_response)
+                    print("order repsone>>>>>>>",order_response)
                     if order_response['data']['status'] =="complete":
                         order_status=f"Order placed successfully for {trade.symbol} with broker {trade.broker}"
                         TradingLog.objects.create(client=user, date=today, symbol=trade.symbol, strategy=strategy,)

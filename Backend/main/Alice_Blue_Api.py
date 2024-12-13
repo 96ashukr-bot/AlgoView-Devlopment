@@ -19,7 +19,7 @@ import logging
 logger = logging.getLogger('main')
 from pya3 import Aliceblue, TransactionType, OrderType, ProductType
 # from pya3.enums import TransactionType  # Adjust import based on your library
-def place_alice_orders(trading_symbol_aliceblue,transaction_type, symbol, quantity, strategy, order_type, product_type, price, user,Lots, trigger_price=None):
+def place_alice_orders(api_skey,api_uid,trading_symbol_aliceblue,transaction_type, symbol, quantity, strategy, order_type, product_type, price, user,Lots, trigger_price=None):
     try:
         print(f"Order Type: {order_type}, Price: {price}, Trigger Price: {trigger_price}")
         # # Convert price and trigger price to float if provided
@@ -50,11 +50,17 @@ def place_alice_orders(trading_symbol_aliceblue,transaction_type, symbol, quanti
         else:
             product_type=None
         # Initialize Aliceblue API
-        alice = Aliceblue(user_id=USER_ID, api_key=ALICE_API_KEY)
-        # alice = Aliceblue(user_id=api_uid, api_key=api_skey)  # Example user attributes
+        # alice = Aliceblue(user_id=USER_ID, api_key=ALICE_API_KEY)
+        alice = Aliceblue(user_id=api_uid, api_key=api_skey)  # Example user attributes
+        # Check session validity
         session_id = alice.get_session_id()
-        # print(f"Aliceblue session established. Session ID: {session_id}")
-
+        if not session_id or not session_id.get('sessionID'):
+            error_message = session_id.get('emsg', 'Invalid credentials or unauthorized access')
+            print(f"Failed to establish Aliceblue session. Reason!!!!!!!!!: {error_message}")
+            response = {"data": {"status": "Unauthorized", "message": error_message}}
+            logger.error(f"Unauthorized access for user {user}. Reason: {error_message}")
+            return response
+        
         # Place the order
         instrument = alice.get_instrument_by_symbol('NFO', trading_symbol_aliceblue)
         if not instrument:
@@ -141,7 +147,18 @@ def place_alice_orders(trading_symbol_aliceblue,transaction_type, symbol, quanti
                 response = {"data": {"status": "rejected"}}
                 logger.info(f"Order is rejected  for user {user}. Response :{response}")
                 save_trade_order_history(user,symbol, order_id, status, res_data, message,order_params, broker="Angle One")
+        # elif response.get("stat") == 'Not_ok':
+        #     print("Not_okNot_okNot_okNot_ok")
+        #     # error_message = response.get("message", "Unknown error")
+        #     response ={"data": {"status": "Failed"}}
+        #     error_message="401 - Unauthorized"
+        #     order_id=None
+        #     status="Failed"
+        #     res_data="login in"
+        #     logger.error(f"Order placement failed for user {user}. Error: {error_message}")
+        #     save_trade_order_history(user,symbol, order_id, status, res_data, message, order_params,broker="Angle One")
         else:
+            print("Not_okNot_okNot_okNot_ok")
             # error_message = response.get("message", "Unknown error")
             response ={"data": {"status": "Failed"}}
             error_message="error when placing order"
@@ -150,12 +167,13 @@ def place_alice_orders(trading_symbol_aliceblue,transaction_type, symbol, quanti
             res_data="Not any reponse failed"
             logger.error(f"Order placement failed for user {user}. Error: {error_message}")
             save_trade_order_history(user,symbol, order_id, status, res_data, message, order_params,broker="Angle One")
-              
+                   
             # save_webhook_signals_logs(transaction_type, symbol, price, strategy, user, "Failed", failure_reason="somthing wrong in order place",json=json)
         # if response.get('stat') == 'Not_Ok':
         #     rejection_reason = response.get('emsg', 'Unknown error')
         #     print(f"Order rejected. Reason: {rejection_reason}")
         #     logger.error(f"Order rejected. Reason: {rejection_reason}")
+        print("response>>>",response)
         return response
 
     except ValueError as val_err:
@@ -220,7 +238,7 @@ def is_market_open():
 
     # Fetch holidays for India for the current year
     market_holidays = holidays.India(years=now.year)
-    print("market_holidays>>",market_holidays)
+    # print("market_holidays>>",market_holidays)
     # Log current state
     logger.info(f"Current date and time: {now}")
     logger.info(f"Market open time: {market_open_time}, Market close time: {market_close_time}")
