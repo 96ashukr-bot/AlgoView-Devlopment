@@ -197,6 +197,13 @@ from datetime import datetime, timedelta
 from rest_framework.views import APIView
 from rest_framework.response import Response
 import pandas as pd
+import os
+import csv
+import requests
+from datetime import datetime, timedelta
+from rest_framework.views import APIView
+from rest_framework.response import Response
+import pandas as pd
 
 class SymbolExpiryDateListView(APIView):
     def get(self, request, *args, **kwargs):
@@ -224,7 +231,13 @@ class SymbolExpiryDateListView(APIView):
         try:
             data = pd.read_csv(csv_file)
             filtered_data = data[data['symbol'].str.contains(symbol, case=False, na=False)]
-            expiry_dates = sorted(set(filtered_data['expiry'].unique()))
+            
+            # Ensure the expiry dates are sorted as datetime objects
+            expiry_dates = sorted(set(filtered_data['expiry'].unique()), key=lambda x: datetime.strptime(x, '%d%b%Y'))
+            
+            # Format expiry dates to the desired format ('%d-%b-%Y')
+            expiry_dates = [datetime.strptime(date, '%d%b%Y').strftime('%d%b%Y') for date in expiry_dates]
+            
             return Response({"symbol": symbol, "expiry_dates": expiry_dates}, status=200)
         except Exception as e:
             return Response({"error": f"Error reading CSV: {str(e)}"}, status=500)
@@ -234,10 +247,10 @@ class SymbolExpiryDateListView(APIView):
             # Fetch data from Angel One Smart API
             url = "https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json"
             headers = {
-                "API_KEY":API_KEY ,
-                "USERNAME": USERNAME,
-                "PASSWORD": PASSWORD,
-                "Totp": Totp
+                "API_KEY": "API_KEY",
+                "USERNAME": "USERNAME",
+                "PASSWORD": "PASSWORD",
+                "Totp": "Totp"
             }
             
             response = requests.get(url, headers=headers)
@@ -262,25 +275,24 @@ class SymbolExpiryDateListView(APIView):
                             try:
                                 # Parse the expiry date using the correct format
                                 parsed_date = datetime.strptime(expiry, '%d%b%Y')
-                                expiry_dates.append(parsed_date.strftime('%d-%b-%Y'))  # Format to a readable format
+                                expiry_dates.append(parsed_date.strftime('%d%b%Y'))  # Format to a readable format
                             except ValueError:
                                 continue  # Skip invalid date formats
                         writer.writerow([entry.get('token', ''), entry.get('symbol', ''),
                                          entry.get('name', ''), entry.get('exch_seg', ''),
                                          expiry, entry.get('instrumenttype', '')])
 
-            # Process and sort expiry dates
-            unique_expiry_dates = sorted(set(expiry_dates), key=lambda x: datetime.strptime(x, '%d-%b-%Y'))
 
+            # Process and sort expiry dates
+            unique_expiry_dates = sorted(set(expiry_dates), key=lambda x: datetime.strptime(x, '%d%b%Y'))
+           
             # Return expiry dates for the requested symbol
             filtered_expiry_dates = [expiry for expiry in unique_expiry_dates if symbol.lower() in expiry.lower()]
-
+            
             return Response({"symbol": symbol, "expiry_dates": filtered_expiry_dates}, status=200)
 
         except Exception as e:
             return Response({"error": str(e)}, status=500)
-
-
 
 
 
