@@ -16,7 +16,7 @@ Backend/algoview/__pycache__/
 /logs/
 
 Backend/logs/
-#  logs/webhooks.log
+ logs/webhooks.log
  Backend/media/strategy/
   Backend/media/kyc_documents/
   Backend/media/profile_pictures

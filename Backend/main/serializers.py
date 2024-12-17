@@ -1069,6 +1069,16 @@ class ClientTradeSettingSerializer(serializers.ModelSerializer):
 class GetclientTradedataSettingSerializer(serializers.ModelSerializer):
     segment = SegmentSerializer()  # Use the SegmentSerializer to include all segment details
     sub_segment = SubSegmentSerializer() 
+        # Override the representation of expiry_date
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        
+        # Convert expiry_date to "DDMMMYYYY" format if it exists
+        if instance.expiry_date:
+            representation['expiry_date'] = instance.expiry_date.strftime('%d%b%Y')  # Format date
+            representation['expiry_date'] = representation['expiry_date'][:2] + representation['expiry_date'][2:].capitalize()  # Capitalize the month correctly
+        
+        return representation
     class Meta:
         model = ClientTradeSetting
         fields = ['id', 'client', 'segment', 'sub_segment', 'symbol', 
