@@ -190,20 +190,7 @@ import requests
 from datetime import datetime, timedelta
 from rest_framework.views import APIView
 from rest_framework.response import Response
-import os
-import csv
-import requests
-from datetime import datetime, timedelta
-from rest_framework.views import APIView
-from rest_framework.response import Response
-import pandas as pd
-import os
-import csv
-import requests
-from datetime import datetime, timedelta
-from rest_framework.views import APIView
-from rest_framework.response import Response
-import pandas as pd
+
 
 class SymbolExpiryDateListView(APIView):
     def get(self, request, *args, **kwargs):
