@@ -13,8 +13,15 @@ from decouple import config
 import pytz
 from main.models import *
 from main.tasks import send_trade_email_async
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+import pandas as pd
+
 USER_ID=config('USER_ID')
 ALICE_API_KEY=config('ALICE_API_KEY')
+
 import logging
 logger = logging.getLogger('main')
 from pya3 import Aliceblue, TransactionType, OrderType, ProductType
@@ -258,46 +265,68 @@ def is_market_open():
     logger.info("Market is closed.")
     return False
 
+import time
 
+class SymbolExpirDateListView(APIView):
+    # Uncomment this if authentication is required
+    # permission_classes = [IsAuthenticated]
 
+    def get(self, request, *args, **kwargs):
+        start_time = time.time()
+        symbol = request.query_params.get('symbol', None)
 
-# def is_market_open():
-#     print("checking market status............")
-#     """
-#     Function to check if the market is currently open.
-#     Returns True if open, False otherwise.
-#     """
-#     # Define market hours (e.g., 9:15 AM to 3:30 PM for Indian stock markets)
-#     market_open_time = datetime.strptime("09:15", "%H:%M").time()
-#     market_close_time = datetime.strptime("15:30", "%H:%M").time()
+        if not symbol:
+            return Response({"error": "Symbol parameter is required"}, status=400)
 
-#     # Get the current time in the market's timezone (e.g., Asia/Kolkata)
-#     market_timezone = pytz.timezone("Asia/Kolkata")
-#     now = datetime.now(market_timezone)
-#     current_time = now.time()
-#     current_day = now.weekday()  # Monday = 0, Sunday = 6
+        try:
+            # Define the CSV file path
+            csv_file_path = "NFO.csv"
 
-#     # Define market holidays
-#     market_holidays = [
-#         "2024-12-25",  # Christmas
-#         "2025-01-01",  # New Year's Day
-#     ]
+            # Check if the file exists and is up-to-date
+            if os.path.exists(csv_file_path):
+                # Get the file's last modified time
+                file_modified_time = datetime.fromtimestamp(os.path.getmtime(csv_file_path))
+                # Check if the file is older than a month
+                if datetime.now() - file_modified_time > timedelta(days=30):
+                    print("File is outdated. Downloading fresh NFO.csv...")
+                    self.download_nfo_csv(csv_file_path)
+                else:
+                    print("Using existing NFO.csv...")
+            else:
+                print("File not found. Downloading fresh NFO.csv...")
+                self.download_nfo_csv(csv_file_path)
 
-#     # Log current state
-#     logger.info(f"Current date and time: {now}")
-#     logger.info(f"Market open time: {market_open_time}, Market close time: {market_close_time}")
-#     logger.info(f"Today is: {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][current_day]}")
+            # Load the CSV file
+            data = pd.read_csv(csv_file_path)
 
-#     # Check if the market is closed for a holiday
-#     if now.strftime("%Y-%m-%d") in market_holidays:
-#         logger.info("Market is closed due to a holiday.")
-#         return False
+            # Filter rows based on the provided symbol
+            filtered_data = data[data['Symbol'].str.contains(symbol, case=False, na=False)]
 
-#     # Check if today is a weekday and time is within market hours
-#     if current_day >= 0 and current_day <= 4:  # Monday to Friday
-#         if market_open_time <= current_time <= market_close_time:
-#             logger.info("Market is open.")
-#             return True
+            # Extract unique expiry dates
+            unique_expiry_dates = filtered_data['Expiry Date'].unique()
+            unique_expiry_dates = filtered_data['Expiry Date'].unique()
+            # Sort the expiry dates
+            unique_expiry_dates_sorted = sorted(unique_expiry_dates)
 
-#     logger.info("Market is closed.")
-#     return False
+            end_time = time.time()
+            total_time = end_time - start_time
+            print("total_time>>>", total_time)
+
+            # Return the sorted expiry dates as a response
+            return Response({"expiry_dates": unique_expiry_dates_sorted}, status=200)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
+
+    def download_nfo_csv(self, csv_file_path):
+        """
+        Downloads the NFO contract master data and saves it as a CSV file.
+        """
+        alice = Aliceblue(user_id=USER_ID, api_key=ALICE_API_KEY)
+        alice.get_session_id()  # Authenticate the session
+        nfo_data = alice.get_contract_master("NFO")
+        
+        # Save the data to a CSV file
+        # with open(csv_file_path, "w") as file:
+        #     file.write(nfo_data)
+        print(f"Downloaded fresh NFO.csv to {nfo_data}")

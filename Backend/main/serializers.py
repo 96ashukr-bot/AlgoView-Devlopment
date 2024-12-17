@@ -1056,6 +1056,19 @@ class SubSegmentSerializer(serializers.ModelSerializer):
 
 
 class ClientTradeSettingSerializer(serializers.ModelSerializer):
+
+    segment = serializers.PrimaryKeyRelatedField(queryset=Segment.objects.all())
+    sub_segment = serializers.PrimaryKeyRelatedField(queryset=SubSegment.objects.all())
+
+    class Meta:
+        model = ClientTradeSetting
+        fields = ['id', 'client', 'segment', 'sub_segment', 'symbol', 
+                  'strategy', 'broker', 'product_type', 'buy_sell', 'quantity', 
+                  'trade_limit', 'max_loss_for_day', 'min_loss_for_day', 
+                  'max_profit_for_day', 'min_profit_for_day', 'expiry_date', 'is_tread_status']
+class GetclientTradedataSettingSerializer(serializers.ModelSerializer):
+    segment = SegmentSerializer()  # Use the SegmentSerializer to include all segment details
+    sub_segment = SubSegmentSerializer() 
     class Meta:
         model = ClientTradeSetting
         fields = ['id', 'client', 'segment', 'sub_segment', 'symbol', 

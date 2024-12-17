@@ -4,10 +4,11 @@ from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
+from main.Alice_Blue_Api import SymbolExpirDateListView
+from main.angleapi import SymbolExpiryDateListView
 from main.permissions import RolePermissionListView, UpdateRolePermissionsView
 from .views import *
 from django.conf.urls.static import static
-
 from main import views
 urlpatterns = [
     path('signup/', UserRegistrationView.as_view(), name='user-registration'),
@@ -116,6 +117,8 @@ urlpatterns = [
     path("enable-disable-broker/", EnableDisableBrokerView.as_view(), name='update-status-broker'),
     path("get-client-api-status/", EnableDisableBrokerView.as_view(), name='get-status-broker'),
     path('get-sub-segments-by-segment/', SubSegmentsListView.as_view(), name='sub-segments-list'),
+    # path('get-expiry-date-list/', SymbolExpirDateListView.as_view(), name='expiry-date-list'),
+    path('get-expiry-date-list/', SymbolExpiryDateListView.as_view(), name='download-nfo-csv'),
 ]
 
 

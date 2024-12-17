@@ -1517,12 +1517,10 @@ class UpdateClientTradeSettingAPIView(UpdateAPIView):
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-from rest_framework import generics
-from rest_framework.response import Response
-from rest_framework import status
+
 
 class GetTradeSettingAPIView(generics.ListAPIView):
-    serializer_class = ClientTradeSettingSerializer
+    serializer_class = GetclientTradedataSettingSerializer#ClientTradeSettingSerializer
     permission_classes = [IsAuthenticated]
     def get_queryset(self):
         """
@@ -2409,3 +2407,4 @@ class SubSegmentsListView(APIView):
                 {"detail": f"An error occurred: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+ 

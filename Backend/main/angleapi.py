@@ -183,3 +183,105 @@ def get_token_details(trading_symbol):
     except requests.exceptions.RequestException as e:
         return f"An error occurred while fetching data: {str(e)}"
 
+import os
+import time
+import csv
+import requests
+from datetime import datetime, timedelta
+from rest_framework.views import APIView
+from rest_framework.response import Response
+import os
+import csv
+import requests
+from datetime import datetime, timedelta
+from rest_framework.views import APIView
+from rest_framework.response import Response
+import pandas as pd
+
+class SymbolExpiryDateListView(APIView):
+    def get(self, request, *args, **kwargs):
+        # Extract symbol from query parameters
+        symbol = request.query_params.get('symbol', None)
+        if not symbol:
+            return Response({"error": "Symbol parameter is required"}, status=400)
+
+        # Path to the CSV file where all symbols' data is stored
+        csv_file = "ANGLE_NFO.csv"
+        
+        # Check if the CSV file exists and if it's updated within the last month
+        if os.path.exists(csv_file):
+            file_mod_time = os.path.getmtime(csv_file)
+            file_mod_date = datetime.fromtimestamp(file_mod_time)
+            if file_mod_date > datetime.now() - timedelta(days=30):
+                # The file was updated within the last 30 days, use the cached file
+                return self.get_expiry_dates_from_csv(csv_file, symbol)
+        
+        # If the file is outdated or doesn't exist, fetch fresh data
+        return self.update_csv_and_get_expiry_dates(symbol, csv_file)
+
+    def get_expiry_dates_from_csv(self, csv_file, symbol):
+        # Read expiry dates from the existing CSV file
+        try:
+            data = pd.read_csv(csv_file)
+            filtered_data = data[data['symbol'].str.contains(symbol, case=False, na=False)]
+            expiry_dates = sorted(set(filtered_data['expiry'].unique()))
+            return Response({"symbol": symbol, "expiry_dates": expiry_dates}, status=200)
+        except Exception as e:
+            return Response({"error": f"Error reading CSV: {str(e)}"}, status=500)
+
+    def update_csv_and_get_expiry_dates(self, symbol, csv_file):
+        try:
+            # Fetch data from Angel One Smart API
+            url = "https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json"
+            headers = {
+                "API_KEY":API_KEY ,
+                "USERNAME": USERNAME,
+                "PASSWORD": PASSWORD,
+                "Totp": Totp
+            }
+            
+            response = requests.get(url, headers=headers)
+            if response.status_code != 200:
+                return Response({"error": "Failed to retrieve data from Angel One API"}, status=response.status_code)
+
+            # Parse response data
+            data = response.json()
+            if not data:
+                return Response({"error": "No data received from API"}, status=404)
+
+            # Filter and write to the CSV file
+            expiry_dates = []
+            with open(csv_file, mode='w', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow(['token', 'symbol', 'name', 'exch_seg', 'expiry', 'instrumenttype'])
+
+                for entry in data:
+                    if entry.get('exch_seg') == 'NFO':  # Filter only NFO segments
+                        expiry = entry.get('expiry', '')
+                        if expiry:
+                            try:
+                                # Parse the expiry date using the correct format
+                                parsed_date = datetime.strptime(expiry, '%d%b%Y')
+                                expiry_dates.append(parsed_date.strftime('%d-%b-%Y'))  # Format to a readable format
+                            except ValueError:
+                                continue  # Skip invalid date formats
+                        writer.writerow([entry.get('token', ''), entry.get('symbol', ''),
+                                         entry.get('name', ''), entry.get('exch_seg', ''),
+                                         expiry, entry.get('instrumenttype', '')])
+
+            # Process and sort expiry dates
+            unique_expiry_dates = sorted(set(expiry_dates), key=lambda x: datetime.strptime(x, '%d-%b-%Y'))
+
+            # Return expiry dates for the requested symbol
+            filtered_expiry_dates = [expiry for expiry in unique_expiry_dates if symbol.lower() in expiry.lower()]
+
+            return Response({"symbol": symbol, "expiry_dates": filtered_expiry_dates}, status=200)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
+
+
+
+
+
+

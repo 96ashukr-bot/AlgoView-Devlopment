@@ -3,6 +3,8 @@ import json
 import logging
 # from logzero import logger
 import logging
+
+import requests
 logger = logging.getLogger('main')
 from channels.generic.websocket import AsyncWebsocketConsumer
 from SmartApi.smartWebSocketV2 import SmartWebSocketV2
@@ -174,89 +176,138 @@ class StockTradingConsumer(AsyncWebsocketConsumer):
         logger.info("WebSocket connection closed.")
         self.sws.close_connection()
 
+from urllib.parse import parse_qs  # For parsing the query string
 
-
-class OptionChainConsumer(AsyncWebsocketConsumer):
+class StockChainConsumer(AsyncWebsocketConsumer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.last_prices = {}  # Dictionary to store last known prices for tokens
+        self.token_to_symbol = {}  # Dictionary to store token to symbol mapping
+        self.token_to_strike_price = {}
+        self.symbol_name = None  # Variable to store the symbol name from query params
 
     async def connect(self):
-        # Extract query parameters from the WebSocket connection URL
-        query_params = parse_qs(self.scope['query_string'].decode())
+        # Parse query string to get the 'name' parameter
+        query_params = parse_qs(self.scope['query_string'].decode('utf-8'))
+        self.symbol_name = query_params.get('name', [None])[0]  # Extract the 'name' parameter
         
-        # Extract 'symbol' parameter, defaulting to 'NIFTY' if not provided
-        self.symbol = query_params.get("symbol", ["NIFTY"])[0]  # Default symbol is 'NIFTY'
-        
-        # Initialize WebSocket and subscribe to the symbol
+        if not self.symbol_name:
+            # Close the connection if 'name' parameter is missing
+            await self.close(code=4001)
+            return
+
+        logger.info(f"Requested symbol: {self.symbol_name}")
+
+        # Fetch tokens for the requested symbol
+        tokens = await self.get_symbol_tokens(self.symbol_name)
+        if not tokens:
+            # Close the connection if no tokens are found
+            await self.close(code=4002)
+            return
+
+        # Prepare token list for subscription
         self.token_list = [{
-            "exchangeType": 1,  # Assuming exchange type is 1 for NIFTY
-            "tokens": [self.symbol]  # Use the symbol from query parameter
+            "exchangeType": 2,  # NFO exchange type
+            "tokens": tokens  # Tokens for the requested symbol
         }]
-        
-        # Log the symbol (optional for debugging)
-        print(f"Subscribing to symbol: {self.symbol}")
-        
+        logger.info(f"Fetched tokens for {self.symbol_name}: {tokens}")
+
         # Accept the WebSocket connection
         await self.accept()
 
         # Store the current event loop
         self.event_loop = asyncio.get_event_loop()
 
-        # Initialize the SmartWebSocketV2 object and subscribe
+        # Initialize WebSocket and subscribe
         self.sws = SmartWebSocketV2(AUTH_TOKEN, API_KEY, USERNAME, FEED_TOKEN)
         self.sws.on_open = self.on_open
         self.sws.on_data = self.on_data
         self.sws.on_error = self.on_error
         self.sws.on_close = self.on_close
 
-        # Start WebSocket connection in a separate thread
+        # Start the WebSocket connection in a separate thread
         loop = asyncio.get_event_loop()
         loop.run_in_executor(None, self.sws.connect)
 
+    async def get_symbol_tokens(self, symbol_name):
+        """Fetch and filter tokens for the requested symbol from the Master API."""
+        try:
+            url = "https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json"
+            response = requests.get(url)
+            data = response.json()
+
+            # Filter tokens for the requested symbol
+            token_to_symbol = {}
+            token_to_strike_price = {}
+
+            for entry in data:
+                if entry.get('exch_seg') == 'NFO' and entry.get('name') == symbol_name.upper():
+                    token = entry['token']
+                    symbol = entry['symbol']
+                    strike_price = entry['strike']
+
+                    token_to_symbol[token] = symbol
+                    token_to_strike_price[token] = strike_price
+
+            # Store the dictionaries in instance variables
+            self.token_to_symbol = token_to_symbol
+            self.token_to_strike_price = token_to_strike_price
+
+            logger.info(f"Token to Symbol Mapping: {self.token_to_symbol}")
+            logger.info(f"Token to Strike Price Mapping: {self.token_to_strike_price}")
+
+            return list(token_to_symbol.keys())  # Return just the tokens for subscription
+        except Exception as e:
+            logger.error(f"Error fetching tokens for symbol {symbol_name}: {e}")
+            return []
+
     def on_open(self, wsapp):
         logger.info("WebSocket connection established.")
+        # Subscribe to tokens for the requested symbol
         self.sws.subscribe(correlation_id, mode, self.token_list)
 
     def on_data(self, wsapp, message, *args):
+        """Process incoming data and filter by token."""
         try:
             tick_data = message
-            print("tick_data >>>>>>>>>>>>>", tick_data)
+            # print("data of option chain----", tick_data)  # Log the tick data to inspect its structure
 
-            current_price = tick_data.get('last_traded_price')
-            close_price = tick_data.get('closed_price')
+            if 'subscription_mode' in tick_data:
+                current_price = tick_data['last_traded_price'] / 100.0
+                token = tick_data.get("token")
+                volume = tick_data.get("volume_trade_for_the_day")
+                closeprice = tick_data.get("closed_price") / 100.0
+                point = closeprice - current_price
+                price_trend = "+" if current_price > closeprice else "-"
+                self.last_prices[token] = current_price  # Update last known price
 
-            if current_price is None or close_price is None:
-                logger.error(f"Missing critical data: {tick_data}")
-                return
+                # Retrieve symbol and strike price using token mappings
+                symbol = self.token_to_symbol.get(token, "Unknown Symbol")
+                strike_price = self.token_to_strike_price.get(token, "Unknown Strike Price")
 
-            # Process price data
-            current_price = current_price / 100.0
-            close_price = close_price / 100.0
-            difference = current_price - close_price
-            percentage = (difference / close_price) * 100
-            trend_symbol = "+" if difference > 0 else "-"
+                # Determine option category (CE or PE)
+                category = "CE" if "CE" in symbol else "PE" if "PE" in symbol else "Unknown"
 
-            formatted_price = f"{current_price:,.2f}"
-            formatted_difference = f"{trend_symbol}{abs(difference):,.2f}"
-            formatted_percentage = f"({trend_symbol}{abs(percentage):.2f}%)"
+                # Send data to the WebSocket client
+                asyncio.run_coroutine_threadsafe(
+                    self.send(text_data=json.dumps({
+                        "token": token,
+                        "Ltp": f"{current_price:.4f}",
+                        "_": price_trend,
+                        "close": closeprice,
+                        "strike_price": strike_price,
+                        "volume": volume,
+                        "symbol": symbol,
+                        "category": category,
+                        "points": point,
+                        "tick_data":tick_data
+                    })),
+                    self.event_loop
+                )
 
-            token = tick_data.get("token", "unknown")
-            self.last_prices[token] = current_price
-
-            # Send the data to the WebSocket client
-            asyncio.run_coroutine_threadsafe(
-                self.send(text_data=json.dumps({
-                    "token": token,
-                    "price": formatted_price,
-                    "trend": trend_symbol,
-                    "difference": formatted_difference,
-                    "percentage": formatted_percentage,
-                    "close": close_price,
-                })),
-                self.event_loop
-            )
-            logger.info(f"Token {token}: {formatted_price} {formatted_difference} {formatted_percentage} sent to client.")
+                logger.info(
+                    f"Token {token}: Price {current_price:.4f} ({price_trend}), Symbol: {symbol}, Volume: {volume}, Strike Price: {strike_price}"
+                )
         except Exception as e:
             logger.error(f"Error processing data: {e}")
 
@@ -269,3 +320,148 @@ class OptionChainConsumer(AsyncWebsocketConsumer):
     async def disconnect(self, close_code):
         logger.info("WebSocket connection closed.")
         self.sws.close_connection()
+
+
+
+
+
+class StockChainConsumerqqq(AsyncWebsocketConsumer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.last_prices = {}  # Dictionary to store last known prices for tokens
+        self.token_to_symbol = {}  # Dictionary to store token to symbol mapping
+        self.token_to_strike_price = {}
+    async def connect(self):
+        banknifty_tokens = await self.get_banknifty_tokens( )
+    
+        self.token_list = [{
+            "exchangeType": 2,  # NFO exchange type
+            "tokens": banknifty_tokens  # All BankNifty tokens
+        }]
+        logger.info(f"Fetched BankNifty tokens: {banknifty_tokens}")
+
+        # Accept the WebSocket connection
+        await self.accept()
+
+        # Store the current event loop
+        self.event_loop = asyncio.get_event_loop()
+
+        # Initialize WebSocket and subscribe
+        self.sws = SmartWebSocketV2(AUTH_TOKEN, API_KEY, USERNAME, FEED_TOKEN)
+        self.sws.on_open = self.on_open
+        self.sws.on_data = self.on_data
+        self.sws.on_error = self.on_error
+        self.sws.on_close = self.on_close
+
+        # Start the WebSocket connection in a separate thread
+        loop = asyncio.get_event_loop()
+        loop.run_in_executor(None, self.sws.connect)
+
+    async def get_banknifty_tokens(self):
+        """Fetch and filter BankNifty tokens from the Master API."""
+        try:
+            url = "https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json"
+            response = requests.get(url)
+            data = response.json()
+
+            # Create dictionaries that map token to symbol and token to strike price
+            token_to_symbol = {}
+            token_to_strike_price = {}
+            
+            for entry in data:
+                print("entry.get('name')>>>",entry.get('name'))
+                if entry.get('exch_seg') == 'NFO' and entry.get('name') == 'BANKNIFTY':
+                    token = entry['token']
+                    symbol = entry['symbol']
+                    strike_price = entry['strike']
+
+                    token_to_symbol[token] = symbol
+                    token_to_strike_price[token] = strike_price  # Store the strike price
+
+            # Store the dictionaries in instance variables
+            self.token_to_symbol = token_to_symbol
+            self.token_to_strike_price = token_to_strike_price
+
+            # print(self.token_to_symbol)  # You can log or print this for verification
+            # print(self.token_to_strike_price)  # Log strike prices
+            return list(token_to_symbol.keys())  # Return just the tokens for subscription
+        except Exception as e:
+            logger.error(f"Error fetching BankNifty tokens: {e}")
+            return []
+    def on_open(self, wsapp):
+        logger.info("WebSocket connection established.")
+        # Subscribe to all BankNifty tokens
+        self.sws.subscribe(correlation_id, mode, self.token_list)
+
+    def on_data(self, wsapp, message, *args):
+        """Called when data is received from the external WebSocket."""
+        try:
+            tick_data = message
+            # print("data of option chain----",tick_data)  # Log the tick data to inspect its structure
+
+            if 'subscription_mode' in tick_data:
+                current_price = tick_data['last_traded_price'] / 100.0
+                token = tick_data.get("token")
+                volume=tick_data.get("volume_trade_for_the_day")
+                exchange_type = tick_data.get("exchange_type")
+                subscription_mode = tick_data.get("subscription_mode")
+                closeprice = tick_data.get("closed_price") / 100.0
+                point=closeprice-current_price
+                last_price = self.last_prices.get(token, None)
+                price_trend = "+" if current_price > closeprice else "-"
+                self.last_prices[token] = current_price  # Update last known price
+
+                # Retrieve symbol using token-to-symbol mapping
+                symbol = self.token_to_symbol.get(token, "Unknown Symbol") 
+                strike_price = self.token_to_strike_price.get(token, "Unknown Strike Price")
+                if "CE" in symbol:
+                    category = "CE"
+                elif "PE" in symbol:
+                    category = "PE"
+                else:
+                    category = "Unknown"
+                # Schedule the coroutine to send data to the WebSocket client
+                asyncio.run_coroutine_threadsafe(
+                    self.send(text_data=json.dumps({
+                        "token": token,
+                        "Ltp": f"{current_price:.4f}",
+                        "_": price_trend,
+                        "close": closeprice,
+                        "strike_price": strike_price,
+                        "volume":volume,
+                        "symbol": symbol,  # Add symbol here
+                        "category":category,
+                        "points":tick_data
+                    })),
+                    self.event_loop  # Use the stored event loop
+                )
+ # Add a delay of 10 seconds before processing the next data
+                asyncio.run_coroutine_threadsafe(asyncio.sleep(10), self.event_loop)
+
+                # logger.info(f"Token {token}: Price {current_price:.4f} ({price_trend}), Symbol: {symbol},volume:{volume},  Strike Price: {strike_price} ")
+        except Exception as e:
+            logger.error(f"Error processing data: {e}")
+
+    def on_error(self, wsapp, error, *args):
+        logger.error(f"WebSocket error: {error}")
+
+    def on_close(self, wsapp, close_status_code, close_msg, *args):
+        logger.info(f"WebSocket connection closed. Status code: {close_status_code}, Message: {close_msg}")
+
+    async def disconnect(self, close_code):
+        logger.info("WebSocket connection closed.")
+        self.sws.close_connection()         
+        
+        
+        
+        
+        
+# {'subscription_mode': 3, 'exchange_type': 2, 'token': '43288', 'sequence_number': 28302387, 'exchange_timestamp': 1734332370000, 'last_traded_price': 368000, 'subscription_mode_val': 'SNAP_QUOTE', 'last_traded_quantity': 30, 'average_traded_price': 369365, 'volume_trade_for_the_day': 300, 'total_buy_quantity': 2370.0, 'total_sell_quantity': 5100.0, 'open_price_of_the_day': 362655, 'high_price_of_the_day': 382375, 'low_price_of_the_day': 362655, 'closed_price': 362375, 'last_traded_timestamp': 1734326982, 'open_interest': 1800, 
+ 
+#  'open_interest_change_percentage': -4613310267473324804, 'upper_circuit_limit': 494065, 'lower_circuit_limit': 230685, '52_week_high_price': 400500, '52_week_low_price': 0,
+# 'best_5_buy_data':[{'flag': 1, 'quantity': 60, 'price': 361535, 'no of orders': 1}, {'flag': 1, 'quantity': 150, 'price': 361530, 'no of orders': 1}, 
+# {'flag': 1, 'quantity': 240, 'price': 360805, 'no of orders': 1}, 
+#                                                                                                                                                                                                   {'flag': 1, 'quantity': 90, 'price': 360315, 'no of orders': 1},
+#                                                                                                                                                                                                   {'flag': 1, 'quantity': 90, 'price': 356385, 'no of orders': 1}], 'best_5_sell_data': [{'flag': 0, 'quantity': 30, 'price': 368440, 'no of orders': 1}, {'flag': 0, 'quantity': 30, 'price': 368445, 'no of orders': 1}, {'flag': 0, 'quantity': 90, 'price': 370990, 'no of orders': 1}, {'flag': 0, 'quantity': 450, 'price': 372235, 'no of orders': 1}, {'flag': 0, 'quantity': 900, 'price': 372660, 'no of orders': 2}]}
+# 2024-12-16 06:59:40 - main - INFO - WebSocket connection closed.
+# 2024-12-16 06:59:40 - main - INFO - Token 43288: Price 3680.0000 (+), Sym
