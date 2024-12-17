@@ -953,18 +953,18 @@ class ClientListSerializer(serializers.ModelSerializer):
                   'client_key', 'start_date_client','end_date_client','Broker', 'Group_service','license', 'user_license_month','to_month', 'created_by', 'assigned_client',
                   'Strategy','client_status','givenservices_to_month','demate_acc_uid','start_date_client', 'end_date_client','is_enable',
                   ]
-class ClientListdetailsSerializer(serializers.ModelSerializer):
-    assigned_client = AssignedClientSerializer(read_only=True)
-    Strategy = StrategySerializer(many=True, read_only=True) 
-    Group_service = GroupServiceSerializer()  # Make sure to match field names
-    license = LicenseSerializer()
-    Broker = GetBrokerSerializer() 
-    class Meta:
-        model = User
-        fields = ['id','email', 'firstName', 'middleName','fullName', 'lastName', 'client_status','phoneNumber',
-                  'client_key', 'start_date_client','end_date_client','Broker', 'Group_service','license', 'user_license_month','to_month', 'created_by', 'assigned_client',
-                  'Strategy','client_status','givenservices_to_month','demate_acc_uid','start_date_client', 'end_date_client','is_enable',
-                  ]
+# class ClientListdetailsSerializer(serializers.ModelSerializer):
+#     assigned_client = AssignedClientSerializer(read_only=True)
+#     Strategy = StrategySerializer(many=True, read_only=True) 
+#     Group_service = GroupServiceSerializer()  # Make sure to match field names
+#     license = LicenseSerializer()
+#     Broker = GetBrokerSerializer() 
+#     class Meta:
+#         model = User
+#         fields = ['id','email', 'firstName', 'middleName','fullName', 'lastName', 'client_status','phoneNumber',
+#                   'client_key', 'start_date_client','end_date_client','Broker', 'Group_service','license', 'user_license_month','to_month', 'created_by', 'assigned_client',
+#                   'Strategy','client_status','givenservices_to_month','demate_acc_uid','start_date_client', 'end_date_client','is_enable',
+#                   ]
 class ClientupdateListSerializer(serializers.ModelSerializer):
     assigned_client = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), required=False)
     # Strategy = StrategySerializer(many=True, read_only=True)
@@ -1136,15 +1136,26 @@ class ClientTradeSegementSerializer(serializers.ModelSerializer):
 
 class ClientListdetailsSerializer(serializers.ModelSerializer):
     assigned_client = AssignedClientSerializer(read_only=True)
-    Strategy = StrategySerializer(many=True, read_only=True) 
-    Group_service = GroupServiceSerializer()  # Make sure to match field names
+    Strategy = StrategySerializer(many=True, read_only=True)
+    Group_service = GroupServiceSerializer()
     license = LicenseSerializer()
-    Broker = GetBrokerSerializer() 
+    Broker = GetBrokerSerializer()
     client_trade_settings = ClientTradeSegementSerializer(many=True, read_only=True, source='clienttradesetting_set')
+
+    broker_names = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ['id','email', 'firstName', 'middleName','fullName', 'lastName', 'client_status','phoneNumber',
-                  'client_key', 'start_date_client','end_date_client','Broker', 'Group_service','license', 'user_license_month','to_month', 'created_by', 'assigned_client',
-                  'Strategy','client_status','givenservices_to_month','demate_acc_uid','start_date_client', 'end_date_client','is_enable',
-                  'client_trade_settings']
+        fields = [
+            'id', 'email', 'firstName', 'middleName', 'fullName', 'lastName', 'client_status', 'phoneNumber',
+            'client_key', 'start_date_client', 'end_date_client', 'Broker', 'Group_service', 'license',
+            'user_license_month', 'to_month', 'created_by', 'assigned_client', 'Strategy', 'client_status',
+            'givenservices_to_month', 'demate_acc_uid', 'start_date_client', 'end_date_client', 'is_enable',
+            'client_trade_settings', 'broker_names'
+        ]
+
+    def get_broker_names(self, obj):
+        # Filter ClientBrokerdetails for the current user
+        brokers = ClientBrokerdetails.objects.filter(client=obj)
+        # Return a list of broker names
+        return [broker.broker_name.broker_name for broker in brokers if broker.broker_name]
