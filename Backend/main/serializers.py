@@ -669,7 +669,7 @@ class RolePermissionSerializer(serializers.ModelSerializer):
 class OrderLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = SignalOrderLog
-        fields = ['signal_time', 'order_type', 'symbol', 'json_data','price', 'strategy', 'created_at']#'user','status','failure_reason']
+        fields = ['id','signal_time', 'order_type', 'symbol', 'json_data','price', 'strategy', 'created_at']#'user','status','failure_reason']
 class UserActivityLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserActivityLog

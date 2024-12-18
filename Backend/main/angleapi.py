@@ -49,6 +49,8 @@ def place_Angle_order(token, symbol, exch_seg, quantity, product_type, transacti
                 product_type="INTRADAY"
             elif product_type.upper() =="CNC":      
                 product_type ="DELIVERY"
+            # Fetch the lot size for the symbol
+ 
         if ordertype=="LIMIT":
             order_params = {
                 "variety": "NORMAL",
@@ -59,7 +61,7 @@ def place_Angle_order(token, symbol, exch_seg, quantity, product_type, transacti
                 "ordertype": ordertype,
                 "producttype": product_type,
                 "duration": "DAY",
-                # "price": price,
+                "price": price,
                 "squareoff": "0",
                 "triggerprice": "0",
                 "stoploss": "0",
@@ -86,19 +88,48 @@ def place_Angle_order(token, symbol, exch_seg, quantity, product_type, transacti
         print("order_params...........",order_params)
 
         # logging.info("Sending Order Request: %s", json.dumps(order_params, indent=4))
-        
         # max_retries = 3
         # for attempt in range(max_retries):
+        lot_size = get_lot_size(order_params['tradingsymbol'])  # Implement this function to fetch lot size
+        # To get the lot size, access the correct key, which is 'lot_size'
+        lot = int(lot_size.get("lot_size", 0))  # Convert lot_size to an integer (default to 0 if not found)
+
+        # Check if the order quantity is a multiple of the lot size
+        if order_params['quantity'] % lot != 0:
+            logger.error(f"Invalid quantity {order_params['quantity']}, it should be in multiples of lot size: {lot}")
+            order_id=0
+            status="Failed"
+            res_data="unknown response",
+            message=f"Invalid quantity {order_params['quantity']}, it should be in multiples of lot size: {lot}"
+            save_trade_order_history(user,symbol, order_id, status, res_data, message, order_params,broker="Angle One")
+
+            return {"data": {"status": "error", "message": f"Quantity must be a multiple of lot size: {lot}"}}
+
         try:
             print("client typee", smart_client)
             response = smart_client.placeOrderFullResponse(order_params)
-            logger.info("Raw API Response: %s", response)
-            resuniqueId= response['data']['uniqueorderid']
-            responsedetails= smart_client.individual_order_details(resuniqueId)
-            print("Order Details: ::::::", json.dumps(responsedetails,indent=4))
-            status=responsedetails['data']['status'] 
-            responsedetails['data'].get('status', 'complete')
-            order_id=responsedetails['data']['orderid'] 
+            print("response of angleeee",response)
+            if response is None:
+                logger.error("Received None response from API.")
+                return {"data": {"status": "error", "message": "No response from API."}}
+
+            logger.info(f"Raw API Response: {response}")
+            resuniqueId = response.get('data', {}).get('uniqueorderid', None)
+            
+            if not resuniqueId:
+                logger.error(f"Order response does not contain valid uniqueorderid: {response}")
+                return {"data": {"status": "error", "message": "Failed to retrieve order ID."}}
+
+            responsedetails = smart_client.individual_order_details(resuniqueId)
+            print("responsedetails>>>",responsedetails)
+            if responsedetails is None:
+                logger.error("No details found for the order.")
+                return {"data": {"status": "error", "message": "Failed to retrieve order details."}}
+
+            status = responsedetails['data'].get('status', 'unknown')
+            order_id = responsedetails['data'].get('orderid', 'unknown')
+            message = responsedetails['data'].get('text', 'No message provided')
+
             res_data=responsedetails 
             if responsedetails['data']['status'] =="complete":
                 order_data = {
@@ -148,6 +179,25 @@ def place_Angle_order(token, symbol, exch_seg, quantity, product_type, transacti
     except Exception as e:
         logging.error(f"An unexpected error occurred: {e}")
         return  e
+def get_lot_size(trading_symbol):
+    # URL to fetch instrument details (for example, for Angel One)
+    url = "https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json"
+    
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        data = response.json()
+        
+        for item in data:
+            # print("item.get("")>>>",item)
+            if item.get("symbol") == trading_symbol:
+                print("**********",item.get("lotsize", None))
+                return {"status":"success" ,"lot_size":item.get("lotsize", None)}  # Fetch lot size from the item
+        
+        return {"status":"False"}  # If no matching symbol is found
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error occurred while fetching data: {str(e)}")
+        return None
 
 # Order logging function
 def log_order(data, filename):
@@ -170,16 +220,17 @@ def get_token_details(trading_symbol):
         response = requests.get(url)
         response.raise_for_status()  
         data = response.json() 
-
         for item in data:
             if item.get("symbol") == trading_symbol:
                 # Return the token and any other details
                 return {
+                    "status": "success", 
                     "token": item.get("token"),
                     "symbol": item.get("symbol"),
                     "expiry": item.get("expiry"),              
                 }
-        return f"No details found for trading symbol: {trading_symbol}"
+        return {"status": "error",  # Indicate that the symbol was not found
+            "message": f"No details found for trading symbol: {trading_symbol}"}
     except requests.exceptions.RequestException as e:
         return f"An error occurred while fetching data: {str(e)}"
 
