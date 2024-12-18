@@ -34,14 +34,23 @@ def place_alice_orders(api_skey,api_uid,trading_symbol_aliceblue,transaction_typ
         trigger_price = float(trigger_price) if trigger_price is not None else None
         # symbol = 'INFY'  # Stock symbol
         order_params = {
+        "symbol":trading_symbol_aliceblue,
         "transactiontype": transaction_type,
         "quantity": quantity,
         "ordertype": order_type,
         "producttype": product_type,
         "price": price,
-        "triggerprice": trigger_price
+        "triggerprice": trigger_price,
+        "strategy":strategy
     }
-        print("symbol",symbol)
+        def serialize_data(data):
+            """Helper function to serialize datetime objects."""
+            if isinstance(data, dict):
+                return {key: (value.isoformat() if isinstance(value, datetime) else value) for key, value in data.items()}
+            return data.isoformat() if isinstance(data, datetime) else data
+
+        # Serialize `order_params` and other fields if necessary
+        order_params = serialize_data(order_params)
         if transaction_type.upper() == "BUY":
            transaction_type = TransactionType.Buy
         elif transaction_type.upper()=="SELL":
@@ -63,24 +72,43 @@ def place_alice_orders(api_skey,api_uid,trading_symbol_aliceblue,transaction_typ
         session_id = alice.get_session_id()
         if not session_id or not session_id.get('sessionID'):
             error_message = session_id.get('emsg', 'Invalid credentials or unauthorized access')
-            print(f"Failed to establish Aliceblue session. Reason!!!!!!!!!: {error_message}")
+            print(f"Failed to establish Aliceblue session. Reason!!!!!!!!!: {error_message}")          
             response = {"data": {"status": "Unauthorized", "message": error_message}}
+            order_id=0
+            status="Unauthorized"
+            res_data=response,
+            message= f"{error_message}"
+            save_trade_order_history(user,symbol, order_id, status, res_data, message, order_params,broker="Alice Blue")
+                        
             logger.error(f"Unauthorized access for user {user}. Reason: {error_message}")
             return response
         
         # Place the order
         instrument = alice.get_instrument_by_symbol('NFO', trading_symbol_aliceblue)
-        if not instrument:
-            raise ValueError(f"Instrument not found for symbol: {trading_symbol_aliceblue}")
+        print("instrument>>>",instrument)
+        # Check if the instrument is valid
+        if isinstance(instrument, Instrument):
+            logger.info(f"Instrument found: {instrument.symbol}")
+        elif isinstance(instrument, dict) and instrument.get("stat") == "Not_ok":
+            error_message = instrument.get("emsg", "Instrument not available")
+            order_id=0
+            status="Failed"
+            res_data="unknown response"
+            message=error_message
+            save_trade_order_history(user,symbol,order_id , status, res_data, message, order_params,broker="Alice Blue")
+            logger.error(f"Instrument not found for symbol: {trading_symbol_aliceblue}, Reason: {error_message}")
+            return {"data":{"status": "error", "message": error_message}}
+        else:
+            logger.error(f"Unexpected response for instrument: {instrument}")
+            return {"data":{"status": "error", "message": "Unexpected response for instrument"}}
 
         logger.info("Placing order with parameters:")
 
-
         # Convert the dictionary to a JSON string if needed
-        order_params_json = json.dumps(order_params, indent=4)
-        logger.info(f"order payload for alice blue...",order_params)
+        # order_params_json = json.dumps(order_params, indent=4)
+        # logger.info(f"order payload for alice blue...",order_params)
                 
-        logger.info(f"Transaction: {transaction_type}, Instrument: {instrument.symbol}, "
+        logger.info(f"Transaction: {transaction_type}, Instrument: {instrument}, "
               f"Quantity: {quantity}, Order Type: {order_type}, Product Type: {product_type}, "
               f"Price: {price}, Trigger Price: {trigger_price}")
         response=None
@@ -145,7 +173,7 @@ def place_alice_orders(api_skey,api_uid,trading_symbol_aliceblue,transaction_typ
             if status == "success":
                 response = {"data": {"status": "completed"}}
                 logger.info(f"Order placed successfully for user {user}. Response: {response}")
-                save_trade_order_history(user,symbol, order_id, status, res_data, message,order_params, broker="Angle One")
+                save_trade_order_history(user,symbol, order_id, status, res_data, message,order_params, broker="Alice Blue")
               
             elif status == "rejected":   
                 from_email = settings.DEFAULT_FROM_EMAIL,
@@ -153,7 +181,7 @@ def place_alice_orders(api_skey,api_uid,trading_symbol_aliceblue,transaction_typ
                 send_trade_email_async.delay(user.email, from_email,user.firstName,status, message)
                 response = {"data": {"status": "rejected"}}
                 logger.info(f"Order is rejected  for user {user}. Response :{response}")
-                save_trade_order_history(user,symbol, order_id, status, res_data, message,order_params, broker="Angle One")
+                save_trade_order_history(user,symbol, order_id, status, res_data, message,order_params, broker="Alice Blue")
         # elif response.get("stat") == 'Not_ok':
         #     print("Not_okNot_okNot_okNot_ok")
         #     # error_message = response.get("message", "Unknown error")
@@ -163,9 +191,8 @@ def place_alice_orders(api_skey,api_uid,trading_symbol_aliceblue,transaction_typ
         #     status="Failed"
         #     res_data="login in"
         #     logger.error(f"Order placement failed for user {user}. Error: {error_message}")
-        #     save_trade_order_history(user,symbol, order_id, status, res_data, message, order_params,broker="Angle One")
+        #     save_trade_order_history(user,symbol, order_id, status, res_data, message, order_params,broker="Alice Blue")
         else:
-            print("Not_okNot_okNot_okNot_ok")
             # error_message = response.get("message", "Unknown error")
             response ={"data": {"status": "Failed"}}
             error_message="error when placing order"
@@ -173,24 +200,16 @@ def place_alice_orders(api_skey,api_uid,trading_symbol_aliceblue,transaction_typ
             status="Failed"
             res_data="Not any reponse failed"
             logger.error(f"Order placement failed for user {user}. Error: {error_message}")
-            save_trade_order_history(user,symbol, order_id, status, res_data, message, order_params,broker="Angle One")
+            save_trade_order_history(user,symbol, order_id, status, res_data, message, order_params,broker="Alice Blue")
                    
-            # save_webhook_signals_logs(transaction_type, symbol, price, strategy, user, "Failed", failure_reason="somthing wrong in order place",json=json)
-        # if response.get('stat') == 'Not_Ok':
-        #     rejection_reason = response.get('emsg', 'Unknown error')
-        #     print(f"Order rejected. Reason: {rejection_reason}")
-        #     logger.error(f"Order rejected. Reason: {rejection_reason}")
-        print("response>>>",response)
         return response
 
     except ValueError as val_err:
         logger.error(f"Validation error: {val_err}")
-        # save_webhook_signals_logs(transaction_type, symbol, price, strategy, user, "Failed", failure_reason=str(val_err),json=json)
         return {"status": "error", "message": str(val_err)}
 
     except AttributeError as attr_err:
         logger.error(f"Attribute error: {attr_err}")
-        # save_webhook_signals_logs(transaction_type, symbol, price, strategy, user, "Failed", failure_reason="Invalid API usage",json=json)
         return {"status": "error", "message": str(attr_err)}
 
     except Exception as e:
@@ -263,7 +282,7 @@ def is_market_open():
             return True
 
     logger.info("Market is closed.")
-    return False
+    return True
 
 import time
 

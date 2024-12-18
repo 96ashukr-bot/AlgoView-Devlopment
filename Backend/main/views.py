@@ -1,3 +1,4 @@
+from decimal import Decimal
 import json
 import os
 from amqp import NotFound
@@ -1857,7 +1858,7 @@ class OrderLogListView(APIView):
     pagination_class = None
     def get(self, request, *args, **kwargs):
         # Fetch all the order logs from the database
-        order_logs = SignalOrderLog.objects.all()
+        order_logs = SignalOrderLog.objects.all().order_by('-id')
         
         # Serialize the data
         serializer = OrderLogSerializer(order_logs, many=True)
@@ -2012,14 +2013,50 @@ class PlaceOrderWebhookView(APIView):
 
         all_enable_users = ClientTradeSetting.objects.filter(is_tread_status=True,client__is_enable=True)
         print("all_enable_users>>",all_enable_users)
+                  
         try:
             for trade in all_enable_users: 
                 print(">>>>symbol>>>>>.",symbols)
-                trade_expiry_date = trade.expiry_date.date()
-                print("trade expiry date..",trade_expiry_date)
-                formatted_trade_expiry_date = trade_expiry_date.strftime("%d-%m-%Y")
+                order_params = {"symbol": trade.symbol,"exch_seg": exch_seg, "quantity": trade.quantity or default_quantity,"product_type": trade.product_type,
+                "transaction_type": trade.buy_sell,"price": limitPrice,"ordertype": default_ordertype,"expiry": trade.expiry_date or default_expiry,"trade_limit": trade.trade_limit,"strategy": trade.strategy}
+                # trade_expiry_date = trade.expiry_date.date()
+                # print("trade expiry date..",trade_expiry_date)
+                # formatted_trade_expiry_date = trade_expiry_date.strftime("%d-%m-%Y")
+                def serialize_to_json(data):
+                    """
+                    Convert data into a JSON-serializable format.
+                    If a value is a datetime object, convert it to an ISO 8601 string.
+                    """
+                    if isinstance(data, dict):
+                        return {key: serialize_to_json(value) for key, value in data.items()}
+                    elif isinstance(data, list):
+                        return [serialize_to_json(item) for item in data]
+                    elif isinstance(data, Decimal):
+                        return float(data)  # Convert Decimal to float
+                    elif isinstance(data, datetime):
+                        return data.isoformat()  # Convert datetime to ISO 8601 string
+                    return data
+                order_params = serialize_to_json(order_params)
+                user=trade.client
+                order_id=0
+                status="Failed"
+                res_data="unknown response",
+                trade_expiry_date = trade.expiry_date
+                if not trade_expiry_date:
+                    message= f"Skipping trade for client {trade.client}: Expiry date is missing."
+                    save_trade_order_history(user,trade.symbol, order_id, status, res_data, message, order_params,broker=trade.broker)
+                                
+                    logger.warning(f"Skipping trade for client {trade.client}: Expiry date is missing.")
+                    continue
 
-                logger.info(f"Trade expiry date: {formatted_trade_expiry_date}")
+                formatted_trade_expiry_date = trade_expiry_date.strftime("%d-%m-%Y")
+                if not trade.symbol or not trade.product_type or not trade.buy_sell:
+                    message= f"trade details for client {trade.client}: Missing symbol, product type, or transaction type."
+                    save_trade_order_history(user,trade.symbol, order_id, status, res_data, message, order_params,broker=trade.broker)
+                        
+                    logger.warning(f"Skipping trade for client {trade.client}: Missing symbol, product type, or transaction type.")
+                    continue
+                logger.info(f"Trade expiry date: {formatted_trade_expiry_date} received date:{default_expiry}")
                 logger.info(f"Trade product type: {trade.product_type.upper()} received type: {producttype.upper()}")
                 logger.info(f"Trade transaction type: {trade.buy_sell.upper()} received transaction type: {buy_sell.upper()}")
                 logger.info(f"Trade symbol: {trade.symbol} received symbol: {symbols}")
@@ -2029,7 +2066,10 @@ class PlaceOrderWebhookView(APIView):
                     trade.product_type.upper() != producttype.upper() or
                     trade.buy_sell.upper() != buy_sell.upper() or
                     formatted_trade_expiry_date != default_expiry
-                ):
+                ): 
+                    message= f"client and Webhook aleart details is not matched for {trade.client}: criteria mismatch."
+                    save_trade_order_history(user,trade.symbol, order_id, status, res_data, message, order_params,broker=trade.broker)
+                      
                     logger.info(f"Skipping client {trade.client}: criteria mismatch.")
                     continue
 
@@ -2049,6 +2089,9 @@ class PlaceOrderWebhookView(APIView):
                 daily_trade_count = TradingLog.objects.filter(client=user, date=today).count()
 
                 if daily_trade_count >= trade_limit:
+                    message= f"Trade limit reached for user {user}. No more trades allowed today."
+                    save_trade_order_history(user,symbol, order_id, status, res_data, message, order_params,broker=trade.broker)
+                      
                     logger.warning(f"Trade limit reached for user {user}. No more trades allowed today.")
                     continue
 
@@ -2060,6 +2103,12 @@ class PlaceOrderWebhookView(APIView):
                         # Fetch client broker details
                         # client_broker = ClientBrokerdetails.objects.filter(client=trade.client, broker_name__broker_name=trade.broker).first()
                         # if not client_broker:
+                            # order_id=0
+                            # status="Failed"
+                            # res_data="unknown response",
+                            # message= f"No broker details found for client {trade.client} and broker {trade.broker}"
+                            # save_trade_order_history(user,symbol, order_id, status, res_data, message, order_params,broker="Angle One")
+                               
                         #     logger.error(f"No broker details found for client {trade.client} and broker {trade.broker}")
                         #     continue
 
@@ -2073,11 +2122,23 @@ class PlaceOrderWebhookView(APIView):
                         logger.info(f"!!!!Placing order for user: {user} Brocker is: {trade.broker} & trading symbol is: {trade.symbol}")
 
                         tokendata = get_token_details(trading_symbol)  
-                        if  tokendata:  
-                            token = tokendata.get("token") 
-                            symbol = tokendata.get("symbol")  
+                        if tokendata["status"] == "success":  
+                            token = tokendata.get("token")
+                            symbol = tokendata.get("symbol")
+                            if not token or not symbol:
+                                logger.error(f"Missing token or symbol for trading symbol: {trade.symbol}")
+                                response= {"data":{"status": "error", "message": "token symbole not found"}}
+                                continue
                         else:
-                            logger.info(f"No token data found for trading symbol: {trading_symbol}")
+                            order_id=0
+                            status="Failed"
+                            res_data="unknown response",
+                            message= f"trading symbol is not found for this :{trade.symbol}"
+                            save_trade_order_history(user,symbol, order_id, status, res_data, message, order_params,broker="Angle One")
+                                
+                            logger.info(f"No token data found for trading symbol: {trade.symbol}")
+                            response= {"data":{"status": "error", "message": "token symbole not found"}}
+                            continue  # Skip to next user if token data is not found
 
                         # Place order for Angle One
                         order_response = place_Angle_order(
@@ -2105,6 +2166,12 @@ class PlaceOrderWebhookView(APIView):
                           # Fetch client broker details
                         client_broker = ClientBrokerdetails.objects.filter(client=trade.client, broker_name__broker_name=trade.broker).first()
                         if not client_broker:
+                            order_id=0
+                            status="Failed"
+                            res_data="unknown response",
+                            message= f"No broker details found for client {trade.client} and broker {trade.broker}"
+                            save_trade_order_history(user,symbol, order_id, status, res_data, message, order_params,broker="Angle One")
+                               
                             logger.error(f"No broker details found for client {trade.client} and broker {trade.broker}")
                             continue
 
@@ -2137,6 +2204,8 @@ class PlaceOrderWebhookView(APIView):
                     elif order_response['data']['status']=="rejected":
                         order_status=f"Order is rejected for {trade.symbol} with broker {trade.broker}"
                         logger.error(f"Order is rejected for {trade.symbol} with broker {trade.broker}")
+                    elif order_response['data']['status']=="error":
+                        order_status=f"Error Order placement failed for {trade.symbol} with broker {trade.broker}"
                     else:
                         order_status=f"Order placement failed for {trade.symbol} with broker {trade.broker}"
                 else:
