@@ -13,14 +13,14 @@ import pyotp
 from urllib.parse import parse_qs
 
 # Smart API credentials
-# API_KEY = 'FNqcDPCk'#'Xp6znI3s'
-# USERNAME = 'A1420760'
-# TOTP_SECRET= "7DFMHZE3BDRCIHMLFT4N3QVCPU"
-# PASSWORD="1986"
-API_KEY = 'StvD7EVL'  
-USERNAME = 'AAAB519761'  
-PASSWORD = '1234' 
-TOTP_SECRET = "RFFORAS7ASFH7KIZWD7FCSVK2Y" 
+API_KEY = 'FNqcDPCk'#'Xp6znI3s'
+USERNAME = 'A1420760'
+TOTP_SECRET= "7DFMHZE3BDRCIHMLFT4N3QVCPU"
+PASSWORD="1986"
+# API_KEY = 'StvD7EVL'  
+# USERNAME = 'AAAB519761'  
+# PASSWORD = '1234' 
+# TOTP_SECRET = "RFFORAS7ASFH7KIZWD7FCSVK2Y" 
 obj = SmartConnect(api_key=API_KEY)
 totp = pyotp.TOTP(TOTP_SECRET).now()
 data = obj.generateSession(USERNAME, PASSWORD, totp)
@@ -138,139 +138,180 @@ class StockTradingConsumer(AsyncWebsocketConsumer):
     async def disconnect(self, close_code):
         logger.info("WebSocket connection closed.")
         self.sws.close_connection()
-
+        
 from urllib.parse import parse_qs  # For parsing the query string
+from channels.generic.websocket import AsyncWebsocketConsumer
+import asyncio
+import requests
+import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 class StockChainConsumer(AsyncWebsocketConsumer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.last_prices = {}  # Dictionary to store last known prices for tokens
-        self.token_to_symbol = {}  # Dictionary to store token to symbol mapping
+        self.last_prices = {}
+        self.token_to_symbol = {}
         self.token_to_strike_price = {}
-        self.symbol_name = None  # Variable to store the symbol name from query params
-
-    async def connect(self):
-        # Parse query string to get the 'name' parameter
-        query_params = parse_qs(self.scope['query_string'].decode('utf-8'))
-        self.symbol_name = query_params.get('name', [None])[0]  # Extract the 'name' parameter
-        
-        if not self.symbol_name:
-            # Close the connection if 'name' parameter is missing
-            await self.close(code=4001)
-            return
-
-        logger.info(f"Requested symbol: {self.symbol_name}")
-
-        # Fetch tokens for the requested symbol
-        tokens = await self.get_symbol_tokens(self.symbol_name)
-        if not tokens:
-            # Close the connection if no tokens are found
-            await self.close(code=4002)
-            return
-
-        # Prepare token list for subscription
-        self.token_list = [{
-            "exchangeType": 2,  # NFO exchange type
-            "tokens": tokens  # Tokens for the requested symbol
-        }]
-        logger.info(f"Fetched tokens for {self.symbol_name}: {tokens}")
-
-        # Accept the WebSocket connection
-        await self.accept()
-
-        # Store the current event loop
+        self.token_to_category = {}
+        self.symbol_name = None
+        self.expiry_date = None
+        self.sws = None  # Initialize WebSocket handler to None
         self.event_loop = asyncio.get_event_loop()
 
-        # Initialize WebSocket and subscribe
+    async def connect(self):
+        # Parse query string to get the 'name' and 'expiry_date' parameters
+        query_params = parse_qs(self.scope['query_string'].decode('utf-8'))
+        self.symbol_name = query_params.get('name', [None])[0]
+        self.expiry_date = query_params.get('expiry_date', [None])[0]
+
+        if not self.symbol_name or not self.expiry_date:
+            await self.close(code=4001)  # Close with error code for missing parameters
+            return
+
+        logger.info(f"Requested symbol: {self.symbol_name}, Expiry Date: {self.expiry_date}")
+
+        tokens = await self.get_symbol_tokens(self.symbol_name, self.expiry_date)
+        if not tokens:
+            await self.close(code=4002)  # Close with error code for no tokens found
+            return
+
+        self.token_list = [{
+            "exchangeType": 2,  # NFO exchange type
+            "tokens": tokens
+        }]
+
+        logger.info(f"Fetched tokens for {self.symbol_name}: {tokens}")
+        await self.accept()
+
+        # Initialize and connect the SmartWebSocket
         self.sws = SmartWebSocketV2(AUTH_TOKEN, API_KEY, USERNAME, FEED_TOKEN)
         self.sws.on_open = self.on_open
         self.sws.on_data = self.on_data
         self.sws.on_error = self.on_error
         self.sws.on_close = self.on_close
 
-        # Start the WebSocket connection in a separate thread
+        # Run the WebSocket connection in a separate thread
         loop = asyncio.get_event_loop()
         loop.run_in_executor(None, self.sws.connect)
 
-    async def get_symbol_tokens(self, symbol_name):
-        """Fetch and filter tokens for the requested symbol from the Master API."""
+    async def get_symbol_tokens(self, symbol_name, expiry_date):
         try:
             url = "https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json"
             response = requests.get(url)
+            response.raise_for_status()  # Raise an error for bad responses
             data = response.json()
 
-            # Filter tokens for the requested symbol
             token_to_symbol = {}
             token_to_strike_price = {}
+            token_to_category = {}
 
             for entry in data:
-                if entry.get('exch_seg') == 'NFO' and entry.get('name') == symbol_name.upper():
+                # logger.info(f"Processing entry: {entry}")
+               if (entry.get('exch_seg') == 'NFO' and entry.get('name') == symbol_name.upper() and entry.get('expiry').upper() == expiry_date.upper()):
+                    print("dataaaa>>")
                     token = entry['token']
                     symbol = entry['symbol']
                     strike_price = entry['strike']
-
+                    category = 'CE' if 'CE' in symbol else 'PE' if 'PE' in symbol else 'Unknown'
+             
                     token_to_symbol[token] = symbol
                     token_to_strike_price[token] = strike_price
+                    token_to_category[token] = category
 
-            # Store the dictionaries in instance variables
             self.token_to_symbol = token_to_symbol
             self.token_to_strike_price = token_to_strike_price
+            self.token_to_category = token_to_category
 
             logger.info(f"Token to Symbol Mapping: {self.token_to_symbol}")
             logger.info(f"Token to Strike Price Mapping: {self.token_to_strike_price}")
+            logger.info(f"Token to Category Mapping: {self.token_to_category}")
 
-            return list(token_to_symbol.keys())  # Return just the tokens for subscription
-        except Exception as e:
+            return list(token_to_symbol.keys())
+        except requests.RequestException as e:
             logger.error(f"Error fetching tokens for symbol {symbol_name}: {e}")
             return []
-
+        except Exception as e:
+            logger.error(f"Unexpected error: {e}")
+            return []
     def on_open(self, wsapp):
         logger.info("WebSocket connection established.")
-        # Subscribe to tokens for the requested symbol
+        if not self.token_list:
+            logger.error("No tokens to subscribe to!")
+            return
         self.sws.subscribe(correlation_id, mode, self.token_list)
 
+
     def on_data(self, wsapp, message, *args):
-        """Process incoming data and filter by token."""
         try:
-            tick_data = message
-            # print("data of option chain----", tick_data)  # Log the tick data to inspect its structure
+            # Check if the message is already a dictionary
+            if isinstance(message, dict):
+                tick_data = message  # If it's already a dict, no need to parse
+            else:
+                tick_data = json.loads(message)  # Parse it as JSON if it's not a dict
 
-            if 'subscription_mode' in tick_data:
-                current_price = tick_data['last_traded_price'] / 100.0
-                token = tick_data.get("token")
-                volume = tick_data.get("volume_trade_for_the_day")
-                closeprice = tick_data.get("closed_price") / 100.0
-                point = closeprice - current_price
-                price_trend = "+" if current_price > closeprice else "-"
-                self.last_prices[token] = current_price  # Update last known price
+            token = tick_data.get("token")
+            current_price = tick_data.get('last_traded_price', 0) / 100.0
+            volume = tick_data.get("volume_trade_for_the_day", 0)
+            close_price = tick_data.get("closed_price", 0) / 100.0
 
-                # Retrieve symbol and strike price using token mappings
-                symbol = self.token_to_symbol.get(token, "Unknown Symbol")
-                strike_price = self.token_to_strike_price.get(token, "Unknown Strike Price")
+            symbol = self.token_to_symbol.get(token, "Unknown Symbol")
+            strike_price = self.token_to_strike_price.get(token, "Unknown Strike Price")
+            category = self.token_to_category.get(token, "Unknown")
+            
+            # Extract and validate data
+            current_price = tick_data.get('last_traded_price')
+            close_price = tick_data.get('closed_price')  # Use the correct key for "close"
 
-                # Determine option category (CE or PE)
-                category = "CE" if "CE" in symbol else "PE" if "PE" in symbol else "Unknown"
+            # Check if any critical data is missing
+            if current_price is None or close_price is None:
+                logger.error(f"Missing critical data: {tick_data}")
+                return
 
-                # Send data to the WebSocket client
-                asyncio.run_coroutine_threadsafe(
-                    self.send(text_data=json.dumps({
-                        "token": token,
-                        "Ltp": f"{current_price:.4f}",
-                        "_": price_trend,
-                        "close": closeprice,
-                        "strike_price": strike_price,
-                        "volume": volume,
-                        "symbol": symbol,
-                        "category": category,
-                        "points": point,
-                        "tick_data":tick_data
-                    })),
-                    self.event_loop
-                )
+            # Convert prices to float
+            current_price = current_price / 100.0
+            close_price = close_price / 100.0
 
-                logger.info(
-                    f"Token {token}: Price {current_price:.4f} ({price_trend}), Symbol: {symbol}, Volume: {volume}, Strike Price: {strike_price}"
-                )
+            # Calculate difference and percentage
+            difference = current_price - close_price
+            percentage = (difference / close_price) * 100
+
+            # Determine trend symbol
+            trend_symbol = "+" if difference > 0 else "-"
+
+            # Format the result
+            formatted_price = f"{current_price:,.2f}"
+            formatted_difference = f"{trend_symbol}{abs(difference):,.2f}"
+            formatted_percentage = f"({trend_symbol}{abs(percentage):.2f}%)"
+
+            # Combined formatted string
+            output = f"{formatted_price} {formatted_difference} {formatted_percentage}"
+
+            if category not in ["CE", "PE"]:
+                return
+
+            asyncio.run_coroutine_threadsafe(
+                self.send(text_data=json.dumps({
+                    "symbol": symbol,
+                    "strike_price": strike_price,
+                    "ltp": f"{current_price:.2f}",
+                    "volume": volume,
+                    "category": category,
+                    "formatted_difference":formatted_difference,
+                    "formatted_percentage":formatted_percentage,
+                    "close_price":close_price
+                    
+                })),
+                self.event_loop
+            )
+
+            logger.info(
+                f"Token {token}: Symbol {symbol}, Strike Price {strike_price}, LTP {current_price:.2f}, Volume {volume}, Category {category}"
+            )
+            # await asyncio.sleep(4)
+        except json.JSONDecodeError as e:
+            logger.error(f"Error decoding JSON data: {e}")
         except Exception as e:
             logger.error(f"Error processing data: {e}")
 

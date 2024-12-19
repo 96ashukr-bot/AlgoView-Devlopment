@@ -18,7 +18,7 @@ class UserAdmin(DjangoUserAdmin):
             'current_add_line_1', 'current_add_line_2', 'current_city',
             'current_state', 'current_country', 'current_zip_code','external_user','type_of_user','Group_service',
             'Strategy','Broker','license','to_month','is_client','client_status','start_date_client','end_date_client' ,'is_enable',)}),
-        ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser')}),
+        ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser','created_at')}),
         # ('Metadata', {'fields': ('created_at', 'updated_at')}),  # Add 'created_at' and 'updated_at' here
     )
     add_fieldsets = (
@@ -117,4 +117,4 @@ class ClientBrokerDetailgAdmin(admin.ModelAdmin):
     
 @admin.register(Tradeorderhistory)    
 class ClientTradeHistoryAdmin(admin.ModelAdmin):
-    list_display=("id",'client','order_id','broker','order_status')     
+    list_display=("id",'client','date','order_id','broker','order_status')     

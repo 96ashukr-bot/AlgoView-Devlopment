@@ -952,7 +952,7 @@ class ClientListSerializer(serializers.ModelSerializer):
         fields = ['id','email', 'firstName', 'middleName','fullName', 'lastName', 'client_status','phoneNumber',
                   'client_key', 'start_date_client','end_date_client','Broker', 'Group_service','license', 'user_license_month','to_month', 'created_by', 'assigned_client',
                   'Strategy','client_status','givenservices_to_month','demate_acc_uid','start_date_client', 'end_date_client','is_enable',
-                  ]
+                  'created_at',]
 # class ClientListdetailsSerializer(serializers.ModelSerializer):
 #     assigned_client = AssignedClientSerializer(read_only=True)
 #     Strategy = StrategySerializer(many=True, read_only=True) 
@@ -1161,7 +1161,7 @@ class ClientListdetailsSerializer(serializers.ModelSerializer):
             'client_key', 'start_date_client', 'end_date_client', 'Broker', 'Group_service', 'license',
             'user_license_month', 'to_month', 'created_by', 'assigned_client', 'Strategy', 'client_status',
             'givenservices_to_month', 'demate_acc_uid', 'start_date_client', 'end_date_client', 'is_enable',
-            'client_trade_settings', 'broker_names'
+            'client_trade_settings', 'broker_names','created_at'
         ]
 
     def get_broker_names(self, obj):

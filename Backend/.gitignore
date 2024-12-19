@@ -13,7 +13,7 @@ main/__pycache__
  Backend/algoview/__pycache__/
 Backend/algoview/__pycache__/
 /localenv
-
+algoview/__pycache__
 logs/webhooks.log
  Backend/media/strategy/
   Backend/media/kyc_documents/
@@ -21,3 +21,6 @@ logs/webhooks.log
 Backend/logs/
 NFO.csv
 ANGLE_NFO.csv
+
+
+Backend/logs/webhooks.log

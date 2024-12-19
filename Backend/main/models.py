@@ -1,5 +1,6 @@
 import datetime
 import random
+from django.utils.timezone import now
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.utils.translation import gettext_lazy as _
@@ -9,7 +10,11 @@ from dateutil.relativedelta import relativedelta
 
 from datetime import datetime,timedelta  # Import timedelta from datetime
 from django.utils import timezone  # To handle timezones correctly in Djang
-
+from pytz import timezone
+def get_ist_time():
+    # Convert the current UTC time to IST
+    ist_timezone = timezone('Asia/Kolkata')
+    return now().astimezone(ist_timezone)
 class Role(models.Model):
     ACTIVE = 'active'
     INACTIVE = 'inactive'
@@ -21,8 +26,8 @@ class Role(models.Model):
     
     name = models.CharField(max_length=100, unique=True)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=ACTIVE)
-    created_at = models.DateTimeField(default=timezone.now)
-    updated_at = models.DateTimeField(default=timezone.now)
+    created_at = models.DateTimeField(default=get_ist_time)
+    updated_at = models.DateTimeField(default=get_ist_time)
     def __str__(self):
         return self.name
 
@@ -114,6 +119,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     givenservices_to_month  = models.CharField(max_length=50, null=True, blank=True)
     # assigned_clients = models.ManyToManyField('self', symmetrical=False, related_name='assigned_users', blank=True)
     type_of_user=models.CharField(max_length=255, blank=True, null=True)
+    created_at = models.DateTimeField(default=get_ist_time)
     #client penle Run Algo form
     objects     = UserManager()
     USERNAME_FIELD = 'email'
@@ -196,8 +202,8 @@ class KYC(models.Model):
     is_verified = models.BooleanField(default=False)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')  # Add status field
     verified_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name='verified_kyc')  # Admin who verified
-    created_at = models.DateTimeField(default=timezone.now)
-    updated_at = models.DateTimeField(default=timezone.now)
+    created_at = models.DateTimeField(default=get_ist_time)
+    updated_at = models.DateTimeField(default=get_ist_time)
     # New fields
     address_proof_id = models.CharField(max_length=100, blank=True)  # To store address ID or code
     address_prof_front = models.FileField(upload_to='kyc_documents/address_front/', blank=True)  # Address proof front
@@ -207,19 +213,19 @@ class KYC(models.Model):
 class OTP(models.Model):
     user = models.ForeignKey(User,null=True, on_delete=models.SET_NULL,related_name='user_otp' )
     otp_code = models.CharField(max_length=6)
-    created_at = models.DateTimeField(default=timezone.now)
+    created_at = models.DateTimeField(default=get_ist_time)
     is_verified = models.BooleanField(default=False)
     expires_at = models.DateTimeField(null=True, blank=True)
 
     def generate_otp(self):
         self.otp_code = random.randint(100000, 999999)
-        self.expires_at = timezone.now() + timedelta(seconds=120)  # Set expiration to 120 seconds from now
+        self.expires_at = get_ist_time() + timedelta(seconds=120)  # Set expiration to 120 seconds from now
         # Set expiration to 120 seconds from now
         self.is_verified = False
         self.save()
         
     def is_expired(self):
-        return timezone.now() > self.expires_at if self.expires_at else True
+        return get_ist_time() > self.expires_at if self.expires_at else True
     def __str__(self):
         return f"{self.user.email} OTP"
 
@@ -279,7 +285,7 @@ class UserActivityLog(models.Model):
 
     def mark_logout(self):
         """ Marks logout time when the user logs out """
-        self.logout_time = timezone.now()
+        self.logout_time = get_ist_time()
         self.save()        
 
 class State(models.Model):
@@ -395,7 +401,7 @@ class TradeLog(models.Model):
     trade_setting = models.ForeignKey("ClientTradeSetting", on_delete=models.CASCADE, related_name='trade_logs')
     symbol = models.CharField(max_length=50,null=True, blank=True)
     is_trade_status = models.BooleanField(null=True, blank=True)
-    trade_date = models.DateTimeField(default=timezone.now)
+    trade_date = models.DateTimeField(default=get_ist_time)
 
     def __str__(self):
         return f"Trade log for {self.client.firstName} - {self.symbol} - {self.trade_date}"
