@@ -196,7 +196,7 @@ class CustomLoginSerializer(serializers.Serializer):
         if not user.role and user.external_user == "true"or  user.type_of_user == 'is_client' or user.is_client == True or user.role.name.lower() == 'client' or user.role.name == 'Client':
                 otp_instance, created = OTP.objects.get_or_create(user=user, is_verified=False)
                 otp_instance.generate_otp()
-
+                
                 # Send OTP to user's email
                 send_email_async.delay(user.firstName,otp_instance.otp_code,user.email )
                 # EmailService.send_login_email_otp(user.email, otp_instance.otp_code, user.firstName)

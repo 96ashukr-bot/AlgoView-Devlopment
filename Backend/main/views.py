@@ -1784,7 +1784,6 @@ class ClientsByGroupServiceView(APIView):
         return Response({"group_service": group_service.group_name, "clients": client_data}, status=status.HTTP_200_OK)
 
 #all active clients for dashboard
-
 class ActiveClientsView(APIView):
     permission_classes = [IsAuthenticated]
     
@@ -1794,14 +1793,38 @@ class ActiveClientsView(APIView):
 
         if user.role and user.role.name.lower() == 'super-admin':
             clients = User.objects.filter(
-                type_of_user='is_client', is_client=True, end_date_client__gt=current_date
+                type_of_user='is_client', is_client=True, client_status=True
             ).order_by('-id')
         else:
             # clients =User.objects.filter(
             #     type_of_user='is_client', is_client=True, end_date_client__gt=current_date,created_by=user
             # ).order_by('-id')
             clients = User.objects.filter(
-                Q(type_of_user='is_client') & Q(is_client=True) & Q(end_date_client__gt=current_date) &
+                Q(type_of_user='is_client') & Q(is_client=True) & Q(client_status=True) &
+                (Q(created_by=user) | Q(assigned_client=user))
+            ).order_by('-id')
+        
+        # Apply pagination and serialize the data
+        paginator = CustomPageNumberPagination()
+        result_page = paginator.paginate_queryset(clients, request)
+        serializer = ClientListSerializer(result_page, many=True)
+        return paginator.get_paginated_response(serializer.data)
+#all In-active clients for dashboard
+class InactiveClientsView(APIView):
+    def get(self, request, *args, **kwargs):
+        user = request.user
+        current_date = timezone.now().date()
+
+        if user.role and user.role.name.lower() == 'super-admin':
+            clients = User.objects.filter(
+                type_of_user='is_client', is_client=True, client_status=False
+            ).order_by('-id')
+        else:
+            # clients = User.objects.filter(
+            #     type_of_user='is_client', is_client=True, end_date_client__lte=current_date,created_by=user
+            # ).order_by('-id')
+            clients = User.objects.filter(
+                Q(type_of_user='is_client') & Q(is_client=True) & Q(client_status=False) &
                 (Q(created_by=user) | Q(assigned_client=user))
             ).order_by('-id')
         
@@ -1812,7 +1835,8 @@ class ActiveClientsView(APIView):
         return paginator.get_paginated_response(serializer.data)
 
 
-class InactiveClientsView(APIView):
+# expiry clients   
+class ExpiryClientsView(APIView):
     permission_classes = [IsAuthenticated]
     
     def get(self, request, *args, **kwargs):

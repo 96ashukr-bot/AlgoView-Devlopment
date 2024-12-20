@@ -119,6 +119,7 @@ urlpatterns = [
     path('get-sub-segments-by-segment/', SubSegmentsListView.as_view(), name='sub-segments-list'),
     # path('get-expiry-date-list/', SymbolExpirDateListView.as_view(), name='expiry-date-list'),
     path('get-expiry-date-list/', SymbolExpiryDateListView.as_view(), name='download-nfo-csv'),
+    path('update-client-status/<int:pk>/', ClientCreateView.as_view(), name='update-client-status'),
 ]
 
 
