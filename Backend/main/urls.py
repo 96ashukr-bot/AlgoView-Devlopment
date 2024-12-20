@@ -7,6 +7,7 @@ from rest_framework_simplejwt.views import (
 from main.Alice_Blue_Api import SymbolExpirDateListView
 from main.angleapi import SymbolExpiryDateListView
 from main.permissions import RolePermissionListView, UpdateRolePermissionsView
+# from main.upstock import *
 from .views import *
 from django.conf.urls.static import static
 from main import views
@@ -111,7 +112,8 @@ urlpatterns = [
     path("get-client-trade/",GetclientdataView.as_view(),name='get-client-trade'),
     path('strategies/<int:strategy_id>/clients/', StrategyClientListView.as_view(), name='strategy-client-list'),
     path("get-client-details/",ClientDashboardIView.as_view(),name='get-client-details'),
-    path("get-client-Trade-status/",ClientsTradeStatusView.as_view(),name='active-inactive-client'),
+    path("get-client-Trade-status/",ClientsTradeStatusView.as_view(),name='client-trading-status'),
+    path("client/<int:client_id>/update-trade-status/",ClientsTradeStatusView.as_view(),name='clienttrade-status-by-id'),
     path("get-client-broker-details/", ClientBrokerDetailsView.as_view(), name='get-client-broker'),
     path("update-client-broker/", ClientBrokerDetailsView.as_view(), name='update-client-broker'),
     path("enable-disable-broker/", EnableDisableBrokerView.as_view(), name='update-status-broker'),
@@ -120,6 +122,12 @@ urlpatterns = [
     # path('get-expiry-date-list/', SymbolExpirDateListView.as_view(), name='expiry-date-list'),
     path('get-expiry-date-list/', SymbolExpiryDateListView.as_view(), name='download-nfo-csv'),
     path('update-client-status/<int:pk>/', ClientCreateView.as_view(), name='update-client-status'),
+    # path('upstox-auth/', order_view, name='upstox_auth'),
+    # path('callback/', callback_view, name='upstox_callback'),
+    # path('upstoxlogin/', login, name='login'),  # Redirect to Upstox login page
+    # path('callback/', callback, name='callback'),  # Handle redirect and exchange code
+
+
 ]
 
 

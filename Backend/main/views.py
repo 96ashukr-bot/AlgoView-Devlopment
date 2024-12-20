@@ -2351,6 +2351,30 @@ class ClientsTradeStatusView(APIView):
         result_page = paginator.paginate_queryset(clients, request)
         serializer = UserclientSerializer(result_page, many=True)
         return paginator.get_paginated_response(serializer.data)
+    
+    def patch(self, request, *args, **kwargs):
+        client_id = kwargs.get('client_id')  # Get client ID from URL
+        user = request.user
+
+        # Fetch the client object
+        client = get_object_or_404(User, id=client_id, type_of_user='is_client', is_client=True)
+
+        # Check if the current user has the right permissions
+        if not (user.role and user.role.name.lower() == 'super-admin') and client.created_by != user:
+            return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
+
+        # Validate the 'is_enable' field in the request body
+        is_enable = request.data.get('is_enable')
+        if is_enable is None:
+            return Response({"detail": "'is_enable' key is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Update the client's trading status
+        client.is_enable = is_enable
+        client.save()
+
+        # Serialize the updated client
+        serializer = UserclientSerializer(client)
+        return Response({"detail": "Trading status updated successfully.", "data": serializer.data}, status=status.HTTP_200_OK)
 
 
 
