@@ -16,14 +16,14 @@ from django.conf import settings
 
 #client inactive and license expir ations
 @shared_task
-def send_client_acc_email_async(subject,msg,username,useremail):
+def send_client_acc_email_async(subject,messages,username,useremail):
         subject=subject
         from_email = settings.DEFAULT_FROM_EMAIL
         context = {
             'user_name': username,          
             'support_email': 'support@company.com', 
             'company_website':settings.COMPANY_WEBSITE , 
-            "msg":msg
+            "messages":messages
         }
         html_message = render_to_string('login_account_email.html', context)
         print("html_message",html_message)

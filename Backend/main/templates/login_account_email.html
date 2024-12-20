@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Notification - AlgoView Technologies</title>
+    <title>Account Status Notification - AlgoView Technologies</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -38,13 +38,11 @@
             font-size: 18px;
             font-weight: bold;
         }
-        .approved {
-            background-color: #d4edda;
-            color: #155724;
-        }
-        .rejected {
-            background-color: #f8d7da;
-            color: #721c24;
+        .notice {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+            margin-bottom: 15px;
         }
         a {
             color: #1a73e8;
@@ -72,17 +70,11 @@
                 <div class="email-content">
                     <h1>Hello {{ user_name }},</h1>
                     
-                    {% comment %} {% if status == 'complete' %}
-                        <p class="status-message approved">Congratulations! {{ message }}</p>
-                        <p>Welcome to <strong>AlgoView Technologies</strong>!</p>
-                    {% elif status == 'rejected' %}
-                        <p class="status-message rejected">We regret to inform you that {{ message }}</p>
-                        <p>If you believe this was a mistake or need further assistance, please contact us at <a href="mailto:{{ support_email }}">{{ support_email }}</a>.</p>
-                    {% endif %} {% endcomment %}
-                    <p class="status-message rejected">We regret to inform you that {{ msg }}</p>
-                    <div class="footer">
-                        <p>Need help? Contact us at <a href="mailto:{{ support_email }}">{{ support_email }}</a> or visit our website at <a href="{{ company_website }}">{{ company_website }}</a>.</p>
-                    </div>
+                    {% for message in messages %}
+                    <p class="status-message notice">{{ message }}</p>
+                    {% endfor %}
+                    
+                    <p>If you need further assistance, please contact us at <a href="mailto:{{ support_email }}">{{ support_email }}</a> or visit our website at <a href="{{ company_website }}">{{ company_website }}</a>.</p>
 
                     <p class="desigborder">Thank you for choosing AlgoView Technologies!</p>
                     
