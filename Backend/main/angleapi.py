@@ -241,8 +241,6 @@ import requests
 from datetime import datetime, timedelta
 from rest_framework.views import APIView
 from rest_framework.response import Response
-
-
 class SymbolExpiryDateListView(APIView):
     def get(self, request, *args, **kwargs):
         # Extract symbol from query parameters

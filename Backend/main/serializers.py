@@ -1,7 +1,7 @@
 from django.forms import ValidationError
 import requests
 from rest_framework import serializers
-from main.tasks import send_email_async, send_email_pass_async
+from main.tasks import send_client_acc_email_async, send_email_async, send_email_pass_async
 from .models import *
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
@@ -196,6 +196,27 @@ class CustomLoginSerializer(serializers.Serializer):
         if user is None:
             raise serializers.ValidationError('Invalid credentials')
         if not user.role and user.external_user == "true"or  user.type_of_user == 'is_client' or user.is_client == True or user.role.name.lower() == 'client' or user.role.name == 'Client':
+                messages = {}
+                # Check license expiry status
+                if user.client_expiry_status is True:
+                   
+                    messages["license_expiry"] = "Your license has expired. Please renew it to continue using the service."
+
+                # Check account status
+                if user.client_status is False:
+                    messages["account_inactive"] = "Your account is inactive. Please contact the administrator for assistance."
+           
+                if messages:
+                    send_client_acc_email_async.delay(
+                        subject="Account status Notification regarding license or account ",
+                        msg=messages,
+                        username=user.firstName,
+                        useremail=user.email
+                    )
+                    raise serializers.ValidationError({
+                        "success": "False",
+                        "message": messages
+                    })
                 otp_instance, created = OTP.objects.get_or_create(user=user, is_verified=False)
                 otp_instance.generate_otp()
                 
@@ -205,6 +226,7 @@ class CustomLoginSerializer(serializers.Serializer):
 
                 return {
                     'message': f"OTP sent to your email: {email}. Please verify.",
+                    'success':"True",
                     'role': {
                         'role_id': user.role.id if user.role else None,
                         'role_name': user.role.name if user.role else None,
@@ -241,6 +263,7 @@ class CustomLoginSerializer(serializers.Serializer):
                     'user_id': user.id,
                     'type_of_user':user.type_of_user if user.type_of_user else None,
                     'message': message,
+                    'success':"True",
                     'email': user.email,
                     'is_client':False,
                     'access': str(refresh.access_token),

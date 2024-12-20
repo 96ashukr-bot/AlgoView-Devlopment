@@ -14,27 +14,41 @@ from celery import shared_task
 from django.core.mail import send_mail
 from django.conf import settings
 
+#client inactive and license expir ations
+@shared_task
+def send_client_acc_email_async(subject,msg,username,useremail):
+        subject=subject
+        from_email = settings.DEFAULT_FROM_EMAIL
+        context = {
+            'user_name': username,          
+            'support_email': 'support@company.com', 
+            'company_website':settings.COMPANY_WEBSITE , 
+            "msg":msg
+        }
+        html_message = render_to_string('login_account_email.html', context)
+        print("html_message",html_message)
+
+        email_message = EmailMultiAlternatives(subject, "", from_email, [useremail])
+        email_message.attach_alternative(html_message, "text/html") 
+        email_message.send()
+#login opt email
 @shared_task
 def send_email_async(user_name, otp_code, email):
         subject='Your Login OTP for AlgoView Technologies'
         from_email = settings.DEFAULT_FROM_EMAIL
         # Define the context for the email template
         context = {
-            'user_name': user_name,           # User's name
-            'otp_code': otp_code,             # One-Time Password
-            'valid_for_minutes': 2,  # OTP expiration time
-            'support_email': 'support@company.com',  # Support email
-            'company_website':settings.COMPANY_WEBSITE ,  # Company website link
+            'user_name': user_name,
+            'otp_code': otp_code,            
+            'valid_for_minutes': 2, 
+            'support_email': 'support@company.com',  
+            'company_website':settings.COMPANY_WEBSITE , 
         }
 
-        # Render the HTML email template
         html_message = render_to_string('login_email.html', context)
-        # plain_message = strip_tags(html_message)  # For non-HTML email clients
-# Create the email
+      
         email_message = EmailMultiAlternatives(subject, "", from_email, [email])
         email_message.attach_alternative(html_message, "text/html")  # Attach the HTML version
-
-        # Send the email
         email_message.send()
     # send_mail(subject, message, from_email, recipient_list)
 

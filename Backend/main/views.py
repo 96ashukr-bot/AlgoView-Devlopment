@@ -1384,10 +1384,11 @@ class ClientsDataView(APIView):
         try:
             # Get the current date
             current_date = timezone.now().date()
-            
+            print(current_date)
             # Fetch clients whose end_date_client has expired and who are of type 'is_client'
             expiry_client = User.objects.filter(end_date_client__lte=current_date, type_of_user='is_client',is_client=True)
-            
+            if expiry_client:
+                expiry_client.update(client_expiry_status=True)
             # Serialize the data
             serializer = ClientListSerializer(expiry_client, many=True)
             return Response({"expiry_client_list": serializer.data}, status=status.HTTP_200_OK)
