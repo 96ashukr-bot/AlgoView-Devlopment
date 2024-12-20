@@ -1702,9 +1702,8 @@ class clientActiveInactiveView(APIView):
         try:
             # Retrieve active clients and set client_status to "active"
             active_clients = user.assigned_users.filter(
-                type_of_user='is_client', is_client=True, end_date_client__gt=current_date
-            )
-            active_clients.update(client_status=True)
+                type_of_user='is_client', is_client=True, client_status=True)
+            
             
             # Prepare list of active clients
             active_clients_list = [
@@ -1726,10 +1725,9 @@ class clientActiveInactiveView(APIView):
         try:
             # Retrieve inactive clients and set client_status to "inactive"
             inactive_clients = user.assigned_users.filter(
-                type_of_user='is_client', is_client=True, end_date_client__lte=current_date
+                type_of_user='is_client', is_client=True,client_status=False
             )
-            inactive_clients.update(client_status=False)
-            
+            # inactive_clients.update(
             # Prepare list of inactive clients
             inactive_clients_list = [
                 {

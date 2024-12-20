@@ -12,6 +12,8 @@ from django.conf import settings
 from django.db import transaction
 from rest_framework.validators import UniqueValidator
 from main.email import EmailService
+from django.utils import timezone
+
 support_email=settings.DEFAULT_FROM_EMAIL
 contact_number=settings.CONTACT_NUM
 login_link=settings.LOGIN_LINK
@@ -838,7 +840,7 @@ class ClientCreateSerializer(serializers.ModelSerializer):
         model = User
         fields = ['id','email', 'firstName', 'lastName', 'phoneNumber', 'fullName', 'middleName','client_key',
                   'Group_service', 'license', 'user_license_month','to_month', 'created_by', 'assigned_client',
-                  'Strategy','client_status','givenservices_to_month','start_date_client','end_date_client']
+                  'Strategy','client_status','givenservices_to_month','start_date_client','end_date_client','client_expiry_status']
     # Phone number validation
     def validate_phoneNumber(self, value):
         # Check if the phone number is in a valid format
@@ -952,7 +954,7 @@ class ClientListSerializer(serializers.ModelSerializer):
         fields = ['id','email', 'firstName', 'middleName','fullName', 'lastName', 'client_status','phoneNumber',
                   'client_key', 'start_date_client','end_date_client','Broker', 'Group_service','license', 'user_license_month','to_month', 'created_by', 'assigned_client',
                   'Strategy','client_status','givenservices_to_month','demate_acc_uid','start_date_client', 'end_date_client','is_enable',
-                  'created_at',]
+                  'created_at','client_expiry_status']
 # class ClientListdetailsSerializer(serializers.ModelSerializer):
 #     assigned_client = AssignedClientSerializer(read_only=True)
 #     Strategy = StrategySerializer(many=True, read_only=True) 
@@ -1161,7 +1163,7 @@ class ClientListdetailsSerializer(serializers.ModelSerializer):
             'client_key', 'start_date_client', 'end_date_client', 'Broker', 'Group_service', 'license',
             'user_license_month', 'to_month', 'created_by', 'assigned_client', 'Strategy', 'client_status',
             'givenservices_to_month', 'demate_acc_uid', 'start_date_client', 'end_date_client', 'is_enable',
-            'client_trade_settings', 'broker_names','created_at'
+            'client_trade_settings', 'broker_names','created_at','client_expiry_status'
         ]
 
     def get_broker_names(self, obj):

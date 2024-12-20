@@ -120,6 +120,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     # assigned_clients = models.ManyToManyField('self', symmetrical=False, related_name='assigned_users', blank=True)
     type_of_user=models.CharField(max_length=255, blank=True, null=True)
     created_at = models.DateTimeField(default=get_ist_time)
+    client_expiry_status=models.BooleanField(default=False)
     #client penle Run Algo form
     objects     = UserManager()
     USERNAME_FIELD = 'email'
