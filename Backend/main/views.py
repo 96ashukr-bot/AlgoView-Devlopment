@@ -706,6 +706,17 @@ class SearchStatesView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response([], status=status.HTTP_200_OK)      
 #segment crud apis
+class SegmentlistAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request, *args, **kwargs):
+        try:
+            segments = Segment.objects.all().order_by('-id')
+            serializer = SegmentSerializer(segments, many=True)
+        except Segment.DoesNotExist:
+            return Response({"error": "Segments not found."}, status=404)
+        
+        return Response(serializer.data, status=status.HTTP_200_OK)
 class SegmentAPIView(APIView):
     permission_classes = [IsAuthenticated]
     
@@ -751,6 +762,17 @@ class SegmentAPIView(APIView):
             return Response({"msg": "Segment deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
         except Segment.DoesNotExist:
             return Response({"detail": "Segment not found."}, status=status.HTTP_404_NOT_FOUND)
+class CategorylistAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        try:
+            category_list = categories.objects.all().order_by('-id')
+            serializer = CategorySerializer(category_list, many=True)
+        except categories.DoesNotExist:
+            return Response({"error": "Categories not found."}, status=404)
+        
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 class CategoryAPIView(APIView):
     permission_classes = [IsAuthenticated]
@@ -839,12 +861,19 @@ class LicenseAPIView(APIView):
         except License.DoesNotExist:
             return Response({"detail": "License not found."}, status=status.HTTP_404_NOT_FOUND)
 
+
+#serices crud
+class ServicelistAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request, *args, **kwargs):
+        try:
+            services = Services.objects.all().order_by('-id')
+            serializer = ServiceSerializer(services, many=True)
+        except Services.DoesNotExist:
+            return Response({"error": "serices not found."}, status=404)
+        return Response(serializer.data, status=status.HTTP_200_OK) 
 class ServiceAPIView(APIView):
     permission_classes = [IsAuthenticated]
-    # def get(self, request, *args, **kwargs):
-    #     services = Services.objects.all()
-    #     serializer = ServiceSerializer(services, many=True)
-    #     return Response(serializer.data, status=status.HTTP_200_OK)
     def get(self, request, *args, **kwargs):
         services = Services.objects.all().order_by('-id')
         paginator = CustomPageNumberPagination()  
@@ -880,6 +909,31 @@ class ServiceAPIView(APIView):
             return Response({"msg": "Services deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
         except Services.DoesNotExist:
             return Response({"detail": "Services not found."}, status=status.HTTP_404_NOT_FOUND)
+#group services api
+class GroupServicelistView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request, *args, **kwargs):
+        try:
+            logger.debug("GroupServiceView GET request received")  
+            group_ser = GroupService.objects.all().order_by('-id')
+            # Serialize the data
+            serializer = GroupServiceSerializer(group_ser, many=True)
+            serialized_data = serializer.data
+            for item in serialized_data:
+                json_data = item.get('json_data', None)
+                if json_data is None:
+                    json_data = []
+                service_names = [entry.get('ServiceName') for entry in json_data if isinstance(entry, dict)]
+                item['service_count'] = len(service_names)
+                
+            return Response(serialized_data, status=200)
+        except GroupService.DoesNotExist:
+            logger.error("GroupService not found.")  # ERROR message
+            return Response({"error": "GroupService not found."}, status=404)
+        except Exception as e:
+            logger.critical("An unexpected error occurred: %s", str(e))
+            return Response({"error": "An unexpected error occurred."}, status=500)
+
 class GroupServiceView(APIView):
     permission_classes = [IsAuthenticated]
     def get(self, request, *args, **kwargs):
