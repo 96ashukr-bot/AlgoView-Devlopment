@@ -11,7 +11,6 @@ import numpy as np
 import logging
 
 import requests
-
 from main.Alice_Blue_Api import save_trade_order_history
 from main.tasks import send_trade_email_async
 logger = logging.getLogger('main')

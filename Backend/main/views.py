@@ -764,7 +764,7 @@ class CategoryAPIView(APIView):
         
     #     return Response(serializer.data, status=status.HTTP_200_OK)
     def get(self, request, *args, **kwargs):
-        category_list = categories.objects.all()
+        category_list = categories.objects.all().order_by('-id')
         paginator = CustomPageNumberPagination()
         result_page = paginator.paginate_queryset(category_list, request)
         serializer = CategorySerializer(result_page, many=True)
