@@ -1189,3 +1189,11 @@ class ClientListdetailsSerializer(serializers.ModelSerializer):
         brokers = ClientBrokerdetails.objects.filter(client=obj)
         # Return a list of broker names
         return [broker.broker_name.broker_name for broker in brokers if broker.broker_name]
+
+class TradeorderhistorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Tradeorderhistory
+        fields = ['id', 'client', 'date', 'trading_symbol', 'Index_Symbol', 'order_id', 'order_status'
+                , 'failure_reason', 'broker', 'order_params', 'strategy', 'Entry_type', 'Entry_Price', 
+                'Exit_Price', 'SignalEntry_time', 'SignalExit_time', 'Exchange', 'Segment']
+

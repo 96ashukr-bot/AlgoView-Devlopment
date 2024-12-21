@@ -129,7 +129,8 @@ urlpatterns = [
     # path('upstox-auth/', order_view, name='upstox_auth'),
     # path('callback/', callback_view, name='upstox_callback'),
     # path('upstoxlogin/', login, name='login'),  # Redirect to Upstox login page
-    # path('callback/', callback, name='callback'),  # Handle redirect and exchange code
+    path('get-trade-history/', TradeorderhistoryListView.as_view(), name='get-trade-history'),  # Handle redirect and exchange code
+    path('get-client-trade-history/', ClientTradeListView.as_view(), name='get-client-trade-history'),  # Handle redirect and exchange code
 
 
 ]

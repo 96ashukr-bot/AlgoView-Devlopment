@@ -26,7 +26,8 @@ import logging
 logger = logging.getLogger('main')
 from pya3 import Aliceblue, TransactionType, OrderType, ProductType
 # from pya3.enums import TransactionType  # Adjust import based on your library
-def place_alice_orders(api_skey,api_uid,trading_symbol_aliceblue,transaction_type, symbol, quantity, strategy, order_type, product_type, price, user,Lots, trigger_price=None):
+def place_alice_orders(api_skey,api_uid,trading_symbol_aliceblue,transaction_type, symbol, quantity, strategy, 
+    order_type, product_type, price, user,Lots, Entry_type, Exchange, Segment,Index_Symbol, trigger_price=None):
     try:
         print(f"Order Type: {order_type}, Price: {price}, Trigger Price: {trigger_price}")
         # # Convert price and trigger price to float if provided
@@ -65,6 +66,7 @@ def place_alice_orders(api_skey,api_uid,trading_symbol_aliceblue,transaction_typ
                 product_type = ProductType.Intraday
         else:
             product_type=None
+            
         # Initialize Aliceblue API
         # alice = Aliceblue(user_id=USER_ID, api_key=ALICE_API_KEY)
         alice = Aliceblue(user_id=api_uid, api_key=api_skey)  # Example user attributes
@@ -78,7 +80,7 @@ def place_alice_orders(api_skey,api_uid,trading_symbol_aliceblue,transaction_typ
             status="Unauthorized"
             res_data=response,
             message= f"{error_message}"
-            save_trade_order_history(user,symbol, order_id, status, res_data, message, order_params,broker="Alice Blue")
+            save_trade_order_history(user,trading_symbol_aliceblue, order_id, status, res_data, message, strategy, Entry_type, Exchange, Segment,Index_Symbol, order_params,broker="Alice Blue")
                         
             logger.error(f"Unauthorized access for user {user}. Reason: {error_message}")
             return response
@@ -95,7 +97,7 @@ def place_alice_orders(api_skey,api_uid,trading_symbol_aliceblue,transaction_typ
             status="Failed"
             res_data="unknown response"
             message=error_message
-            save_trade_order_history(user,symbol,order_id , status, res_data, message, order_params,broker="Alice Blue")
+            save_trade_order_history(user,trading_symbol_aliceblue,order_id , status, res_data, message, strategy, Entry_type, Exchange, Segment,Index_Symbol, order_params,broker="Alice Blue")
             logger.error(f"Instrument not found for symbol: {trading_symbol_aliceblue}, Reason: {error_message}")
             return {"data":{"status": "error", "message": error_message}}
         else:
@@ -112,6 +114,21 @@ def place_alice_orders(api_skey,api_uid,trading_symbol_aliceblue,transaction_typ
               f"Quantity: {quantity}, Order Type: {order_type}, Product Type: {product_type}, "
               f"Price: {price}, Trigger Price: {trigger_price}")
         response=None
+        
+        # lot_size = get_lot_size(trading_symbol_aliceblue)  # Implement this function to fetch lot size
+        # # To get the lot size, access the correct key, which is 'lot_size'
+        # lot = int(lot_size.get("lot_size", 0))  # Convert lot_size to an integer (default to 0 if not found)
+
+        # # Check if the order quantity is a multiple of the lot size
+        # if quantity % lot != 0:
+        #     logger.error(f"Invalid quantity {quantity}, it should be in multiples of lot size: {lot}")
+        #     order_id=0
+        #     status="Failed"
+        #     res_data="unknown response",
+        #     message=f"Invalid quantity {quantity}, it should be in multiples of lot size: {lot}"
+        #     save_trade_order_history(user,trading_symbol_aliceblue, order_id, status, res_data, message, strategy, Entry_type, Exchange, Segment,Index_Symbol, order_params,broker="Angle One")
+
+        #     return {"data": {"status": "error", "message": f"Quantity must be a multiple of lot size: {lot}"}}
         print("order_type>>>",order_type)
         if order_type=="LIMIT":
             order_type=OrderType.Limit
@@ -173,7 +190,7 @@ def place_alice_orders(api_skey,api_uid,trading_symbol_aliceblue,transaction_typ
             if status == "success":
                 response = {"data": {"status": "completed"}}
                 logger.info(f"Order placed successfully for user {user}. Response: {response}")
-                save_trade_order_history(user,symbol, order_id, status, res_data, message,order_params, broker="Alice Blue")
+                save_trade_order_history(user,trading_symbol_aliceblue, order_id, status, res_data, message, strategy, Entry_type, Exchange, Segment,Index_Symbol,order_params, broker="Alice Blue")
               
             elif status == "rejected":   
                 from_email = settings.DEFAULT_FROM_EMAIL,
@@ -181,7 +198,7 @@ def place_alice_orders(api_skey,api_uid,trading_symbol_aliceblue,transaction_typ
                 send_trade_email_async.delay(user.email, from_email,user.firstName,status, message)
                 response = {"data": {"status": "rejected"}}
                 logger.info(f"Order is rejected  for user {user}. Response :{response}")
-                save_trade_order_history(user,symbol, order_id, status, res_data, message,order_params, broker="Alice Blue")
+                save_trade_order_history(user,trading_symbol_aliceblue, order_id, status, res_data, message, strategy, Entry_type, Exchange, Segment,Index_Symbol,order_params, broker="Alice Blue")
         # elif response.get("stat") == 'Not_ok':
         #     print("Not_okNot_okNot_okNot_ok")
         #     # error_message = response.get("message", "Unknown error")
@@ -191,7 +208,7 @@ def place_alice_orders(api_skey,api_uid,trading_symbol_aliceblue,transaction_typ
         #     status="Failed"
         #     res_data="login in"
         #     logger.error(f"Order placement failed for user {user}. Error: {error_message}")
-        #     save_trade_order_history(user,symbol, order_id, status, res_data, message, order_params,broker="Alice Blue")
+        #     save_trade_order_history(user,trading_symbol_aliceblue, order_id, status, res_data, message, strategy, Entry_type, Exchange, Segment,Index_Symbol, order_params,broker="Alice Blue")
         else:
             # error_message = response.get("message", "Unknown error")
             response ={"data": {"status": "Failed"}}
@@ -200,7 +217,7 @@ def place_alice_orders(api_skey,api_uid,trading_symbol_aliceblue,transaction_typ
             status="Failed"
             res_data="Not any reponse failed"
             logger.error(f"Order placement failed for user {user}. Error: {error_message}")
-            save_trade_order_history(user,symbol, order_id, status, res_data, message, order_params,broker="Alice Blue")
+            save_trade_order_history(user,trading_symbol_aliceblue, order_id, status, res_data, message, strategy, Entry_type, Exchange, Segment,Index_Symbol, order_params,broker="Alice Blue")
                    
         return response
 
@@ -217,19 +234,31 @@ def place_alice_orders(api_skey,api_uid,trading_symbol_aliceblue,transaction_typ
         # save_webhook_signals_logs(transaction_type, symbol, price, strategy, user, "Failed", failure_reason=str(e),json=json)
         return {"status": "error", "message": "An unexpected error occurred"}
 
-def save_trade_order_history(client, trading_symbol, order_id, order_status, response_data, failure_reason, order_params=None,broker=None):
+def save_trade_order_history(client, trading_symbol, order_id, order_status, response_data, failure_reason,
+     strategy, Entry_type, Exchange, Segment,Index_Symbol ,order_params=None,broker=None ):
     try:
         # Create a new Tradeorderhistory record
         trade_history = Tradeorderhistory.objects.create(
-            client=client,
-            trading_symbol=trading_symbol,
-            order_id=order_id,
-            order_status=order_status,
-            response_data=response_data,
-            failure_reason=failure_reason,
-            broker=broker,
-            order_params=order_params
-        )
+        client=client,
+        trading_symbol=trading_symbol,
+        order_id=order_id,
+        order_status=order_status,
+        response_data=response_data or None,    
+        failure_reason=failure_reason or None,    
+        broker=broker or None,    
+        order_params=order_params or None,    
+        strategy= strategy or None,     
+        Entry_type=Entry_type or None,     
+        # Entry_Price=Entry_Price or None,     
+        # Exit_Price=Exit_Price or None,     
+        # SignalEntry_time=SignalEntry_time or None,     
+        # SignalExit_time=SignalExit_time or None, 
+            
+        Exchange=Exchange or None,     
+        Segment=Segment or None,     
+        Index_Symbol=Index_Symbol or None
+    )
+
         # Log success (optional)
         logger.info(f"Order history saved successfully for Order ID: {order_id}")
         return trade_history  # Return the created record, if needed

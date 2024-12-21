@@ -20,7 +20,7 @@ from rest_framework.generics import ListAPIView,UpdateAPIView
 from main.angleapi import get_token_details, place_Angle_order
 from main.permissions import  IsAdminRole
 from main.tasks import send_kyc_email_async, send_trade_email_async
-
+from rest_framework import status
 from .models import *
 from .serializers import *
 from django.core.exceptions import ObjectDoesNotExist
@@ -28,7 +28,7 @@ from rest_framework.views import APIView
 from django.contrib import messages
 from pya3 import *
 from decouple import config
-from main.Alice_Blue_Api import ALICE_ORDER_URL,GET_ORDER_BOOK_URL,GET_TREAD_BOOK_URL, is_market_open, place_alice_orders
+from main.Alice_Blue_Api import ALICE_ORDER_URL,GET_ORDER_BOOK_URL,GET_TREAD_BOOK_URL, is_market_open, place_alice_orders, save_trade_order_history
 from rest_framework.pagination import PageNumberPagination        
 from main.email import EmailService
 from django.contrib.auth.signals import user_logged_in, user_logged_out
@@ -928,7 +928,7 @@ class GroupServicelistView(APIView):
                 
             return Response(serialized_data, status=200)
         except GroupService.DoesNotExist:
-            logger.error("GroupService not found.")  # ERROR message
+            logger.error("GroupService not found.")   
             return Response({"error": "GroupService not found."}, status=404)
         except Exception as e:
             logger.critical("An unexpected error occurred: %s", str(e))
@@ -960,11 +960,11 @@ class GroupServiceView(APIView):
 
             # return paginator.get_paginated_response(serialized_data)
         except GroupService.DoesNotExist:
-            logger.error("GroupService not found.")  # ERROR message
+            logger.error("GroupService not found.")   
             return Response({"error": "GroupService not found."}, status=404)
 
         except Exception as e:
-            logger.critical("An unexpected error occurred: %s", str(e))  # CRITICAL message
+            logger.critical("An unexpected error occurred: %s", str(e))  
             return Response({"error": "An unexpected error occurred."}, status=500)
 
         return paginator.get_paginated_response(serialized_data)
@@ -1127,7 +1127,7 @@ class StrategyAPIView(APIView):
         paginator = CustomPageNumberPagination()
         result_page = paginator.paginate_queryset(strategies, request)
         serializer = GetStrategySerializer(result_page, many=True)
-        logging.info("strategy of data>>>>>",serializer.data)
+        # logging.info("strategy of data>>>>>",serializer.data)
         return paginator.get_paginated_response(serializer.data)
 
     def post(self, request, *args, **kwargs):
@@ -2084,16 +2084,21 @@ class PlaceOrderWebhookView(APIView):
         # Concatenate fields to create the trading symbol
         trading_symbol = f"{symbols}{day}{month}{year}{default_price}{Type}"            
         # Print the result
-        print("Trading Symbol:", trading_symbol,symbols)
+        print("Trading Symbol Angle:", trading_symbol,symbols)
+        trading_symbol_aliceblue = f"{symbols}{day}{month}{year}{Type[0]}{default_price}"
+        print("trading_symbol_aliceblue..",trading_symbol_aliceblue)
         order_status=None
         save_webhook_signals_logs(buy_sell, symbols, default_price, strategy, json=alert_data)
 
-        all_enable_users = ClientTradeSetting.objects.filter(is_tread_status=True,client__is_enable=True)
+        all_enable_users = ClientTradeSetting.objects.filter(is_tread_status=True,client__is_enable=True, broker__isnull=False)
         print("all_enable_users>>",all_enable_users)
                   
         try:
             for trade in all_enable_users: 
-                print(">>>>symbol>>>>>.",symbols)
+                if trade.broker.lower() == 'alice blue':
+                    trade_symbol=trading_symbol_aliceblue
+                elif trade.broker.lower() == 'angle one':
+                    trade_symbol=trading_symbol
                 order_params = {"symbol": trade.symbol,"exch_seg": exch_seg, "quantity": trade.quantity or default_quantity,"product_type": trade.product_type,
                 "transaction_type": trade.buy_sell,"price": limitPrice,"ordertype": default_ordertype,"expiry": trade.expiry_date or default_expiry,"trade_limit": trade.trade_limit,"strategy": trade.strategy}
                 # trade_expiry_date = trade.expiry_date.date()
@@ -2114,14 +2119,21 @@ class PlaceOrderWebhookView(APIView):
                         return data.isoformat()  # Convert datetime to ISO 8601 string
                     return data
                 order_params = serialize_to_json(order_params)
+                strategy=trade.strategy
+                Segment=trade.segment.name if trade.segment else None
+                Exchange="NFO"
                 user=trade.client
                 order_id=0
                 status="Failed"
+                Index_Symbol=trade.symbol
                 res_data="unknown response",
+                broker=trade.broker
+                Entry_type=trade.buy_sell
                 trade_expiry_date = trade.expiry_date
                 if not trade_expiry_date:
                     message= f"Skipping trade for client {trade.client}: Expiry date is missing."
-                    save_trade_order_history(user,trade.symbol, order_id, status, res_data, message, order_params,broker=trade.broker)
+                    save_trade_order_history(user,trade_symbol, order_id, status, res_data, message,
+                    strategy, Entry_type, Exchange, Segment,Index_Symbol,order_params ,broker=trade.broker)
                                 
                     logger.warning(f"Skipping trade for client {trade.client}: Expiry date is missing.")
                     continue
@@ -2129,7 +2141,7 @@ class PlaceOrderWebhookView(APIView):
                 formatted_trade_expiry_date = trade_expiry_date.strftime("%d-%m-%Y")
                 if not trade.symbol or not trade.product_type or not trade.buy_sell:
                     message= f"trade details for client {trade.client}: Missing symbol, product type, or transaction type."
-                    save_trade_order_history(user,trade.symbol, order_id, status, res_data, message, order_params,broker=trade.broker)
+                    save_trade_order_history(user,trade_symbol, order_id, status, res_data, message,strategy, Entry_type, Exchange, Segment,Index_Symbol, order_params,broker=trade.broker)
                         
                     logger.warning(f"Skipping trade for client {trade.client}: Missing symbol, product type, or transaction type.")
                     continue
@@ -2145,7 +2157,7 @@ class PlaceOrderWebhookView(APIView):
                     formatted_trade_expiry_date != default_expiry
                 ): 
                     message= f"client and Webhook aleart details is not matched for {trade.client}: criteria mismatch."
-                    save_trade_order_history(user,trade.symbol, order_id, status, res_data, message, order_params,broker=trade.broker)
+                    save_trade_order_history(user,trade_symbol, order_id, status, res_data, message,strategy, Entry_type, Exchange, Segment,Index_Symbol, order_params,broker=trade.broker)
                       
                     logger.info(f"Skipping client {trade.client}: criteria mismatch.")
                     continue
@@ -2167,7 +2179,7 @@ class PlaceOrderWebhookView(APIView):
 
                 if daily_trade_count >= trade_limit:
                     message= f"Trade limit reached for user {user}. No more trades allowed today."
-                    save_trade_order_history(user,symbol, order_id, status, res_data, message, order_params,broker=trade.broker)
+                    save_trade_order_history(user,trade_symbol, order_id, status, res_data, message, strategy, Entry_type, Exchange, Segment,Index_Symbol,order_params,broker=trade.broker)
                       
                     logger.warning(f"Trade limit reached for user {user}. No more trades allowed today.")
                     continue
@@ -2176,7 +2188,7 @@ class PlaceOrderWebhookView(APIView):
                 if is_market_open():
                     logger.info("Market is open. Proceed with the trade.")
                         
-                    if trade.broker == "Angle One":
+                    if trade.broker.lower() == "angle one":
                         # Fetch client broker details
                         # client_broker = ClientBrokerdetails.objects.filter(client=trade.client, broker_name__broker_name=trade.broker).first()
                         # if not client_broker:
@@ -2211,7 +2223,7 @@ class PlaceOrderWebhookView(APIView):
                             status="Failed"
                             res_data="unknown response",
                             message= f"trading symbol is not found for this :{trade.symbol}"
-                            save_trade_order_history(user,symbol, order_id, status, res_data, message, order_params,broker="Angle One")
+                            save_trade_order_history(user,trade_symbol, order_id, status, res_data, message,strategy, Entry_type, Exchange, Segment,Index_Symbol, order_params,broker="Angle One")
                                 
                             logger.info(f"No token data found for trading symbol: {trade.symbol}")
                             response= {"data":{"status": "error", "message": "token symbole not found"}}
@@ -2233,13 +2245,17 @@ class PlaceOrderWebhookView(APIView):
                             ordertype=ordertype,
                             expiry=expiry,
                             lot_size=Lots,
+                            Entry_type=Entry_type, 
+                            Exchange=Exchange,
+                            Segment=Segment,
+                            Index_Symbol=Index_Symbol ,
                             user=user,
                             strategy=strategy,
                             
                             
                         )
     
-                    elif trade.broker == "Alice Blue":
+                    elif trade.broker.lower() == "alice blue":
                           # Fetch client broker details
                         client_broker = ClientBrokerdetails.objects.filter(client=trade.client, broker_name__broker_name=trade.broker).first()
                         if not client_broker:
@@ -2247,7 +2263,7 @@ class PlaceOrderWebhookView(APIView):
                             status="Failed"
                             res_data="unknown response",
                             message= f"No broker details found for client {trade.client} and broker {trade.broker}"
-                            save_trade_order_history(user,symbol, order_id, status, res_data, message, order_params,broker="Angle One")
+                            save_trade_order_history(user,trade_symbol, order_id, status, res_data, message, strategy, Entry_type, Exchange, Segment,Index_Symbol,order_params,broker="Angle One")
                                
                             logger.error(f"No broker details found for client {trade.client} and broker {trade.broker}")
                             continue
@@ -2256,8 +2272,6 @@ class PlaceOrderWebhookView(APIView):
                         api_uid = client_broker.broker_API_UID
                         logger.info(f"Fetched API credentials for {trade.broker}: SKEY={api_skey}, UID={api_uid}")
         
-                        trading_symbol_aliceblue = f"{symbols}{day}{month}{year}{Type[0]}{default_price}"
-                        print("trading_symbol_aliceblue..",trading_symbol_aliceblue)
                         logger.info(f"!!!!Placing order for user: {user} Brocker is: {trade.broker} & trading symbol is: {trade.symbol}")
                         # Handle Alice Blue-specific order placement
                         # session_id = get_or_regenerate_session_id(USER_ID, ALICE_API_KEY)
@@ -2267,7 +2281,7 @@ class PlaceOrderWebhookView(APIView):
                         # order_response=place_alice_orders(trading_symbol_aliceblue,transaction_type, symbol, quantity,strategy,ordertype,
                         #                                 product_type, price,user, Lots,triggerPrice)
                         order_response=place_alice_orders(api_skey,api_uid,trading_symbol_aliceblue,transaction_type, symbol, quantity,strategy,ordertype,
-                                                        product_type, price,user, Lots,triggerPrice)
+                        product_type, price,user, Lots, Entry_type, Exchange, Segment,Index_Symbol,triggerPrice)
                 
                     # Check order response and log or handle failures
                     print("order repsone>>>>>>>",order_response)
@@ -2292,29 +2306,6 @@ class PlaceOrderWebhookView(APIView):
         except Exception as e:
             logger.error(f"Order placement encountered an error: {e}")
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-def save_trade_order_history(client, trading_symbol, order_id, order_status, response_data, failure_reason, order_params=None,broker=None):
-    try:
-        # Create a new Tradeorderhistory record
-        trade_history = Tradeorderhistory.objects.create(
-            client=client,
-            trading_symbol=trading_symbol,
-            order_id=order_id,
-            order_status=order_status,
-            response_data=response_data,
-            failure_reason=failure_reason,
-            broker=broker,
-            order_params=order_params
-        )
-        # Log success (optional)
-        logger.info(f"Order history saved successfully for Order ID: {order_id}")
-        return trade_history  # Return the created record, if needed
-    except Exception as e:
-        # Handle any exceptions that may occur during the save process
-        logger.error(f"Error saving order history for Order ID: {order_id}. Error: {e}")
-        return None  # Or handle the error as needed
-
-
 
 #token Sesiion id for alice blue order
 from datetime import datetime, timedelta
@@ -2577,4 +2568,55 @@ class SubSegmentsListView(APIView):
                 {"detail": f"An error occurred: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
- 
+#trading history api demate rejected and success status
+class TradeorderhistoryListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        try:
+            user = request.user
+            if user.role and user.role.name.lower() == 'super-admin':
+                # Super-admin can see all clients' trade order histories
+                clients = User.objects.filter(type_of_user='is_client', is_client=True)
+                trade_history = Tradeorderhistory.objects.exclude(order_id=0).filter(client__in=clients).order_by('-id')
+            elif user.role and user.role.name.lower() == 'sub-admin':
+                # Sub-admin can see trade order histories of their assigned clients
+                clients = User.objects.filter(assigned_client=user,created_by=user,type_of_user='is_client', is_client=True)
+                trade_history = Tradeorderhistory.objects.exclude(order_id=0).filter(client__in=clients).order_by('-id')
+            else:
+                trade_history = Tradeorderhistory.objects.exclude(order_id=0).filter(client=user).order_by('-id')
+
+            paginator = CustomPageNumberPagination()
+            result_page = paginator.paginate_queryset(trade_history, request)
+
+            serializer = TradeorderhistorySerializer(result_page, many=True)
+            return paginator.get_paginated_response(serializer.data)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+#CLIENT trade all history data 
+class ClientTradeListView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request, *args, **kwargs):
+        try:
+            user = request.user
+            if user.role and user.role.name.lower() == 'super-admin':
+                # Super-admin can see all clients' trade order histories
+                clients = User.objects.filter(type_of_user='is_client', is_client=True)
+                trade_history = Tradeorderhistory.objects.filter(client__in=clients).order_by('-id')
+            elif user.role and user.role.name.lower() == 'sub-admin':
+                print("Sub-AdminSub-AdminSub-AdminSub-Admin")
+                # Sub-admin can see trade order histories of their assigned clients
+                clients = User.objects.filter(assigned_client=user,created_by=user,type_of_user='is_client', is_client=True)
+                trade_history = Tradeorderhistory.objects.filter(client__in=clients).order_by('-id')
+            else:
+                trade_history = Tradeorderhistory.objects.filter(client=user).order_by('-id')
+
+            paginator = CustomPageNumberPagination()
+            result_page = paginator.paginate_queryset(trade_history, request)
+
+            serializer = TradeorderhistorySerializer(result_page, many=True)
+            return paginator.get_paginated_response(serializer.data)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

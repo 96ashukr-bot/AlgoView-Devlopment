@@ -1,5 +1,8 @@
 import json
 import os
+import csv
+from rest_framework.views import APIView
+from rest_framework.response import Response
 import time
 from django.conf import settings
 import pandas as pd
@@ -9,9 +12,9 @@ from SmartApi.smartExceptions import DataException
 from time import sleep
 import numpy as np
 import logging
-
 import requests
 from main.Alice_Blue_Api import save_trade_order_history
+from main.dematemodule import get_lot_size
 from main.tasks import send_trade_email_async
 logger = logging.getLogger('main')
 API_KEY = 'FNqcDPCk'#'Xp6znI3s'
@@ -38,7 +41,8 @@ data = generate_session_with_retry(USERNAME, PASSWORD, totp)
 feedToken = smart_client.getfeedToken()
 # api_key,demate_user_name,totp,angle_pass,
 #place order using Angle one api
-def place_Angle_order(token, symbol, exch_seg, quantity, product_type, transactiontype, price, ordertype, expiry,lot_size, user=None, strategy=None):
+def place_Angle_order(token, symbol, exch_seg, quantity, product_type, transactiontype, price, ordertype, expiry,lot_size, 
+                Entry_type, Exchange, Segment,Index_Symbol ,user=None, strategy=None):
     try:
         logger.info(f"Angle one api order placement for user: {user} & trading symbol is: {symbol}")
         if product_type:
@@ -100,7 +104,7 @@ def place_Angle_order(token, symbol, exch_seg, quantity, product_type, transacti
             status="Failed"
             res_data="unknown response",
             message=f"Invalid quantity {order_params['quantity']}, it should be in multiples of lot size: {lot}"
-            save_trade_order_history(user,symbol, order_id, status, res_data, message, order_params,broker="Angle One")
+            save_trade_order_history(user,symbol, order_id, status, res_data, message, strategy, Entry_type, Exchange, Segment,Index_Symbol , order_params,broker="Angle One")
 
             return {"data": {"status": "error", "message": f"Quantity must be a multiple of lot size: {lot}"}}
 
@@ -139,7 +143,7 @@ def place_Angle_order(token, symbol, exch_seg, quantity, product_type, transacti
                 # log_order(order_data, "orders_placed.csv")  
                 message = responsedetails['data'].get('text', 'completed successfully ')
 
-                save_trade_order_history(user,symbol, order_id, status, res_data, message, order_params,broker="Angle One")
+                save_trade_order_history(user,symbol, order_id, status, res_data, message,  strategy, Entry_type, Exchange, Segment,Index_Symbol ,order_params,broker="Angle One")
                 # from_email = settings.DEFAULT_FROM_EMAIL,
                 # send_trade_email_async.delay(user.email, from_email,user.firstName,status, message)
                 # save_webhook_signals_logs(order_params['transactiontype'], symbol, price, strategy, user, status=responsedetails['data'].get('status'),failure_reason="your order place succesfully", json=json)
@@ -156,7 +160,7 @@ def place_Angle_order(token, symbol, exch_seg, quantity, product_type, transacti
                 print("user.firstName>>>>>",user.firstName)
                 send_trade_email_async.delay(user.email, from_email,user.firstName,status, message)
                 logger.info(f"Order is pending or in process reason is !!!::{message}")
-                save_trade_order_history(user,symbol, order_id, status, res_data, message,order_params, broker="Angle One")
+                save_trade_order_history(user,symbol, order_id, status, res_data, message, strategy, Entry_type, Exchange, Segment,Index_Symbol ,order_params, broker="Angle One")
                 return responsedetails
                 
             else:
@@ -167,7 +171,7 @@ def place_Angle_order(token, symbol, exch_seg, quantity, product_type, transacti
                 # Send rejection email
                 print("user.firstName>>>>>",user.firstName)
                 send_trade_email_async.delay(user.email, from_email,user.firstName,status, rejection_message)
-                save_trade_order_history(user,symbol, order_id, status, res_data, rejection_message,order_params ,broker="Angle One")
+                save_trade_order_history(user,symbol, order_id, status, res_data, rejection_message, strategy, Entry_type, Exchange, Segment,Index_Symbol ,order_params ,broker="Angle One")
                 # save_webhook_signals_logs(order_params['transactiontype'], symbol, price, strategy, user, status=responsedetails['data'].get('status'),
                 return responsedetails
         except Exception as e:
@@ -178,26 +182,8 @@ def place_Angle_order(token, symbol, exch_seg, quantity, product_type, transacti
     except Exception as e:
         logging.error(f"An unexpected error occurred: {e}")
         return  e
-def get_lot_size(trading_symbol):
-    # URL to fetch instrument details (for example, for Angel One)
-    url = "https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json"
-    
-    try:
-        response = requests.get(url)
-        response.raise_for_status()
-        data = response.json()
-        
-        for item in data:
-            # print("item.get("")>>>",item)
-            if item.get("symbol") == trading_symbol:
-                print("**********",item.get("lotsize", None))
-                return {"status":"success" ,"lot_size":item.get("lotsize", None)}  # Fetch lot size from the item
-        
-        return {"status":"False"}  # If no matching symbol is found
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Error occurred while fetching data: {str(e)}")
-        return None
 
+from datetime import datetime, timedelta    
 # Order logging function
 def log_order(data, filename):
     """Log order details to a CSV file."""
@@ -233,13 +219,7 @@ def get_token_details(trading_symbol):
     except requests.exceptions.RequestException as e:
         return f"An error occurred while fetching data: {str(e)}"
 
-import os
-import time
-import csv
-import requests
-from datetime import datetime, timedelta
-from rest_framework.views import APIView
-from rest_framework.response import Response
+
 class SymbolExpiryDateListView(APIView):
     def get(self, request, *args, **kwargs):
         # Extract symbol from query parameters
@@ -317,11 +297,7 @@ class SymbolExpiryDateListView(APIView):
                                          entry.get('name', ''), entry.get('exch_seg', ''),
                                          expiry, entry.get('instrumenttype', '')])
 
-
-            # Process and sort expiry dates
             unique_expiry_dates = sorted(set(expiry_dates), key=lambda x: datetime.strptime(x, '%d%b%Y'))
-           
-            # Return expiry dates for the requested symbol
             filtered_expiry_dates = [expiry for expiry in unique_expiry_dates if symbol.lower() in expiry.lower()]
             
             return Response({"symbol": symbol, "expiry_dates": filtered_expiry_dates}, status=200)

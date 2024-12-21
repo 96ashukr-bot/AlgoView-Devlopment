@@ -454,6 +454,7 @@ class Tradeorderhistory(models.Model):
     client = models.ForeignKey('User', on_delete=models.CASCADE)
     date = models.DateField(auto_now_add=True, null=True, blank=True)
     trading_symbol = models.CharField(max_length=50, null=True, blank=True)
+    Index_Symbol    = models.CharField(max_length=50, null=True, blank=True)
     order_id = models.CharField(max_length=50, null=True, blank=True)  # Changed to CharField for order ID, it could be alphanumeric
     order_status = models.CharField(max_length=15, null=True, blank=True)
     response_data = models.JSONField(null=True, blank=True)  # Store the full response as JSON
@@ -461,5 +462,16 @@ class Tradeorderhistory(models.Model):
     broker=models.CharField(max_length=15, null=True, blank=True)
     order_params= models.JSONField(null=True, blank=True) 
     
+    #add this fileds
+    strategy=models.CharField(max_length=50, null=True, blank=True)
+    Entry_type=models.CharField(max_length=50, null=True, blank=True)#but or sell LE/LX
+    Entry_Price=models.IntegerField(null=True, blank=True)
+    Exit_Price=models.IntegerField(null=True, blank=True)
+    SignalEntry_time=models.DateTimeField(auto_now_add=True,null=True, blank=True)
+    SignalExit_time=models.DateTimeField(null=True, blank=True)
+    Exchange=models.CharField(max_length=50, null=True, blank=True)
+    Segment=models.CharField(max_length=50, null=True, blank=True)
+    # LivePrice
+    # Entry_status
     def __str__(self):
         return f"Order ID: {self.order_id}, Status: {self.order_status}"
