@@ -367,6 +367,20 @@ class GetUser(APIView):
             return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
 
         return Response(serializer.data, status=status.HTTP_200_OK)
+    
+# All sub-admins list     
+class SubadminsView(APIView):
+    permission_classes = [permissions.IsAuthenticated,  ]
+    def get(self, request, *args, **kwargs):
+        user = request.user 
+        try:
+        #     if user.role and user.role.name == 'Super-Admin':
+            subadmin = User.objects.filter(role__name='Sub-Admin').order_by('-id')
+            serializer = UserSerializer(subadmin,many=True) 
+        except User.DoesNotExist:
+            return Response({"detail": "subadmins not found."}, status=status.HTTP_404_NOT_FOUND)
+        return Response(serializer.data)
+    
 #user crud api for admin
 class UserManagementView(APIView):
     permission_classes = [permissions.IsAuthenticated,  ]

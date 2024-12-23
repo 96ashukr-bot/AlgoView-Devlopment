@@ -26,7 +26,7 @@ def send_client_acc_email_async(subject,messages,username,useremail):
             "messages":messages
         }
         html_message = render_to_string('login_account_email.html', context)
-        print("html_message",html_message)
+        # print("html_message",html_message)
 
         email_message = EmailMultiAlternatives(subject, "", from_email, [useremail])
         email_message.attach_alternative(html_message, "text/html") 
@@ -114,9 +114,6 @@ def send_kyc_email_async(email, from_email, user_name, action, reason):
     email_message.attach_alternative(html_message, "text/html")
     email_message.send()
     
-
-
-
 
 @shared_task
 def send_trade_email_async(email, from_email, user_name, status, reason):

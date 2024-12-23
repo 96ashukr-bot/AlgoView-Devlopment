@@ -28,6 +28,7 @@ urlpatterns = [
     path('roles/<int:pk>/', RoleDetailView.as_view(), name='role-detail'),
     path('user/<int:pk>/', GetUser.as_view(), name='GetUser'),
     path('users/<int:pk>/assign-role/', UserAssignRoleView.as_view(), name='assign-role'),
+    path('get-subadmins-list/', SubadminsView.as_view(), name='sub-admins '),
     path('users-list/', UserManagementView.as_view(), name='user-management'),
     path('create-user/', UserManagementView.as_view(), name='user-management'),
     path('update-user/<int:pk>/', UserManagementView.as_view(), name='user-management'),
