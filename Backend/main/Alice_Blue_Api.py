@@ -248,7 +248,7 @@ def save_trade_order_history(client, trading_symbol, order_id, order_status, res
         broker=broker or None,    
         order_params=order_params or None,    
         strategy= strategy or None,     
-        Entry_type=Entry_type or None,     
+        Entry_type=Entry_type.upper() or None,     
         # Entry_Price=Entry_Price or None,     
         # Exit_Price=Exit_Price or None,     
         # SignalEntry_time=SignalEntry_time or None,     

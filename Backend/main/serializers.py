@@ -196,22 +196,22 @@ class CustomLoginSerializer(serializers.Serializer):
         if user is None:
             raise serializers.ValidationError('Invalid credentials')
         if not user.role and user.external_user == "true"or  user.type_of_user == 'is_client' or user.is_client == True or user.role.name.lower() == 'client' or user.role.name == 'Client':
-                messages = []
-                if user.client_expiry_status:
-                    messages.append("Your license has expired. Please renew it to continue using the service.")
-                if not user.client_status:
-                    messages.append("Your account is inactive. Please contact the administrator for assistance.")
-                if messages:
-                    send_client_acc_email_async.delay(
-                        subject="Account Status Notification regarding license or account activity",
-                        messages=messages,
-                        username=user.firstName,
-                        useremail=user.email
-                    )
-                    raise serializers.ValidationError({
-                        "success": "False",
-                        "message": messages
-                    })
+                # messages = []
+                # if user.client_expiry_status:
+                #     messages.append("Your license has expired. Please renew it to continue using the service.")
+                # if not user.client_status:
+                #     messages.append("Your account is inactive. Please contact the administrator for assistance.")
+                # if messages:
+                #     send_client_acc_email_async.delay(
+                #         subject="Account Status Notification regarding license or account activity",
+                #         messages=messages,
+                #         username=user.firstName,
+                #         useremail=user.email
+                #     )
+                #     raise serializers.ValidationError({
+                #         "success": "False",
+                #         "message": messages
+                #     })
                 otp_instance, created = OTP.objects.get_or_create(user=user, is_verified=False)
                 otp_instance.generate_otp()
                 

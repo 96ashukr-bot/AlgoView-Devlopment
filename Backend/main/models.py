@@ -465,13 +465,16 @@ class Tradeorderhistory(models.Model):
     #add this fileds
     strategy=models.CharField(max_length=50, null=True, blank=True)
     Entry_type=models.CharField(max_length=50, null=True, blank=True)#but or sell LE/LX
-    Entry_Price=models.IntegerField(null=True, blank=True)
-    Exit_Price=models.IntegerField(null=True, blank=True)
+    Entry_Price=models.DecimalField(max_digits=10, decimal_places=2,null=True, blank=True)
+    Exit_Price=models.DecimalField(max_digits=10, decimal_places=2,null=True, blank=True)
     SignalEntry_time=models.DateTimeField(auto_now_add=True,null=True, blank=True)
     SignalExit_time=models.DateTimeField(null=True, blank=True)
     Exchange=models.CharField(max_length=50, null=True, blank=True)
     Segment=models.CharField(max_length=50, null=True, blank=True)
-    # LivePrice
-    # Entry_status
+    Lot=models.IntegerField(null=True, blank=True)
+    LivePrice=models.DecimalField(max_digits=15, decimal_places=2,null=True, blank=True)
+    Entry_status=models.CharField(max_length=50, null=True, blank=True)
+    Exit_status=models.CharField(max_length=50, null=True, blank=True)
+    Total=models.DecimalField(max_digits=15, decimal_places=2,null=True, blank=True)
     def __str__(self):
         return f"Order ID: {self.order_id}, Status: {self.order_status}"

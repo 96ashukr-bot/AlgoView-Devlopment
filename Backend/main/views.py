@@ -1238,6 +1238,39 @@ class BrokerView(APIView):
         except Broker.DoesNotExist:
             return Response({"detail": "Broker not found."}, status=status.HTTP_404_NOT_FOUND)
 import time
+
+class ClientFilterView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request, *args, **kwargs):
+        user = request.user 
+        if user.role and user.role.name.lower() == 'super-admin' or user.role.name =='Super-Admin':
+            clients = User.objects.filter(type_of_user='is_client', is_client=True).order_by('-id')
+        # elif user.role and user.role.name.lower() == 'sub-admin' or user.role.name=='Sub-Admin':
+            # print("sub-admin.........")
+            # clients = User.objects.filter(assigned_client=user).order_by('-id')
+        else:
+            clients = User.objects.filter(Q(type_of_user='is_client') & (Q(created_by=user) 
+            | Q(assigned_client=user))).order_by('-id')
+            # clients = User.objects.filter(type_of_user='is_client',is_client=True, created_by=user).order_by('-id')
+                # Apply additional filters based on query parameters
+        license_type = request.query_params.get('client_type') 
+        trading_status = request.query_params.get('trading_type')  
+        # broker_type = request.query_params.get('broker_type') 
+
+        if license_type:
+            clients = clients.filter(license__name__iexact=license_type)
+        
+        if trading_status:
+            clients = clients.filter(is_enable=(trading_status.lower() == 'on'))
+        
+        # if broker_type:
+        #     clients = clients.filter(Broker__name__icontains=broker_type)
+        # Apply pagination and serialize the data
+        paginator = CustomPageNumberPagination()
+        result_page = paginator.paginate_queryset(clients, request)
+        serializer = ClientListSerializer(result_page, many=True)
+        return paginator.get_paginated_response(serializer.data)
 #Client ADD Api
 class ClientCreateView(APIView):
     permission_classes = [IsAuthenticated]
@@ -1253,8 +1286,7 @@ class ClientCreateView(APIView):
             clients = User.objects.filter(Q(type_of_user='is_client') & (Q(created_by=user) 
             | Q(assigned_client=user))).order_by('-id')
             # clients = User.objects.filter(type_of_user='is_client',is_client=True, created_by=user).order_by('-id')
-
-        # Apply pagination and serialize the data
+                # Apply additional filters based on query parameters
         paginator = CustomPageNumberPagination()
         result_page = paginator.paginate_queryset(clients, request)
         serializer = ClientListSerializer(result_page, many=True)
@@ -2075,6 +2107,11 @@ SESSION_EXPIRATION = None
 class PlaceOrderWebhookView(APIView):
     def post(self, request):
         alert_data = request.data
+        # Check if alert_data is None or an empty dictionary
+        if not alert_data:
+            logger.warning("No alert data received or empty payload.")
+            return Response({"status": "error", "message": "No alert data received."}, status=status.HTTP_400_BAD_REQUEST)
+        
         logger.info(f"Received alert: {alert_data}")
         symbols = request.data.get('symbol','NIFTY')
         exch_seg = request.data.get('exch_seg','NFO')
@@ -2114,7 +2151,7 @@ class PlaceOrderWebhookView(APIView):
                 elif trade.broker.lower() == 'angle one':
                     trade_symbol=trading_symbol
                 order_params = {"symbol": trade.symbol,"exch_seg": exch_seg, "quantity": trade.quantity or default_quantity,"product_type": trade.product_type,
-                "transaction_type": trade.buy_sell,"price": limitPrice,"ordertype": default_ordertype,"expiry": trade.expiry_date or default_expiry,"trade_limit": trade.trade_limit,"strategy": trade.strategy}
+                "transaction_type":buy_sell,"price": limitPrice,"ordertype": default_ordertype,"expiry": trade.expiry_date or default_expiry,"trade_limit": trade.trade_limit,"strategy": trade.strategy}
                 # trade_expiry_date = trade.expiry_date.date()
                 # print("trade expiry date..",trade_expiry_date)
                 # formatted_trade_expiry_date = trade_expiry_date.strftime("%d-%m-%Y")
@@ -2142,7 +2179,7 @@ class PlaceOrderWebhookView(APIView):
                 Index_Symbol=trade.symbol
                 res_data="unknown response",
                 broker=trade.broker
-                Entry_type=trade.buy_sell
+                Entry_type=buy_sell
                 trade_expiry_date = trade.expiry_date
                 if not trade_expiry_date:
                     message= f"Skipping trade for client {trade.client}: Expiry date is missing."
@@ -2153,7 +2190,7 @@ class PlaceOrderWebhookView(APIView):
                     continue
 
                 formatted_trade_expiry_date = trade_expiry_date.strftime("%d-%m-%Y")
-                if not trade.symbol or not trade.product_type or not trade.buy_sell:
+                if not trade.symbol or not trade.product_type:
                     message= f"trade details for client {trade.client}: Missing symbol, product type, or transaction type."
                     save_trade_order_history(user,trade_symbol, order_id, status, res_data, message,strategy, Entry_type, Exchange, Segment,Index_Symbol, order_params,broker=trade.broker)
                         
@@ -2161,13 +2198,13 @@ class PlaceOrderWebhookView(APIView):
                     continue
                 logger.info(f"Trade expiry date: {formatted_trade_expiry_date} received date:{default_expiry}")
                 logger.info(f"Trade product type: {trade.product_type.upper()} received type: {producttype.upper()}")
-                logger.info(f"Trade transaction type: {trade.buy_sell.upper()} received transaction type: {buy_sell.upper()}")
+                # logger.info(f"Trade transaction type: {trade.buy_sell.upper()} received transaction type: {buy_sell.upper()}")
                 logger.info(f"Trade symbol: {trade.symbol} received symbol: {symbols}")
 
                 if (
                     trade.symbol != symbols or
                     trade.product_type.upper() != producttype.upper() or
-                    trade.buy_sell.upper() != buy_sell.upper() or
+                    # trade.buy_sell.upper() != buy_sell.upper() or
                     formatted_trade_expiry_date != default_expiry
                 ): 
                     message= f"client and Webhook aleart details is not matched for {trade.client}: criteria mismatch."
@@ -2182,7 +2219,7 @@ class PlaceOrderWebhookView(APIView):
                 strategy = trade.strategy
                 quantity = trade.quantity or default_quantity
                 product_type = trade.product_type
-                transaction_type = trade.buy_sell 
+                transaction_type = buy_sell 
                 price = limitPrice
                 ordertype = default_ordertype
                 expiry = trade.expiry_date or default_expiry
@@ -2204,23 +2241,23 @@ class PlaceOrderWebhookView(APIView):
                         
                     if trade.broker.lower() == "angle one":
                         # Fetch client broker details
-                        # client_broker = ClientBrokerdetails.objects.filter(client=trade.client, broker_name__broker_name=trade.broker).first()
-                        # if not client_broker:
-                            # order_id=0
-                            # status="Failed"
-                            # res_data="unknown response",
-                            # message= f"No broker details found for client {trade.client} and broker {trade.broker}"
-                            # save_trade_order_history(user,symbol, order_id, status, res_data, message, order_params,broker="Angle One")
-                               
-                        #     logger.error(f"No broker details found for client {trade.client} and broker {trade.broker}")
-                        #     continue
+                        client_broker = ClientBrokerdetails.objects.filter(client=trade.client, broker_name__broker_name=trade.broker).first()
+                        if not client_broker:
+                            order_id=0
+                            status="Failed"
+                            res_data="unknown response",
+                            message= f"No broker details found for client {trade.client} and broker {trade.broker}"
+                            save_trade_order_history(user,trade_symbol, order_id, status, res_data, message,strategy, Entry_type, Exchange, Segment,Index_Symbol, order_params,broker="Angle One")
+                                
+                            logger.error(f"No broker details found for client {trade.client} and broker {trade.broker}")
+                            continue
 
-                        # api_key = client_broker.broker_API_SKEY
-                        # demate_user_name = client_broker.broker_Demate_User_Name
-                        # totp = client_broker.broker_Totp_Authcode
-                        # angle_pass = client_broker.broker_pass
+                        api_key = client_broker.broker_API_SKEY
+                        demate_user_name = client_broker.broker_Demate_User_Name
+                        totp = client_broker.broker_Totp_Authcode
+                        angle_pass = client_broker.broker_pass
 
-                        # logger.info(f"Fetched API credentials for {trade.broker}: SKEY={api_key}, USER={demate_user_name}")
+                        logger.info(f"Fetched API credentials for {trade.broker}: SKEY={api_key}, USER={demate_user_name}")
         
                         logger.info(f"!!!!Placing order for user: {user} Brocker is: {trade.broker} & trading symbol is: {trade.symbol}")
 
@@ -2245,10 +2282,10 @@ class PlaceOrderWebhookView(APIView):
 
                         # Place order for Angle One
                         order_response = place_Angle_order(
-                            # api_key=api_key,
-                            # demate_user_name=demate_user_name,
-                            # totp=totp,
-                            # angle_pass=angle_pass,
+                            api_key=api_key,
+                            demate_user_name=demate_user_name,
+                            totp=totp,
+                            angle_pass=angle_pass,
                             token=token,
                             symbol=symbol,
                             exch_seg=exch_seg,
@@ -2616,12 +2653,12 @@ class ClientTradeListView(APIView):
             user = request.user
             if user.role and user.role.name.lower() == 'super-admin':
                 # Super-admin can see all clients' trade order histories
-                clients = User.objects.filter(type_of_user='is_client', is_client=True)
+                clients = User.objects.all()#filter(type_of_user='is_client', is_client=True)
                 trade_history = Tradeorderhistory.objects.filter(client__in=clients).order_by('-id')
             elif user.role and user.role.name.lower() == 'sub-admin':
                 print("Sub-AdminSub-AdminSub-AdminSub-Admin")
                 # Sub-admin can see trade order histories of their assigned clients
-                clients = User.objects.filter(assigned_client=user,created_by=user,type_of_user='is_client', is_client=True)
+                clients = User.objects.filter(assigned_client=user,created_by=user)#,type_of_user='is_client', is_client=True)
                 trade_history = Tradeorderhistory.objects.filter(client__in=clients).order_by('-id')
             else:
                 trade_history = Tradeorderhistory.objects.filter(client=user).order_by('-id')
@@ -2634,3 +2671,58 @@ class ClientTradeListView(APIView):
 
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+import csv
+from django.http import HttpResponse
+class ExportTradeHistoryView(APIView):
+    """
+    API View to export trade history data as a CSV file.
+    """
+
+    def get(self, request):
+        # Get filter parameters from the query string
+        symbol = request.query_params.get('symbol', None)
+        start_date = request.query_params.get('start_date', None)
+        end_date = request.query_params.get('end_date', None)
+
+        # Filter data from the database
+        queryset = Tradeorderhistory.objects.all()  # Replace with your model
+
+        if symbol:
+            queryset = queryset.filter(symbol=symbol)
+        if start_date and end_date:
+            queryset = queryset.filter(signal_entry_time__range=[start_date, end_date])
+
+        if not queryset.exists():
+            return Response(
+                {"status": "error", "message": "No trade history found for the given filters."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Create the HttpResponse object with CSV headers
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="trade_history.csv"'
+
+        # Write the CSV data
+        writer = csv.writer(response)
+        writer.writerow(["S.No.", "Signal Entry Time", "Signal Exit Time", "Symbol", "Strategy",
+                         "Entry Type", "Entry Qty", "Exit Qty", "Entry Price", "Exit Price", "Total"])
+
+        for index, trade in enumerate(queryset, start=1):
+            writer.writerow([
+                index,
+                trade.signal_entry_time,
+                trade.signal_exit_time,
+                trade.symbol,
+                trade.strategy,
+                trade.entry_type,
+                trade.entry_qty,
+                trade.exit_qty,
+                trade.entry_price,
+                trade.exit_price,
+                trade.total,
+            ])
+
+        return response
+        

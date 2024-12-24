@@ -41,7 +41,7 @@ data = generate_session_with_retry(USERNAME, PASSWORD, totp)
 feedToken = smart_client.getfeedToken()
 # api_key,demate_user_name,totp,angle_pass,
 #place order using Angle one api
-def place_Angle_order(token, symbol, exch_seg, quantity, product_type, transactiontype, price, ordertype, expiry,lot_size, 
+def place_Angle_order(api_key,demate_user_name,totp,angle_pass,token, symbol, exch_seg, quantity, product_type, transactiontype, price, ordertype, expiry,lot_size, 
                 Entry_type, Exchange, Segment,Index_Symbol ,user=None, strategy=None):
     try:
         logger.info(f"Angle one api order placement for user: {user} & trading symbol is: {symbol}")
@@ -89,31 +89,49 @@ def place_Angle_order(token, symbol, exch_seg, quantity, product_type, transacti
             }
                 
         print("order_params...........",order_params)
-
-        # logging.info("Sending Order Request: %s", json.dumps(order_params, indent=4))
+        # API_KEY = api_key
+        # USERNAME = demate_user_name
+        # Totp     = totp
+        # PASSWORD=angle_pass
+        # smart_client = SmartConnect(api_key=API_KEY)
+        # totp = pyotp.TOTP(Totp).now()
+        logging.info("Sending Order Request: %s", json.dumps(order_params, indent=4))
         # max_retries = 3
         # for attempt in range(max_retries):
-        lot_size = get_lot_size(order_params['tradingsymbol'])  # Implement this function to fetch lot size
+        lot_size = get_lot_size(symbol)  # Implement this function to fetch lot size
+        print("))))))))")
         # To get the lot size, access the correct key, which is 'lot_size'
         lot = int(lot_size.get("lot_size", 0))  # Convert lot_size to an integer (default to 0 if not found)
 
         # Check if the order quantity is a multiple of the lot size
         if order_params['quantity'] % lot != 0:
-            logger.error(f"Invalid quantity {order_params['quantity']}, it should be in multiples of lot size: {lot}")
+            print("ooooooooooooooooooo")
+            logger.error(f"Invalid quantity {symbol}, it should be in multiples of lot size: {lot}")
             order_id=0
             status="Failed"
             res_data="unknown response",
-            message=f"Invalid quantity {order_params['quantity']}, it should be in multiples of lot size: {lot}"
+            message=f"Invalid quantity {symbol}, it should be in multiples of lot size: {lot}"
             save_trade_order_history(user,symbol, order_id, status, res_data, message, strategy, Entry_type, Exchange, Segment,Index_Symbol , order_params,broker="Angle One")
 
             return {"data": {"status": "error", "message": f"Quantity must be a multiple of lot size: {lot}"}}
 
         try:
+            smart_client = SmartConnect(api_key=api_key)
+            if not smart_client:
+                logger.error("Failed to initialize SmartConnect client.")
+                return {"data": {"status": "error", "message": "API client initialization failed."}}
+
             print("client typee", smart_client)
             response = smart_client.placeOrderFullResponse(order_params)
             print("response of angleeee",response)
             if response is None:
                 logger.error("Received None response from API.")
+                status="error"
+                order_id=0
+                message=f"Empty Response from API return None"
+                res_data=response
+                save_trade_order_history(user,symbol, order_id, status, res_data, message, strategy, Entry_type, Exchange, Segment,Index_Symbol , order_params,broker="Angle One")
+
                 return {"data": {"status": "error", "message": "No response from API."}}
 
             logger.info(f"Raw API Response: {response}")

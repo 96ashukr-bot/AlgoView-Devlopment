@@ -8,7 +8,7 @@ from SmartApi.smartWebSocketV2 import SmartWebSocketV2
 from SmartApi import SmartConnect
 import pyotp
 from urllib.parse import parse_qs
-logger = logging.getLogger(__name__)
+# logger = logging.getLogger(__name__)
 
 # Smart API credentials
 API_KEY = 'FNqcDPCk'#'Xp6znI3s'
@@ -215,9 +215,9 @@ class StockChainConsumer(AsyncWebsocketConsumer):
             self.token_to_strike_price = token_to_strike_price
             self.token_to_category = token_to_category
 
-            logger.info(f"Token to Symbol Mapping: {self.token_to_symbol}")
-            logger.info(f"Token to Strike Price Mapping: {self.token_to_strike_price}")
-            logger.info(f"Token to Category Mapping: {self.token_to_category}")
+            # logger.info(f"Token to Symbol Mapping: {self.token_to_symbol}")
+            # logger.info(f"Token to Strike Price Mapping: {self.token_to_strike_price}")
+            # logger.info(f"Token to Category Mapping: {self.token_to_category}")
 
             return list(token_to_symbol.keys())
         except requests.RequestException as e:
@@ -354,8 +354,8 @@ class StockChainOldConsumer(AsyncWebsocketConsumer):
             "exchangeType": 2,  # NFO exchange type
             "tokens": tokens
         }]
-
-        logger.info(f"Fetched tokens for {self.symbol_name}: {tokens}")
+        logger.info(f"Fetched tokens for {self.symbol_name}")
+        # logger.info(f"Fetched tokens for {self.symbol_name}: {tokens}")
         await self.accept()
 
         # Initialize and connect the SmartWebSocket
