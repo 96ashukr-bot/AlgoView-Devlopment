@@ -89,12 +89,12 @@ def place_Angle_order(api_key,demate_user_name,totp,angle_pass,token, symbol, ex
             }
                 
         print("order_params...........",order_params)
-        # API_KEY = api_key
-        # USERNAME = demate_user_name
-        # Totp     = totp
-        # PASSWORD=angle_pass
-        # smart_client = SmartConnect(api_key=API_KEY)
-        # totp = pyotp.TOTP(Totp).now()
+        API_KEY = api_key
+        USERNAME = demate_user_name
+        Totp     = totp
+        PASSWORD=angle_pass
+        smart_client = SmartConnect(api_key=API_KEY)
+        totp = pyotp.TOTP(Totp).now()
         logging.info("Sending Order Request: %s", json.dumps(order_params, indent=4))
         # max_retries = 3
         # for attempt in range(max_retries):
