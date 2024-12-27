@@ -133,6 +133,7 @@ urlpatterns = [
     path('get-trade-history/', TradeorderhistoryListView.as_view(), name='get-trade-history'),  # Handle redirect and exchange code
     path('get-client-trade-history/', ClientTradeListView.as_view(), name='get-client-trade-history'),  # Handle redirect and exchange code
     path('clients-filter/', ClientFilterView.as_view(), name='client-list'),
+    path('client-dashboard-redirect/',ClientDashBoardView.as_view(),name='client-dashboard-'),
 
 ]
 

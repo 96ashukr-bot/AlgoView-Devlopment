@@ -236,7 +236,20 @@ def get_token_details(trading_symbol):
             "message": f"No details found for trading symbol: {trading_symbol}"}
     except requests.exceptions.RequestException as e:
         return f"An error occurred while fetching data: {str(e)}"
+def save_data_to_file(self, data, filename="symbol_data.json"):
+    """
+    Save JSON data to a file in the specified directory.
+    """
+    try:
+        os.makedirs(self.target_directory, exist_ok=True)  # Ensure the directory exists
+        file_path = os.path.join(self.target_directory, filename)
 
+        with open(file_path, "w") as file:
+            json.dump(data, file, indent=4)
+
+        logger.info(f"Data successfully saved to {file_path}")
+    except Exception as e:
+        logger.error(f"Error saving data to file: {e}")
 
 class SymbolExpiryDateListView(APIView):
     def get(self, request, *args, **kwargs):
@@ -263,14 +276,15 @@ class SymbolExpiryDateListView(APIView):
         # Read expiry dates from the existing CSV file
         try:
             data = pd.read_csv(csv_file)
-            filtered_data = data[data['symbol'].str.contains(symbol, case=False, na=False)]
-            
-            # Ensure the expiry dates are sorted as datetime objects
+            filtered_data = data[data['name'].str.upper() == symbol.upper()]
             expiry_dates = sorted(set(filtered_data['expiry'].unique()), key=lambda x: datetime.strptime(x, '%d%b%Y'))
-            
-            # Format expiry dates to the desired format ('%d-%b-%Y')
-            expiry_dates = [datetime.strptime(date, '%d%b%Y').strftime('%d%b%Y') for date in expiry_dates]
-            
+            current_date = datetime.now()
+            # Filter out past expiry dates
+            expiry_dates = [
+                datetime.strptime(date, '%d%b%Y').strftime('%d%b%Y') 
+                for date in expiry_dates 
+                if datetime.strptime(date, '%d%b%Y') >= current_date
+            ]   
             return Response({"symbol": symbol, "expiry_dates": expiry_dates}, status=200)
         except Exception as e:
             return Response({"error": f"Error reading CSV: {str(e)}"}, status=500)
@@ -294,12 +308,11 @@ class SymbolExpiryDateListView(APIView):
             data = response.json()
             if not data:
                 return Response({"error": "No data received from API"}, status=404)
-
-            # Filter and write to the CSV file
+                # Filter and write to the CSV file
             expiry_dates = []
             with open(csv_file, mode='w', newline='') as file:
                 writer = csv.writer(file)
-                writer.writerow(['token', 'symbol', 'name', 'exch_seg', 'expiry', 'instrumenttype'])
+                writer.wristerow(['token', 'symbol', 'name', 'exch_seg', 'expiry', 'instrumenttype'])
 
                 for entry in data:
                     if entry.get('exch_seg') == 'NFO':  # Filter only NFO segments

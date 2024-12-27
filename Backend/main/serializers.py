@@ -196,22 +196,22 @@ class CustomLoginSerializer(serializers.Serializer):
         if user is None:
             raise serializers.ValidationError('Invalid credentials')
         if not user.role and user.external_user == "true"or  user.type_of_user == 'is_client' or user.is_client == True or user.role.name.lower() == 'client' or user.role.name == 'Client':
-                # messages = []
-                # if user.client_expiry_status:
-                #     messages.append("Your license has expired. Please renew it to continue using the service.")
-                # if not user.client_status:
-                #     messages.append("Your account is inactive. Please contact the administrator for assistance.")
-                # if messages:
-                #     send_client_acc_email_async.delay(
-                #         subject="Account Status Notification regarding license or account activity",
-                #         messages=messages,
-                #         username=user.firstName,
-                #         useremail=user.email
-                #     )
-                #     raise serializers.ValidationError({
-                #         "success": "False",
-                #         "message": messages
-                #     })
+                messages = []
+                if user.client_expiry_status:
+                    messages.append("Your license has expired. Please renew it to continue using the service.")
+                if not user.client_status:
+                    messages.append("Your account is inactive. Please contact the administrator for assistance.")
+                if messages:
+                    send_client_acc_email_async.delay(
+                        subject="Account Status Notification regarding license or account activity",
+                        messages=messages,
+                        username=user.firstName,
+                        useremail=user.email
+                    )
+                    raise serializers.ValidationError({
+                        "success": "False",
+                        "message": messages
+                    })
                 otp_instance, created = OTP.objects.get_or_create(user=user, is_verified=False)
                 otp_instance.generate_otp()
                 
@@ -601,15 +601,15 @@ class NewUserCreateSerializer(serializers.ModelSerializer):
         if self.instance is not None:
             # Update scenario: Exclude the current instance when checking for duplicates
             if User.objects.exclude(id=self.instance.id).filter(phoneNumber=phone_number).exists():
-                raise serializers.ValidationError({'phoneNumber': 'A user with this phone number already exists.'})
+                raise serializers.ValidationError({'phoneNumber': 'User with this phone number already exists.'})
             if User.objects.exclude(id=self.instance.id).filter(email=email).exists():
-                raise serializers.ValidationError({'email': 'A user with this email already exists.'})
+                raise serializers.ValidationError({'email': 'User with this email already exists.'})
         else:
             # Create scenario: Check for duplicates including the new data
             if User.objects.filter(phoneNumber=phone_number).exists():
                 raise serializers.ValidationError({'phoneNumber': 'A user with this phone number already exists.'})
             if User.objects.filter(email=email).exists():
-                raise serializers.ValidationError({'email': 'A user with this email already exists.'})
+                raise serializers.ValidationError({'email': 'User with this email already exists.'})
 
         return data
     
@@ -835,15 +835,15 @@ class NewClientCreateSerializer(serializers.ModelSerializer):
         if self.instance is not None:
             # Update scenario: Exclude the current instance when checking for duplicates
             if User.objects.exclude(id=self.instance.id).filter(phoneNumber=phone_number).exists():
-                raise serializers.ValidationError({'phoneNumber': 'A user with this phone number already exists.'})
+                raise serializers.ValidationError({'phoneNumber': 'User with this phone number already exists.'})
             if User.objects.exclude(id=self.instance.id).filter(email=email).exists():
-                raise serializers.ValidationError({'email': 'A user with this email already exists.'})
+                raise serializers.ValidationError({'email': 'User with this email already exists.'})
         else:
             # Create scenario: Check for duplicates including the new data
             if User.objects.filter(phoneNumber=phone_number).exists():
-                raise serializers.ValidationError({'phoneNumber': 'A user with this phone number already exists.'})
+                raise serializers.ValidationError({'phoneNumber': 'User with this phone number already exists.'})
             if User.objects.filter(email=email).exists():
-                raise serializers.ValidationError({'email': 'A user with this email already exists.'})
+                raise serializers.ValidationError({'email': 'User with this email already exists.'})
 
         return data
     
@@ -896,20 +896,20 @@ class ClientCreateSerializer(serializers.ModelSerializer):
         # Check if the phone number already exists for another user (excluding the current instance if updating)
             if self.instance is None:  # For new users, just check if phone exists
                 if User.objects.filter(phoneNumber=phone_number).exists():
-                    raise serializers.ValidationError({'phoneNumber': 'A user with this phone number already exists.'})
+                    raise serializers.ValidationError({'phoneNumber': 'User with this phone number already exists.'})
             else:  # For updates, exclude the current user from the check
                 if User.objects.exclude(id=self.instance.id).filter(phoneNumber=phone_number).exists():
-                    raise serializers.ValidationError({'phoneNumber': 'A user with this phone number already exists.'})
+                    raise serializers.ValidationError({'phoneNumber': 'User with this phone number already exists.'})
 
             # Check for duplicate email
             if email:
                 # Check if the email already exists for another user (excluding the current instance if updating)
                 if self.instance is None:  # For new users, just check if email exists
                     if User.objects.filter(email=email).exists():
-                        raise serializers.ValidationError({'email': 'A user with this email already exists.'})
+                        raise serializers.ValidationError({'email': 'User with this email already exists.'})
                 else:  # For updates, exclude the current user from the check
                     if User.objects.exclude(id=self.instance.id).filter(email=email).exists():
-                        raise serializers.ValidationError({'email': 'A user with this email already exists.'})
+                        raise serializers.ValidationError({'email': 'User with this email already exists.'})
 
             # Split the full name into parts
             name_parts = full_name.split()
@@ -1197,3 +1197,27 @@ class TradeorderhistorySerializer(serializers.ModelSerializer):
                 , 'failure_reason', 'broker', 'order_params', 'strategy', 'Entry_type', 'Entry_Price', 
                 'Exit_Price', 'SignalEntry_time', 'SignalExit_time', 'Exchange', 'Segment']
 
+
+from rest_framework.exceptions import AuthenticationFailed
+class ClientdashboardSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+    def validate(self, attrs):
+        email = attrs.get("email")
+
+        # Check if the email exists in the database
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            raise AuthenticationFailed("Invalid email or user does not exist.")
+
+        # Check if the user is active
+        if not user.is_active:
+            raise AuthenticationFailed("User account is disabled.")
+
+        # Generate tokens for the user
+        refresh = RefreshToken.for_user(user)
+        return {
+            'access': str(refresh.access_token),
+            'refresh': str(refresh),
+        }

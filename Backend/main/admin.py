@@ -44,7 +44,7 @@ class KycAdmin(admin.ModelAdmin):
     
 @admin.register(OTP)
 class OtpAdmin(admin.ModelAdmin):
-    list_display = ['user','otp_code','is_verified']
+    list_display = ['id','user','otp_code','is_verified']
     search_fields = ['user',]
     ordering = ['user',]
 

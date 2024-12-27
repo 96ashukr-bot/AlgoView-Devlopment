@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import os
 import requests
 logger = logging.getLogger('main')
 from channels.generic.websocket import AsyncWebsocketConsumer
@@ -172,7 +173,7 @@ class StockChainConsumer(AsyncWebsocketConsumer):
             "tokens": tokens
         }]
 
-        logger.info(f"Fetched tokens for {self.symbol_name}: {tokens}")
+        # logger.info(f"Fetched tokens for {self.symbol_name}: {tokens}")
         await self.accept()
 
         # Initialize and connect the SmartWebSocket
@@ -298,9 +299,9 @@ class StockChainConsumer(AsyncWebsocketConsumer):
                 self.event_loop
             )
 
-            logger.info(
-                f"Token {token}: Symbol {symbol}, Strike Price {strike_price}, LTP {current_price:.2f}, Volume {volume}, Category {category}"
-            )
+            # logger.info(
+            #     f"Token {token}: Symbol {symbol}, Strike Price {strike_price}, LTP {current_price:.2f}, Volume {volume}, Category {category}"
+            # )
             # await asyncio.sleep(4)
         except json.JSONDecodeError as e:
             logger.error(f"Error decoding JSON data: {e}")
@@ -321,7 +322,7 @@ class StockChainConsumer(AsyncWebsocketConsumer):
 
 
 
-class StockChainOldConsumer(AsyncWebsocketConsumer):
+class StockChainConsumerold(AsyncWebsocketConsumer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.last_prices = {}
@@ -338,12 +339,12 @@ class StockChainOldConsumer(AsyncWebsocketConsumer):
         query_params = parse_qs(self.scope['query_string'].decode('utf-8'))
         self.symbol_name = query_params.get('name', [None])[0]
         self.expiry_date = query_params.get('expiry_date', [None])[0]
-
+        logger.info(f"self.symbol_name{self.symbol_name}")
         if not self.symbol_name or not self.expiry_date:
             await self.close(code=4001)  # Close with error code for missing parameters
             return
 
-        logger.info(f"Requested symbol: {self.symbol_name}, Expiry Date: {self.expiry_date}")
+        # logger.info(f"Requested symbol: {self.symbol_name}, Expiry Date: {self.expiry_date}")
 
         tokens = await self.get_symbol_tokens(self.symbol_name, self.expiry_date)
         if not tokens:
@@ -354,7 +355,7 @@ class StockChainOldConsumer(AsyncWebsocketConsumer):
             "exchangeType": 2,  # NFO exchange type
             "tokens": tokens
         }]
-        logger.info(f"Fetched tokens for {self.symbol_name}")
+        # logger.info(f"Fetched tokens for {self.symbol_name}")
         # logger.info(f"Fetched tokens for {self.symbol_name}: {tokens}")
         await self.accept()
 
@@ -375,6 +376,10 @@ class StockChainOldConsumer(AsyncWebsocketConsumer):
             response = requests.get(url)
             response.raise_for_status()  # Raise an error for bad responses
             data = response.json()
+            # logger.info(f"{data}...dataaaaa--------")
+            #         # Save the data to the specified directory
+            # target_directory = "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend"
+            # self.save_data_to_file(data, "symbol_data.json", target_directory)
 
             token_to_symbol = {}
             token_to_strike_price = {}
@@ -382,24 +387,30 @@ class StockChainOldConsumer(AsyncWebsocketConsumer):
 
             for entry in data:
                 # logger.info(f"Processing entry: {entry}")
-               if (entry.get('exch_seg') == 'NFO' and entry.get('name') == symbol_name.upper() and entry.get('expiry').upper() == expiry_date.upper()):
-                    print("dataaaa>>")
+                if (entry.get('exch_seg') == 'NFO' and entry.get('name') == symbol_name.upper() and entry.get('expiry').upper() == expiry_date.upper()):
+                    # logger.info(f"tttttttttttttttttttt>>{entry}")
+                        # Log matched entries
+                    # logger.info(f"Matched Entry: {entry}")
+
                     token = entry['token']
                     symbol = entry['symbol']
                     strike_price = entry['strike']
+                    
                     category = 'CE' if 'CE' in symbol else 'PE' if 'PE' in symbol else 'Unknown'
              
                     token_to_symbol[token] = symbol
                     token_to_strike_price[token] = strike_price
                     token_to_category[token] = category
+                else:
+                    logger.info(f"NOT  Matched Entry: {entry}")
 
             self.token_to_symbol = token_to_symbol
             self.token_to_strike_price = token_to_strike_price
             self.token_to_category = token_to_category
 
-            logger.info(f"Token to Symbol Mapping: {self.token_to_symbol}")
-            logger.info(f"Token to Strike Price Mapping: {self.token_to_strike_price}")
-            logger.info(f"Token to Category Mapping: {self.token_to_category}")
+            # logger.info(f"Token to Symbol Mapping: {self.token_to_symbol}")
+            # logger.info(f"Token to Strike Price Mapping: {self.token_to_strike_price}")
+            # logger.info(f"Token to Category Mapping: {self.token_to_category}")
 
             return list(token_to_symbol.keys())
         except requests.RequestException as e:
