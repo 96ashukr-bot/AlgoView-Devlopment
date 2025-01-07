@@ -447,24 +447,31 @@ class ClientBrokerdetails(models.Model):
     broker_Demate_User_Name = models.CharField(max_length=50,null=True, blank=True)
     broker_Totp_Authcode=models.CharField(max_length=250,null=True, blank=True)
     broker_pass=models.CharField(max_length=50,null=True, blank=True)
+    # New fields for token management
+    request_token = models.CharField(max_length=250, null=True, blank=True)  # Temporary request token
+    access_token = models.CharField(max_length=500, null=True, blank=True)  # Persistent access token
+    access_token_expiry = models.DateTimeField(null=True, blank=True)  # Expiry of the access token (if applicable)
+    
+    
     def __str__(self):
         return f"Trade Setting {self.broker_name} - {self.broker_API_SKEY}"
     
 class Tradeorderhistory(models.Model):
     client = models.ForeignKey('User', on_delete=models.CASCADE)
     date = models.DateField(auto_now_add=True, null=True, blank=True)
-    trading_symbol = models.CharField(max_length=50, null=True, blank=True)
-    Index_Symbol    = models.CharField(max_length=50, null=True, blank=True)
-    order_id = models.CharField(max_length=50, null=True, blank=True)  # Changed to CharField for order ID, it could be alphanumeric
+    trading_symbol = models.CharField(max_length=255, null=True, blank=True)
+    Index_Symbol    = models.CharField(max_length=255, null=True, blank=True)
+    order_id = models.CharField(max_length=255, null=True, blank=True)  # Changed to CharField for order ID, it could be alphanumeric
     order_status = models.CharField(max_length=15, null=True, blank=True)
     response_data = models.JSONField(null=True, blank=True)  # Store the full response as JSON
     failure_reason = models.TextField(null=True, blank=True)  # Store failure reason if any
-    broker=models.CharField(max_length=15, null=True, blank=True)
+    broker=models.CharField(max_length=255, null=True, blank=True)
     order_params= models.JSONField(null=True, blank=True) 
     
     #add this fileds
     strategy=models.CharField(max_length=50, null=True, blank=True)
     Entry_type=models.CharField(max_length=50, null=True, blank=True)#but or sell LE/LX
+    Exit_type=models.CharField(max_length=50, null=True, blank=True)#but or sell LE/LX
     Entry_Price=models.DecimalField(max_digits=10, decimal_places=2,null=True, blank=True)
     Exit_Price=models.DecimalField(max_digits=10, decimal_places=2,null=True, blank=True)
     SignalEntry_time=models.DateTimeField(auto_now_add=True,null=True, blank=True)
@@ -476,5 +483,7 @@ class Tradeorderhistory(models.Model):
     Entry_status=models.CharField(max_length=50, null=True, blank=True)
     Exit_status=models.CharField(max_length=50, null=True, blank=True)
     Total=models.DecimalField(max_digits=15, decimal_places=2,null=True, blank=True)
+    webhook_signal= models.JSONField(null=True, blank=True) 
+    
     def __str__(self):
         return f"Order ID: {self.order_id}, Status: {self.order_status}"

@@ -42,7 +42,7 @@ feedToken = smart_client.getfeedToken()
 # api_key,demate_user_name,totp,angle_pass,
 #place order using Angle one api
 def place_Angle_order(api_key,demate_user_name,totp,angle_pass,token, symbol, exch_seg, quantity, product_type, transactiontype, price, ordertype, expiry,lot_size, 
-                Entry_type, Exchange, Segment,Index_Symbol ,user=None, strategy=None):
+                 Entry_type,Exit_type ,webhook_signal, Exchange, Segment,Index_Symbol ,user=None, strategy=None):
     try:
         logger.info(f"Angle one api order placement for user: {user} & trading symbol is: {symbol}")
         if product_type:
@@ -111,7 +111,7 @@ def place_Angle_order(api_key,demate_user_name,totp,angle_pass,token, symbol, ex
             status="Failed"
             res_data="unknown response",
             message=f"Invalid quantity {symbol}, it should be in multiples of lot size: {lot}"
-            save_trade_order_history(user,symbol, order_id, status, res_data, message, strategy, Entry_type, Exchange, Segment,Index_Symbol , order_params,broker="Angle One")
+            save_trade_order_history(user,symbol, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type ,webhook_signal , Exchange, Segment,Index_Symbol , order_params,broker="Angle One")
 
             return {"data": {"status": "error", "message": f"Quantity must be a multiple of lot size: {lot}"}}
 
@@ -130,7 +130,7 @@ def place_Angle_order(api_key,demate_user_name,totp,angle_pass,token, symbol, ex
                 order_id=0
                 message=f"Empty Response from API return None"
                 res_data=response
-                save_trade_order_history(user,symbol, order_id, status, res_data, message, strategy, Entry_type, Exchange, Segment,Index_Symbol , order_params,broker="Angle One")
+                save_trade_order_history(user,symbol, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type ,webhook_signal , Exchange, Segment,Index_Symbol , order_params,broker="Angle One")
 
                 return {"data": {"status": "error", "message": "No response from API."}}
 
@@ -161,7 +161,7 @@ def place_Angle_order(api_key,demate_user_name,totp,angle_pass,token, symbol, ex
                 # log_order(order_data, "orders_placed.csv")  
                 message = responsedetails['data'].get('text', 'completed successfully ')
 
-                save_trade_order_history(user,symbol, order_id, status, res_data, message,  strategy, Entry_type, Exchange, Segment,Index_Symbol ,order_params,broker="Angle One")
+                save_trade_order_history(user,symbol, order_id, status, res_data, message,   strategy,  Entry_type,Exit_type ,webhook_signal , Exchange, Segment,Index_Symbol ,order_params,broker="Angle One")
                 # from_email = settings.DEFAULT_FROM_EMAIL,
                 # send_trade_email_async.delay(user.email, from_email,user.firstName,status, message)
                 # save_webhook_signals_logs(order_params['transactiontype'], symbol, price, strategy, user, status=responsedetails['data'].get('status'),failure_reason="your order place succesfully", json=json)
@@ -178,7 +178,7 @@ def place_Angle_order(api_key,demate_user_name,totp,angle_pass,token, symbol, ex
                 print("user.firstName>>>>>",user.firstName)
                 send_trade_email_async.delay(user.email, from_email,user.firstName,status, message)
                 logger.info(f"Order is pending or in process reason is !!!::{message}")
-                save_trade_order_history(user,symbol, order_id, status, res_data, message, strategy, Entry_type, Exchange, Segment,Index_Symbol ,order_params, broker="Angle One")
+                save_trade_order_history(user,symbol, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type ,webhook_signal , Exchange, Segment,Index_Symbol ,order_params, broker="Angle One")
                 return responsedetails
                 
             else:
@@ -189,7 +189,7 @@ def place_Angle_order(api_key,demate_user_name,totp,angle_pass,token, symbol, ex
                 # Send rejection email
                 print("user.firstName>>>>>",user.firstName)
                 send_trade_email_async.delay(user.email, from_email,user.firstName,status, rejection_message)
-                save_trade_order_history(user,symbol, order_id, status, res_data, rejection_message, strategy, Entry_type, Exchange, Segment,Index_Symbol ,order_params ,broker="Angle One")
+                save_trade_order_history(user,symbol, order_id, status, res_data, rejection_message,  strategy,  Entry_type,Exit_type ,webhook_signal , Exchange, Segment,Index_Symbol ,order_params ,broker="Angle One")
                 # save_webhook_signals_logs(order_params['transactiontype'], symbol, price, strategy, user, status=responsedetails['data'].get('status'),
                 return responsedetails
         except Exception as e:
@@ -265,9 +265,13 @@ class SymbolExpiryDateListView(APIView):
         if os.path.exists(csv_file):
             file_mod_time = os.path.getmtime(csv_file)
             file_mod_date = datetime.fromtimestamp(file_mod_time)
-            if file_mod_date > datetime.now() - timedelta(days=30):
-                # The file was updated within the last 30 days, use the cached file
+            if file_mod_date.date() == datetime.now().date():
+                # The file was updated today, use the cached file
                 return self.get_expiry_dates_from_csv(csv_file, symbol)
+        
+            # if file_mod_date > datetime.now() - timedelta(days=30):
+            #     # The file was updated within the last 30 days, use the cached file
+            #     return self.get_expiry_dates_from_csv(csv_file, symbol)
         
         # If the file is outdated or doesn't exist, fetch fresh data
         return self.update_csv_and_get_expiry_dates(symbol, csv_file)
@@ -312,7 +316,7 @@ class SymbolExpiryDateListView(APIView):
             expiry_dates = []
             with open(csv_file, mode='w', newline='') as file:
                 writer = csv.writer(file)
-                writer.wristerow(['token', 'symbol', 'name', 'exch_seg', 'expiry', 'instrumenttype'])
+                writer.writerow(['token', 'symbol', 'name', 'exch_seg', 'expiry', 'instrumenttype'])
 
                 for entry in data:
                     if entry.get('exch_seg') == 'NFO':  # Filter only NFO segments

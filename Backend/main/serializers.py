@@ -1195,7 +1195,7 @@ class TradeorderhistorySerializer(serializers.ModelSerializer):
         model = Tradeorderhistory
         fields = ['id', 'client', 'date', 'trading_symbol', 'Index_Symbol', 'order_id', 'order_status'
                 , 'failure_reason', 'broker', 'order_params', 'strategy', 'Entry_type', 'Entry_Price', 
-                'Exit_Price', 'SignalEntry_time', 'SignalExit_time', 'Exchange', 'Segment']
+                'Exit_Price','Exit_type', 'SignalEntry_time', 'SignalExit_time', 'Exchange', 'Segment','webhook_signal']
 
 
 from rest_framework.exceptions import AuthenticationFailed

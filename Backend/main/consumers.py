@@ -10,6 +10,10 @@ from SmartApi import SmartConnect
 import pyotp
 from urllib.parse import parse_qs
 # logger = logging.getLogger(__name__)
+# API_KEY = 'Xp6znI3s'  
+# USERNAME = 'AAAB519761'  
+# PASSWORD = '1234' 
+# Totp = "RFFORAS7ASFH7KIZWD7FCSVK2Y" 
 
 # Smart API credentials
 API_KEY = 'FNqcDPCk'#'Xp6znI3s'

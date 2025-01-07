@@ -134,7 +134,17 @@ urlpatterns = [
     path('get-client-trade-history/', ClientTradeListView.as_view(), name='get-client-trade-history'),  # Handle redirect and exchange code
     path('clients-filter/', ClientFilterView.as_view(), name='client-list'),
     path('client-dashboard-redirect/',ClientDashBoardView.as_view(),name='client-dashboard-'),
+    path('callback/', views.oauth_callback, name='oauth_callback'),
+    path('login-5paisa/', views.login_redirect, name='login_redirect'),
 
+    path('login-zerodha/', views.login_zerodha_redirect, name='login-zerodha'),
+    path('callback-zerodha/', views.zerodha_callback, name='zerodha-callback'),
+    path('login-angelone/', views.login_angelone_redirect, name='login-angelone'),
+    path('callback-angelone/', views.angelone_callback, name='angelone-callback'),
+    path("callback/aliceblue/", views.aliceblue_callback, name="aliceblue_callback"),
+    path("login-aliceblue/", views.login_aliceblue, name="login_aliceblue"),
+    path("auth-callback/", broker_callback, name="broker_callback"),
+    path("place-zerodha-order/", place_zerodha_order, name="zerodha-order"),
 ]
 
 

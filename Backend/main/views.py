@@ -2120,6 +2120,10 @@ class PlaceOrderWebhookView(APIView):
         buy_sell = request.data.get('buy_sell', 'BUY')
         triggerPrice = request.data.get('triggerPrice', 0)
         limitPrice = request.data.get('limitPrice', 0)
+        # The above code is a comment in Python. Comments are used to provide explanations or notes
+        # within the code for better understanding. In Python, comments start with the `#` symbol and
+        # everything after the `#` on that line is considered a comment and is ignored by the Python
+        # interpreter.
         Type=request.data.get('Type',"CE")
         Lots=request.data.get('Lot',"1")
         strategy=request.data.get('strategyTag',"ce entry")
@@ -2176,12 +2180,24 @@ class PlaceOrderWebhookView(APIView):
                 Index_Symbol=trade.symbol
                 res_data="unknown response",
                 broker=trade.broker
-                Entry_type=buy_sell
+                Entry_type=None
+                Exit_type=None
+                webhook_signal=alert_data
+                Entry_price=0.0
+                if buy_sell.upper()=="BUY":
+                    Entry_type="BUY"
+                    Entry_price=0.1
+                elif buy_sell.upper()=="SELL":
+                    Exit_type="SELL" 
+                    Entry_type="BUY"
+                    Entry_price=0.1
+                    Exit_price=1.0
+                     
                 trade_expiry_date = trade.expiry_date
                 if not trade_expiry_date:
                     message= f"Skipping trade for client {trade.client}: Expiry date is missing."
                     save_trade_order_history(user,trade_symbol, order_id, status, res_data, message,
-                    strategy, Entry_type, Exchange, Segment,Index_Symbol,order_params ,broker=trade.broker)
+                     strategy,  Entry_type,Exit_type ,webhook_signal,Exchange, Segment,Index_Symbol,order_params ,broker=trade.broker)
                                 
                     logger.warning(f"Skipping trade for client {trade.client}: Expiry date is missing.")
                     continue
@@ -2189,7 +2205,7 @@ class PlaceOrderWebhookView(APIView):
                 formatted_trade_expiry_date = trade_expiry_date.strftime("%d-%m-%Y")
                 if not trade.symbol or not trade.product_type:
                     message= f"trade details for client {trade.client}: Missing symbol, product type, or transaction type."
-                    save_trade_order_history(user,trade_symbol, order_id, status, res_data, message,strategy, Entry_type, Exchange, Segment,Index_Symbol, order_params,broker=trade.broker)
+                    save_trade_order_history(user,trade_symbol, order_id, status, res_data, message, strategy,  Entry_type,Exit_type ,webhook_signal , Exchange, Segment,Index_Symbol, order_params,broker=trade.broker)
                         
                     logger.warning(f"Skipping trade for client {trade.client}: Missing symbol, product type, or transaction type.")
                     continue
@@ -2205,7 +2221,7 @@ class PlaceOrderWebhookView(APIView):
                     formatted_trade_expiry_date != default_expiry
                 ): 
                     message= f"client and Webhook aleart details is not matched for {trade.client}: criteria mismatch."
-                    save_trade_order_history(user,trade_symbol, order_id, status, res_data, message,strategy, Entry_type, Exchange, Segment,Index_Symbol, order_params,broker=trade.broker)
+                    save_trade_order_history(user,trade_symbol, order_id, status, res_data, message, strategy,  Entry_type,Exit_type ,webhook_signal , Exchange, Segment,Index_Symbol, order_params,broker=trade.broker)
                       
                     logger.info(f"Skipping client {trade.client}: criteria mismatch.")
                     continue
@@ -2225,9 +2241,9 @@ class PlaceOrderWebhookView(APIView):
                 today = datetime.today()
                 daily_trade_count = TradingLog.objects.filter(client=user, date=today).count()
 
-                if daily_trade_count >= trade_limit:
+                if daily_trade_count >= trade_limit and trade_limit != 0:
                     message= f"Trade limit reached for user {user}. No more trades allowed today."
-                    save_trade_order_history(user,trade_symbol, order_id, status, res_data, message, strategy, Entry_type, Exchange, Segment,Index_Symbol,order_params,broker=trade.broker)
+                    save_trade_order_history(user,trade_symbol, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type ,webhook_signal , Exchange, Segment,Index_Symbol,order_params,broker=trade.broker)
                       
                     logger.warning(f"Trade limit reached for user {user}. No more trades allowed today.")
                     continue
@@ -2244,7 +2260,7 @@ class PlaceOrderWebhookView(APIView):
                             status="Failed"
                             res_data="unknown response",
                             message= f"No broker details found for client {trade.client} and broker {trade.broker}"
-                            save_trade_order_history(user,trade_symbol, order_id, status, res_data, message,strategy, Entry_type, Exchange, Segment,Index_Symbol, order_params,broker="Angle One")
+                            save_trade_order_history(user,trade_symbol, order_id, status, res_data, message, strategy,  Entry_type,Exit_type ,webhook_signal , Exchange, Segment,Index_Symbol, order_params,broker="Angle One")
                                 
                             logger.error(f"No broker details found for client {trade.client} and broker {trade.broker}")
                             continue
@@ -2271,7 +2287,7 @@ class PlaceOrderWebhookView(APIView):
                             status="Failed"
                             res_data="unknown response",
                             message= f"trading symbol is not found for this :{trade.symbol}"
-                            save_trade_order_history(user,trade_symbol, order_id, status, res_data, message,strategy, Entry_type, Exchange, Segment,Index_Symbol, order_params,broker="Angle One")
+                            save_trade_order_history(user,trade_symbol, order_id, status, res_data, message, strategy,  Entry_type,Exit_type ,webhook_signal , Exchange, Segment,Index_Symbol, order_params,broker="Angle One")
                                 
                             logger.info(f"No token data found for trading symbol: {trade.symbol}")
                             response= {"data":{"status": "error", "message": "token symbole not found"}}
@@ -2294,13 +2310,14 @@ class PlaceOrderWebhookView(APIView):
                             expiry=expiry,
                             lot_size=Lots,
                             Entry_type=Entry_type, 
+                            Exit_type=Exit_type,
+                            webhook_signal=webhook_signal,
                             Exchange=Exchange,
                             Segment=Segment,
                             Index_Symbol=Index_Symbol ,
                             user=user,
                             strategy=strategy,
-                            
-                            
+                              
                         )
     
                     elif trade.broker.lower() == "alice blue":
@@ -2311,7 +2328,7 @@ class PlaceOrderWebhookView(APIView):
                             status="Failed"
                             res_data="unknown response",
                             message= f"No broker details found for client {trade.client} and broker {trade.broker}"
-                            save_trade_order_history(user,trade_symbol, order_id, status, res_data, message, strategy, Entry_type, Exchange, Segment,Index_Symbol,order_params,broker="Angle One")
+                            save_trade_order_history(user,trade_symbol, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type ,webhook_signal , Exchange, Segment,Index_Symbol,order_params,broker="Angle One")
                                
                             logger.error(f"No broker details found for client {trade.client} and broker {trade.broker}")
                             continue
@@ -2329,7 +2346,7 @@ class PlaceOrderWebhookView(APIView):
                         # order_response=place_alice_orders(trading_symbol_aliceblue,transaction_type, symbol, quantity,strategy,ordertype,
                         #                                 product_type, price,user, Lots,triggerPrice)
                         order_response=place_alice_orders(api_skey,api_uid,trading_symbol_aliceblue,transaction_type, symbol, quantity,strategy,ordertype,
-                        product_type, price,user, Lots, Entry_type, Exchange, Segment,Index_Symbol,triggerPrice)
+                        product_type, price,user, Lots,  Entry_type,Exit_type ,webhook_signal ,Exchange, Segment,Index_Symbol,triggerPrice)
                 
                     # Check order response and log or handle failures
                     print("order repsone>>>>>>>",order_response)
@@ -2675,3 +2692,432 @@ class ClientDashBoardView(APIView):
         serializer = ClientdashboardSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         return Response(serializer.validated_data, status=status.HTTP_200_OK)
+    
+#auth callback url demate---------------------------
+from django.http import JsonResponse
+from django.shortcuts import redirect
+from datetime import timedelta
+from django.utils.timezone import now
+from .models import ClientBrokerdetails
+from kiteconnect import KiteConnect  # For Zerodha
+# Import other broker-specific SDKs as needed
+
+def broker_callback(request):
+    request_token = request.GET.get('request_token')
+    state = request.GET.get('state')  # e.g., "user-<user_id>-<broker_name>"
+    
+    if not request_token or not state:
+        return JsonResponse({"error": "Invalid request, missing parameters"}, status=400)
+
+    # Parse the state parameter to extract user ID and broker name
+    try:
+        state_parts = state.split("-")
+        user_id = int(state_parts[1])
+        broker_name = state_parts[2].lower()  # Extract broker name
+    except (IndexError, ValueError):
+        return JsonResponse({"error": "Invalid state parameter format"}, status=400)
+
+    try:
+        # Retrieve the broker details
+        broker_details = ClientBrokerdetails.objects.get(client_id=user_id, broker_name__broker_name=broker_name)
+
+        if broker_name == "zerodha":
+            kite = KiteConnect(api_key=broker_details.broker_API_UID)
+            session_data = kite.generate_session(request_token, api_secret=broker_details.broker_API_SKEY)
+            access_token = session_data['access_token']
+        elif broker_name == "5paisa":
+            # Implement 5Paisa-specific token generation here
+            access_token = "5paisa_access_token_placeholder"
+        elif broker_name == "alice blue":
+            # Implement Alice Blue-specific token generation here
+            access_token = "aliceblue_access_token_placeholder"
+        else:
+            return JsonResponse({"error": "Unsupported broker"}, status=400)
+
+        # Save the access token and other details
+        broker_details.request_token = request_token
+        broker_details.access_token = access_token
+        broker_details.access_token_expiry = now() + timedelta(days=1)  # Assuming 1-day validity
+        broker_details.save()
+
+        return JsonResponse({"message": "Callback processed successfully", "access_token": access_token})
+    
+    except ClientBrokerdetails.DoesNotExist:
+        return JsonResponse({"error": "Broker details not found for the user"}, status=404)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+    
+    
+#ZERODHA...............
+from kiteconnect import KiteConnect
+def login_zerodha_redirect(request):
+    user = request.user
+
+    # Ensure the user is authenticated
+    if not user.is_authenticated:
+        return JsonResponse({"error": "User not authenticated"}, status=403)
+
+    try:
+        # Retrieve broker details for the logged-in user
+        broker_details = ClientBrokerdetails.objects.get(client=user)
+        api_key = broker_details.broker_API_UID
+        broker_name = broker_details.broker_name.broker_name.lower()  # Case-insensitive match
+
+        if broker_name == "zerodha":
+            # Redirect to Zerodha login
+            redirect_url = "http://127.0.0.1:8000/callback-zerodha/"  # Replace with your callback URL
+            state = f"user-{user.id}"  # Include user-specific state
+            zerodha_url = (
+                f"https://kite.zerodha.com/connect/login?api_key={api_key}&v=3"
+                f"&redirect_uri={redirect_url}&state={state}"
+            )
+            return redirect(zerodha_url)
+
+        elif broker_name == "5paisa":
+            return redirect("login-5paisa")  # Replace with the correct view name for 5paisa login
+
+        elif broker_name == "alice blue":
+            return redirect("login-aliceblue")  # Replace with the correct view name for Alice Blue login
+
+        else:
+            return JsonResponse({"error": f"Unsupported broker: {broker_name}"}, status=400)
+
+    except ClientBrokerdetails.DoesNotExist:
+        return JsonResponse({"error": "Broker details not found for the user"}, status=404)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+def zerodha_callback(request):
+    # Extract the request_token and state from the query parameters
+    request_token = request.GET.get('request_token')
+    state = request.GET.get('state')
+
+    # Extract user ID from the state
+    user_id = state.split('-')[1] if state and '-' in state else None
+
+    try:
+        if not request_token or not user_id:
+            return JsonResponse({"error": "Invalid request. Missing parameters."}, status=400)
+        # Retrieve the broker details for the user
+        broker_details = ClientBrokerdetails.objects.get(client_id=user_id)
+        # Initialize the KiteConnect instance
+        kite = KiteConnect(api_key=broker_details.broker_API_UID)
+
+        # Generate the access token
+        session_data = kite.generate_session(request_token, api_secret=broker_details.broker_API_SKEY)
+        access_token = session_data['access_token']
+
+        # Save tokens in the database
+        broker_details.request_token = request_token
+        broker_details.access_token = access_token
+        broker_details.access_token_expiry = now() + timedelta(days=1)  # Assuming 1-day token validity
+        broker_details.save()
+
+        return JsonResponse({
+            "message": "Callback successful",
+            "access_token": access_token,
+            "state": state,
+        })
+
+    except ClientBrokerdetails.DoesNotExist:
+        return JsonResponse({"error": "Broker details not found for the user"}, status=404)
+
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+#place order using zerodha api 
+
+def place_zerodha_order(request):
+    user = request.user
+
+    # Ensure user is authenticated
+    if not user.is_authenticated:
+        return JsonResponse({"error": "User not authenticated"}, status=403)
+
+    # Retrieve broker details for the user
+    try:
+        broker_details = ClientBrokerdetails.objects.get(client=user, broker_name__broker_name="ZERODHA")
+
+        # Check if access token is valid
+        if not broker_details.access_token or broker_details.access_token_expiry < datetime.now():
+            return JsonResponse({"error": "Access token is missing or expired. Please reauthenticate."}, status=401)
+
+        # Initialize KiteConnect with API key and access token
+        kite = KiteConnect(api_key=broker_details.broker_API_UID)
+        kite.set_access_token(broker_details.access_token)
+
+        # Order details
+        order_params = {
+            "tradingsymbol": "RELIANCE",
+            "exchange": "NSE",
+            "transaction_type": "BUY",
+            "quantity": 1,
+            "order_type": "MARKET",
+            "product": "CNC",
+        }
+
+        # Place order
+        try:
+            order_response = kite.place_order(variety=kite.VARIETY_REGULAR, **order_params)
+            return JsonResponse({"message": "Order placed successfully", "order_response": order_response})
+        except Exception as e:
+            return JsonResponse({"error": f"Failed to place order: {str(e)}"}, status=500)
+
+    except ClientBrokerdetails.DoesNotExist:
+        return JsonResponse({"error": "Broker details not found for the user"}, status=404)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+
+
+
+
+
+
+
+
+def generate_checksum(api_key, api_secret, request_token):
+    import hashlib
+    return hashlib.sha256(f"{api_key}{request_token}{api_secret}".encode()).hexdigest()
+from django.shortcuts import redirect
+
+def login_zerodha_redirect(request):
+    user=request.user
+    broker_details = ClientBrokerdetails.objects.filter(client=user)
+    api_key=broker_details.broker_API_UID
+    # Zerodha API credentials
+    # api_key = "jsdgh8p7k3yvfii8"  # Replace with your API Key
+    redirect_url ="https://software.algosparks.co.in/#/login"# "http://127.0.0.1:8000/callback-zerodha/"  # Your callback URL
+    state = "example_state"  # Optional, to track the request state
+
+    # Construct the URL
+    zerodha_url = (
+        f"https://kite.zerodha.com/connect/login?api_key={api_key}&v=3"
+        f"&redirect_uri={redirect_url}&state={state}"
+    )
+    return redirect(zerodha_url)
+
+from django.http import JsonResponse
+import requests
+
+def zerodha_callback(request):
+    # Extract the request_token and state from query parameters
+    request_token = "f9deaGRIRbMgfmDFHAYc4Lz1bPp6l44B"#request.GET.get('request_token')
+    state = "success"#request.GET.get('state')
+
+    if not request_token:
+        return JsonResponse({"error": "Request token not provided"}, status=400)
+
+    # Fetch the access token using the request token
+    api_key = "jsdgh8p7k3yvfii8"
+    api_secret = "f6hk1ihfqsc05j22mzjxi5z74zh4qh6h"
+
+    try:
+        # Make a POST request to fetch the access token
+        response = requests.post(
+            "https://api.kite.trade/session/token",
+            data={
+                "api_key": api_key,
+                "request_token": request_token,
+                "checksum": generate_checksum(api_key, api_secret, request_token),
+            },
+        )
+        response_data = response.json()
+        print("response_data>>>",response_data)
+        return JsonResponse({
+            "message": "Callback successful",
+            "access_token": response_data.get("access_token"),
+            "state": state,
+        })
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+def generate_checksum(api_key, api_secret, request_token):
+    import hashlib
+    return hashlib.sha256(f"{api_key}{request_token}{api_secret}".encode()).hexdigest()
+#5 Paisa -----------------
+
+def oauth_callback(request):
+    # Extract the request token and state from the callback URL parameters
+    request_token = request.GET.get('RequestToken')
+    state = request.GET.get('state')
+
+    if not request_token:
+        return JsonResponse({"error": "RequestToken not provided"}, status=400)
+
+    # Handle the token (e.g., save it, or use it to fetch an access token)
+    return JsonResponse({
+        "message": "Callback successful",
+        "request_token": request_token,
+        "state": state,
+    })
+from django.shortcuts import redirect
+    
+def login_redirect(request):
+    vendor_key = settings.VENDOR_KEY
+    response_url = settings.RESPONSE_URL
+    state = "test_state"  # Optional, for tracking requests
+    
+    redirect_url = f"https://dev-openapi.5paisa.com/WebVendorLogin/VLogin/Index?VendorKey={vendor_key}&ResponseURL={response_url}&State={state}"
+    return redirect(redirect_url)
+
+
+
+from django.shortcuts import redirect
+
+def login_angelone_redirect(request):
+    # Angel One API credentials
+    api_key = "DHKO4GA8"  # Replace with your API Key
+    redirect_url = "https://staging.cricratings.com/user/"  # "http://127.0.0.1:8000/callback-angelone/"#
+    state = "example_state"  # Optional, to track request state
+
+    # Construct the Angel One login URL 
+    angelone_url = (
+        f"https://smartapi.angelbroking.com/publisher-login"
+        f"?api_key={api_key}&redirect_url={redirect_url}&state={state}"
+    )
+    return redirect(angelone_url)
+
+from django.http import JsonResponse
+import requests
+# API_KEY = 'StvD7EVL'  
+# USERNAME = 'AAAB519761'  
+# PASSWORD = '1234' 
+# TOTP_SECRET = "RFFORAS7ASFH7KIZWD7FCSVK2Y" from django.http import JsonResponse
+import requests
+import pyotp
+
+def angelone_callbackaa(request):
+    # Extract the authorization code from the query parameters
+    auth_code = request.GET.get('code')
+
+    if not auth_code:
+        return JsonResponse({"error": "Authorization code not provided"}, status=400)
+# AAAB519761
+    # Angel One credentials
+    api_key = "DHKO4GA8"
+    username = "Algo123"
+    password = "1234"
+    totp_secret = "RFFORAS7ASFH7KIZWD7FCSVK2Y"
+
+    # Generate TOTP
+    totp = pyotp.TOTP(totp_secret).now()
+
+    # Exchange authorization code for access token
+    try:
+        response = requests.post(
+            "https://smartapi.angelbroking.com/rest/auth/login",
+            json={
+                "api_key": api_key,
+                "client_code": username,
+                "password": password,
+                "totp": totp,
+            },
+        )
+        response_data = response.json()
+
+        if response.status_code == 200:
+            return JsonResponse({
+                "message": "Callback successful",
+                "access_token": response_data.get("data", {}).get("jwtToken"),
+                "refresh_token": response_data.get("data", {}).get("refreshToken"),
+            })
+        else:
+            return JsonResponse({"error": response_data.get("message")}, status=400)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+import pyotp
+totp_secret = "RFFORAS7ASFH7KIZWD7FCSVK2Y"
+totp = pyotp.TOTP(totp_secret).now()
+print(f"TOTP: {totp}")
+from django.http import JsonResponse
+import requests
+
+def angelone_callback(request):
+    # Extract the authorization code and state from the query parameters
+    auth_code = request.GET.get('auth_code')
+    print(">>>>>>>>>>>>",auth_code)
+    state = request.GET.get('state')
+    
+    if not auth_code:
+        return JsonResponse({"error": "Authorization code not provided"}, status=400)
+
+    # Fetch the access token using the authorization code
+    api_key = "DHKO4GA8"
+    client_code = "Algo123"  # Replace with your Angel One client code
+    secret_key = "f85d6a33-b86d-4864-98a5-f61062b7545b"  # Replace with your Angel One secret key
+
+    try:
+        # Make a POST request to fetch the access token
+        response = requests.post(
+            "https://smartapi.angelbroking.com/rest/authentication/v1/login",
+            json={
+                "api_key": api_key,
+                "clientcode": client_code,
+                "authcode": auth_code,
+                "secretkey": secret_key,
+            },
+        )
+        response_data = response.json()
+        return JsonResponse({
+            "message": "Callback successful",
+            "access_token": response_data.get("data", {}).get("jwtToken"),
+            "refresh_token": response_data.get("data", {}).get("refreshToken"),
+            "state": state,
+        })
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect
+
+def login_aliceblue(request):
+    APP_CODE = "pyZPOPZiZzCMaWQ"  # Your app code
+    CALLBACK_URL = "https://software.alcrafttechnology.com/backend/AliceBlue"  # Your callback URL after successful login
+    
+    # Build the login URL with app code and callback URL
+    LOGIN_URL = f"https://ant.aliceblueonline.com/?appcode={APP_CODE}"#&redirect_uri={CALLBACK_URL}"  # Include the callback URL
+    
+    # Redirect the user to Alice Blue login page
+    return HttpResponseRedirect(LOGIN_URL)
+
+
+# def login_aliceblue(request):
+#     App_Code = "pyZPOPZiZzCMaWQ"  # Replace with your Alice Blue API key
+#     CALLBACK_URL = "http://127.0.0.1:8000/callback/aliceblue/"  # Your callback URL
+#     LOGIN_URL = f"https://ant.aliceblueonline.com/oauth2/auth?response_type=code&client_id={API_KEY}&redirect_uri={CALLBACK_URL}"
+  
+#     # Redirect to Alice Blue login page
+#     return HttpResponseRedirect(LOGIN_URL)import requests
+from django.http import JsonResponse
+
+def aliceblue_callback(request):
+    auth_code = request.GET.get("code")  # Extract the authorization code
+    if not auth_code:
+        return JsonResponse({"error": "auth_code is missing"}, status=400)
+
+    access_token = fetch_aliceblue_access_token(auth_code)
+    if access_token:
+        return JsonResponse({"access_token": access_token})
+    else:
+        return JsonResponse({"error": "Failed to fetch access token"}, status=500)
+
+def fetch_aliceblue_access_token(auth_code):
+    userId = 857984
+    ALICE_API_KEY ="hFSWodPXI0yJXnXcYBZnfFLqJM0YQm6t9mvn5WmtQrkcvXFcZRpq8tK3BKueJQDI4vSOHVYUzi2kLiKdWCnsO0SyfsSMsGFL3US3fikNU8cFGVXVXH8682zjvK7qLulP"
+
+    # SECRET_KEY = "your_secret_key"  # Replace with your Alice Blue API secret key
+    CALLBACK_URL = "http://127.0.0.1:8000/callback/aliceblue/"  # Your callback URL
+    
+    TOKEN_URL = "https://ant.aliceblueonline.com/oauth2/token"
+    
+    payload = {
+        "userId": userId,
+        "ALICE_API_KEY":ALICE_API_KEY,
+        "userData": auth_code
+     } 
+    
+    response = requests.post(TOKEN_URL, data=payload)
+    if response.status_code == 200:
+        data = response.json()
+        return data.get("access_token")  # Return access token
+    return None
