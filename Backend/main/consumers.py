@@ -30,7 +30,7 @@ data = obj.generateSession(USERNAME, PASSWORD, totp)
 feedToken = obj.getfeedToken()
 FEED_TOKEN = feedToken
 AUTH_TOKEN = data['data']['refreshToken']
-
+print(">>>>>>>>>>>consumerrrrrrrr")
 correlation_id = "abc123"
 mode = 3#1  # Subscription mode
 

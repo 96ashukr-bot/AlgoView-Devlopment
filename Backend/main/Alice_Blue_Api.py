@@ -27,7 +27,7 @@ logger = logging.getLogger('main')
 from pya3 import Aliceblue, TransactionType, OrderType, ProductType
 # from pya3.enums import TransactionType  # Adjust import based on your library
 def place_alice_orders(api_skey,api_uid,trading_symbol_aliceblue,transaction_type, symbol, quantity, strategy, 
-    order_type, product_type, price, user,Lots,  Entry_type,Exit_type ,webhook_signal, Exchange, Segment,Index_Symbol, trigger_price=None):
+    order_type, product_type, price, user,Lots,  Entry_type,Exit_type,Entry_price,Exit_price ,webhook_signal, Exchange, Segment,Index_Symbol, trigger_price=None):
     try:
         print(f"Order Type: {order_type}, Price: {price}, Trigger Price: {trigger_price}")
         # # Convert price and trigger price to float if provided
@@ -72,6 +72,7 @@ def place_alice_orders(api_skey,api_uid,trading_symbol_aliceblue,transaction_typ
         alice = Aliceblue(user_id=api_uid, api_key=api_skey)  # Example user attributes
         # Check session validity
         session_id = alice.get_session_id()
+        # print("session_id?????",session_id)
         if not session_id or not session_id.get('sessionID'):
             error_message = session_id.get('emsg', 'Invalid credentials or unauthorized access')
             print(f"Failed to establish Aliceblue session. Reason!!!!!!!!!: {error_message}")          
@@ -79,9 +80,10 @@ def place_alice_orders(api_skey,api_uid,trading_symbol_aliceblue,transaction_typ
             order_id=0
             status="Unauthorized"
             res_data=response,
+            print("error_message>>>>",error_message)
             message= f"{error_message}"
-            save_trade_order_history(user,trading_symbol_aliceblue, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type ,webhook_signal , Exchange, Segment,Index_Symbol, order_params,broker="Alice Blue")
-                        
+            # if status=="Unauthorized":
+            save_trade_order_history(user,trading_symbol_aliceblue, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type,Entry_price,Exit_price ,webhook_signal , Exchange, Segment,Index_Symbol, order_params,broker="Alice Blue")        
             logger.error(f"Unauthorized access for user {user}. Reason: {error_message}")
             return response
         
@@ -97,7 +99,7 @@ def place_alice_orders(api_skey,api_uid,trading_symbol_aliceblue,transaction_typ
             status="Failed"
             res_data="unknown response"
             message=error_message
-            save_trade_order_history(user,trading_symbol_aliceblue,order_id , status, res_data, message,  strategy,  Entry_type,Exit_type ,webhook_signal , Exchange, Segment,Index_Symbol, order_params,broker="Alice Blue")
+            save_trade_order_history(user,trading_symbol_aliceblue,order_id , status, res_data, message,  strategy,  Entry_type,Exit_type,Entry_price,Exit_price ,webhook_signal , Exchange, Segment,Index_Symbol, order_params,broker="Alice Blue")
             logger.error(f"Instrument not found for symbol: {trading_symbol_aliceblue}, Reason: {error_message}")
             return {"data":{"status": "error", "message": error_message}}
         else:
@@ -126,7 +128,7 @@ def place_alice_orders(api_skey,api_uid,trading_symbol_aliceblue,transaction_typ
         #     status="Failed"
         #     res_data="unknown response",
         #     message=f"Invalid quantity {quantity}, it should be in multiples of lot size: {lot}"
-        #     save_trade_order_history(user,trading_symbol_aliceblue, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type ,webhook_signal , Exchange, Segment,Index_Symbol, order_params,broker="Angle One")
+        #     save_trade_order_history(user,trading_symbol_aliceblue, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type ,Entry_price,Exit_price,webhook_signal , Exchange, Segment,Index_Symbol, order_params,broker="Angle One")
 
         #     return {"data": {"status": "error", "message": f"Quantity must be a multiple of lot size: {lot}"}}
         print("order_type>>>",order_type)
@@ -137,7 +139,7 @@ def place_alice_orders(api_skey,api_uid,trading_symbol_aliceblue,transaction_typ
                         quantity = quantity, 
                         order_type = order_type, 
                         product_type = product_type,
-                        # price=price,
+                        price=price,
                         )
         elif order_type=="MARKET":
             order_type= OrderType.Market
@@ -190,7 +192,8 @@ def place_alice_orders(api_skey,api_uid,trading_symbol_aliceblue,transaction_typ
             if status == "success":
                 response = {"data": {"status": "completed"}}
                 logger.info(f"Order placed successfully for user {user}. Response: {response}")
-                save_trade_order_history(user,trading_symbol_aliceblue, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type ,webhook_signal , Exchange, Segment,Index_Symbol,order_params, broker="Alice Blue")
+                print("Entry_type>>>",Entry_type)
+                save_trade_order_history(user,trading_symbol_aliceblue, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type,Entry_price,Exit_price ,webhook_signal , Exchange, Segment,Index_Symbol,order_params, broker="Alice Blue")
               
             elif status == "rejected":   
                 from_email = settings.DEFAULT_FROM_EMAIL,
@@ -198,7 +201,7 @@ def place_alice_orders(api_skey,api_uid,trading_symbol_aliceblue,transaction_typ
                 send_trade_email_async.delay(user.email, from_email,user.firstName,status, message)
                 response = {"data": {"status": "rejected"}}
                 logger.info(f"Order is rejected  for user {user}. Response :{response}::{Exit_type}")
-                save_trade_order_history(user,trading_symbol_aliceblue, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type ,webhook_signal , Exchange, Segment,Index_Symbol,order_params, broker="Alice Blue")
+                save_trade_order_history(user,trading_symbol_aliceblue, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type,Entry_price,Exit_price ,webhook_signal , Exchange, Segment,Index_Symbol,order_params, broker="Alice Blue")
         # elif response.get("stat") == 'Not_ok':
         #     print("Not_okNot_okNot_okNot_ok")
         #     # error_message = response.get("message", "Unknown error")
@@ -236,9 +239,12 @@ def place_alice_orders(api_skey,api_uid,trading_symbol_aliceblue,transaction_typ
         return {"status": "error", "message": "An unexpected error occurred"}
 
 def save_trade_order_history(client, trading_symbol, order_id, order_status, response_data, failure_reason,
-      strategy, Entry_type, Exit_type,webhook_signal, Exchange, Segment,Index_Symbol ,order_params=None,broker=None ):
-    print("Exit_type>>>>",Exit_type)
+      strategy, Entry_type, Exit_type,Entry_price,Exit_price,webhook_signal, Exchange, Segment,Index_Symbol ,order_params=None,broker=None ):
+    print("Exit_type>>>>",Exit_type,"Entry_type>>>",Entry_type)
     try:
+        # Calculate signal times based on entry and exit types
+        SignalEntry_time = now() if Entry_type else None
+        SignalExit_time = now() if Exit_type else None
         # Create a new Tradeorderhistory record
         trade_history = Tradeorderhistory.objects.create(
         client=client,
@@ -252,10 +258,10 @@ def save_trade_order_history(client, trading_symbol, order_id, order_status, res
         strategy= strategy or None,     
         Entry_type=Entry_type or None,  
         Exit_type=Exit_type or None   ,
-        # Entry_Price=Entry_Price or None,     
-        # Exit_Price=Exit_Price or None,     
-        # SignalEntry_time=SignalEntry_time or None,     
-        # SignalExit_time=SignalExit_time or None, 
+        Entry_Price=Entry_price  or None,  
+        Exit_Price=Exit_price or None,     
+        SignalEntry_time=SignalEntry_time,     
+        SignalExit_time=SignalExit_time, 
             
         Exchange=Exchange or None,     
         Segment=Segment or None,     
@@ -296,7 +302,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-def is_market_open():
+def is_market_open_old():
     print("Checking market status...")
     """
     Function to check if the market is currently open.
@@ -332,7 +338,53 @@ def is_market_open():
             return True
 
     logger.info("Market is closed.")
-    return True
+    return  False
+
+
+def is_market_open():
+    """
+    Function to check if the Indian stock market is currently open.
+    Returns True if open, False otherwise.
+    """
+    # Define market hours (e.g., 9:15 AM to 3:30 PM for Indian stock markets)
+    market_open_time = datetime.strptime("09:15", "%H:%M").time()
+    market_close_time = datetime.strptime("15:30", "%H:%M").time()
+
+    # Get the current time in the market's timezone (e.g., Asia/Kolkata)
+    market_timezone = pytz.timezone("Asia/Kolkata")
+    now = datetime.now(market_timezone)
+    current_time = now.time()
+    current_day = now.weekday()  # Monday = 0, Sunday = 6
+
+    # Custom stock market holidays for the current year
+    stock_market_holidays = [
+        datetime(2025, 1, 26).date(),  # Republic Day
+        datetime(2025, 3, 10).date(),  # Holi
+        datetime(2025, 8, 15).date(),  # Independence Day
+        datetime(2025, 10, 2).date(),  # Gandhi Jayanti
+        datetime(2025, 11, 11).date(),  # Diwali Balipratipada
+    ]
+
+    # Log current state
+    logger.info(f"Current date and time: {now}")
+    logger.info(f"Market open time: {market_open_time}, Market close time: {market_close_time}")
+    logger.info(f"Today is: {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][current_day]}")
+
+    # Check if the market is closed for a holiday
+    if now.date() in stock_market_holidays:
+        logger.info("Market is closed due to a stock market holiday.")
+        return False
+
+    # Check if today is a weekday and time is within market hours
+    if 0 <= current_day <= 4:  # Monday to Friday
+        if market_open_time <= current_time <= market_close_time:
+            logger.info("Market is open.")
+            return True
+
+    logger.info("Market is closed.")
+    return True#False
+
+
 
 import time
 

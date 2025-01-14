@@ -7,7 +7,7 @@ from rest_framework_simplejwt.views import (
 from main.Alice_Blue_Api import SymbolExpirDateListView
 from main.angleapi import SymbolExpiryDateListView
 from main.permissions import RolePermissionListView, UpdateRolePermissionsView
-# from main.upstock import *
+from main.upstock import *
 from .views import *
 from django.conf.urls.static import static
 from main import views
@@ -127,13 +127,13 @@ urlpatterns = [
     # path('get-expiry-date-list/', SymbolExpirDateListView.as_view(), name='expiry-date-list'),
     path('get-expiry-date-list/', SymbolExpiryDateListView.as_view(), name='download-nfo-csv'),
     path('update-client-status/<int:pk>/', ClientCreateView.as_view(), name='update-client-status'),
-    # path('upstox-auth/', order_view, name='upstox_auth'),
-    # path('callback/', callback_view, name='upstox_callback'),
-    # path('upstoxlogin/', login, name='login'),  # Redirect to Upstox login page
-    path('get-trade-history/', TradeorderhistoryListView.as_view(), name='get-trade-history'),  # Handle redirect and exchange code
-    path('get-client-trade-history/', ClientTradeListView.as_view(), name='get-client-trade-history'),  # Handle redirect and exchange code
+    path('get-trade-history/', TradeorderhistoryListView.as_view(), name='get-trade-history'),  
+    path('get-client-trade-history/', ClientTradeListView.as_view(), name='get-client-trade-history'), 
     path('clients-filter/', ClientFilterView.as_view(), name='client-list'),
     path('client-dashboard-redirect/',ClientDashBoardView.as_view(),name='client-dashboard-'),
+    path("broker_auth_login/",BrokerLoginRedirectView.as_view(), name="login_broker"),#AUTH2.0
+    path("auth-callback/", BrokerCallbackView.as_view(), name="broker_callback"),
+    
     path('callback/', views.oauth_callback, name='oauth_callback'),
     path('login-5paisa/', views.login_redirect, name='login_redirect'),
 
@@ -143,8 +143,9 @@ urlpatterns = [
     path('callback-angelone/', views.angelone_callback, name='angelone-callback'),
     path("callback/aliceblue/", views.aliceblue_callback, name="aliceblue_callback"),
     path("login-aliceblue/", views.login_aliceblue, name="login_aliceblue"),
-    path("auth-callback/", broker_callback, name="broker_callback"),
     path("place-zerodha-order/", place_zerodha_order, name="zerodha-order"),
+    path('login-upstox/',get_upstox_login_url,name="login_upstox_redirect"),
+    path('callback-upstox/',callback_upstox,name="login_upstox_redirect"),
 ]
 
 

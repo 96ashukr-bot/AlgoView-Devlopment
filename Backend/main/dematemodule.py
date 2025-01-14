@@ -19,7 +19,7 @@ def get_lot_size(trading_symbol):
         for item in data:
             # print("item.get("")>>>",item)
             if item.get("symbol") == trading_symbol:
-                print("**********",item.get("lotsize", None))
+                # print("**********",item.get("lotsize", None))
                 return {"status":"success" ,"lot_size":item.get("lotsize", None)}  # Fetch lot size from the item
         
         return {"status":"False"}  # If no matching symbol is found
