@@ -116,7 +116,7 @@ def place_upstox_orders(
         logger.info(f"Fetched Instrument Key: {instrument_key}")
 
         # Map product types to API-compatible values
-        product_mapping = {"NRML": "C", "MIS": "I", "CNC": "D"}
+        product_mapping = {"NRML": "N", "MIS": "I", "CNC": "D"}
         product_code = product_mapping.get(product_type.upper(), product_type)
 
         # Construct the order payload

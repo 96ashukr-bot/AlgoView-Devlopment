@@ -55,10 +55,14 @@ def generate_session_with_retry(username, password, totp, retries=3, delay=1):
 feedToken = smart_client.getfeedToken()
 # api_key,demate_user_name,totp,angle_pass,
 #place order using Angle one api
-def place_Angle_order(api_key,demate_user_name,totp,angle_pass,token, symbol, exch_seg, quantity, product_type, transactiontype, price, ordertype, expiry,lot_size, 
-                Entry_type, Exit_type,Entry_price,Exit_price ,webhook_signal, Exchange, Segment,Index_Symbol ,user=None, strategy=None):
+ 
+def place_Angle_order(api_key,demate_user_name,totp,angle_pass,token, symbol, quantity, product_type, transactiontype, 
+        price, ordertype,lot_size, Entry_type, Exit_type,Entry_price,Exit_price ,webhook_signal, Exchange,trade_order_status,
+        Segment,Index_Symbol ,user=None, strategy=None):
+
     try:
         logger.info(f"Angle one api order placement for user: {user} & trading symbol is: {symbol}")
+        print("product_type>>>",product_type)
         if product_type:
             if product_type.upper() =="NRML":
                product_type= "CARRYFORWARD"
@@ -66,12 +70,13 @@ def place_Angle_order(api_key,demate_user_name,totp,angle_pass,token, symbol, ex
                 product_type="INTRADAY"
             elif product_type.upper() =="CNC":      
                 product_type ="DELIVERY"
+        print("_----------------")
         order_params = {
             "variety": "NORMAL",
             "tradingsymbol": symbol,
             "symboltoken": token,
             "transactiontype": transactiontype,
-            "exchange": exch_seg,
+            # "exchange": exch_seg,
             "ordertype": ordertype,
             "producttype": product_type,
             "duration": "DAY",
@@ -102,7 +107,7 @@ def place_Angle_order(api_key,demate_user_name,totp,angle_pass,token, symbol, ex
             status="Failed"
             res_data="unknown response",
             message=f"Invalid quantity {symbol}, it should be in multiples of lot size: {lot}"
-            save_trade_order_history(user,symbol, order_id, status, res_data, message,  strategy, Entry_type, Exit_type,Entry_price,Exit_price ,webhook_signal , Exchange, Segment,Index_Symbol , order_params,broker="Angle One")
+            save_trade_order_history(trade_order_status,user,symbol, order_id, status, res_data, message,  strategy, Entry_type, Exit_type,Entry_price,Exit_price ,webhook_signal , Exchange, Segment,Index_Symbol , order_params,broker="Angle One")
 
             return {"data": {"status": "error", "message": f"Quantity must be a multiple of lot size: {lot}"}}
 
@@ -121,7 +126,7 @@ def place_Angle_order(api_key,demate_user_name,totp,angle_pass,token, symbol, ex
                 order_id=0
                 message=f"Empty Response from API return None invalid token or somthing else"
                 res_data=response
-                save_trade_order_history(user,symbol, order_id, status, res_data, message,  strategy, Entry_type, Exit_type,Entry_price,Exit_price ,webhook_signal , Exchange, Segment,Index_Symbol , order_params,broker="Angle One")
+                save_trade_order_history(trade_order_status,user,symbol, order_id, status, res_data, message,  strategy, Entry_type, Exit_type,Entry_price,Exit_price ,webhook_signal , Exchange, Segment,Index_Symbol , order_params,broker="Angle One")
 
                 return {"data": {"status": "error", "message": "No response from API."}}
 
@@ -152,7 +157,7 @@ def place_Angle_order(api_key,demate_user_name,totp,angle_pass,token, symbol, ex
                 # log_order(order_data, "orders_placed.csv")  
                 message = responsedetails['data'].get('text', 'completed successfully ')
 
-                save_trade_order_history(user,symbol, order_id, status, res_data, message,   strategy, Entry_type, Exit_type,Entry_price,Exit_price ,webhook_signal , Exchange, Segment,Index_Symbol ,order_params,broker="Angle One")
+                save_trade_order_history(trade_order_status,user,symbol, order_id, status, res_data, message,   strategy, Entry_type, Exit_type,Entry_price,Exit_price ,webhook_signal , Exchange, Segment,Index_Symbol ,order_params,broker="Angle One")
                 # from_email = settings.DEFAULT_FROM_EMAIL,
                 # send_trade_email_async.delay(user.email, from_email,user.firstName,status, message)
                 # save_webhook_signals_logs(order_params['transactiontype'], symbol, price, strategy, user, status=responsedetails['data'].get('status'),failure_reason="your order place succesfully", json=json)
@@ -169,7 +174,7 @@ def place_Angle_order(api_key,demate_user_name,totp,angle_pass,token, symbol, ex
                 print("user.firstName>>>>>",user.firstName)
                 send_trade_email_async.delay(user.email, from_email,user.firstName,status, message)
                 logger.info(f"Order is pending or in process reason is !!!::{message}")
-                save_trade_order_history(user,symbol, order_id, status, res_data, message,  strategy, Entry_type, Exit_type,Entry_price,Exit_price ,webhook_signal , Exchange, Segment,Index_Symbol ,order_params, broker="Angle One")
+                save_trade_order_history(trade_order_status,user,symbol, order_id, status, res_data, message,  strategy, Entry_type, Exit_type,Entry_price,Exit_price ,webhook_signal , Exchange, Segment,Index_Symbol ,order_params, broker="Angle One")
                 return responsedetails
                 
             else:
@@ -180,7 +185,7 @@ def place_Angle_order(api_key,demate_user_name,totp,angle_pass,token, symbol, ex
                 # Send rejection email
                 print("user.firstName>>>>>",user.firstName)
                 send_trade_email_async.delay(user.email, from_email,user.firstName,status, rejection_message)
-                save_trade_order_history(user,symbol, order_id, status, res_data, rejection_message,  strategy, Entry_type, Exit_type,Entry_price,Exit_price ,webhook_signal , Exchange, Segment,Index_Symbol ,order_params ,broker="Angle One")
+                save_trade_order_history(trade_order_status,user,symbol, order_id, status, res_data, rejection_message,  strategy, Entry_type, Exit_type,Entry_price,Exit_price ,webhook_signal , Exchange, Segment,Index_Symbol ,order_params ,broker="Angle One")
                 # save_webhook_signals_logs(order_params['transactiontype'], symbol, price, strategy, user, status=responsedetails['data'].get('status'),
                 return responsedetails
         except Exception as e:
@@ -226,7 +231,8 @@ def get_token_details(trading_symbol):
         return {"status": "error",  # Indicate that the symbol was not found
             "message": f"No details found for trading symbol: {trading_symbol}"}
     except requests.exceptions.RequestException as e:
-        return f"An error occurred while fetching data: {str(e)}"
+        print(f"An error occurred while fetching data: {str(e)}") 
+        return {"status": "error", "message": f"An error occurred while fetching data:  {str(e)}"}
 def save_data_to_file(self, data, filename="symbol_data.json"):
     """
     Save JSON data to a file in the specified directory.
