@@ -2282,7 +2282,7 @@ class PlaceOrderWebhookView(APIView):
         order_type_mapping = {
             "BUY-O": "Buy CE",
             "SELL-C": "Close CE",
-            "SELL-C_O": "Close CE & BUY PE",
+            "SELL-C_O": "Close CE & Buy PE",
             "SELL-O": "BUY PE",
             "BUY-C": "Close PE",
             "BUY-C_O": "Close PE & Buy CE"
@@ -2293,10 +2293,16 @@ class PlaceOrderWebhookView(APIView):
             logger.error(f"Invalid OrderType received: {transaction_type}")
             return Response({"status": "error", "message": "Invalid OrderType received."}, status=status.HTTP_400_BAD_REQUEST)
         # Split type
-        action_split = action_description.split()
-        transaction_split= transaction_type.split('-')
-        buy_sell =action_split[-1]# transaction_split[0]  #  'BUY' or 'SELL'
-        # Type = action_split[-1]  # CE or PE
+        print("action_description>>",action_description)
+        if action_description=="Close CE & Buy PE":
+            buy_sell="CE PE"
+        elif action_description =="Close PE & Buy CE":
+            buy_sell="PE CE"
+        else:    
+            action_split = action_description.split()
+            transaction_split= transaction_type.split('-')
+            buy_sell =action_split[-1]# transaction_split[0]  #  'BUY' or 'SELL'
+            # Type = action_split[-1]  # CE or PE
         print("buy_sell>>>>",buy_sell)
         # Map raw symbol to standardized symbol
         symbol_mapping = {
