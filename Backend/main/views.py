@@ -2175,9 +2175,9 @@ def place_order_broker(
             res_data="unknown response",
             message= f"No broker details found for client {trade.client} and broker {trade.broker}"
             save_trade_order_history(trade_order_status,user,trade_symbol, order_id, status, res_data, message,  strategy, Entry_type,Exit_type ,Entry_price,Exit_price,webhook_signal , Exchange, Segment,Index_Symbol,order_params,broker="Angle One")
-            
             logger.error(f"No broker details found for client {trade.client} and broker {trade.broker}")
-            # continue
+            response= {"data":{"status": "error", "message":message }}
+            return response
 
         api_skey = client_broker.broker_API_SKEY
         api_uid = client_broker.broker_API_UID
@@ -2279,6 +2279,25 @@ class PlaceOrderWebhookView(APIView):
         default_price = round_price(signal_price)
         print("Round of price:::::::::::",default_price)
         transaction_type = request.data.get('ordertype', 'BUY-O').upper()
+        order_type_mapping = {
+            "BUY-O": "Buy CE",
+            "SELL-C": "Close CE",
+            "SELL-C_O": "Close CE & BUY PE",
+            "SELL-O": "BUY PE",
+            "BUY-C": "Close PE",
+            "BUY-C_O": "Close PE & Buy CE"
+        }
+        # Get the description and split action/type
+        action_description = order_type_mapping.get(transaction_type, "Invalid OrderType")
+        if action_description == "Invalid OrderType":
+            logger.error(f"Invalid OrderType received: {transaction_type}")
+            return Response({"status": "error", "message": "Invalid OrderType received."}, status=status.HTTP_400_BAD_REQUEST)
+        # Split type
+        action_split = action_description.split()
+        transaction_split= transaction_type.split('-')
+        buy_sell =action_split[-1]# transaction_split[0]  #  'BUY' or 'SELL'
+        # Type = action_split[-1]  # CE or PE
+        print("buy_sell>>>>",buy_sell)
         # Map raw symbol to standardized symbol
         symbol_mapping = {
             "NIFTY BANK": "BANKNIFTY",
@@ -2291,8 +2310,6 @@ class PlaceOrderWebhookView(APIView):
             exch_seg="BSE"
         else:
             exch_seg="NFO" 
-
-        buy_sell = transaction_type
         default_ordertype = request.data.get('orderType', 'MARKET')
         strategy=request.data.get('strategyTag',"ce entry")
         limitPrice=request.data.get('limitPrice',0)
@@ -2317,12 +2334,10 @@ class PlaceOrderWebhookView(APIView):
                 Entry_type = None
                 Exit_type = None
                 Type=None
-                trade_symbol=None 
+                trade_symbol=symbols 
                 user=trade.client
                 print("trade for user >>",trade.client)
                 if trade.symbol.upper() == symbols:
-                    default_expiry = localtime(trade.expiry_date).date()  
-                    print("default_expiry>>>>>>>>>",default_expiry)
                     Type=None
                     strategy=trade.strategy
                     Segment=trade.segment.name if trade.segment else None
@@ -2332,11 +2347,12 @@ class PlaceOrderWebhookView(APIView):
                     order_id=0
                     status="Failed"
                     Index_Symbol=trade.symbol
-                    res_data="unknown response",
-                    order_params = {"symbol": trade.symbol,"exch_seg": exch_seg, "quantity": trade.quantity or default_quantity,"product_type": trade.product_type,
-                    "transaction_type":buy_sell,"price": limitPrice,"ordertype": default_ordertype,"expiry": trade.expiry_date or default_expiry,"trade_limit": trade.trade_limit,"strategy": trade.strategy}
+                    res_data="unknown response"
+                    order_params = {"symbol": trade.symbol,"Exchange": exch_seg, "quantity": trade.quantity or default_quantity,"product_type": trade.product_type,
+                    "transaction_type":buy_sell,"price": limitPrice or 0 ,"ordertype": default_ordertype,"strategy": trade.strategy}
                     order_params = serialize_to_json(order_params)
                     if default_expiry:
+                        default_expiry=localtime(trade.expiry_date.date())
                         # expiry_date = datetime.strptime(default_expiry, "%d-%m-%Y")
                         expiry_date=default_expiry
                         day = expiry_date.strftime("%d")
@@ -2348,6 +2364,10 @@ class PlaceOrderWebhookView(APIView):
                         message=f"Expiry date is missing {trade.symbol} for user {trade.client}. so can not get trading symbol"
                         save_trade_order_history(trade_order_status,user,trade_symbol, order_id, status, res_data, message,  strategy, Entry_type,Exit_type ,Entry_price,Exit_price,webhook_signal , Exchange, Segment,Index_Symbol,order_params,broker=trade.broker)
                         continue 
+                    order_params = {"symbol": trade.symbol,"Exchange": exch_seg, "quantity": trade.quantity or default_quantity,"product_type": trade.product_type,
+                    "transaction_type":buy_sell,"price": limitPrice or 0 ,"ordertype": default_ordertype, "expiry": default_expiry,"strategy": trade.strategy}
+                    order_params = serialize_to_json(order_params)
+
                     logger.info(f"symbol>>{symbols}>>expiry>{default_expiry} >>Type>>{Type}>>default_price>>{default_price}")
                     # Concatenate fields to create the trading symbol
                     # skip the order and move to next user 
@@ -2368,7 +2388,6 @@ class PlaceOrderWebhookView(APIView):
                     product_type = trade.product_type
                     price = limitPrice
                     ordertype = default_ordertype
-                    expiry = trade.expiry_date or default_expiry
                     trade_limit=trade.trade_limit
                     # Count user's trades for the day
                     today = datetime.today()
@@ -2385,7 +2404,7 @@ class PlaceOrderWebhookView(APIView):
                         print("started place order market is open: transaction_type is :::::::", transaction_type ) 
                         logger.info("Market is open. Proceed with the trade.")
                         if transaction_type=="SELL-C_O":#Will Close the existing order and Open a new PE order
-                            # print("SELL-C_O ======== SELL-C - Close CE(Close CE) & BUY PE")
+                            # print("SELL-C_O = (Close CE)SELL-C & BUY PE")
                             # First transaction: SELL-C
                             transaction_type = "SELL-C"
                             buy_sell, Type = manage_order(transaction_type, buy_sell, Type)
