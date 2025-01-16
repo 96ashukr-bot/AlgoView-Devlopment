@@ -2233,6 +2233,22 @@ def place_order_broker(
             Index_Symbol=Index_Symbol , user=user, strategy=strategy)#exch_seg=exch_seg expiry=expiry
             
     return order_response    
+
+def serialize_to_json(data):
+    """
+    Convert data into a JSON-serializable format.
+    If a value is a datetime object, convert it to an ISO 8601 string.
+    """
+    if isinstance(data, dict):
+        return {key: serialize_to_json(value) for key, value in data.items()}
+    elif isinstance(data, list):
+        return [serialize_to_json(item) for item in data]
+    elif isinstance(data, Decimal):
+        return float(data)  # Convert Decimal to float
+    elif isinstance(data, datetime):
+        return data.isoformat()  # Convert datetime to ISO 8601 string
+    return data
+
 SESSION_ID = None
 SESSION_EXPIRATION = None
 # Webhook  trade Alert
@@ -2278,11 +2294,12 @@ class PlaceOrderWebhookView(APIView):
         all_enable_users = ClientTradeSetting.objects.filter(is_tread_status=True,client__is_enable=True, broker__isnull=False)
         user_count = all_enable_users.count()
         print("all_enable_users>>",all_enable_users,">>>count>>>>",user_count)
-        default_expiry=None         
+        default_expiry=None 
+        order_status=None        
         try:
             for trade in all_enable_users:
                 transaction_type=buy_sell_type
-                order_status=None
+               
                 trade_order_status=None
                 Entry_price = None
                 Exit_price = None
@@ -2290,10 +2307,23 @@ class PlaceOrderWebhookView(APIView):
                 Exit_type = None
                 Type=None
                 trade_symbol=None 
+                user=trade.client
                 print("trade for user >>",trade.client)
                 if trade.symbol.upper() == symbols:
                     default_expiry = trade.expiry_date 
                     Type=None
+                    strategy=trade.strategy
+                    Segment=trade.segment.name if trade.segment else None
+                    Exchange=exch_seg
+                    user=trade.client
+                    webhook_signal=alert_data
+                    order_id=0
+                    status="Failed"
+                    Index_Symbol=trade.symbol
+                    res_data="unknown response",
+                    order_params = {"symbol": trade.symbol,"exch_seg": exch_seg, "quantity": trade.quantity or default_quantity,"product_type": trade.product_type,
+                    "transaction_type":buy_sell,"price": limitPrice,"ordertype": default_ordertype,"expiry": trade.expiry_date or default_expiry,"trade_limit": trade.trade_limit,"strategy": trade.strategy}
+                    order_params = serialize_to_json(order_params)
                     if default_expiry:
                         # expiry_date = datetime.strptime(default_expiry, "%d-%m-%Y")
                         expiry_date=default_expiry
@@ -2302,39 +2332,14 @@ class PlaceOrderWebhookView(APIView):
                         year = expiry_date.strftime("%y")
                     else:
                         logger.error(f"Expiry date is missing {trade.symbol} for user {trade.client}. Skipping trade.")
-                        # order_id=0
+                        order_id=0
+                        message=f"Expiry date is missing {trade.symbol} for user {trade.client}. Skipping trade."
                         save_trade_order_history(trade_order_status,user,trade_symbol, order_id, status, res_data, message,  strategy, Entry_type,Exit_type ,Entry_price,Exit_price,webhook_signal , Exchange, Segment,Index_Symbol,order_params,broker=trade.broker)
                         continue 
                     logger.info(f"symbol>>{symbols}>>expiry>{default_expiry} >>Type>>{Type}>>default_price>>{default_price}")
                     # Concatenate fields to create the trading symbol
                     # skip the order and move to next user 
-                    order_params = {"symbol": trade.symbol,"exch_seg": exch_seg, "quantity": trade.quantity or default_quantity,"product_type": trade.product_type,
-                    "transaction_type":buy_sell,"price": limitPrice,"ordertype": default_ordertype,"expiry": trade.expiry_date or default_expiry,"trade_limit": trade.trade_limit,"strategy": trade.strategy}
-                    def serialize_to_json(data):
-                        """
-                        Convert data into a JSON-serializable format.
-                        If a value is a datetime object, convert it to an ISO 8601 string.
-                        """
-                        if isinstance(data, dict):
-                            return {key: serialize_to_json(value) for key, value in data.items()}
-                        elif isinstance(data, list):
-                            return [serialize_to_json(item) for item in data]
-                        elif isinstance(data, Decimal):
-                            return float(data)  # Convert Decimal to float
-                        elif isinstance(data, datetime):
-                            return data.isoformat()  # Convert datetime to ISO 8601 string
-                        return data
-                    order_params = serialize_to_json(order_params)
-                    strategy=trade.strategy
-                    Segment=trade.segment.name if trade.segment else None
-                    Exchange=exch_seg
-                    user=trade.client
-                    order_id=0
-                    status="Failed"
-                    Index_Symbol=trade.symbol
-                    res_data="unknown response",
                     broker=trade.broker
-                    webhook_signal=alert_data
                     logger.info(f"Action resolved: EntryType={Entry_type}, EntryPrice={Entry_price}, "
                                 f"ExitType={Exit_type}, ExitPrice={Exit_price}")  
                     if  not trade.product_type:
