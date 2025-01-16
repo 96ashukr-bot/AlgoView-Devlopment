@@ -19,10 +19,12 @@ from django.conf import settings
 import time
 from rest_framework.generics import ListAPIView,UpdateAPIView
 from main.angleapi import get_token_details, place_Angle_order
+from main.dematemodule import trading_Symbol_sum
 from main.permissions import  IsAdminRole
 from main.tasks import send_kyc_email_async, send_trade_email_async
 from rest_framework import status
-
+from django.utils.timezone import make_aware
+from pytz import timezone as pytz_timezone
 from main.upstock import place_upstox_orders
 from main.zerodha import place_zerodha_orders
 from .models import *
@@ -296,8 +298,8 @@ class PasswordResetRequestView(generics.GenericAPIView):
             #     f'/password-reset-confirm/?uidb64={uid}&token={token}'
             # )
             
-            reset_link = f'http://103.120.178.54:4000/pages/authentication/reset-password/:{uid}/:{token}/:layout'
-            # reset_link = f'http://localhost:3000/pages/authentication/reset-password/:{uid}/:{token}/:layout'
+            # reset_link = f'http://103.120.178.54:4000/pages/authentication/reset-password/:{uid}/:{token}/:layout'
+            reset_link = f'http://localhost:3000/pages/authentication/reset-password/:{uid}/:{token}/:layout'
             subject = "Password Reset Request"
             print("reset_link",reset_link)
             message = (
@@ -1606,6 +1608,15 @@ class UpdateClientTradeSettingAPIView(UpdateAPIView):
         serializer = self.get_serializer(trade_setting, data=request.data, partial=True)
         
         if serializer.is_valid():
+            expiry_date = request.data.get('expiry_date')
+            print("expiry_date>>>",expiry_date)
+            if expiry_date:
+                # Convert to Asia/Kolkata timezone
+                india_tz = pytz_timezone('Asia/Kolkata')
+                expiry_date = datetime.fromisoformat(expiry_date)
+                expiry_date = make_aware(expiry_date, timezone=india_tz)
+                trade_setting.expiry_date = expiry_date
+
             # Save the updated trade setting
             serializer.save()
             # Log the update in TradeLog
@@ -1621,7 +1632,7 @@ class UpdateClientTradeSettingAPIView(UpdateAPIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-
+from django.utils.timezone import localtime
 class GetTradeSettingAPIView(generics.ListAPIView):
     serializer_class = GetclientTradedataSettingSerializer#ClientTradeSettingSerializer
     permission_classes = [IsAuthenticated]
@@ -2310,7 +2321,8 @@ class PlaceOrderWebhookView(APIView):
                 user=trade.client
                 print("trade for user >>",trade.client)
                 if trade.symbol.upper() == symbols:
-                    default_expiry = trade.expiry_date 
+                    default_expiry = localtime(trade.expiry_date).date()  
+                    print("default_expiry>>>>>>>>>",default_expiry)
                     Type=None
                     strategy=trade.strategy
                     Segment=trade.segment.name if trade.segment else None
@@ -2333,7 +2345,7 @@ class PlaceOrderWebhookView(APIView):
                     else:
                         logger.error(f"Expiry date is missing {trade.symbol} for user {trade.client}. Skipping trade.")
                         order_id=0
-                        message=f"Expiry date is missing {trade.symbol} for user {trade.client}. Skipping trade."
+                        message=f"Expiry date is missing {trade.symbol} for user {trade.client}. so can not get trading symbol"
                         save_trade_order_history(trade_order_status,user,trade_symbol, order_id, status, res_data, message,  strategy, Entry_type,Exit_type ,Entry_price,Exit_price,webhook_signal , Exchange, Segment,Index_Symbol,order_params,broker=trade.broker)
                         continue 
                     logger.info(f"symbol>>{symbols}>>expiry>{default_expiry} >>Type>>{Type}>>default_price>>{default_price}")
@@ -2379,6 +2391,7 @@ class PlaceOrderWebhookView(APIView):
                             buy_sell, Type = manage_order(transaction_type, buy_sell, Type)
                             transaction_type=buy_sell
                             logger.info(f"Placing first order: Action={buy_sell}, Type={Type}")
+                            trading_Symbol_sum(trade, symbols, day, month, year, Type, default_price)
                             order_response = place_order_broker(
                                 trade, user, transaction_type, symbol, quantity, strategy, ordertype,
                                 product_type, price, Lots, trade_order_status, Entry_type, Exit_type,

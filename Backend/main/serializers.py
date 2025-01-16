@@ -1079,6 +1079,8 @@ class ClientTradeSettingSerializer(serializers.ModelSerializer):
 
     segment = serializers.PrimaryKeyRelatedField(queryset=Segment.objects.all())
     sub_segment = serializers.PrimaryKeyRelatedField(queryset=SubSegment.objects.all())
+    expiry_date = serializers.DateTimeField(required=False, allow_null=True)
+
 
     class Meta:
         model = ClientTradeSetting
@@ -1086,6 +1088,7 @@ class ClientTradeSettingSerializer(serializers.ModelSerializer):
                   'strategy', 'broker', 'product_type', 'buy_sell', 'quantity', 
                   'trade_limit', 'max_loss_for_day', 'min_loss_for_day', 
                   'max_profit_for_day', 'min_profit_for_day', 'expiry_date', 'is_tread_status']
+from django.utils.timezone import localtime
 class GetclientTradedataSettingSerializer(serializers.ModelSerializer):
     segment = SegmentSerializer()  # Use the SegmentSerializer to include all segment details
     sub_segment = SubSegmentSerializer() 
@@ -1094,9 +1097,11 @@ class GetclientTradedataSettingSerializer(serializers.ModelSerializer):
         representation = super().to_representation(instance)
         
         # Convert expiry_date to "DDMMMYYYY" format if it exists
+        # if instance.expiry_date:
+        #     representation['expiry_date'] = instance.expiry_date.strftime('%d%b%Y')  # Format date
+        #     representation['expiry_date'] = representation['expiry_date'][:2] + representation['expiry_date'][2:].capitalize()  # Capitalize the month correctly
         if instance.expiry_date:
-            representation['expiry_date'] = instance.expiry_date.strftime('%d%b%Y')  # Format date
-            representation['expiry_date'] = representation['expiry_date'][:2] + representation['expiry_date'][2:].capitalize()  # Capitalize the month correctly
+            representation['expiry_date'] = localtime(instance.expiry_date).date()  # Convert to local time and show only the date part
         
         return representation
     class Meta:
