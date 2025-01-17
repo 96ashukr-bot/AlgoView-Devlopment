@@ -23,7 +23,9 @@ from main.dematemodule import trading_Symbol_sum
 from main.permissions import  IsAdminRole
 from main.tasks import send_kyc_email_async, send_trade_email_async
 from rest_framework import status
-from django.utils.timezone import make_aware
+# from django.utils.timezone import make_aware
+# from django.utils.timezone import localtime
+from django.utils.timezone import make_aware, localtime
 from pytz import timezone as pytz_timezone
 from main.upstock import place_upstox_orders
 from main.zerodha import place_zerodha_orders
@@ -1632,7 +1634,6 @@ class UpdateClientTradeSettingAPIView(UpdateAPIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-from django.utils.timezone import localtime
 class GetTradeSettingAPIView(generics.ListAPIView):
     serializer_class = GetclientTradedataSettingSerializer#ClientTradeSettingSerializer
     permission_classes = [IsAuthenticated]
@@ -2303,7 +2304,7 @@ class PlaceOrderWebhookView(APIView):
             transaction_split= transaction_type.split('-')
             buy_sell =action_split[-1]# transaction_split[0]  #  'BUY' or 'SELL'
             # Type = action_split[-1]  # CE or PE
-        print("buy_sell>>>>",buy_sell)
+        logger.info(f"buy_sell>>>>{buy_sell}")
         # Map raw symbol to standardized symbol
         symbol_mapping = {
             "NIFTY BANK": "BANKNIFTY",
@@ -2358,7 +2359,14 @@ class PlaceOrderWebhookView(APIView):
                     "transaction_type":buy_sell,"price": limitPrice or 0 ,"ordertype": default_ordertype,"strategy": trade.strategy}
                     order_params = serialize_to_json(order_params)
                     if default_expiry:
-                        default_expiry=localtime(trade.expiry_date.date())
+                        default_expiry_date = trade.expiry_date.date()  # This is a datetime.date object
+
+                        # Convert it to a timezone-aware datetime object
+                        default_expiry_datetime = make_aware(datetime.combine(default_expiry_date, datetime.min.time()))
+
+                        # Use localtime with the timezone-aware datetime object
+                        default_expiry = localtime(default_expiry_datetime)
+                        # default_expiry=localtime(trade.expiry_date.date())
                         # expiry_date = datetime.strptime(default_expiry, "%d-%m-%Y")
                         expiry_date=default_expiry
                         day = expiry_date.strftime("%d")
