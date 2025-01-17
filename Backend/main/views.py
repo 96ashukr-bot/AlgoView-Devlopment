@@ -2333,7 +2333,7 @@ class PlaceOrderWebhookView(APIView):
         try:
             for trade in all_enable_users:
                 transaction_type=buy_sell_type
-               
+                default_expiry=trade.expiry_date
                 trade_order_status=None
                 Entry_price = None
                 Exit_price = None
