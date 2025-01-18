@@ -2171,7 +2171,7 @@ def place_order_broker(
         logger.info(f"Trading Symbol (Upstox): {trade_symbol}")
 
         client_broker = ClientBrokerdetails.objects.filter(
-            client=trade.client, broker_name__broker_name=trade.broker
+            client=trade.client, broker_name__broker_name__iexact=trade.broker
         ).first()
         if not client_broker:
             message = f"No broker details found for client {trade.client} and broker {trade.broker}."
@@ -2222,7 +2222,7 @@ def place_order_broker(
         logger.info("trading_symbol_aliceblue.. %s %s", trading_symbol_aliceblue,symbol)
         trade_symbol=trading_symbol_aliceblue
         # Fetch client broker details
-        client_broker = ClientBrokerdetails.objects.filter(client=trade.client, broker_name__broker_name=trade.broker).first()
+        client_broker = ClientBrokerdetails.objects.filter(client=trade.client, broker_name__broker_name__iexact=trade.broker).first()
         if not client_broker:
             message= f"No broker details found for client {trade.client} and broker {trade.broker}"
             save_trade_order_history(trade_order_status,user,trade_symbol, order_id, status, res_data, message,  strategy, Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal , Exchange, Segment,Index_Symbol,order_params,broker="Angle One")
@@ -2251,7 +2251,7 @@ def place_order_broker(
     elif trade.broker.lower() == "angle one":
         trade_symbol = f"{symbol}{day}{month}{year}{default_price}{Type}" 
         # Fetch client broker details
-        client_broker = ClientBrokerdetails.objects.filter(client=trade.client, broker_name__broker_name=trade.broker).first()
+        client_broker = ClientBrokerdetails.objects.filter(client=trade.client, broker_name__broker_name__iexact=trade.broker).first()
         if not client_broker:
             message= f"No broker details found for client {trade.client} and broker {trade.broker}"
             response= {"data":{"status": "Failed", "message":message }}
@@ -2969,7 +2969,7 @@ def place_zerodha_order(request):
     api_secret = "f6hk1ihfqsc05j22mzjxi5z74zh4qh6h"
     # Retrieve broker details for the user
     try:
-        # broker_details = ClientBrokerdetails.objects.get(client=user, broker_name__broker_name="ZERODHA")
+        # broker_details = ClientBrokerdetails.objects.get(client=user, broker_name__broker_name__iexact="ZERODHA")
         kite = KiteConnect(api_key=api_key)
         # # Check if access token is valid
         # if not broker_details.access_token or broker_details.access_token_expiry < datetime.now():
