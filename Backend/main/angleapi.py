@@ -17,47 +17,14 @@ from main.Alice_Blue_Api import save_trade_order_history
 from main.dematemodule import get_lot_size
 from main.tasks import send_trade_email_async
 logger = logging.getLogger('main')
-API_KEY = 'FNqcDPCk'#'Xp6znI3s'
-USERNAME = 'A1420760'
-Totp     = "7DFMHZE3BDRCIHMLFT4N3QVCPU"
-PASSWORD="1986"
-smart_client = SmartConnect(api_key=API_KEY)
-totp = pyotp.TOTP(Totp).now()
-print("*******")
-def generate_session_with_retry(username, password, totp, retries=3, delay=1):
-    for attempt in range(retries):
-        try:
-            # Attempt to generate the session
-            return smart_client.generateSession(username, password, totp)
-        except smart_client.smartExceptions.DataException as e:
-            # Handling specific exception from smartClient
-            if "exceeding access rate" in str(e):
-                print(f"Rate limit exceeded. Retrying in {delay} seconds...")
-                time.sleep(delay * (2 ** attempt))  # Exponential backoff
-            else:
-                # If it's a different DataException, raise it
-                logger.error(f"DataException occurred: {e}")
-                raise
-        except requests.exceptions.RequestException as e:
-            # General network request exception
-            logger.error(f"Request failed: {e}")
-            print(f"Request failed, retrying in {delay} seconds...")
-            time.sleep(delay * (2 ** attempt))  # Exponential backoff for network failures
-        except Exception as e:
-            # Catch any other unexpected exceptions
-            logger.error(f"Unexpected error: {e}")
-            raise
-    
-    # If all retries fail, raise an exception
-    raise Exception("Max retries reached. Could not generate session.")
-# Attempt to generate session
-# data = generate_session_with_retry(USERNAME, PASSWORD, totp)
-feedToken = smart_client.getfeedToken()
-# api_key,demate_user_name,totp,angle_pass,
-#place order using Angle one api
- 
+# API_KEY = 'FNqcDPCk'#'Xp6znI3s'
+# USERNAME = 'A1420760'
+# Totp     = "7DFMHZE3BDRCIHMLFT4N3QVCPU"
+# PASSWORD="1986"
+# smart_client = SmartConnect(api_key=API_KEY)
+# totp = pyotp.TOTP(Totp).now()
 def place_Angle_order(api_key,demate_user_name,totp,angle_pass,token, symbol, quantity, product_type, transactiontype, 
-        price, ordertype,lot_size, Entry_type, Exit_type,Entry_price,Exit_price ,webhook_signal, Exchange,trade_order_status,
+        price, ordertype,lot_size, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal, Exchange,trade_order_status,
         Segment,Index_Symbol ,user=None, strategy=None):
 
     try:
@@ -76,7 +43,7 @@ def place_Angle_order(api_key,demate_user_name,totp,angle_pass,token, symbol, qu
             "tradingsymbol": symbol,
             "symboltoken": token,
             "transactiontype": transactiontype,
-            # "exchange": exch_seg,
+            "exchange": Exchange,
             "ordertype": ordertype,
             "producttype": product_type,
             "duration": "DAY",
@@ -89,56 +56,76 @@ def place_Angle_order(api_key,demate_user_name,totp,angle_pass,token, symbol, qu
         }
                 
         print("order_params...........",order_params)
-        API_KEY = api_key
-        USERNAME = demate_user_name
-        Totp     = totp
-        PASSWORD=angle_pass
-        smart_client = SmartConnect(api_key=API_KEY)
-        totp = pyotp.TOTP(Totp).now()
+        api_key = api_key
+        username = demate_user_name
+        Totp_Secret     = totp
+        password=angle_pass
+        # smart_client = SmartConnect(api_key=API_KEY)
+        # totp = pyotp.TOTP(Totp).now()
         logging.info("Sending Order Request: %s", json.dumps(order_params, indent=4))
         # max_retries = 3
         # for attempt in range(max_retries):
         lot_size = get_lot_size(symbol)  # Implement this function to fetch lot size
         lot = int(lot_size.get("lot_size", 0))  # Convert lot_size to an integer (default to 0 if not found)
         # Check if the order quantity is a multiple of the lot size
+        order_id=0
+        status="Failed"
+        res_data="unknown response",
         if order_params['quantity'] % lot != 0:
             logger.error(f"Invalid quantity {symbol}, it should be in multiples of lot size: {lot}")
-            order_id=0
-            status="Failed"
-            res_data="unknown response",
             message=f"Invalid quantity {symbol}, it should be in multiples of lot size: {lot}"
-            save_trade_order_history(trade_order_status,user,symbol, order_id, status, res_data, message,  strategy, Entry_type, Exit_type,Entry_price,Exit_price ,webhook_signal , Exchange, Segment,Index_Symbol , order_params,broker="Angle One")
+            save_trade_order_history(trade_order_status,user,symbol, order_id, status, res_data, message,  strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol , order_params,broker="Angle One")
 
             return {"data": {"status": "error", "message": f"Quantity must be a multiple of lot size: {lot}"}}
 
         try:
-            smart_client = SmartConnect(api_key=api_key)
-            if not smart_client:
+            smartApi = SmartConnect(api_key=api_key)
+            if not smartApi:
                 logger.error("Failed to initialize SmartConnect client.")
-                return {"data": {"status": "Unauthorized", "message": "API client initialization failed."}}
-
-            print("client typee", smart_client)
-            response = smart_client.placeOrderFullResponse(order_params)
-            print("response of angleeee",response)
+                return {"data": {"status": "Unauthorized", "message": "API client initialization Failed."}}
+            try:
+                print("username", username, "password", password, "totp", Totp_Secret)
+                session_data = login_user(username, password, Totp_Secret, smartApi)
+                if not session_data or not session_data.get("status"):
+                    error_message = session_data.get("message", "Unknown error occurred during login.")
+                    logger.error("Failed to log in: %s", error_message)
+                    res_data = "Invalid API key or invalid credentials"
+                    message = error_message
+                    save_trade_order_history(
+                        trade_order_status, user, symbol, order_id, status, res_data, message,
+                        strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
+                        webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="Angle One"
+                    )
+                    return {"data": {"status": "Failed", "message": error_message}}
+            except Exception as e:
+                # Handle exceptions during the entire process
+                logger.error("An error occurred: %s", e)
+                res_data = "An exception occurred during login."
+                message = str(e)
+                save_trade_order_history(
+                    trade_order_status, user, symbol, order_id, status, res_data, message,
+                    strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
+                    webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="Angle One"
+                )
+                return {"data": {"status": "Failed", "message": f"Exception: {message}"}}
+            # If login is successful, proceed further
+            logger.info("Login successful.......................")
+            response = smartApi.placeOrderFullResponse(order_params)
+            logger.info(f"Angle API Response: {response}")
             if response is None:
                 logger.error("Received None response from API.")
-                status="error"
-                order_id=0
-                message=f"Empty Response from API return None invalid token or somthing else"
-                res_data=response
-                save_trade_order_history(trade_order_status,user,symbol, order_id, status, res_data, message,  strategy, Entry_type, Exit_type,Entry_price,Exit_price ,webhook_signal , Exchange, Segment,Index_Symbol , order_params,broker="Angle One")
+                message=f"somthing wrong or token is invalid"
+                res_data="None response from API"
+                save_trade_order_history(trade_order_status,user,symbol, order_id, status, res_data, message,  strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol , order_params,broker="Angle One")
+                return {"data": {"status": "faild", "message": message}}
 
-                return {"data": {"status": "error", "message": "No response from API."}}
-
-            logger.info(f"Raw API Response: {response}")
-            resuniqueId = response.get('data', {}).get('uniqueorderid', None)
-            
-            if not resuniqueId:
+            uniqueorderid = response.get('data', {}).get('uniqueorderid', None)
+            if not uniqueorderid:
                 logger.error(f"Order response does not contain valid uniqueorderid: {response}")
                 return {"data": {"status": "error", "message": "Failed to retrieve order ID."}}
 
-            responsedetails = smart_client.individual_order_details(resuniqueId)
-            print("responsedetails>>>",responsedetails)
+            responsedetails = smartApi.individual_order_details(uniqueorderid)
+            # print("responsedetails>>>",responsedetails)
             if responsedetails is None:
                 logger.error("No details found for the order.")
                 return {"data": {"status": "error", "message": "Failed to retrieve order details."}}
@@ -148,51 +135,63 @@ def place_Angle_order(api_key,demate_user_name,totp,angle_pass,token, symbol, qu
             message = responsedetails['data'].get('text', 'No message provided')
 
             res_data=responsedetails 
-            if responsedetails['data']['status'] =="complete":
-                order_data = {
-                    "order_id": "data",
-                    "status": "Success",
-                }
-                logger.info(f"Order Placed Successfully, Order ID: {response.get('data', 'Unknown')}")
+            if responsedetails['data']['status'] =="completed":
+                trasaction_type=responsedetails['data'].get('transactiontype', '')
+                if trasaction_type == "BUY":
+                    Entry_type="LE"
+                    Entry_price=responsedetails['data'].get('averageprice', 0.0)
+                    EntryQty=responsedetails['data'].get('quantity', 0)
+                elif trasaction_type == "SELL": 
+                    Exit_type="LX"
+                    Exit_price=responsedetails['data'].get('averageprice', 0.0) 
+                    ExitQty= responsedetails['data'].get('quantity', 0)#disclosedquantity
+                order_id=responsedetails['data']['orderid']
+                logger.info(f"Order placed successfully for user {user}. Order ID: {order_id}")
                 # log_order(order_data, "orders_placed.csv")  
                 message = responsedetails['data'].get('text', 'completed successfully ')
-
-                save_trade_order_history(trade_order_status,user,symbol, order_id, status, res_data, message,   strategy, Entry_type, Exit_type,Entry_price,Exit_price ,webhook_signal , Exchange, Segment,Index_Symbol ,order_params,broker="Angle One")
+                status=responsedetails['data'].get('status', 'completed')
+                save_trade_order_history(trade_order_status,user,symbol, order_id, status, res_data, message,   strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol ,order_params,broker="Angle One")
                 # from_email = settings.DEFAULT_FROM_EMAIL,
                 # send_trade_email_async.delay(user.email, from_email,user.firstName,status, message)
                 # save_webhook_signals_logs(order_params['transactiontype'], symbol, price, strategy, user, status=responsedetails['data'].get('status'),failure_reason="your order place succesfully", json=json)
-                return responsedetails
+                response = {"data": {"status": status}}
+                return response
+            
             elif responsedetails['data']['status'] == "open":
-                     
-                logger.info(f"Order is pending stete, Order ID: {response.get('data', 'Unknown')}")
+                order_id=responsedetails['data']['orderid']     
+                logger.info(f"Order is pending state, Order ID: {order_id}")
                 # log_order(order_data, "orders_placed.csv")  
                 # send massage email aleart to client your order is trade 
                 from_email = settings.DEFAULT_FROM_EMAIL,
                 # Send rejection email
                 message = responsedetails['data'].get('text', 'Unknown  reason')
-                responsedetails['data'].get('status', 'pending')
+                status=responsedetails['data'].get('status', 'pending')
                 print("user.firstName>>>>>",user.firstName)
                 send_trade_email_async.delay(user.email, from_email,user.firstName,status, message)
                 logger.info(f"Order is pending or in process reason is !!!::{message}")
-                save_trade_order_history(trade_order_status,user,symbol, order_id, status, res_data, message,  strategy, Entry_type, Exit_type,Entry_price,Exit_price ,webhook_signal , Exchange, Segment,Index_Symbol ,order_params, broker="Angle One")
-                return responsedetails
+                save_trade_order_history(trade_order_status,user,symbol, order_id, status, res_data, message,  strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol ,order_params, broker="Angle One")
+                response = {"data": {"status": status}}
+                return response
                 
             else:
                 rejection_message = responsedetails['data'].get('text', 'Unknown rejection reason')
-                responsedetails['data'].get('status', 'rejected')
-                logger.info(f"Order Rejected reason!!!::{rejection_message}")
+                status=responsedetails['data'].get('status', 'rejected')
+                order_id=responsedetails['data']['orderid']     
+                logger.info(f"Order Rejected reason!!!::{rejection_message} Order ID: {order_id}")
                 from_email = settings.DEFAULT_FROM_EMAIL,
                 # Send rejection email
                 print("user.firstName>>>>>",user.firstName)
                 send_trade_email_async.delay(user.email, from_email,user.firstName,status, rejection_message)
-                save_trade_order_history(trade_order_status,user,symbol, order_id, status, res_data, rejection_message,  strategy, Entry_type, Exit_type,Entry_price,Exit_price ,webhook_signal , Exchange, Segment,Index_Symbol ,order_params ,broker="Angle One")
+                save_trade_order_history(trade_order_status,user,symbol, order_id, status, res_data, rejection_message,  strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol ,order_params ,broker="Angle One")
                 # save_webhook_signals_logs(order_params['transactiontype'], symbol, price, strategy, user, status=responsedetails['data'].get('status'),
-                return responsedetails
+                response = {"data": {"status": status}}
+                return response
         except Exception as e:
             logging.error(f"Order could not be placed  !!!!!!!!!!!{e}")
             # logging.error("Error while placing order on attempt %d/%d: %s", attempt + 1, max_retries, e)
             sleep(1)
-            return e
+            response = {"data": {"status": e}}
+            return response
     except Exception as e:
         logging.error(f"An unexpected error occurred: {e}")
         return  e
@@ -247,6 +246,58 @@ def save_data_to_file(self, data, filename="symbol_data.json"):
         logger.info(f"Data successfully saved to {file_path}")
     except Exception as e:
         logger.error(f"Error saving data to file: {e}")
+# Function to generate TOTP
+def generate_totp(token_secret):
+    try:
+        totp = pyotp.TOTP(token_secret).now()
+        logger.info("TOTP generated successfully.")
+        return totp
+    except Exception as e:
+        logger.error("Error generating TOTP: %s", e)
+        return None
+
+def login_user(username, password, token_secret, smartApi):
+    response = {"status": False, "message": "", "data": None}
+    totp = generate_totp(token_secret)
+    
+    if not totp:
+        response["message"] = "Failed to generate TOTP."
+        return response
+    
+    try:
+        # Attempt to login
+        data = smartApi.generateSession(username, password, totp)
+        
+        if not data.get("status"):
+            response["message"] = f"Login failed: {data.get('message', 'Unknown error')}"
+            logger.error("Login Failed: %s", data)
+            return response
+        
+        logger.info("Login successful")
+        
+        authToken = data["data"]["jwtToken"]
+        refreshToken = data["data"]["refreshToken"]
+        feedToken = smartApi.getfeedToken()
+        user_profile = smartApi.getProfile(refreshToken)
+        
+        logger.info("User Exchanges: %s", user_profile["data"]["exchanges"])
+
+        # Return session data
+        response["status"] = True
+        response["message"] = "Login successful."
+        response["data"] = {
+            "authToken": authToken,
+            "refreshToken": refreshToken,
+            "feedToken": feedToken,
+        }
+        return response
+
+    except Exception as e:
+        logger.error("Login request failed: %s", e)
+        response["message"] = f"Exception occurred: {str(e)}"
+        return response
+
+
 
 class SymbolExpiryDateListView(APIView):
     def get(self, request, *args, **kwargs):

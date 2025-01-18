@@ -11,6 +11,7 @@ from main.upstock import *
 from .views import *
 from django.conf.urls.static import static
 from main import views
+from main.dematemodule import LoginDematAPIView
 urlpatterns = [
     path('signup/', UserRegistrationView.as_view(), name='user-registration'),
     path('login/', CustomLoginView.as_view(), name='login'),
@@ -131,7 +132,9 @@ urlpatterns = [
     path('get-client-trade-history/', ClientTradeListView.as_view(), name='get-client-trade-history'), 
     path('clients-filter/', ClientFilterView.as_view(), name='client-list'),
     path('client-dashboard-redirect/',ClientDashBoardView.as_view(),name='client-dashboard-'),
+    
     path("broker_auth_login/",BrokerLoginRedirectView.as_view(), name="login_broker"),#AUTH2.0
+   
     path("auth-callback/", BrokerCallbackView.as_view(), name="broker_callback"),
     
     path('callback/', views.oauth_callback, name='oauth_callback'),
@@ -146,6 +149,7 @@ urlpatterns = [
     path("place-zerodha-order/", place_zerodha_order, name="zerodha-order"),
     path('login-upstox/',get_upstox_login_url,name="login_upstox_redirect"),
     path('callback-upstox/',callback_upstox,name="login_upstox_redirect"),
+    path("broker-login/", LoginDematAPIView.as_view(), name="login_broker"),
 ]
 
 

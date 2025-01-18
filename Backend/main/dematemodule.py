@@ -5,6 +5,8 @@ from rest_framework.response import Response
 import time
 import requests
 import logging
+
+from main.models import ClientBrokerdetails
 logger = logging.getLogger('main')
 from datetime import datetime, timedelta    
 def get_lot_size(trading_symbol):
@@ -48,3 +50,80 @@ def trading_Symbol_sum(trade, symbols, day, month, year, Type, default_price):
     
     # Return the generated trading symbol
     return trade_symbol
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.exceptions import NotFound
+from django.http import JsonResponse
+# https://software.algosparks.co.in/?type=login&status=success&request_token=Thk7L77Phj3AuNjOY3FmGCgvhIZ8416L&action=login#/login
+# https://software.alcrafttechnology.com/login?code=YNJ5jw
+#UPSTOX 
+AUTHORIZATION_URL = 'https://login.upstox.com/login/v2/oauth/authorize'
+REDIRECT_URI_UPSTOX = 'https://software.alcrafttechnology.com/login' 
+TOKEN_URL_UPSTOX = 'https://api.upstox.com/v2/login/authorization/token'
+AUTH_URL_UPSTOX = "https://api.upstox.com/v2/login/authorization/dialog"
+AUTH_URL_ZERODHA="https://kite.zerodha.com/connect/login"
+# Base URL for Upstox API
+BASE_URL = "https://api.upstox.com"
+class LoginDematAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request, *args, **kwargs):
+        try:
+            # Get the logged-in user
+            user = request.user
+            print(">>>>>>>>",user)
+            # Retrieve broker details for the user
+            broker_details = ClientBrokerdetails.objects.filter(client=user).first()
+            if not broker_details:
+                raise NotFound("Broker details not found for the user.")
+            
+            broker = broker_details.broker_name
+            print("broker>>>>>>",broker)
+            # Generate login URL based on broker
+            if str(broker).lower() == "upstox":
+                state = "upstox"
+                client_key = broker_details.broker_API_UID
+                login_url = (
+                    f"{AUTH_URL_UPSTOX}?client_id={client_key}&"
+                    f"redirect_uri={REDIRECT_URI_UPSTOX}&"
+                    f"response_type=Auth_code&"
+                    f"state={state}"
+                )
+                print("login_url???????",login_url)
+            elif broker.lower() == "zerodha":
+                state = "zerodha"
+                api_key = "jsdgh8p7k3yvfii8"  # Replace with your API Key
+                redirect_url = "https://software.algosparks.co.in/#/login"  # Your callback URL
+                login_url = (
+                    f"{AUTH_URL_ZERODHA}?api_key={api_key}&v=3"
+                    f"&redirect_url={redirect_url}&state={state}"
+                )
+            elif broker == "alice blue":
+                state = "alice_blue"
+                app_code = broker_details.broker_API_UID  # Replace with the Alice Blue App Code
+                redirect_uri = "https://software.algosparks.co.in/#/login"  # Your callback URL
+                login_url = (
+                    f"https://ant.aliceblueonline.com/oauth2/auth?client_id={app_code}&"
+                    f"redirect_uri={redirect_uri}&response_type=code&state={state}"
+                )
+            elif broker.lower() == "angel one":
+                state = "angel_one"
+                client_code = broker_details.broker_API_UID
+                redirect_uri = "https://software.algosparks.co.in/#/login"  # Replace with your callback URL
+                login_url = (
+                    f"https://smartapi.angelbroking.com/publisher-login?api_key={client_code}&"
+                    f"redirect_url={redirect_uri}&state={state}"
+                )
+            else:
+                return JsonResponse(
+                    {"error": f"Unsupported broker: {broker_details.broker_name}"}, 
+                    status=400
+                )
+            
+            # Return the login URL in the response
+            return JsonResponse({"login_url": login_url}, status=200)
+
+        except NotFound as e:
+            return JsonResponse({"error": str(e)}, status=404)
+        except Exception as e:
+            return JsonResponse({"error": "An error occurred. Please try again later.", "details": str(e)}, status=500)

@@ -484,7 +484,8 @@ class Tradeorderhistory(models.Model):
     Exit_status=models.CharField(max_length=50, null=True, blank=True)
     Total=models.DecimalField(max_digits=15, decimal_places=2,null=True, blank=True)
     webhook_signal= models.JSONField(null=True, blank=True) 
-    
+    EntryQty=models.IntegerField( null=True, blank=True)
+    ExitQty=models.IntegerField( null=True, blank=True)
     trade_order_status = models.CharField(max_length=15, null=True, blank=True)
     def __str__(self):
         return f"Order ID: {self.order_id}, Status: {self.order_status}"

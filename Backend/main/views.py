@@ -300,8 +300,8 @@ class PasswordResetRequestView(generics.GenericAPIView):
             #     f'/password-reset-confirm/?uidb64={uid}&token={token}'
             # )
             
-            # reset_link = f'http://103.120.178.54:4000/pages/authentication/reset-password/:{uid}/:{token}/:layout'
-            reset_link = f'http://localhost:3000/pages/authentication/reset-password/:{uid}/:{token}/:layout'
+            reset_link = f'http://103.120.178.54:4000/pages/authentication/reset-password/:{uid}/:{token}/:layout'
+            # reset_link = f'http://localhost:3000/pages/authentication/reset-password/:{uid}/:{token}/:layout'
             subject = "Password Reset Request"
             print("reset_link",reset_link)
             message = (
@@ -2160,47 +2160,102 @@ def manage_order(transaction_type, buy_sell, Type):
         print(f"Error processing transaction: {e}")
         return None, None  # Return None values in case of an exception
 def place_order_broker(
-    trade, user, transaction_type, symbol, quantity, strategy, ordertype,
-    product_type, price, Lots, trade_order_status, Entry_type, Exit_type, Entry_price,
-    Exit_price, webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice, day,month, year, default_price, Type, order_params):   
-     
-    if trade.broker.lower() == "alice blue":
+    trade, user, transaction_type, symbol, quantity, strategy, ordertype,product_type, price, Lots, 
+    trade_order_status, Entry_type, Exit_type, Entry_price,Exit_price,EntryQty,ExitQty,
+    webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice, day, month, year, default_price, Type, order_params):
+    order_id = 0
+    status = "Failed"
+    res_data = "Unknown response"
+    if trade.broker.lower() == "upstox":
+        trade_symbol = f"{symbol}{default_price}{Type}{day}{month}{year}"
+        logger.info(f"Trading Symbol (Upstox): {trade_symbol}")
+
+        client_broker = ClientBrokerdetails.objects.filter(
+            client=trade.client, broker_name__broker_name=trade.broker
+        ).first()
+        if not client_broker:
+            message = f"No broker details found for client {trade.client} and broker {trade.broker}."
+            save_trade_order_history(trade_order_status,user, trade_symbol, order_id, status, res_data, message, strategy,
+                Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,
+                order_params, broker="Upstox"
+            )
+            logger.error(message)
+            return {"data": {"status": "Failed", "message": message}}
+
+        # api_skey = client_broker.broker_API_SKEY
+        # api_uid = client_broker.broker_API_UID
+        access_token = client_broker.access_token
+
+        if not access_token: #or not api_skey or not api_uid:
+            message = f"API credentials  token not found for client {trade.client} and broker {trade.broker}."
+            save_trade_order_history(trade_order_status,user, trade_symbol, order_id, status, res_data, message, strategy,
+                Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal, Exchange, Segment, Index_Symbol,
+                order_params, broker="Upstox"
+            )
+            logger.error(message)
+            return {"data": {"status": "Failed", "message": message}}
+
+        # Placing the order
+        # try:
+        logger.info(f"Placing order for user: {user}, Broker: {trade.broker}, Symbol: {symbol}.")
+        response = place_upstox_orders(
+            access_token, trade_symbol, transaction_type,symbol, quantity, strategy, ordertype, product_type, price, user,
+            Lots, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, Segment,
+            Index_Symbol, triggerPrice,trade_order_status
+        )
+        
+        logger.info(f" Upstox  Order. Response: {response}")
+        #     return response
+        # except Exception as e:
+        #     # Handle unexpected errors during order placement
+        #     message = f"An error occurred while placing the order: {str(e)}"
+        #     save_trade_order_history(trade_order_status,
+        #         user, trade_symbol, order_id, status, res_data, message, strategy,
+        #         Entry_type, Exit_type, webhook_signal, Exchange, Segment, Index_Symbol,
+        #         order_params, broker="Upstox"
+        #     )
+        #     logger.error(message)
+        #     return {"data": {"status": "Failed", "message": message}}
+  
+    elif trade.broker.lower() == "alice blue":
         trading_symbol_aliceblue = f"{symbol}{day}{month}{year}{Type[0]}{default_price}"
         logger.info("trading_symbol_aliceblue.. %s %s", trading_symbol_aliceblue,symbol)
         trade_symbol=trading_symbol_aliceblue
         # Fetch client broker details
         client_broker = ClientBrokerdetails.objects.filter(client=trade.client, broker_name__broker_name=trade.broker).first()
         if not client_broker:
-            order_id=0
-            status="Failed"
-            res_data="unknown response",
             message= f"No broker details found for client {trade.client} and broker {trade.broker}"
-            save_trade_order_history(trade_order_status,user,trade_symbol, order_id, status, res_data, message,  strategy, Entry_type,Exit_type ,Entry_price,Exit_price,webhook_signal , Exchange, Segment,Index_Symbol,order_params,broker="Angle One")
+            save_trade_order_history(trade_order_status,user,trade_symbol, order_id, status, res_data, message,  strategy, Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal , Exchange, Segment,Index_Symbol,order_params,broker="Angle One")
             logger.error(f"No broker details found for client {trade.client} and broker {trade.broker}")
-            response= {"data":{"status": "error", "message":message }}
+            response= {"data":{"status": "Failed", "message":message }}
             return response
 
         api_skey = client_broker.broker_API_SKEY
         api_uid = client_broker.broker_API_UID
+        if not api_skey or not api_uid:
+            message = f"API credentials not found for client {trade.client} and broker {trade.broker}."
+            save_trade_order_history(trade_order_status,user, trade_symbol, order_id, status, res_data, message, strategy,
+                Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,
+                order_params, broker="Upstox"
+            )
+            logger.error(message)
+            return {"data": {"status": "Failed", "message": message}}
         logger.info(f"Fetched API credentials for {trade.broker}: SKEY={api_skey}, UID={api_uid}")
 
         logger.info(f"!!!!Placing order for user: {user} Brocker is: {trade.broker} & trading symbol is: {trade.symbol}")
         Entry_price=Entry_price
         Exit_price=Exit_price
-        order_response=place_alice_orders(api_skey,api_uid,trade_symbol,transaction_type, symbol, quantity,strategy,ordertype,
-        product_type, price,user, Lots,trade_order_status,  Entry_type,Exit_type ,Entry_price,Exit_price,webhook_signal ,Exchange, Segment,Index_Symbol,triggerPrice)
+        response=place_alice_orders(api_skey,api_uid,trade_symbol,transaction_type, symbol, quantity,strategy,ordertype,
+        product_type, price,user, Lots,trade_order_status,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal ,Exchange, Segment,Index_Symbol,triggerPrice)
+        logger.info(f" Alice blue. Response: {response}")
     elif trade.broker.lower() == "angle one":
-        print("angle one order :::::::::::::::: ")
         trade_symbol = f"{symbol}{day}{month}{year}{default_price}{Type}" 
         # Fetch client broker details
         client_broker = ClientBrokerdetails.objects.filter(client=trade.client, broker_name__broker_name=trade.broker).first()
         if not client_broker:
-            order_id=0
-            status="Failed"
-            res_data="unknown response",
             message= f"No broker details found for client {trade.client} and broker {trade.broker}"
-            response= {"data":{"status": "error", "message":message }}
-            save_trade_order_history(trade_order_status,user,trade_symbol, order_id, status, res_data, message, strategy,  Entry_type,Exit_type ,webhook_signal , Exchange, Segment,Index_Symbol, order_params,broker="Angle One")
+            response= {"data":{"status": "Failed", "message":message }}
+            save_trade_order_history(trade_order_status,user,trade_symbol, order_id, status, res_data, message, strategy,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal , Exchange, Segment,Index_Symbol, order_params,broker="Angle One")
                 
             logger.error(f"No broker details found for client {trade.client} and broker {trade.broker}")
             return response # continue
@@ -2209,11 +2264,18 @@ def place_order_broker(
         demate_user_name = client_broker.broker_Demate_User_Name
         totp = client_broker.broker_Totp_Authcode
         angle_pass = client_broker.broker_pass
-
+        if not api_key or not demate_user_name or not totp or not angle_pass:
+            message = f"API credentials not found for client {trade.client} and broker {trade.broker}."
+            save_trade_order_history(
+                trade_order_status,user, trade_symbol, order_id, status, res_data, message, strategy,
+                Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, 
+                Segment, Index_Symbol,order_params, broker="Upstox"
+            )
+            logger.error(message)
+            return {"data": {"status": "Failed", "message": message}}
         logger.info(f"Fetched API credentials for {trade.broker}: SKEY={api_key}, USER={demate_user_name}")
 
         logger.info(f"!!!!Placing order for user: {user} Brocker is: {trade.broker} & trading symbol is: {trade.symbol}")
-        print("trade_symbol>>>>>>",trade_symbol)
         tokendata = get_token_details(trade_symbol) 
         if tokendata["status"] == "success":  
             token = tokendata.get("token")
@@ -2223,28 +2285,25 @@ def place_order_broker(
                 response= {"data":{"status": "error", "message": "token symbole not found"}}
                 return response# continue
         else:
-            order_id=0
-            status="Failed"
-            res_data="unknown response",
             message= f"trading symbol is not found for this :{trade.symbol}"
             save_trade_order_history(trade_order_status,user,trade_symbol, order_id, status, res_data,
-                                     message, strategy,  Entry_type,Exit_type, Entry_price,Exit_price,webhook_signal , 
+                                     message, strategy,  Entry_type,Exit_type, Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal , 
                                      Exchange, Segment,Index_Symbol, order_params,broker="Angle One")
                 
             logger.info(f"No token data found for trading symbol: {trade.symbol}")
             response= {"data":{"status": "error", "message": "token symbole not found"}}
             return response
             # continue  # Skip to next user if token data is not found
-
         # Place order for Angle One
-        order_response =place_Angle_order( api_key=api_key,demate_user_name=demate_user_name,totp=totp,angle_pass=angle_pass,
+        response =place_Angle_order( api_key=api_key,demate_user_name=demate_user_name,totp=totp,angle_pass=angle_pass,
             token=token,symbol=symbol,quantity=quantity,product_type=product_type, 
             transactiontype=transaction_type,price=price,ordertype=ordertype,lot_size=Lots,
-            Entry_type=Entry_type, Exit_type=Exit_type,Entry_price=Entry_price, Exit_price=Exit_price,
+            Entry_type=Entry_type, Exit_type=Exit_type,Entry_price=Entry_price,Exit_price=Exit_price,EntryQty=EntryQty,ExitQty=ExitQty,
             webhook_signal=webhook_signal,Exchange=Exchange,Segment=Segment,trade_order_status=trade_order_status,
             Index_Symbol=Index_Symbol , user=user, strategy=strategy)#exch_seg=exch_seg expiry=expiry
-            
-    return order_response    
+
+        logger.info(f"Angle one. Response: {response}")    
+    return response    
 
 def serialize_to_json(data):
     """
@@ -2340,30 +2399,40 @@ class PlaceOrderWebhookView(APIView):
                 Exit_price = None
                 Entry_type = None
                 Exit_type = None
+                EntryQty=None
+                ExitQty=None
                 Type=None
                 trade_symbol=symbols 
                 user=trade.client
                 print("trade for user >>",trade.client)
-                if trade.symbol.upper() == symbols:
-                    Type=None
-                    strategy=trade.strategy
-                    Segment=trade.segment.name if trade.segment else None
-                    Exchange=exch_seg
-                    user=trade.client
-                    webhook_signal=alert_data
-                    order_id=0
-                    status="Failed"
-                    Index_Symbol=trade.symbol
-                    res_data="unknown response"
-                    order_params = {"symbol": trade.symbol,"Exchange": exch_seg, "quantity": trade.quantity or default_quantity,"product_type": trade.product_type,
-                    "transaction_type":buy_sell,"price": limitPrice or 0 ,"ordertype": default_ordertype,"strategy": trade.strategy}
-                    order_params = serialize_to_json(order_params)
+                Type=None
+                strategy=trade.strategy
+                Segment=trade.segment.name if trade.segment else None
+                Exchange=exch_seg
+                user=trade.client
+                webhook_signal=alert_data
+                order_id=0
+                status="Failed"
+                Index_Symbol=trade.symbol if trade.symbol else None
+                res_data="unknown response"
+                order_params = {"symbol":trade.symbol if trade.symbol else trade_symbol,"Exchange": exch_seg, "quantity": trade.quantity or default_quantity,"product_type": trade.product_type,
+                "transaction_type":buy_sell,"price": limitPrice or 0 ,"ordertype": default_ordertype,"strategy": trade.strategy}
+                order_params = serialize_to_json(order_params)
+                if not trade.symbol:
+                    logger.error(f"Symbol is missing for trade by user {trade.client}. Skipping this trade.")
+                    message = f"Trade skipped due to missing symbol for user {trade.client}."
+                    save_trade_order_history(
+                        trade_order_status, user, trade.symbol, 0, status, "No symbol", message,
+                        trade.strategy, Entry_type, Exit_type, Entry_price, Exit_price,
+                        EntryQty, ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,
+                        order_params, broker=trade.broker
+                    )
+                    continue
+                if trade.symbol.upper() == symbols.upper():
                     if default_expiry:
                         default_expiry_date = trade.expiry_date.date()  # This is a datetime.date object
-
                         # Convert it to a timezone-aware datetime object
                         default_expiry_datetime = make_aware(datetime.combine(default_expiry_date, datetime.min.time()))
-
                         # Use localtime with the timezone-aware datetime object
                         default_expiry = localtime(default_expiry_datetime)
                         # default_expiry=localtime(trade.expiry_date.date())
@@ -2376,7 +2445,7 @@ class PlaceOrderWebhookView(APIView):
                         logger.error(f"Expiry date is missing {trade.symbol} for user {trade.client}. Skipping trade.")
                         order_id=0
                         message=f"Expiry date is missing {trade.symbol} for user {trade.client}. so can not get trading symbol"
-                        save_trade_order_history(trade_order_status,user,trade_symbol, order_id, status, res_data, message,  strategy, Entry_type,Exit_type ,Entry_price,Exit_price,webhook_signal , Exchange, Segment,Index_Symbol,order_params,broker=trade.broker)
+                        save_trade_order_history(trade_order_status,user,trade_symbol, order_id, status, res_data, message,  strategy, Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal , Exchange, Segment,Index_Symbol,order_params,broker=trade.broker)
                         continue 
                     order_params = {"symbol": trade.symbol,"Exchange": exch_seg, "quantity": trade.quantity or default_quantity,"product_type": trade.product_type,
                     "transaction_type":buy_sell,"price": limitPrice or 0 ,"ordertype": default_ordertype, "expiry": default_expiry,"strategy": trade.strategy}
@@ -2390,7 +2459,7 @@ class PlaceOrderWebhookView(APIView):
                                 f"ExitType={Exit_type}, ExitPrice={Exit_price}")  
                     if  not trade.product_type:
                         message= f"trade details for client {trade.client}: Missing  product type."
-                        save_trade_order_history(trade_order_status,user,trade_symbol, order_id, status, res_data, message, strategy,  Entry_type,Exit_type ,webhook_signal , Exchange, Segment,Index_Symbol, order_params,broker=trade.broker)      
+                        save_trade_order_history(trade_order_status,user,trade_symbol, order_id, status, res_data, message, strategy,  Entry_type,Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol, order_params,broker=trade.broker)      
                         logger.warning(f"Skipping trade for client {trade.client}: Missing  product type")
                         continue
         
@@ -2403,17 +2472,18 @@ class PlaceOrderWebhookView(APIView):
                     price = limitPrice
                     ordertype = default_ordertype
                     trade_limit=trade.trade_limit
-                    # Count user's trades for the day
-                    today = datetime.today()
-                    daily_trade_count = TradingLog.objects.filter(client=user, date=today).count()
-                    if daily_trade_count >= trade_limit and trade_limit != 0:
-                        message= f"Trade limit reached for user {user}. No more trades allowed today."
-                        save_trade_order_history(trade_order_status,user,trade_symbol, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type ,Entry_price,Exit_price,webhook_signal , Exchange, Segment,Index_Symbol,order_params,broker=trade.broker)
-                        
-                        logger.warning(f"Trade limit reached for user {user}. No more trades allowed today.")
-                        continue
+                    if trade_limit:
+                        # Count user's trades for the day
+                        today = datetime.today()
+                        daily_trade_count = TradingLog.objects.filter(client=user, date=today).count()
+                        if daily_trade_count >= trade_limit and trade_limit != 0:
+                            message= f"Trade limit reached for user {user}. No more trades allowed today."
+                            save_trade_order_history(trade_order_status,user,trade_symbol, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal , Exchange, Segment,Index_Symbol,order_params,broker=trade.broker)
+                            
+                            logger.warning(f"Trade limit reached for user {user}. No more trades allowed today.")
+                            continue
 
-                    logger.info(f"Placing order for user {user}. Trade count: {daily_trade_count}/{trade_limit}")
+                        logger.info(f"Placing order for user {user}. Trade count: {daily_trade_count}/{trade_limit}")
                     if is_market_open():
                         print("started place order market is open: transaction_type is :::::::", transaction_type ) 
                         logger.info("Market is open. Proceed with the trade.")
@@ -2428,7 +2498,7 @@ class PlaceOrderWebhookView(APIView):
                             order_response = place_order_broker(
                                 trade, user, transaction_type, symbol, quantity, strategy, ordertype,
                                 product_type, price, Lots, trade_order_status, Entry_type, Exit_type,
-                                Entry_price, Exit_price, webhook_signal, Exchange, Segment, Index_Symbol,
+                                Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,
                                 triggerPrice, day, month, year, default_price, Type, order_params
                             )
                             # if order_response:
@@ -2442,7 +2512,7 @@ class PlaceOrderWebhookView(APIView):
                             order_response = place_order_broker(
                                 trade, user, transaction_type, symbol, quantity, strategy, ordertype,
                                 product_type, price, Lots, trade_order_status, Entry_type, Exit_type,
-                                Entry_price, Exit_price, webhook_signal, Exchange, Segment, Index_Symbol,
+                                Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,
                                 triggerPrice, day, month, year, default_price, Type, order_params
                             )
                         elif transaction_type=="BUY-C_O":# - Close PE & Buy CE"  BUY-C=PE CLOSE ,BUY-O = Buy CE
@@ -2454,7 +2524,7 @@ class PlaceOrderWebhookView(APIView):
                             order_response = place_order_broker(
                                 trade, user, transaction_type, symbol, quantity, strategy, ordertype,
                                 product_type, price, Lots, trade_order_status, Entry_type, Exit_type,
-                                Entry_price, Exit_price, webhook_signal, Exchange, Segment, Index_Symbol,
+                                Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,
                                 triggerPrice, day, month, year, default_price, Type, order_params
                             )
                             # if order_response:
@@ -2468,7 +2538,7 @@ class PlaceOrderWebhookView(APIView):
                             order_response = place_order_broker(
                                 trade, user, transaction_type, symbol, quantity, strategy, ordertype,
                                 product_type, price, Lots, trade_order_status, Entry_type, Exit_type,
-                                Entry_price, Exit_price, webhook_signal, Exchange, Segment, Index_Symbol,
+                                Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,
                                 triggerPrice, day, month, year, default_price, Type, order_params
                             )
                         else:
@@ -2477,7 +2547,7 @@ class PlaceOrderWebhookView(APIView):
                             print(f"Action: {buy_sell}, Type: {Type}")
                             transaction_type=buy_sell
                             order_response=place_order_broker(trade,user,transaction_type, symbol, quantity,strategy,ordertype,
-                            product_type, price, Lots,trade_order_status,  Entry_type,Exit_type ,Entry_price,Exit_price,
+                            product_type, price, Lots,trade_order_status,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,
                             webhook_signal ,Exchange, Segment,Index_Symbol,triggerPrice,day,month,year,default_price,Type,order_params)
                               
                         # Check order response and log or handle failures
@@ -2486,7 +2556,7 @@ class PlaceOrderWebhookView(APIView):
                             order_status = f"Unauthorized Order placement failed for {trade.symbol} with broker {trade.broker}"
                             logger.warning(order_status)  # Log the unauthorized order status
                             continue  # Skip to the next client trade if unauthorized
-                        elif order_response['data']['status'] =="complete":
+                        elif order_response['data']['status'] =="completed":
                             order_status=f"Order placed successfully for {trade.symbol} with broker {trade.broker}"
                             TradingLog.objects.create(client=user, date=today, symbol=trade.symbol, strategy=strategy,)
                             logger.info(f"Order placed successfully for {trade.symbol} with broker {trade.broker}")
@@ -2498,6 +2568,9 @@ class PlaceOrderWebhookView(APIView):
                             logger.error(f"Order is rejected for {trade.symbol} with broker {trade.broker}")
                         elif order_response['data']['status']=="error":
                             order_status=f"Error Order placement failed for {trade.symbol} with broker {trade.broker}"
+                        elif order_response['data']['status']=="Failed":
+                            order_status=f"Order placement failed for {trade.symbol} with broker {trade.broker}"
+                     
                         else:
                             order_status=f"Order placement failed for {trade.symbol} with broker {trade.broker}"
                     else:
@@ -2901,19 +2974,19 @@ def place_zerodha_order(request):
         # # Check if access token is valid
         # if not broker_details.access_token or broker_details.access_token_expiry < datetime.now():
         #     return JsonResponse({"error": "Access token is missing or expired. Please reauthenticate."}, status=401)
-        token="fk9XE0LyQK5xgNk2353gJXNozlgP1IHb"
+        token="h5HJ47RcoYJDsJGUGqAB7d1LEDm4Nd3F"
         # Initialize KiteConnect with API key and access token
         # kite = KiteConnect(api_key=broker_details.broker_API_UID)
         kite.set_access_token(token)
         exchange="NFO"
-        symbol="NIFTY25JAN24850CE"
+        symbol="BANKNIFTY25JAN48500PE"
         trading_symbol = get_trading_symbol(exchange, symbol,kite)
         # Order details
         order_params = {
             "tradingsymbol": trading_symbol,
             "exchange": "NFO",
             "transaction_type": "BUY",
-            "quantity": 25,
+            "quantity": 30,
             "order_type": "MARKET",
             "product": "NRML",
         }
@@ -3021,7 +3094,7 @@ def login_zerodha_redirect(request):
     # Construct the URL
     zerodha_url = (
         f"https://kite.zerodha.com/connect/login?api_key={api_key}&v=3"
-        f"&state={state}"
+        f"&redirect_url={redirect_url}&state={state}"
     )
     print("zerodha_url777",zerodha_url)
     return redirect(zerodha_url)
@@ -3031,7 +3104,7 @@ import requests
 
 def zerodha_callback(request):
     # Extract the request_token and state from query parameters
-    request_token = "nnP5J4xXUFglLI3WrlYseIlgpchQRQZM"#request.GET.get('request_token')
+    request_token = "Thk7L77Phj3AuNjOY3FmGCgvhIZ8416L"#request.GET.get('request_token')
     state = "success"#request.GET.get('state')
 
     if not request_token:
@@ -3060,9 +3133,9 @@ def zerodha_callback(request):
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
 
-def generate_checksum(api_key, api_secret, request_token):
-    import hashlib
-    return hashlib.sha256(f"{api_key}{request_token}{api_secret}".encode()).hexdigest()
+# def generate_checksum(api_key, api_secret, request_token):
+#     import hashlib
+#     return hashlib.sha256(f"{api_key}{request_token}{api_secret}".encode()).hexdigest()
 #5 Paisa -----------------
 
 def oauth_callback(request):
@@ -3270,8 +3343,9 @@ class BrokerLoginRedirectView(APIView):
             # Retrieve broker details for the logged-in user
             broker_details = ClientBrokerdetails.objects.get(client=user)
             broker_name = broker_details.broker_name.broker_name.lower()
-
+            broker_name=request.GET.get('state')
             if broker_name == "zerodha":
+                request.GET.get('request_token')
                 return self.redirect_to_zerodha(broker_details)
 
             elif broker_name == "5paisa":
@@ -3335,27 +3409,28 @@ class BrokerCallbackView(APIView):
     def get(self, request, *args, **kwargs):
         print("callback url calleddd......")
         # Get the authorization code and state from the URL
-        request_token = "YeiOQP"#request.GET.get('Auth_code')
-        if not request_token:
-            raise ValidationError("Authorization code missing")
         try:
             user = request.user  
             broker_details = ClientBrokerdetails.objects.get(client=user)
             print("broker_details:::::::::::",broker_details)
-            broker_name = broker_details.broker_name.broker_name.lower()
-
+            broker_name  = broker_details.broker_name.broker_name
+            print("broker_name>>>>",broker_name)
+            broker_name=request.GET.get('state',"") 
             # Handle different brokers
             if broker_name == "zerodha":
                 return self.handle_zerodha(request_token, broker_details)
 
             elif broker_name == "5paisa":
+                request_token = request.GET.get('RequestToken')
                 return self.handle_5paisa(request_token, broker_details)
 
             elif broker_name == "alice blue":
                 return self.handle_alice_blue(request_token, broker_details)
 
             elif broker_name == "upstox":
-                return self.handle_upstox(request_token, broker_details)
+                request_token = request.GET.get('code')
+                REDIRECT_URI = request.GET.get('redirect_uri')
+                return self.handle_upstox(request_token, broker_details,REDIRECT_URI)
 
             else:
                 raise ValidationError("Unsupported broker")
@@ -3424,7 +3499,7 @@ class BrokerCallbackView(APIView):
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
 
-    def handle_upstox(self, request_token, broker_details):
+    def handle_upstox(self, request_token, broker_details,REDIRECT_URI):
         try:
             # Example Upstox-specific token generation logic
             TOKEN_URL = 'https://api.upstox.com/v2/login/authorization/token' 
@@ -3432,16 +3507,19 @@ class BrokerCallbackView(APIView):
             
             if not auth_code:
                 return JsonResponse({"error": "Authorization code not provided"}, status=400)
+            CLIENT_KEY=broker_details.broker_API_UID
+            CLIENT_SECRET=broker_details.broker_API_SKEY
+            print(CLIENT_KEY,">>>>>>>",CLIENT_SECRET)
+
             data = {
                 'code': auth_code,
-                'client_id': broker_details.broker_API_UID,
-                'client_secret': broker_details.broker_API_SKEY,
-                'redirect_uri':REDIRECT_URI,
+                'client_id': CLIENT_KEY,
+                'client_secret': CLIENT_SECRET,
+                'redirect_uri': REDIRECT_URI,
                 'grant_type': 'authorization_code'
             }
-            
             response = requests.post(TOKEN_URL, data=data)
-            
+            print("response>>>>",response)
             if response.status_code == 200:
                 access_token = response.json().get('access_token')
                 
@@ -3450,8 +3528,8 @@ class BrokerCallbackView(APIView):
                 broker_details.access_token = access_token
                 broker_details.access_token_expiry = now() + timedelta(days=1)  # Assuming 1-day validity
                 broker_details.save()
-                
-                return JsonResponse({"message": "Upstox callback processed successfully", "access_token": access_token})
+                logger.info(f"Upstox callback processed successfully")
+                return JsonResponse({"message": "success", "access_token": access_token})
             else:
                 return JsonResponse({"error": "Failed to get access token from Upstox"}, status=400)
         
