@@ -139,7 +139,7 @@ def place_upstox_orders(
             order_id = response_data["data"]["order_id"]
             logger.info(f"Order placed successfully get the Order details for Order ID: {order_id}")
             return handle_successful_order(
-                order_id, user, symbol, strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty , webhook_signal,
+                order_id, user, trade_symbol, strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty , webhook_signal,
                 Exchange, Segment, Index_Symbol, order_params, access_token,trade_order_status
             )
         elif response.status_code == 401:
@@ -147,7 +147,7 @@ def place_upstox_orders(
             status= "Unauthorized"
             message="Unauthorized access"
             res_data=response
-            save_trade_order_history(trade_order_status,user,symbol, order_id, status, res_data, message,  
+            save_trade_order_history(trade_order_status,user,trade_symbol, order_id, status, res_data, message,  
             strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,
             webhook_signal , Exchange, Segment,Index_Symbol ,order_params,broker="upstox")
             return {
@@ -158,7 +158,7 @@ def place_upstox_orders(
             logger.error(f"Resource not Found. Reason: {res_data}")
             status= "errors"
             message="Resource not Found 404"
-            save_trade_order_history(trade_order_status,user,symbol, order_id, status, res_data, message, 
+            save_trade_order_history(trade_order_status,user,trade_symbol, order_id, status, res_data, message, 
             strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,
             webhook_signal , Exchange, Segment,Index_Symbol ,order_params,broker="upstox")
             return { "data": {"status": "error","message":res_data}}
@@ -178,7 +178,7 @@ def place_upstox_orders(
             "data": { "status": "error","message": "Unexpected error occurred.","error_details": str(e)}
             }
 def handle_successful_order(
-    order_id, user, symbol, strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal, Exchange,
+    order_id, user, trade_symbol, strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal, Exchange,
     Segment, Index_Symbol, order_params, access_token,trade_order_status):
     try:
         order_details = get_order_details(order_id, access_token)
@@ -200,7 +200,7 @@ def handle_successful_order(
             res_data=order_details
             trade_order_status="success"
             status=order_details['data']['status'] 
-            save_trade_order_history(trade_order_status,user,symbol, order_id, status, res_data, message,  
+            save_trade_order_history(trade_order_status,user,trade_symbol, order_id, status, res_data, message,  
                                      strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,
                                      webhook_signal , Exchange, Segment,Index_Symbol ,order_params,broker="upstox")
             response={"data": {"status": "completed","message": "Order placed and details saved successfully."}}
@@ -211,7 +211,7 @@ def handle_successful_order(
         elif order_details['data']['status'] == "rejected":
             rejection_message= order_details['data'].get('status_message', 'Unknown rejection reason')
             status=order_details['data'].get('status', 'rejected')
-            save_trade_order_history(trade_order_status,user,symbol, order_id, status, res_data, rejection_message, 
+            save_trade_order_history(trade_order_status,user,trade_symbol, order_id, status, res_data, rejection_message, 
             strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, 
             Segment,Index_Symbol ,order_params , broker="Upstox")
             logger.info(f"Order Rejected reason!!!::{rejection_message} Order ID: {order_id}")
@@ -226,7 +226,7 @@ def handle_successful_order(
             status=order_details['data']['status']
             rejection_message= order_details['data'].get('status_message', 'Unknown rejection reason')
             logger.warning(f"Failed to fetch order details for Order ID {order_id}")
-            save_trade_order_history(trade_order_status,user,symbol, order_id, status, res_data, rejection_message, 
+            save_trade_order_history(trade_order_status,user,trade_symbol, order_id, status, res_data, rejection_message, 
             strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, 
             Segment,Index_Symbol ,order_params , broker="Upstox")
             return {"data": {"status": "Failed","message": "Order placed but details could not be fetched."}}
