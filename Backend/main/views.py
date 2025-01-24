@@ -20,6 +20,7 @@ import time
 from rest_framework.generics import ListAPIView,UpdateAPIView
 from main.angleapi import get_token_details, place_Angle_order
 from main.dematemodule import trading_Symbol_sum
+from main.fivepaisa import place_5paisa_order
 from main.permissions import  IsAdminRole
 from main.tasks import send_kyc_email_async, send_trade_email_async
 from rest_framework import status
@@ -2162,17 +2163,85 @@ def manage_order(transaction_type, buy_sell, Type):
 def place_order_broker(
     trade, user, transaction_type, symbol, quantity, strategy, ordertype,product_type, price, Lots, 
     trade_order_status, Entry_type, Exit_type, Entry_price,Exit_price,EntryQty,ExitQty,
-    webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice, day, month, year, default_price, Type, order_params):
+    webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice, day, month, year, fullyear,default_price, Type, order_params):
     order_id = 0
     status = "Failed"
     res_data = "Unknown response"
-    if trade.broker.lower() == "upstox":
+    if trade.broker.lower() == "5paisa":
+        print("5 paisa function is calleddddddddd")
+        formated_prc=f"{default_price:.2f}"
+        trade_symbol = f"{symbol}{day}{month}{fullyear}{Type}{formated_prc}" 
+        print(">>>>>>>trade_symbol>>>>>>>>>>>",trade_symbol)
+        # Fetch client broker details
+        client_broker = ClientBrokerdetails.objects.filter(client=trade.client, broker_name__broker_name__iexact=trade.broker).first()
+        if not client_broker:
+            message= f"No broker details found for client {trade.client} and broker {trade.broker}"
+            response= {"data":{"status": "Failed", "message":message }}
+            save_trade_order_history(trade_order_status,user,trade_symbol, order_id, status, res_data, message, strategy,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal , Exchange, Segment,Index_Symbol, order_params,broker="Angle One")
+                
+            logger.error(f"No broker details found for client {trade.client} and broker {trade.broker}")
+            return response # continue
+
+        api_key = client_broker.broker_API_KEY
+        # encreption_key = client_broker.broker_API_SKEY
+        # user_id = client_broker.broker_API_UID
+        access_token = client_broker.access_token
+        if not access_token or not api_key:
+            message = f"API credentials not found for client {trade.client} and broker {trade.broker}."
+            save_trade_order_history(
+                trade_order_status,user, trade_symbol, order_id, status, res_data, message, strategy,
+                Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, 
+                Segment, Index_Symbol,order_params, broker="Upstox"
+            )
+            logger.error(message)
+            return {"data": {"status": "Failed", "message": message}}
+        # logger.info(f"Fetched API credentials for {trade.broker}: SKEY={api_key}, USER={demate_user_name}")
+            # continue  # Skip to next user if token data is not found
+        logger.info(f"!!!!Placing order for user: {user} Brocker is: {trade.broker} & trading symbol is: {trade.symbol}")
+        response=place_5paisa_order(api_key,access_token,trade_symbol,transaction_type, symbol, quantity,strategy,ordertype,
+            product_type, price,user, Lots,trade_order_status,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal ,Exchange, Segment,Index_Symbol,triggerPrice,trade)
+
+        logger.info(f" 5paisa blue. Response: {response}")
+        
+    elif trade.broker.lower() == "zerodha":
+        trade_symbol = f"{symbol}{year}{month}{default_price}{Type}"
+        print("Trading Symbol zerodha: ", symbol)
+        # Fetch client broker details
+        client_broker = ClientBrokerdetails.objects.filter(client=trade.client, broker_name__broker_name__iexact=trade.broker).first()
+        if not client_broker:
+            message = f"No broker details found for client {trade.client} and broker {trade.broker}"
+            save_trade_order_history(trade_order_status,user, trade_symbol, order_id, status, res_data, message, strategy,
+                Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,
+                order_params, broker="zerodha"
+            )
+            logger.error(message)
+            return {"data": {"status": "Failed", "message": message}}
+        access_token=client_broker.access_token
+        Api_key=client_broker.broker_API_SKEY
+        print("acesssssss",access_token,"Api_key.....",Api_key)
+        if not access_token or not Api_key:
+            message = f"API credentials  token not found for client {trade.client} and broker {trade.broker}."
+            save_trade_order_history(trade_order_status,user, trade_symbol, order_id, status, res_data, message, strategy,
+                Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal, Exchange, Segment, Index_Symbol,
+                order_params, broker="zerodha"
+            )
+            logger.error(message)
+            return {"data": {"status": "Failed", "message": message}}
+
+        # logger.info(f"Fetched API credentials for broker {trade.broker}.")
+        logger.info(f"Placing order for user: {user}, Broker: {trade.broker}, Symbol: {trade.symbol}")
+
+        response = place_zerodha_orders(access_token,Api_key,trade_symbol, transaction_type, symbol, quantity,
+            strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type,Entry_price,Exit_price,
+            EntryQty,ExitQty,webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice,trade_order_status
+        )
+        logger.info(f" Zerodha Order . Response: {response}")
+
+    elif trade.broker.lower() == "upstox":
         trade_symbol = f"{symbol}{default_price}{Type}{day}{month}{year}"
         logger.info(f"Trading Symbol (Upstox): {trade_symbol}")
 
-        client_broker = ClientBrokerdetails.objects.filter(
-            client=trade.client, broker_name__broker_name__iexact=trade.broker
-        ).first()
+        client_broker = ClientBrokerdetails.objects.filter(client=trade.client, broker_name__broker_name__iexact=trade.broker).first()
         if not client_broker:
             message = f"No broker details found for client {trade.client} and broker {trade.broker}."
             save_trade_order_history(trade_order_status,user, trade_symbol, order_id, status, res_data, message, strategy,
@@ -2183,7 +2252,7 @@ def place_order_broker(
             return {"data": {"status": "Failed", "message": message}}
 
         # api_skey = client_broker.broker_API_SKEY
-        # api_uid = client_broker.broker_API_UID
+        # api_uid = client_broker.broker_API_KEY
         access_token = client_broker.access_token
 
         if not access_token: #or not api_skey or not api_uid:
@@ -2230,7 +2299,7 @@ def place_order_broker(
             response= {"data":{"status": "Failed", "message":message }}
             return response
 
-        api_skey = client_broker.broker_API_SKEY
+        api_skey = client_broker.broker_API_KEY
         api_uid = client_broker.broker_API_UID
         if not api_skey or not api_uid:
             message = f"API credentials not found for client {trade.client} and broker {trade.broker}."
@@ -2243,8 +2312,6 @@ def place_order_broker(
         logger.info(f"Fetched API credentials for {trade.broker}: SKEY={api_skey}, UID={api_uid}")
 
         logger.info(f"!!!!Placing order for user: {user} Brocker is: {trade.broker} & trading symbol is: {trade.symbol}")
-        Entry_price=Entry_price
-        Exit_price=Exit_price
         response=place_alice_orders(api_skey,api_uid,trade_symbol,transaction_type, symbol, quantity,strategy,ordertype,
         product_type, price,user, Lots,trade_order_status,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal ,Exchange, Segment,Index_Symbol,triggerPrice)
         logger.info(f" Alice blue. Response: {response}")
@@ -2260,7 +2327,7 @@ def place_order_broker(
             logger.error(f"No broker details found for client {trade.client} and broker {trade.broker}")
             return response # continue
 
-        api_key = client_broker.broker_API_SKEY
+        api_key = client_broker.broker_API_KEY
         demate_user_name = client_broker.broker_Demate_User_Name
         totp = client_broker.broker_Totp_Authcode
         angle_pass = client_broker.broker_pass
@@ -2441,6 +2508,7 @@ class PlaceOrderWebhookView(APIView):
                         day = expiry_date.strftime("%d")
                         month = expiry_date.strftime("%b").upper()
                         year = expiry_date.strftime("%y")
+                        fullyear=expiry_date.strftime("%Y")
                     else:
                         logger.error(f"Expiry date is missing {trade.symbol} for user {trade.client}. Skipping trade.")
                         order_id=0
@@ -2499,7 +2567,7 @@ class PlaceOrderWebhookView(APIView):
                                 trade, user, transaction_type, symbol, quantity, strategy, ordertype,
                                 product_type, price, Lots, trade_order_status, Entry_type, Exit_type,
                                 Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,
-                                triggerPrice, day, month, year, default_price, Type, order_params
+                                triggerPrice, day, month, year,fullyear, default_price, Type, order_params
                             )
                             # if order_response:
                             print("again one order for SELL-O")
@@ -2513,7 +2581,7 @@ class PlaceOrderWebhookView(APIView):
                                 trade, user, transaction_type, symbol, quantity, strategy, ordertype,
                                 product_type, price, Lots, trade_order_status, Entry_type, Exit_type,
                                 Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,
-                                triggerPrice, day, month, year, default_price, Type, order_params
+                                triggerPrice, day, month, year, fullyear,default_price, Type, order_params
                             )
                         elif transaction_type=="BUY-C_O":# - Close PE & Buy CE"  BUY-C=PE CLOSE ,BUY-O = Buy CE
                             # First transaction: BUY-C
@@ -2525,7 +2593,7 @@ class PlaceOrderWebhookView(APIView):
                                 trade, user, transaction_type, symbol, quantity, strategy, ordertype,
                                 product_type, price, Lots, trade_order_status, Entry_type, Exit_type,
                                 Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,
-                                triggerPrice, day, month, year, default_price, Type, order_params
+                                triggerPrice, day, month, year,fullyear, default_price, Type, order_params
                             )
                             # if order_response:
                             print("again one order for SELL-O")
@@ -2539,7 +2607,7 @@ class PlaceOrderWebhookView(APIView):
                                 trade, user, transaction_type, symbol, quantity, strategy, ordertype,
                                 product_type, price, Lots, trade_order_status, Entry_type, Exit_type,
                                 Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,
-                                triggerPrice, day, month, year, default_price, Type, order_params
+                                triggerPrice, day, month, year,fullyear, default_price, Type, order_params
                             )
                         else:
                             print("signal trasaction type................",transaction_type)
@@ -2548,7 +2616,7 @@ class PlaceOrderWebhookView(APIView):
                             transaction_type=buy_sell
                             order_response=place_order_broker(trade,user,transaction_type, symbol, quantity,strategy,ordertype,
                             product_type, price, Lots,trade_order_status,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,
-                            webhook_signal ,Exchange, Segment,Index_Symbol,triggerPrice,day,month,year,default_price,Type,order_params)
+                            webhook_signal ,Exchange, Segment,Index_Symbol,triggerPrice,day,month,year,fullyear,default_price,Type,order_params)
                               
                         # Check order response and log or handle failures
                         print("final order repsone :::::::::::::::::::::",order_response)
@@ -3104,7 +3172,7 @@ import requests
 
 def zerodha_callback(request):
     # Extract the request_token and state from query parameters
-    request_token = "Thk7L77Phj3AuNjOY3FmGCgvhIZ8416L"#request.GET.get('request_token')
+    request_token = "yRq7lpv5LzgYYLsXUZ3vWl8zIRO2SqR7"#request.GET.get('request_token')
     state = "success"#request.GET.get('state')
 
     if not request_token:
@@ -3138,7 +3206,7 @@ def zerodha_callback(request):
 #     return hashlib.sha256(f"{api_key}{request_token}{api_secret}".encode()).hexdigest()
 #5 Paisa -----------------
 
-def oauth_callback(request):
+def oauth_callbacks(request):
     # Extract the request token and state from the callback URL parameters
     request_token = request.GET.get('RequestToken')
     state = request.GET.get('state')
@@ -3535,3 +3603,66 @@ class BrokerCallbackView(APIView):
         
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
+
+#Search api for client trade
+
+class TradeOrderHistoryFilterView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        try:
+            # Query parameters
+            service = request.query_params.get('service', None)
+            strategy = request.query_params.get('strategy', None)
+            trade_type = request.query_params.get('type', None)
+            index_symbol = request.query_params.get('index_symbol', None)
+            symbol = request.query_params.get('symbol', None)
+            start_date = request.query_params.get('start_date', None)
+            end_date = request.query_params.get('end_date', None)
+            order_status = request.query_params.get('order_status', None)  # Entry_status or Exit_status
+            broker = request.query_params.get('broker', None)
+            max_lot = request.query_params.get('max_lot', None)
+
+            # Base filters
+            filters = Q()
+            if service:
+                filters &= Q(broker__iexact=service)
+            if strategy:
+                filters &= Q(strategy__iexact=strategy)
+            if trade_type:
+                filters &= Q(Entry_type__iexact=trade_type) | Q(Exit_type__iexact=trade_type)
+            if index_symbol:
+                filters &= Q(Index_Symbol__iexact=index_symbol)
+            if symbol:
+                filters &= Q(trading_symbol__iexact=symbol)
+            if start_date and end_date:
+                filters &= Q(SignalEntry_time__range=[start_date, end_date])
+            if order_status:
+                filters &= Q(Entry_status__iexact=order_status) | Q(Exit_status__iexact=order_status)
+
+            # User-specific filtering
+            user = request.user
+            if user.role and user.role.name.lower() == 'super-admin':
+                # Super-admin sees all clients' trade histories
+                clients = User.objects.filter(type_of_user='is_client', is_client=True)
+                trade_history = Tradeorderhistory.objects.exclude(order_id=0).filter(client__in=clients).filter(filters).order_by('-id')
+
+            elif user.role and user.role.name.lower() == 'sub-admin':
+                # Sub-admin sees their assigned clients' histories
+                clients = User.objects.filter(assigned_client=user, created_by=user, type_of_user='is_client', is_client=True)
+                trade_history = Tradeorderhistory.objects.exclude(order_id=0).filter(client__in=clients).filter(filters).order_by('-id')
+
+            else: 
+                # Regular user sees only their trade history
+                trade_history = Tradeorderhistory.objects.exclude(order_id=0).filter(client=user).filter(filters).order_by('-id')
+
+            # Pagination
+            paginator = CustomPageNumberPagination()
+            result_page = paginator.paginate_queryset(trade_history, request)
+
+            # Serialization
+            serializer = TradeOrderHistoryFilterSerializer(result_page, many=True)
+            return paginator.get_paginated_response(serializer.data)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

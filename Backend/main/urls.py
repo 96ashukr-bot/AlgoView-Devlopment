@@ -8,6 +8,7 @@ from main.Alice_Blue_Api import SymbolExpirDateListView
 from main.angleapi import SymbolExpiryDateListView
 from main.permissions import RolePermissionListView, UpdateRolePermissionsView
 from main.upstock import *
+from main.fivepaisa import *
 from .views import *
 from django.conf.urls.static import static
 from main import views
@@ -137,8 +138,10 @@ urlpatterns = [
    
     path("auth-callback/", BrokerCallbackView.as_view(), name="broker_callback"),
     
-    path('callback/', views.oauth_callback, name='oauth_callback'),
-    path('login-5paisa/', views.login_redirect, name='login_redirect'),
+    # path('callback/', views.oauth_callback, name='oauth_callback'),
+    # path('login-5paisa/', views.login_redirect, name='login_redirect'),
+    path("login-5paisa/",initiate_oauth_login, name="initiate_oauth"),
+    path("callback-5paisa/", oauth_callback, name="oauth_callback"),
 
     path('login-zerodha/', views.login_zerodha_redirect, name='login-zerodha'),
     path('callback-zerodha/', views.zerodha_callback, name='zerodha-callback'),
@@ -150,6 +153,9 @@ urlpatterns = [
     path('login-upstox/',get_upstox_login_url,name="login_upstox_redirect"),
     path('callback-upstox/',callback_upstox,name="login_upstox_redirect"),
     path("broker-login/", LoginDematAPIView.as_view(), name="login_broker"),
+    
+    path('trade-history-filter/', TradeOrderHistoryFilterView.as_view(), name='trade_history_filter'),
+
 ]
 
 

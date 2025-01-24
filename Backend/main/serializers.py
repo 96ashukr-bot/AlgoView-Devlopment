@@ -1200,7 +1200,7 @@ class TradeorderhistorySerializer(serializers.ModelSerializer):
         model = Tradeorderhistory
         fields = ['id', 'client', 'date', 'trading_symbol', 'Index_Symbol', 'order_id', 'order_status'
                 , 'failure_reason', 'broker', 'order_params', 'strategy', 'Entry_type', 'Entry_Price', 
-                'Exit_Price','Exit_type', 'SignalEntry_time', 'SignalExit_time', 'Exchange', 'Segment','webhook_signal']
+                'Exit_Price','Exit_type','EntryQty','ExitQty','trade_order_status', 'SignalEntry_time', 'SignalExit_time', 'Exchange', 'Segment','webhook_signal']
 
 
 from rest_framework.exceptions import AuthenticationFailed
@@ -1226,3 +1226,11 @@ class ClientdashboardSerializer(serializers.Serializer):
             'access': str(refresh.access_token),
             'refresh': str(refresh),
         }
+        
+class TradeOrderHistoryFilterSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Tradeorderhistory
+        fields = ['id', 'client', 'date', 'trading_symbol', 'Index_Symbol', 'order_id',
+                'broker', 'order_status', 'strategy', 'Entry_type', 'Entry_Price', 
+                'Exit_Price','Exit_type','EntryQty','ExitQty','trade_order_status',
+                'SignalEntry_time', 'SignalExit_time', 'Exchange', 'Segment','webhook_signal']

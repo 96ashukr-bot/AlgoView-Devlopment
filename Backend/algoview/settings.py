@@ -254,5 +254,5 @@ LOGGING = {
     },
 }
 
-VENDOR_KEY=   "CnVgZkl8QRol8XhHoWlLIe5UVIKYHCgN"
+VENDOR_KEY=   "CNh6IRx0kF8c1MSyNBPaOhcaaVmiitbm"
 RESPONSE_URL="http://127.0.0.1:8000/callback/"

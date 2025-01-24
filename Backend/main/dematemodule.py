@@ -82,7 +82,7 @@ class LoginDematAPIView(APIView):
             # Generate login URL based on broker
             if str(broker).lower() == "upstox":
                 state = "upstox"
-                client_key = broker_details.broker_API_UID
+                client_key = broker_details.broker_API_KEY
                 login_url = (
                     f"{AUTH_URL_UPSTOX}?client_id={client_key}&"
                     f"redirect_uri={REDIRECT_URI_UPSTOX}&"
