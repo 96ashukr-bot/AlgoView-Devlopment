@@ -20,6 +20,7 @@ import time
 from rest_framework.generics import ListAPIView,UpdateAPIView
 from main.angleapi import get_token_details, place_Angle_order
 from main.dematemodule import trading_Symbol_sum
+from main.dhanapi import place_dhan_orders
 from main.fivepaisa import place_5paisa_order
 from main.permissions import  IsAdminRole
 from main.tasks import send_kyc_email_async, send_trade_email_async
@@ -124,7 +125,6 @@ class UserListCreateView(generics.ListCreateAPIView):
 class UserRegistrationView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserRegistrationSerializer
-    
     def create(self, request, *args, **kwargs):
         # start_time=time.time()
         serializer = self.get_serializer(data=request.data)
@@ -2167,7 +2167,42 @@ def place_order_broker(
     order_id = 0
     status = "Failed"
     res_data = "Unknown response"
-    if trade.broker.lower() == "5paisa":
+    
+    if trade.broker.lower() == "dhan":
+        print("dhan fun   calleddddddddd")
+        trade_symbol = f"{symbol}{month}{fullyear}{default_price}{Type}" 
+        print(">>>>>>>trade_symbol>>>>>>>>>>>",trade_symbol)
+        # Fetch client broker details
+        client_broker = ClientBrokerdetails.objects.filter(client=trade.client, broker_name__broker_name__iexact=trade.broker).first()
+        if not client_broker:
+            message= f"No broker details found for client {trade.client} and broker {trade.broker}"
+            response= {"data":{"status": "Failed", "message":message }}
+            save_trade_order_history(trade_order_status,user,trade_symbol, order_id, status, res_data, message, strategy,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal , Exchange, Segment,Index_Symbol, order_params,broker="dhan")
+                
+            logger.error(f"No broker details found for client {trade.client} and broker {trade.broker}")
+            return response # continue
+
+        client_id = client_broker.broker_API_KEY
+        print("api key",client_id,"<<<<<<<<<<",client_broker)
+        access_token = client_broker.access_token
+        if not access_token or not client_id:
+            message = f"API credentials not found for client {trade.client} and broker {trade.broker}."
+            save_trade_order_history(
+                trade_order_status,user, trade_symbol, order_id, status, res_data, message, strategy,
+                Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, 
+                Segment, Index_Symbol,order_params, broker="dhan"
+            )
+            logger.error(message)
+            return {"data": {"status": "Failed", "message": message}}
+        # logger.info(f"Fetched API credentials for {trade.broker}: SKEY={api_key}, USER={demate_user_name}")
+            # continue  # Skip to next user if token data is not found
+        logger.info(f"!!!!Placing order for user: {user} Brocker is: {trade.broker} & trading symbol is: {trade.symbol}")
+        response=place_dhan_orders(access_token, client_id, trade_symbol, transaction_type, symbol, quantity,
+                strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type, Entry_price, Exit_price, 
+                EntryQty, ExitQty, webhook_signal, Exchange, Segment,Index_Symbol, triggerPrice, trade_order_status)
+        logger.info(f" dhan api. Response: {response}")
+        
+    elif trade.broker.lower() == "5paisa":
         print("5 paisa function is calleddddddddd")
         formated_prc=f"{default_price:.2f}"
         trade_symbol = f"{symbol}{day}{month}{fullyear}{Type}{formated_prc}" 
@@ -2177,7 +2212,8 @@ def place_order_broker(
         if not client_broker:
             message= f"No broker details found for client {trade.client} and broker {trade.broker}"
             response= {"data":{"status": "Failed", "message":message }}
-            save_trade_order_history(trade_order_status,user,trade_symbol, order_id, status, res_data, message, strategy,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal , Exchange, Segment,Index_Symbol, order_params,broker="Angle One")
+            save_trade_order_history(trade_order_status,user,trade_symbol, order_id, status, res_data, message, strategy,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,
+                        ExitQty,webhook_signal , Exchange, Segment,Index_Symbol, order_params,broker="5paisa")
                 
             logger.error(f"No broker details found for client {trade.client} and broker {trade.broker}")
             return response # continue
@@ -2191,7 +2227,7 @@ def place_order_broker(
             save_trade_order_history(
                 trade_order_status,user, trade_symbol, order_id, status, res_data, message, strategy,
                 Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, 
-                Segment, Index_Symbol,order_params, broker="Upstox"
+                Segment, Index_Symbol,order_params, broker="5paisa"
             )
             logger.error(message)
             return {"data": {"status": "Failed", "message": message}}
@@ -2217,7 +2253,7 @@ def place_order_broker(
             logger.error(message)
             return {"data": {"status": "Failed", "message": message}}
         access_token=client_broker.access_token
-        Api_key=client_broker.broker_API_SKEY
+        Api_key=client_broker.broker_API_KEY
         print("acesssssss",access_token,"Api_key.....",Api_key)
         if not access_token or not Api_key:
             message = f"API credentials  token not found for client {trade.client} and broker {trade.broker}."
@@ -2336,7 +2372,7 @@ def place_order_broker(
             save_trade_order_history(
                 trade_order_status,user, trade_symbol, order_id, status, res_data, message, strategy,
                 Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, 
-                Segment, Index_Symbol,order_params, broker="Upstox"
+                Segment, Index_Symbol,order_params, broker="Angle One"
             )
             logger.error(message)
             return {"data": {"status": "Failed", "message": message}}
@@ -3157,13 +3193,13 @@ def login_zerodha_redirect(request):
     # Zerodha API credentials
     api_key = "jsdgh8p7k3yvfii8"  # Replace with your API Key
     redirect_url ="https://software.algosparks.co.in/#/login"# "http://127.0.0.1:8000/callback-zerodha/"  # Your callback URL
-    state = "example_state"  # Optional, to track the request state
+    state = "zerodha"  # Optional, to track the request state
 
     # Construct the URL
     zerodha_url = (
-        f"https://kite.zerodha.com/connect/login?api_key={api_key}&v=3"
-        f"&redirect_url={redirect_url}&state={state}"
-    )
+            f"https://kite.zerodha.com/connect/login?api_key={api_key}&v=3"
+            f"&redirect_uri={redirect_url}&state={state}"
+        )
     print("zerodha_url777",zerodha_url)
     return redirect(zerodha_url)
 
@@ -3172,7 +3208,7 @@ import requests
 
 def zerodha_callback(request):
     # Extract the request_token and state from query parameters
-    request_token = "yRq7lpv5LzgYYLsXUZ3vWl8zIRO2SqR7"#request.GET.get('request_token')
+    request_token = "dD048whQMqDbwOL7ig1BJK21yrIl2M69"
     state = "success"#request.GET.get('state')
 
     if not request_token:

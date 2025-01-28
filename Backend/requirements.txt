@@ -41,5 +41,5 @@ daphne ==4.1.2
 holidays
 kiteconnect
 py5paisa
-
+dhanhq== 2.0.2
 

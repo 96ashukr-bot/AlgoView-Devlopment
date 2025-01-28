@@ -232,7 +232,13 @@ def handle_successful_order(
             return {"data": {"status": "Failed","message": "Order placed but details could not be fetched."}}
                            
     except Exception as e:
+        rejection_message="error while fetching order"
+        status="Failed"
+        res_data=str(e)
         logger.exception(f"Error while fetching order details for Order ID {order_id}: {str(e)}")
+        save_trade_order_history(trade_order_status,user,trade_symbol, order_id, status, res_data, rejection_message, 
+        strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, 
+        Segment,Index_Symbol ,order_params , broker="Upstox")
         return {
             "data": {
                 "status": "error",

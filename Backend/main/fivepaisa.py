@@ -372,7 +372,7 @@ def place_5paisa_order(api_key,access_token,trade_symbol,transaction_type, symbo
                 res_data="invakid token"
                 logger.error(f"Order placement Failed for user {user}. Error: {error_message}")
                 
-                save_trade_order_history(trade_order_status,user,trade_symbol, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type ,webhook_signal , Exchange, Segment,Index_Symbol, order_params,broker="5paisa")
+                save_trade_order_history(trade_order_status,user,trade_symbol, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type,Entry_price,Exit_price,EntryQty,ExitQty  ,webhook_signal , Exchange, Segment,Index_Symbol, order_params,broker="5paisa")
                 return response       
       
         except Exception as e:

@@ -215,7 +215,7 @@ def place_alice_orders(api_skey,api_uid,trading_symbol_aliceblue,transaction_typ
             res_data="Not any reponse Failed"
             logger.error(f"Order placement Failed for user {user}. Error: {error_message}")
             
-            save_trade_order_history(trade_order_status,user,trading_symbol_aliceblue, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type ,webhook_signal , Exchange, Segment,Index_Symbol, order_params,broker="Alice Blue")
+            save_trade_order_history(trade_order_status,user,trading_symbol_aliceblue, order_id, status, res_data, message,  strategy,   Entry_type,Exit_type,Entry_price,Exit_price,EntryQty,ExitQty  ,webhook_signal , Exchange, Segment,Index_Symbol, order_params,broker="Alice Blue")
             return response       
 
     except ValueError as val_err:
