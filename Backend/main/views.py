@@ -21,7 +21,7 @@ from rest_framework.generics import ListAPIView,UpdateAPIView
 from main.angleapi import get_token_details, place_Angle_order
 from main.dematemodule import trading_Symbol_sum
 from main.dhanapi import place_dhan_orders
-from main.fivepaisa import place_5paisa_order
+from main.fivepaisa import fetch_access_token_5paisa, place_5paisa_order
 from main.permissions import  IsAdminRole
 from main.tasks import send_kyc_email_async, send_trade_email_async
 from rest_framework import status
@@ -3584,7 +3584,7 @@ class BrokerCallbackView(APIView):
             #     return JsonResponse({"error": str(e)}, status=500)
     def handle_5paisa(self, request_token, broker_details):
         try:
-            access_token = "5paisa_access_token_placeholder"
+            access_token = fetch_access_token_5paisa(request_token,broker_details)
             broker_details.request_token = request_token
             broker_details.access_token = access_token
             broker_details.access_token_expiry = now() + timedelta(days=1) 
@@ -3593,7 +3593,7 @@ class BrokerCallbackView(APIView):
             return JsonResponse({"message": "5Paisa callback processed successfully", "access_token": access_token})
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
-
+    
     def handle_alice_blue(self, request_token, broker_details):
         try: 
             access_token = "aliceblue_access_token_placeholder" 
