@@ -30,13 +30,22 @@ ALLOWED_HOSTS = ['*']
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 CORS_ORIGIN_ALLOW_ALL = True
-
+FILE_UPLOAD_PERMISSIONS = 0o644  
 # Optional: Set X-Frame-Options header to allow specific origins for embedding your site in frames
 X_FRAME_OPTIONS = 'ALLOWALL'
 
+CSRF_TRUSTED_ORIGINS = [
+    "https://client.algoview.in",
+    "https://www.client.algoview.in",
+    "https://www.admin.algoview.in",
+    "http://www.admin.algoview.in",
+]
+
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",  # React development server
-    "http://103.120.178.54:4000",
+    "http://localhost:3000",
+   "http://103.120.178.54:4000",
+   "https://www.admin.algoview.in",
+    "https://client.algoview.in",
 ]
 # Application definition
 
@@ -215,9 +224,9 @@ CONTACT_NUM="+919988746583"
 #LOGIN_LINK="'http://localhost:3000/login"
 #HELP_CENTER_LINK="'http://localhost:3000"
 #COMPANY_WEBSITE="'http://localhost:3000"
-LOGIN_LINK="http://103.120.178.54:4000/login"
-HELP_CENTER_LINK="http://103.120.178.54:4000"
-COMPANY_WEBSITE="http://103.120.178.54:4000" 
+LOGIN_LINK="https://www.admin.algoview.in/login"
+HELP_CENTER_LINK="https://www.admin.algoview.in/"
+COMPANY_WEBSITE="https://www.admin.algoview.in/" 
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
