@@ -22,7 +22,7 @@ ACCESS_TOKEN_URL = "https://Openapi.5paisa.com/VendorsAPI/Service1.svc/GetAccess
 AUTH_LOGIN_URL="https://dev-openapi.5paisa.com/WebVendorLogin/VLogin/Index"
 # Replace with your 5Paisa credentials
 
-REDIRECT_URL = "https://software.alcrafttechnology.com/login"
+REDIRECT_URL = "https://www.admin.algoview.in/callback"
 STATE = "5paisa"
 # Provided credentials
 VENDOR_KEY = "CNh6IRx0kF8c1MSyNBPaOhcaaVmiitbm"  # Your API Key (App Key)
@@ -42,8 +42,8 @@ def oauth_callback(request):
     """
     Handles the callback from 5Paisa after successful login.
     """
-    request_token = request.GET.get("RequestToken")
-    state = request.GET.get("state")
+    request_token ="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1bmlxdWVfbmFtZSI6IjUxMDcyMDY3Iiwicm9sZSI6IkNOaDZJUngwa0Y4YzFNU3lOQlBhT2hjYWFWbWlpdGJtIiwibmJmIjoxNzM4MTQwNzYyLCJleHAiOjE3MzgxNDA3OTIsImlhdCI6MTczODE0MDc2Mn0.d0QkgutM0TKPOK_6ND0YQLCuUjWRhsp0pG9e4ilXMrI"
+    state = "5paisa"#request.GET.get("state")
 
     if not request_token:
         return JsonResponse({"error": "RequestToken is missing"}, status=400)

@@ -25,10 +25,10 @@ AUTHORIZATION_URL = 'https://login.upstox.com/login/v2/oauth/authorize'
 #UPSTOX
 CLIENT_KEY = '5fc50c51-44a3-43bc-98d5-8258e3ddfea1'  
 CLIENT_SECRET = 'ajpiqe2sgh' 
-REDIRECT_URI = 'https://software.alcrafttechnology.com/login' 
+# REDIRECT_URI = 'https://software.alcrafttechnology.com/login' 
 TOKEN_URL = 'https://api.upstox.com/v2/login/authorization/token'
 AUTH_URL = "https://api.upstox.com/v2/login/authorization/dialog"
-
+REDIRECT_URI = "https://www.admin.algoview.in/callback"
 # Base URL for Upstox API
 BASE_URL = "https://api.upstox.com"
 PLACE__ORDER_URL="https://api-hft.upstox.com/v2/order/place"
@@ -37,6 +37,7 @@ def get_upstox_login_url(request):
     try:
         # Add a broker identifier in the state
         state = "upstox" 
+        print("CLIENT_KEY>>",CLIENT_KEY)
         # The lowercase field (tradingsymbol) is deprecated and will be removed in future versions. Use the snake_case versions for consistency.
         # trading_symbol
         login_url = (

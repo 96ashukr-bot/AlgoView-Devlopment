@@ -2858,6 +2858,12 @@ class ClientBrokerDetailsView(APIView):
             serializer = ClientBrokerDetailsUpdateSerializer(broker_detail, data=request.data, partial=True)
             if serializer.is_valid():
                 serializer.save()
+                # Update the broker field in ClientTradeSetting
+                client_trade_settings = ClientTradeSetting.objects.filter(client=user)
+                for trade_setting in client_trade_settings:
+                    trade_setting.broker = broker_detail.broker_name.broker_name  # Assuming 'broker_name' is the field that links to the broker model
+                    trade_setting.save()
+
                 message = "Broker details created successfully!" if created else "Broker details updated successfully!"
                 return Response({"message": message, "data": serializer.data}, status=status.HTTP_200_OK)
 
@@ -3433,7 +3439,7 @@ from django.http import JsonResponse
 from kiteconnect import KiteConnect
 from django.contrib.auth.decorators import login_required
 from .models import ClientBrokerdetails
-REDIRECT_URI = "http://127.0.0.1:8000/auth-callback/"  
+REDIRECT_URI = "https://www.admin.algoview.in/callback"  
 class BrokerLoginRedirectView(APIView):
     permission_classes = [IsAuthenticated]  
 
@@ -3447,7 +3453,8 @@ class BrokerLoginRedirectView(APIView):
             # Retrieve broker details for the logged-in user
             broker_details = ClientBrokerdetails.objects.get(client=user)
             broker_name = broker_details.broker_name.broker_name.lower()
-            broker_name=request.GET.get('state')
+            print("broker_name>>>",broker_name)
+            # broker_name=request.GET.get('state')
             if broker_name == "zerodha":
                 request.GET.get('request_token')
                 return self.redirect_to_zerodha(broker_details)
@@ -3473,39 +3480,37 @@ class BrokerLoginRedirectView(APIView):
         api_key = broker_details.broker_API_UID
         # redirect_url = "http://127.0.0.1:8000/auth-callback/"  #
         redirect_url ="https://software.algosparks.co.in/#/login"# Replace with your callback URL
-        state = f"user-{broker_details.client.id}"  # Include user-specific state
+        state = "zerodha"  # Include user-specific state
         zerodha_url = (
             f"https://kite.zerodha.com/connect/login?api_key={api_key}&v=3"
             f"&redirect_uri={redirect_url}&state={state}"
         )
-        return redirect(zerodha_url)
+        return Response({"redirect_url": zerodha_url})
 
     def redirect_to_5paisa(self, broker_details):
-        vendor_key = settings.VENDOR_KEY
-        response_url = settings.RESPONSE_URL
-        state = "test_state"  # Optional, for tracking requests
-        
-        paisa_url = f"https://dev-openapi.5paisa.com/WebVendorLogin/VLogin/Index? VendorKey={vendor_key}&ResponseURL={response_url}&State={state}"
-        return redirect(paisa_url)
+        vendor_key = broker_details.broker_API_KEY
+        state = "5paisa"  
+        paisa_url = f"https://dev-openapi.5paisa.com/WebVendorLogin/VLogin/Index? VendorKey={vendor_key}&ResponseURL={REDIRECT_URI}&State={state}"
+        return Response({"redirect_url": paisa_url})
 
     def redirect_to_alice_blue(self, broker_details):
         return redirect("login-aliceblue")  
 
     def redirect_to_upstox(self, broker_details):
-        CLIENT_KEY = broker_details.broker_API_UID
+        CLIENT_KEY = broker_details.broker_API_KEY
         print("CLIENT_KEY>>>",CLIENT_KEY)
         CLIENT_SECRET = broker_details.broker_API_SKEY
+        state="upstox"
         AUTH_URL = "https://api.upstox.com/v2/login/authorization/dialog"
-        # Construct the login URL
-        REDIRECT_URI= 'https://software.alcrafttechnology.com/login' 
+        # Ensure REDIRECT_URI is properly defined
         login_url = (
-            f"{AUTH_URL}?client_id={CLIENT_KEY}&response_type=Auth_code"
-            # f"redirect_uri={REDIRECT_URI}&"
-            f"response_type=Auth_code"
+            f"{AUTH_URL}?client_id={CLIENT_KEY}&"
+            f"redirect_uri={REDIRECT_URI}&"
+            f"response_type=Auth_code&"
+            f"state={state}"
         )
-        print("login_url>>",login_url)
+        print("login_url>>", login_url)
         return Response({"redirect_url": login_url})
-        # return redirect(login_url)
 
 class BrokerCallbackView(APIView):
     permission_classes = [IsAuthenticated]  
@@ -3517,15 +3522,16 @@ class BrokerCallbackView(APIView):
             user = request.user  
             broker_details = ClientBrokerdetails.objects.get(client=user)
             print("broker_details:::::::::::",broker_details)
-            broker_name  = broker_details.broker_name.broker_name
-            print("broker_name>>>>",broker_name)
+            broker  = broker_details.broker_name.broker_name
+            print("broker_name>>>>",broker)
             broker_name=request.GET.get('state',"") 
             # Handle different brokers
             if broker_name == "zerodha":
+                request_token = request.GET.get('code')
                 return self.handle_zerodha(request_token, broker_details)
 
             elif broker_name == "5paisa":
-                request_token = request.GET.get('RequestToken')
+                request_token = request.GET.get('code')
                 return self.handle_5paisa(request_token, broker_details)
 
             elif broker_name == "alice blue":
@@ -3533,8 +3539,7 @@ class BrokerCallbackView(APIView):
 
             elif broker_name == "upstox":
                 request_token = request.GET.get('code')
-                REDIRECT_URI = request.GET.get('redirect_uri')
-                return self.handle_upstox(request_token, broker_details,REDIRECT_URI)
+                return self.handle_upstox(request_token, broker_details)
 
             else:
                 raise ValidationError("Unsupported broker")
@@ -3546,7 +3551,7 @@ class BrokerCallbackView(APIView):
 
     def handle_zerodha(self, request_token, broker_details):
         try:
-            kite = KiteConnect(api_key=broker_details.broker_API_UID)
+            kite = KiteConnect(api_key=broker_details.broker_API_KEY)
             session_data = kite.generate_session(request_token, api_secret=broker_details.broker_API_SKEY)
             access_token = session_data['access_token']
             
@@ -3603,7 +3608,7 @@ class BrokerCallbackView(APIView):
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
 
-    def handle_upstox(self, request_token, broker_details,REDIRECT_URI):
+    def handle_upstox(self, request_token, broker_details):
         try:
             # Example Upstox-specific token generation logic
             TOKEN_URL = 'https://api.upstox.com/v2/login/authorization/token' 
@@ -3611,7 +3616,7 @@ class BrokerCallbackView(APIView):
             
             if not auth_code:
                 return JsonResponse({"error": "Authorization code not provided"}, status=400)
-            CLIENT_KEY=broker_details.broker_API_UID
+            CLIENT_KEY=broker_details.broker_API_KEY
             CLIENT_SECRET=broker_details.broker_API_SKEY
             print(CLIENT_KEY,">>>>>>>",CLIENT_SECRET)
 
