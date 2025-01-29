@@ -21,6 +21,10 @@ algoview/__pycache__
 Backend/logs/
 NFO.csv
 ANGLE_NFO.csv
+# Ignore compiled Python files
+__pycache__/
+*.pyc
+*.pyo
 
-
-Backend/logs/webhooks.log
+# Ignore logs
+logs/webhooks.log
