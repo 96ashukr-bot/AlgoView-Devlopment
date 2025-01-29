@@ -300,8 +300,8 @@ class PasswordResetRequestView(generics.GenericAPIView):
             # reset_link = request.build_absolute_uri(
             #     f'/password-reset-confirm/?uidb64={uid}&token={token}'
             # )
-            
-            reset_link = f'http://103.120.178.54:4000/pages/authentication/reset-password/:{uid}/:{token}/:layout'
+            reset_link = f'https://www.admin.algoview.in/pages/authentication/reset-password/:{uid}/:{token}/:layout'
+            # reset_link = f'http://103.120.178.54:4000/pages/authentication/reset-password/:{uid}/:{token}/:layout'
             # reset_link = f'http://localhost:3000/pages/authentication/reset-password/:{uid}/:{token}/:layout'
             subject = "Password Reset Request"
             print("reset_link",reset_link)
