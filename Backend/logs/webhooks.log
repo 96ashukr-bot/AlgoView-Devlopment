@@ -1,0 +1,164 @@
+2025-01-29 16:50:49 - django.request - WARNING - Bad Request: /verify-otp/
+2025-01-29 16:51:11 - main - INFO - WebSocket connection established.
+2025-01-29 16:51:11 - main - INFO - WebSocket connection established.
+2025-01-29 16:51:11 - main - INFO - Requested symbol: BANKNIFTY, Expiry Date: 30Jan2025
+2025-01-29 16:51:12 - main - INFO - WebSocket connection established.
+2025-01-29 16:53:12 - main - INFO - WebSocket connection closed.
+2025-01-29 16:53:12 - main - INFO - Requested symbol: MIDCPNIFTY, Expiry Date: 30Jan2025
+2025-01-29 16:53:13 - main - INFO - WebSocket connection closed.
+2025-01-29 16:53:13 - main - INFO - Requested symbol: BANKNIFTY, Expiry Date: 30Jan2025
+2025-01-29 16:53:13 - main - INFO - WebSocket connection established.
+2025-01-29 16:53:14 - main - INFO - WebSocket connection established.
+2025-01-29 16:53:22 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 16:53:22 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 16:53:23 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 16:53:23 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 16:53:23 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 16:53:23 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 16:53:24 - main - INFO - WebSocket connection closed.
+2025-01-29 16:53:24 - main - INFO - WebSocket connection closed.
+2025-01-29 16:53:24 - main - INFO - WebSocket connection closed.
+2025-01-29 16:53:26 - main - INFO - WebSocket connection established.
+2025-01-29 16:53:26 - main - INFO - WebSocket connection established.
+2025-01-29 16:53:27 - main - INFO - Requested symbol: BANKNIFTY, Expiry Date: 30Jan2025
+2025-01-29 16:53:27 - main - INFO - WebSocket connection established.
+2025-01-29 16:53:34 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 16:53:34 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 16:53:34 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 16:53:34 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 16:53:34 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 16:53:34 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 16:58:03 - main - INFO - Requested symbol: FINNIFTY, Expiry Date: 30Jan2025
+2025-01-29 16:58:12 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 16:58:12 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 16:58:12 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 16:58:12 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 16:58:12 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 16:58:12 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 16:58:13 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 16:58:13 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 16:58:13 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 16:58:14 - main - INFO - WebSocket connection closed.
+2025-01-29 16:58:14 - main - INFO - WebSocket connection closed.
+2025-01-29 16:58:14 - main - INFO - WebSocket connection closed.
+2025-01-29 16:58:19 - main - INFO - Requested symbol: FINNIFTY, Expiry Date: 30Jan2025
+2025-01-29 16:58:29 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 16:58:29 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 16:58:29 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 16:58:29 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 16:58:29 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 16:58:29 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 16:58:30 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 16:58:30 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 16:58:30 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 16:58:47 - main - INFO - WebSocket connection closed.
+2025-01-29 16:58:47 - main - INFO - WebSocket connection closed.
+2025-01-29 16:58:47 - main - INFO - WebSocket connection closed.
+2025-01-29 16:58:58 - main - INFO - WebSocket connection closed.
+2025-01-29 16:59:05 - main - INFO - WebSocket connection established.
+2025-01-29 16:59:08 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 16:59:08 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 16:59:39 - main - INFO - Requested symbol: BANKNIFTY, Expiry Date: 30Jan2025
+2025-01-29 16:59:48 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 16:59:48 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 16:59:48 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 16:59:49 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 16:59:49 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 16:59:49 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 16:59:49 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 16:59:49 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 16:59:49 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 16:59:52 - main - INFO - WebSocket connection closed.
+2025-01-29 16:59:52 - main - INFO - WebSocket connection closed.
+2025-01-29 16:59:52 - main - INFO - WebSocket connection closed.
+2025-01-29 17:07:48 - main - INFO - Requested symbol: FINNIFTY, Expiry Date: 30Jan2025
+2025-01-29 17:07:58 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:07:58 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:07:58 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:07:58 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:07:58 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:07:58 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:07:59 - main - INFO - WebSocket connection closed.
+2025-01-29 17:07:59 - main - INFO - WebSocket connection closed.
+2025-01-29 17:07:59 - main - INFO - WebSocket connection closed.
+2025-01-29 17:07:59 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:07:59 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:07:59 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:28:51 - main - INFO - Requested symbol: BANKNIFTY, Expiry Date: 30Jan2025
+2025-01-29 17:28:56 - main - INFO - WebSocket connection closed.
+2025-01-29 17:28:56 - main - INFO - WebSocket connection closed.
+2025-01-29 17:28:56 - main - INFO - WebSocket connection closed.
+2025-01-29 17:28:58 - main - INFO - Requested symbol: FINNIFTY, Expiry Date: 30Jan2025
+2025-01-29 17:29:01 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:29:01 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:29:01 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:29:01 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:29:01 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:29:01 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:29:02 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:29:02 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:29:02 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:29:09 - main - INFO - WebSocket connection closed.
+2025-01-29 17:29:09 - main - INFO - WebSocket connection closed.
+2025-01-29 17:29:09 - main - INFO - WebSocket connection closed.
+2025-01-29 17:29:11 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:29:11 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:29:11 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:29:11 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:29:11 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:29:11 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:29:12 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:29:12 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:29:12 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:29:15 - main - INFO - Requested symbol: BANKNIFTY, Expiry Date: 30Jan2025
+2025-01-29 17:29:24 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:29:24 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:29:24 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:29:24 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:29:24 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:29:24 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:29:25 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:29:25 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:29:25 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:32:02 - main - INFO - WebSocket connection closed.
+2025-01-29 17:32:02 - main - INFO - WebSocket connection closed.
+2025-01-29 17:32:02 - main - INFO - WebSocket connection closed.
+2025-01-29 17:34:12 - main - INFO - Requested symbol: FINNIFTY, Expiry Date: 30Jan2025
+2025-01-29 17:34:17 - main - INFO - WebSocket connection closed.
+2025-01-29 17:34:17 - main - INFO - WebSocket connection closed.
+2025-01-29 17:34:17 - main - INFO - WebSocket connection closed.
+2025-01-29 17:34:22 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:34:22 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:34:22 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:34:22 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:34:22 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:34:22 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:34:23 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:34:23 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:34:23 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:35:38 - main - INFO - Requested symbol: FINNIFTY, Expiry Date: 30Jan2025
+2025-01-29 17:35:46 - main - INFO - WebSocket connection closed.
+2025-01-29 17:35:46 - main - INFO - WebSocket connection closed.
+2025-01-29 17:35:46 - main - INFO - WebSocket connection closed.
+2025-01-29 17:35:48 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:35:48 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:35:48 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:35:48 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:35:48 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:35:48 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:35:49 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:35:49 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:35:49 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:43:48 - main - INFO - Requested symbol: FINNIFTY, Expiry Date: 30Jan2025
+2025-01-29 17:43:58 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:43:58 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:43:58 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:43:58 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:43:58 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:43:58 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:43:59 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:43:59 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:43:59 - main - ERROR - WebSocket error: Connection closed
+2025-01-29 17:44:34 - main - INFO - WebSocket connection closed.
+2025-01-29 17:44:34 - main - INFO - WebSocket connection closed.
+2025-01-29 17:44:34 - main - INFO - WebSocket connection closed.

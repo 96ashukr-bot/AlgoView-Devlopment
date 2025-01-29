@@ -43,3 +43,4 @@ kiteconnect
 py5paisa
 dhanhq== 2.0.2
 
+celery
