@@ -3554,16 +3554,17 @@ class BrokerCallbackView(APIView):
             kite = KiteConnect(api_key=broker_details.broker_API_KEY)
             session_data = kite.generate_session(request_token, api_secret=broker_details.broker_API_SKEY)
             access_token = session_data['access_token']
-            
-            # Save access token and other details
-            broker_details.request_token = request_token
-            broker_details.access_token = access_token
-            broker_details.access_token_expiry = now() + timedelta(days=1)  # Assuming 1-day validity
-            broker_details.save()
-            
-            return JsonResponse({"message": "Zerodha callback processed successfully", "access_token": access_token})
+            if access_token:
+                # Save access token and other details
+                broker_details.request_token = request_token
+                broker_details.access_token = access_token
+                broker_details.access_token_expiry = now() + timedelta(days=1)  # Assuming 1-day validity
+                broker_details.save()
+                return JsonResponse({"message": "success", "access_token": access_token})
+            else:
+                return JsonResponse({"message": "success", "access_token": access_token})
         except Exception as e:
-            return JsonResponse({"error": str(e)}, status=500)
+            return JsonResponse({"message":"Failed","error": str(e)}, status=500)
             # try:
             #     AUTH_TOKEN_URL="https://api.kite.trade/session/token"
             #     headers={
@@ -3585,28 +3586,32 @@ class BrokerCallbackView(APIView):
     def handle_5paisa(self, request_token, broker_details):
         try:
             access_token = fetch_access_token_5paisa(request_token,broker_details)
-            broker_details.request_token = request_token
-            broker_details.access_token = access_token
-            broker_details.access_token_expiry = now() + timedelta(days=1) 
-            broker_details.save()
-            
-            return JsonResponse({"message": "5Paisa callback processed successfully", "access_token": access_token})
+            if access_token:
+                broker_details.request_token = request_token
+                broker_details.access_token = access_token
+                broker_details.access_token_expiry = now() + timedelta(days=1) 
+                broker_details.save()
+                return JsonResponse({"message": "success", "access_token": access_token})
+            else:
+                return JsonResponse({"message": "Failed"}, status=400)
         except Exception as e:
-            return JsonResponse({"error": str(e)}, status=500)
-    
+            return JsonResponse({"message":"Failed","error": str(e)}, status=500)
     def handle_alice_blue(self, request_token, broker_details):
         try: 
             access_token = "aliceblue_access_token_placeholder" 
-            
-            # Save access token and other details
-            broker_details.request_token = request_token
-            broker_details.access_token = access_token
-            broker_details.access_token_expiry = now() + timedelta(days=1)  # Assuming 1-day validity
-            broker_details.save()
-            
-            return JsonResponse({"message": "Alice Blue callback processed successfully", "access_token": access_token})
+            if access_token:
+                # Save access token and other details
+                broker_details.request_token = request_token
+                broker_details.access_token = access_token
+                broker_details.access_token_expiry = now() + timedelta(days=1)  # Assuming 1-day validity
+                broker_details.save()
+                
+                return JsonResponse({"message": "success", "access_token": access_token})
+            else:
+                return JsonResponse({"message": "Failed"}, status=400)
+        
         except Exception as e:
-            return JsonResponse({"error": str(e)}, status=500)
+            return JsonResponse({"message":"Failed","error": str(e)}, status=500)
 
     def handle_upstox(self, request_token, broker_details):
         try:
@@ -3640,10 +3645,10 @@ class BrokerCallbackView(APIView):
                 logger.info(f"Upstox callback processed successfully")
                 return JsonResponse({"message": "success", "access_token": access_token})
             else:
-                return JsonResponse({"error": "Failed to get access token from Upstox"}, status=400)
+                return JsonResponse({"message": "Failed"}, status=400)
         
         except Exception as e:
-            return JsonResponse({"error": str(e)}, status=500)
+            return JsonResponse({"message":"Failed","error": str(e)}, status=500)
 
 #Search api for client trade
 

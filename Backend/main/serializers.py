@@ -150,8 +150,16 @@ class CustomLoginSerializer_sync(serializers.Serializer):
         
         # Check if the user is logging in with a temporary password
         if user.is_password_temporary:
-            otp_instance, created = OTP.objects.get_or_create(user=user, is_verified=False)
+            otp_instance = OTP.objects.filter(user=user, is_verified=False).order_by('-created_at').first()
+
+        # If no OTP exists, create a new one
+            if not otp_instance:
+                otp_instance = OTP.objects.create(user=user, is_verified=False)
+
             otp_instance.generate_otp()
+
+            # otp_instance, created = OTP.objects.get_or_create(user=user, is_verified=False)
+            # otp_instance.generate_otp()
             
             # Use Celery to send OTP asynchronously
             send_email_async.delay(
@@ -171,9 +179,16 @@ class CustomLoginSerializer_sync(serializers.Serializer):
                 'message': 'Please change your password as this is a one-time temporary password.'
             }
         else:
-            otp_instance, created = OTP.objects.get_or_create(user=user, is_verified=False)
+            # otp_instance, created = OTP.objects.get_or_create(user=user, is_verified=False)
+            # otp_instance.generate_otp()
+            otp_instance = OTP.objects.filter(user=user, is_verified=False).order_by('-created_at').first()
+
+            # If no OTP exists, create a new one
+            if not otp_instance:
+                otp_instance = OTP.objects.create(user=user, is_verified=False)
+
             otp_instance.generate_otp()
-            
+
             # Use Celery to send OTP asynchronously
             send_email_async.delay(
                 subject='Your OTP Code',
@@ -212,9 +227,16 @@ class CustomLoginSerializer(serializers.Serializer):
                         "success": "False",
                         "message": messages
                     })
-                otp_instance, created = OTP.objects.get_or_create(user=user, is_verified=False)
+                # otp_instance, created = OTP.objects.get_or_create(user=user, is_verified=False)
+                # otp_instance.generate_otp()
+                otp_instance = OTP.objects.filter(user=user, is_verified=False).order_by('-created_at').first()
+
+                # If no OTP exists, create a new one
+                if not otp_instance:
+                    otp_instance = OTP.objects.create(user=user, is_verified=False)
+
                 otp_instance.generate_otp()
-                
+
                 # Send OTP to user's email
                 send_email_async.delay(user.firstName,otp_instance.otp_code,user.email )
                 # EmailService.send_login_email_otp(user.email, otp_instance.otp_code, user.firstName)
