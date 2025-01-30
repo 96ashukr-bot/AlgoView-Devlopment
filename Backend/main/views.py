@@ -3456,7 +3456,7 @@ class BrokerLoginRedirectView(APIView):
             print("broker_name>>>",broker_name)
             # broker_name=request.GET.get('state')
             if broker_name == "zerodha":
-                request.GET.get('request_token')
+                # request.GET.get('request_token')
                 return self.redirect_to_zerodha(broker_details)
 
             elif broker_name == "5paisa":
@@ -3477,20 +3477,21 @@ class BrokerLoginRedirectView(APIView):
             return Response({"error": str(e)}, status=500)
 
     def redirect_to_zerodha(self, broker_details):
-        api_key = broker_details.broker_API_UID
-        # redirect_url = "http://127.0.0.1:8000/auth-callback/"  #
-        redirect_url ="https://software.algosparks.co.in/#/login"# Replace with your callback URL
+        api_key = broker_details.broker_API_KEY
+        # redirect_url ="https://www.admin.algoview.in/callback"  # Replace with your callback URL
         state = "zerodha"  # Include user-specific state
         zerodha_url = (
             f"https://kite.zerodha.com/connect/login?api_key={api_key}&v=3"
-            f"&redirect_uri={redirect_url}&state={state}"
+            f"&redirect_uri={REDIRECT_URI}&state={state}"
         )
         return Response({"redirect_url": zerodha_url})
 
     def redirect_to_5paisa(self, broker_details):
-        vendor_key = broker_details.broker_API_KEY
-        state = "5paisa"  
-        paisa_url = f"https://dev-openapi.5paisa.com/WebVendorLogin/VLogin/Index? VendorKey={vendor_key}&ResponseURL={REDIRECT_URI}&State={state}"
+        # redirect_url ="https://www.admin.algoview.in/callback" 
+        VENDOR_KEY = broker_details.broker_API_KEY
+        state="5paisa"
+        paisa_url = (f"https://dev-openapi.5paisa.com/WebVendorLogin/VLogin/Index?"f"VendorKey={VENDOR_KEY}&ResponseURL={REDIRECT_URI}&State={state}"
+    )    
         return Response({"redirect_url": paisa_url})
 
     def redirect_to_alice_blue(self, broker_details):
@@ -3554,16 +3555,17 @@ class BrokerCallbackView(APIView):
             kite = KiteConnect(api_key=broker_details.broker_API_KEY)
             session_data = kite.generate_session(request_token, api_secret=broker_details.broker_API_SKEY)
             access_token = session_data['access_token']
-            
-            # Save access token and other details
-            broker_details.request_token = request_token
-            broker_details.access_token = access_token
-            broker_details.access_token_expiry = now() + timedelta(days=1)  # Assuming 1-day validity
-            broker_details.save()
-            
-            return JsonResponse({"message": "Zerodha callback processed successfully", "access_token": access_token})
+            if access_token:
+                # Save access token and other details
+                broker_details.request_token = request_token
+                broker_details.access_token = access_token
+                broker_details.access_token_expiry = now() + timedelta(days=1)  # Assuming 1-day validity
+                broker_details.save()
+                return JsonResponse({"message": "success", "access_token": access_token})
+            else:
+                return JsonResponse({"message": "success", "access_token": access_token})
         except Exception as e:
-            return JsonResponse({"error": str(e)}, status=500)
+            return JsonResponse({"message":"Failed","error": str(e)}, status=500)
             # try:
             #     AUTH_TOKEN_URL="https://api.kite.trade/session/token"
             #     headers={
@@ -3585,28 +3587,32 @@ class BrokerCallbackView(APIView):
     def handle_5paisa(self, request_token, broker_details):
         try:
             access_token = fetch_access_token_5paisa(request_token,broker_details)
-            broker_details.request_token = request_token
-            broker_details.access_token = access_token
-            broker_details.access_token_expiry = now() + timedelta(days=1) 
-            broker_details.save()
-            
-            return JsonResponse({"message": "5Paisa callback processed successfully", "access_token": access_token})
+            if access_token:
+                broker_details.request_token = request_token
+                broker_details.access_token = access_token
+                broker_details.access_token_expiry = now() + timedelta(days=1) 
+                broker_details.save()
+                return JsonResponse({"message": "success", "access_token": access_token})
+            else:
+                return JsonResponse({"message": "Failed"}, status=400)
         except Exception as e:
-            return JsonResponse({"error": str(e)}, status=500)
-    
+            return JsonResponse({"message":"Failed","error": str(e)}, status=500)
     def handle_alice_blue(self, request_token, broker_details):
         try: 
             access_token = "aliceblue_access_token_placeholder" 
-            
-            # Save access token and other details
-            broker_details.request_token = request_token
-            broker_details.access_token = access_token
-            broker_details.access_token_expiry = now() + timedelta(days=1)  # Assuming 1-day validity
-            broker_details.save()
-            
-            return JsonResponse({"message": "Alice Blue callback processed successfully", "access_token": access_token})
+            if access_token:
+                # Save access token and other details
+                broker_details.request_token = request_token
+                broker_details.access_token = access_token
+                broker_details.access_token_expiry = now() + timedelta(days=1)  # Assuming 1-day validity
+                broker_details.save()
+                
+                return JsonResponse({"message": "success", "access_token": access_token})
+            else:
+                return JsonResponse({"message": "Failed"}, status=400)
+        
         except Exception as e:
-            return JsonResponse({"error": str(e)}, status=500)
+            return JsonResponse({"message":"Failed","error": str(e)}, status=500)
 
     def handle_upstox(self, request_token, broker_details):
         try:
@@ -3640,10 +3646,10 @@ class BrokerCallbackView(APIView):
                 logger.info(f"Upstox callback processed successfully")
                 return JsonResponse({"message": "success", "access_token": access_token})
             else:
-                return JsonResponse({"error": "Failed to get access token from Upstox"}, status=400)
+                return JsonResponse({"message": "Failed"}, status=400)
         
         except Exception as e:
-            return JsonResponse({"error": str(e)}, status=500)
+            return JsonResponse({"message":"Failed","error": str(e)}, status=500)
 
 #Search api for client trade
 
