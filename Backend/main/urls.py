@@ -145,7 +145,7 @@ urlpatterns = [
     path('delete-company-profile/<int:pk>/', CompanyProfileDetailView.as_view(), name='delete-company_profile_detail'),
 
     path('create-company-smtp/', CompanySmtpDetailView.as_view(), name='company-smtp-list'),  # GET & POST
-    path('get-company-smtpget-company-smtp/<int:pk>/', CompanySmtpDetailView.as_view(), name='get-company-smtp-detail'),  
+    path('get-company-smtp/<int:pk>/', CompanySmtpDetailView.as_view(), name='get-company-smtp-detail'),  
     path('update-company-smtp/<int:pk>/', CompanySmtpDetailView.as_view(), name='put-company-smtp-detail'),  
     path('delete-company-smtp/<int:pk>/', CompanySmtpDetailView.as_view(), name='update-company-smtp-detail'),
     # path('callback/', views.oauth_callback, name='oauth_callback'),
