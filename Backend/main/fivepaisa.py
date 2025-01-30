@@ -16,8 +16,8 @@ PLACE_ORDER_URL = "https://Openapi.5paisa.com/VendorsAPI/Service1.svc/V1/PlaceOr
 """
 The access token  generated after successful login request remains valid thought a day from 
 the time of its generation. Token expires every day at 11:59 PM.
-
 """
+
 ACCESS_TOKEN_URL = "https://Openapi.5paisa.com/VendorsAPI/Service1.svc/GetAccessToken"
 AUTH_LOGIN_URL="https://dev-openapi.5paisa.com/WebVendorLogin/VLogin/Index"
 # Replace with your 5Paisa credentials
@@ -28,15 +28,17 @@ STATE = "5paisa"
 VENDOR_KEY = "CNh6IRx0kF8c1MSyNBPaOhcaaVmiitbm"  # Your API Key (App Key)
 USER_ID = "87CUsmjf7dP"  # Your User ID
 ENCRYPTION_KEY = "UFDlfZjoOsj07XipwGuFUDPAGeER61Q7"  # Your Encryption Key
-    
 def initiate_oauth_login(request):
+    logger.info(f"Vendor Key: {VENDOR_KEY}")
     
-    OAUTH_URL = f"{AUTH_LOGIN_URL}?VendorKey={VENDOR_KEY}&ResponseURL={REDIRECT_URL}&State={STATE}"
+    state = "5paisa"
+    oauth_url = (
+        f"https://dev-openapi.5paisa.com/WebVendorLogin/VLogin/Index?"
+        f"VendorKey={VENDOR_KEY}&ResponseURL={REDIRECT_URL}&State={state}"
+    )
 
-    """
-    Redirects the user to the 5Paisa OAuth login page.
-    """
-    return HttpResponseRedirect(OAUTH_URL)
+    # Redirect the user to the OAuth login page
+    return HttpResponseRedirect(oauth_url)
 
 def oauth_callback(request):
     """
