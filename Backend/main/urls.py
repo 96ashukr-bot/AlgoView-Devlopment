@@ -6,6 +6,7 @@ from rest_framework_simplejwt.views import (
 )
 from main.Alice_Blue_Api import SymbolExpirDateListView
 from main.angleapi import SymbolExpiryDateListView
+from main.companyprofile import *
 from main.permissions import RolePermissionListView, UpdateRolePermissionsView
 from main.upstock import *
 from main.fivepaisa import *
@@ -138,6 +139,15 @@ urlpatterns = [
    
     path("auth-callback/", BrokerCallbackView.as_view(), name="broker_callback"),
     
+    path('create-company-profile/', CompanyProfileDetailView.as_view(), name='company_profile_list'),
+    path('get-company-profile/<int:pk>/', CompanyProfileDetailView.as_view(), name='get-company_profile_detail'),
+    path('update-company-profile/<int:pk>/', CompanyProfileDetailView.as_view(), name='put-company_profile_detail'),
+    path('delete-company-profile/<int:pk>/', CompanyProfileDetailView.as_view(), name='delete-company_profile_detail'),
+
+    path('create-company-smtp/', CompanySmtpDetailView.as_view(), name='company-smtp-list'),  # GET & POST
+    path('get-company-smtpget-company-smtp/<int:pk>/', CompanySmtpDetailView.as_view(), name='get-company-smtp-detail'),  
+    path('update-company-smtp/<int:pk>/', CompanySmtpDetailView.as_view(), name='put-company-smtp-detail'),  
+    path('delete-company-smtp/<int:pk>/', CompanySmtpDetailView.as_view(), name='update-company-smtp-detail'),
     # path('callback/', views.oauth_callback, name='oauth_callback'),
     # path('login-5paisa/', views.login_redirect, name='login_redirect'),
     path("login-5paisa/",initiate_oauth_login, name="initiate_oauth"),

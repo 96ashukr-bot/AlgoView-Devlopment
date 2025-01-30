@@ -1256,3 +1256,63 @@ class TradeOrderHistoryFilterSerializer(serializers.ModelSerializer):
                 'broker', 'order_status', 'strategy', 'Entry_type', 'Entry_Price', 
                 'Exit_Price','Exit_type','EntryQty','ExitQty','trade_order_status',
                 'SignalEntry_time', 'SignalExit_time', 'Exchange', 'Segment','webhook_signal']
+        
+import re
+class CompanyProfileDetailsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CompanyProfileDetails
+        fields = '__all__'  # Includes all model fields
+class CompanyProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CompanyProfileDetails
+        fields = '__all__'  # Includes all model fields
+
+    def validate_company_email(self, value):
+        """Ensure email format is valid."""
+        email_regex = r'^[\w\.-]+@[\w\.-]+\.\w+$'
+        if not re.match(email_regex, value):
+            raise serializers.ValidationError("Invalid email format.")
+        return value
+
+    def validate_company_support_email(self, value):
+        """Ensure support email format is valid."""
+        email_regex = r'^[\w\.-]+@[\w\.-]+\.\w+$'
+        if value and not re.match(email_regex, value):
+            raise serializers.ValidationError("Invalid support email format.")
+        return value
+
+    def validate_company_phone_number(self, value):
+        """Ensure phone number is exactly 10 digits and numeric."""
+        if value is None:
+            return value  # Allow null values
+        
+        value_str = str(value)
+        if not value_str.isdigit():
+            raise serializers.ValidationError("Phone number must contain only digits.")
+        if len(value_str) != 10:
+            raise serializers.ValidationError("Phone number must be exactly 10 digits.")
+        return value
+
+
+class CompanySmtpDetailsSerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model = CompanySmtpDetails
+        fields = '__all__'
+
+    def validate_email_host_user(self, value):
+        """Ensure email_host_user is unique."""
+        if CompanySmtpDetails.objects.filter(email_host_user=value).exists():
+            raise serializers.ValidationError("Email host user already exists.")
+        return value
+    
+    def validate_default_from_email(self, value):
+        """Ensure default_from_email is unique."""
+        if CompanySmtpDetails.objects.filter(default_from_email=value).exists():
+            raise serializers.ValidationError("Default from email already exists.")
+        return value
+class CompanySmtpSerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model = CompanySmtpDetails
+        fields = '__all__'

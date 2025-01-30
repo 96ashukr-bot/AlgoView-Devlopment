@@ -490,3 +490,25 @@ class Tradeorderhistory(models.Model):
     trade_order_status = models.CharField(max_length=15, null=True, blank=True)
     def __str__(self):
         return f"Order ID: {self.order_id}, Status: {self.order_status}"
+
+class CompanyProfileDetails(models.Model):
+    company_name = models.CharField(max_length=255, blank=True, null=True)
+    company_email = models.EmailField(unique=True, blank=True, null=True)
+    company_support_email = models.EmailField(unique=True, blank=True, null=True)
+    company_phone_number = models.BigIntegerField(unique=True, blank=True, null=True)  # Updated field
+    company_logo = models.ImageField(upload_to='company_logos/', blank=True, null=True)
+
+    def __str__(self):
+        return self.company_name if self.company_name else "Unnamed Company"
+
+    
+class CompanySmtpDetails(models.Model):
+    email_host = models.CharField(max_length=255, blank=True, null=True)
+    email_port = models.PositiveIntegerField(blank=True, null=True)
+    email_use_tls = models.BooleanField(default=True)
+    email_host_user = models.EmailField(blank=True, null=True)
+    email_host_password = models.CharField(max_length=255, blank=True, null=True)
+    default_from_email = models.EmailField(blank=True, null=True)
+
+    def __str__(self):
+        return self.email_host if self.email_host else "SMTP Configuration"
