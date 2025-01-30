@@ -3453,7 +3453,7 @@ class BrokerLoginRedirectView(APIView):
             # Retrieve broker details for the logged-in user
             broker_details = ClientBrokerdetails.objects.get(client=user)
             broker_name = broker_details.broker_name.broker_name.lower()
-            print("broker_name>>>",broker_name)
+            # print("broker_name>>>",broker_name)
             # broker_name=request.GET.get('state')
             if broker_name == "zerodha":
                 # request.GET.get('request_token')
