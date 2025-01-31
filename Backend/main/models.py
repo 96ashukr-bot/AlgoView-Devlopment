@@ -490,19 +490,20 @@ class Tradeorderhistory(models.Model):
     trade_order_status = models.CharField(max_length=15, null=True, blank=True)
     def __str__(self):
         return f"Order ID: {self.order_id}, Status: {self.order_status}"
-
 class CompanyProfileDetails(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="company_profile",null=True, blank=True)
     company_name = models.CharField(max_length=255, blank=True, null=True)
     company_email = models.EmailField(unique=True, blank=True, null=True)
     company_support_email = models.EmailField(unique=True, blank=True, null=True)
-    company_phone_number = models.BigIntegerField(unique=True, blank=True, null=True)  # Updated field
+    company_phone_number = models.BigIntegerField(unique=True, blank=True, null=True)  
     company_logo = models.ImageField(upload_to='company_logos/', blank=True, null=True)
 
     def __str__(self):
         return self.company_name if self.company_name else "Unnamed Company"
 
-    
+
 class CompanySmtpDetails(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="company_smtp",null=True, blank=True)  # Changed related_name
     email_host = models.CharField(max_length=255, blank=True, null=True)
     email_port = models.PositiveIntegerField(blank=True, null=True)
     email_use_tls = models.BooleanField(default=True)
