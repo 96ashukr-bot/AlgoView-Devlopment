@@ -3,9 +3,8 @@ from kiteconnect import KiteConnect
 from main.Alice_Blue_Api import save_trade_order_history
 from main.models import ClientBrokerdetails, CompanySmtpDetails
 import logging
-default_from_email="exampl@gmail.com"
-# smtp_details=CompanySmtpDetails.objects.first()
-# default_from_email=smtp_details.default_from_email if smtp_details else None
+smtp_details=CompanySmtpDetails.objects.first()
+default_from_email=smtp_details.default_from_email if smtp_details else None
 logger = logging.getLogger('main')
 
 def place_zerodha_orders(access_token, Api_key, trade_symbol, transaction_type, symbol, quantity,

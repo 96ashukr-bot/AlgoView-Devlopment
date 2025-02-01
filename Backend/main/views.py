@@ -61,24 +61,17 @@ import logging
 logger = logging.getLogger('main')
 UserModel = get_user_model()
 
-# company_profile = CompanyProfileDetails.objects.first()
+company_profile = CompanyProfileDetails.objects.first()
 
-# support_email = company_profile.company_support_email if company_profile else "support@example.com"
-# company_website = company_profile.company_website if company_profile else "https://example.com"
-# logo_url = company_profile.company_logo if company_profile else "https://example.com/logo.png"
-# login_link = company_profile.login_link if company_profile else "https://www.admin.algoview.in/login"
-# help_center_link = company_profile.help_center_link if company_profile else "https://www.admin.algoview.in/login"  
-# contact_number = company_profile.company_phone_number if company_profile else None
-support_email=settings.DEFAULT_FROM_EMAIL
-contact_number=settings.CONTACT_NUM
-login_link=settings.LOGIN_LINK
-help_center_link=settings.HELP_CENTER_LINK
-company_website=settings.COMPANY_WEBSITE  
-logo_url='company_logos/download.png'
+support_email = company_profile.company_support_email if company_profile else "support@example.com"
+company_website = company_profile.company_website if company_profile else "https://example.com"
+logo_url = company_profile.company_logo if company_profile else "https://example.com/logo.png"
+login_link = company_profile.login_link if company_profile else "https://www.admin.algoview.in/login"
+help_center_link = company_profile.help_center_link if company_profile else "https://www.admin.algoview.in/login"  
+contact_number = company_profile.company_phone_number if company_profile else None
 
-default_from_email="support@example.com"
-# smtp_details=CompanySmtpDetails.objects.first()
-# default_from_email=smtp_details.default_from_email if smtp_details else None  
+smtp_details=CompanySmtpDetails.objects.first()
+default_from_email=smtp_details.default_from_email if smtp_details else None  
 # get Role Views
 class RoleListCreateView(generics.ListCreateAPIView):
     pagination_class = None

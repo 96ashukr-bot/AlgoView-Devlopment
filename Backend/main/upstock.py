@@ -15,9 +15,8 @@ from django.http import JsonResponse
 from datetime import datetime
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-default_from_email="exampl@gmail.com"
-# smtp_details=CompanySmtpDetails.objects.first()
-# default_from_email=smtp_details.default_from_email if smtp_details else None
+smtp_details=CompanySmtpDetails.objects.first()
+default_from_email=smtp_details.default_from_email if smtp_details else None
 # # Constants (You can keep these in settings.py for better management)
 # CLIENT_ID = 'your_client_id'  # Replace with your Upstox Client ID
 # CLIENT_SECRET = 'your_api_secret'  # Replace with your Upstox API Secret

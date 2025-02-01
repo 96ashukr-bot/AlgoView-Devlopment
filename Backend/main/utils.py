@@ -4,7 +4,7 @@ from main.models import CompanySmtpDetails
 def get_smtp_connection():
     """Fetch SMTP details from the database and return an SMTP connection."""
     smtp_details = CompanySmtpDetails.objects.first()
-    # smtp_details=""
+
     if not smtp_details:
         print("SMTP details not found!")
         return None

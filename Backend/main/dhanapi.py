@@ -9,9 +9,8 @@ from main.Alice_Blue_Api import save_trade_order_history
 from main.models import CompanySmtpDetails
 from main.tasks import send_trade_email_async
 logger = logging.getLogger('main')
-default_from_email="exampl@gmail.com"
-# smtp_details=CompanySmtpDetails.objects.first()
-# default_from_email=smtp_details.default_from_email if smtp_details else None
+smtp_details=CompanySmtpDetails.objects.first()
+default_from_email=smtp_details.default_from_email if smtp_details else None
 def place_dhan_orders(access_token, client_id, trade_symbol, transaction_type, symbol, quantity,
     strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type, Entry_price, Exit_price, 
     EntryQty, ExitQty, webhook_signal, Exchange, Segment,Index_Symbol, triggerPrice, trade_order_status):

@@ -18,27 +18,22 @@ from main.models import *
 from main.utils import get_smtp_connection
 from django.templatetags.static import static
     # Get company profile for support email and website
-# company_profile = CompanyProfileDetails.objects.first()
-# support_email = company_profile.company_support_email if company_profile else "support@example.com"
-# company_website = company_profile.company_website if company_profile else "https://example.com"
-# logo_url = company_profile.company_logo if company_profile else "https://example.com/logo.png"
-# login_link = company_profile.login_link if company_profile else "https://www.admin.algoview.in/login"
-# help_center_link = company_profile.help_center_link if company_profile else "https://www.admin.algoview.in/login"  
-# contact_number = company_profile.company_phone_number if company_profile else None
-support_email=settings.DEFAULT_FROM_EMAIL
-contact_number=settings.CONTACT_NUM
-login_link=settings.LOGIN_LINK
-help_center_link=settings.HELP_CENTER_LINK
-company_website=settings.COMPANY_WEBSITE  
-logo_url='company_logos/download.png'
-# if company_profile and company_profile.company_logo:
-#     logo_url = settings.MEDIA_URL + str(company_profile.company_logo)  # Ensure full URL
-# else:
-#     logo_url = static('company_logos/download.png')  # Fallback to a default logo
+company_profile = CompanyProfileDetails.objects.first()
+support_email = company_profile.company_support_email if company_profile else "support@example.com"
+company_website = company_profile.company_website if company_profile else "https://example.com"
+logo_url = company_profile.company_logo if company_profile else "https://example.com/logo.png"
+login_link = company_profile.login_link if company_profile else "https://www.admin.algoview.in/login"
+help_center_link = company_profile.help_center_link if company_profile else "https://www.admin.algoview.in/login"  
+contact_number = company_profile.company_phone_number if company_profile else None
+company_name = company_profile.company_name if company_profile else "AlgoView"
+if company_profile and company_profile.company_logo:
+    logo_url = settings.MEDIA_URL + str(company_profile.company_logo)  # Ensure full URL
+else:
+    logo_url = static('company_logos/download.png')  # Fallback to a default logo
 
-# smtp_details=CompanySmtpDetails.objects.first()
-# default_from_email=smtp_details.default_from_email if smtp_details else   "no-reply@example.com"
-default_from_email="exampl@gmail.com"
+smtp_details=CompanySmtpDetails.objects.first()
+default_from_email=smtp_details.default_from_email if smtp_details else   "no-reply@example.com"
+
 #client inactive and license expir ations
 @shared_task
 def send_client_acc_email_async(subject,messages,username,useremail):
