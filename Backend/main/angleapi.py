@@ -17,8 +17,9 @@ from main.Alice_Blue_Api import save_trade_order_history
 from main.dematemodule import get_lot_size
 from main.models import CompanySmtpDetails
 from main.tasks import send_trade_email_async
-smtp_details=CompanySmtpDetails.objects.first()
-default_from_email=smtp_details.default_from_email if smtp_details else None
+# smtp_details=CompanySmtpDetails.objects.first()
+# default_from_email=smtp_details.default_from_email if smtp_details else None
+default_from_email="exampl@gmail.com"
 logger = logging.getLogger('main')
 # API_KEY = 'FNqcDPCk'#'Xp6znI3s'
 # USERNAME = 'A1420760'

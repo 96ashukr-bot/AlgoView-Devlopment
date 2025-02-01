@@ -75,8 +75,10 @@ login_link=settings.LOGIN_LINK
 help_center_link=settings.HELP_CENTER_LINK
 company_website=settings.COMPANY_WEBSITE  
 logo_url='company_logos/download.png'
-smtp_details=CompanySmtpDetails.objects.first()
-default_from_email=smtp_details.default_from_email if smtp_details else None  
+
+default_from_email="support@example.com"
+# smtp_details=CompanySmtpDetails.objects.first()
+# default_from_email=smtp_details.default_from_email if smtp_details else None  
 # get Role Views
 class RoleListCreateView(generics.ListCreateAPIView):
     pagination_class = None

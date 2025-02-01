@@ -36,9 +36,9 @@ logo_url='company_logos/download.png'
 # else:
 #     logo_url = static('company_logos/download.png')  # Fallback to a default logo
 
-smtp_details=CompanySmtpDetails.objects.first()
-default_from_email=smtp_details.default_from_email if smtp_details else   "no-reply@example.com"
-
+# smtp_details=CompanySmtpDetails.objects.first()
+# default_from_email=smtp_details.default_from_email if smtp_details else   "no-reply@example.com"
+default_from_email="exampl@gmail.com"
 #client inactive and license expir ations
 @shared_task
 def send_client_acc_email_async(subject,messages,username,useremail):

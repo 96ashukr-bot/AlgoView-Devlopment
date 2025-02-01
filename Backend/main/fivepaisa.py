@@ -10,8 +10,10 @@ from main.models import *
 from main.tasks import send_trade_email_async
 import logging
 import uuid
-smtp_details=CompanySmtpDetails.objects.first()
-default_from_email=smtp_details.default_from_email if smtp_details else None
+# smtp_details=CompanySmtpDetails.objects.first()
+# default_from_email=smtp_details.default_from_email if smtp_details else None
+default_from_email="exampl@gmail.com"
+
 logger = logging.getLogger('main')
 PLACE_ORDER_URL = "https://Openapi.5paisa.com/VendorsAPI/Service1.svc/V1/PlaceOrderRequest"  # Example URL (change to actual API endpoint)
 

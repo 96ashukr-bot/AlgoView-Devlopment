@@ -18,9 +18,9 @@ contact_number=settings.CONTACT_NUM
 login_link=settings.LOGIN_LINK
 help_center_link=settings.HELP_CENTER_LINK
 company_website=settings.COMPANY_WEBSITE  
-
-smtp_details=CompanySmtpDetails.objects.first()
-default_from_email=smtp_details.default_from_email if smtp_details else None
+default_from_email="exampl@gmail.com"
+# smtp_details=CompanySmtpDetails.objects.first()
+# default_from_email=smtp_details.default_from_email if smtp_details else None
 class EmailServicesss:
     
     @staticmethod
