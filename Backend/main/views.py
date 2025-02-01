@@ -23,7 +23,7 @@ from main.dematemodule import trading_Symbol_sum
 from main.dhanapi import place_dhan_orders
 from main.fivepaisa import fetch_access_token_5paisa, place_5paisa_order
 from main.permissions import  IsAdminRole
-from main.tasks import send_kyc_email_async, send_trade_email_async
+from main.tasks import resend_otp_email_async, send_kyc_email_async, send_trade_email_async
 from rest_framework import status
 # from django.utils.timezone import make_aware
 # from django.utils.timezone import localtime
@@ -60,13 +60,18 @@ ALICE_API_KEY=config('ALICE_API_KEY')
 import logging
 logger = logging.getLogger('main')
 UserModel = get_user_model()
-#email parmas
 
-support_email=settings.DEFAULT_FROM_EMAIL
-contact_number=settings.CONTACT_NUM
-login_link=settings.LOGIN_LINK
-help_center_link=settings.HELP_CENTER_LINK
-company_website=settings.COMPANY_WEBSITE    
+company_profile = CompanyProfileDetails.objects.first()
+
+support_email = company_profile.company_support_email if company_profile else "support@example.com"
+company_website = company_profile.company_website if company_profile else "https://example.com"
+logo_url = company_profile.company_logo if company_profile else "https://example.com/logo.png"
+login_link = company_profile.login_link if company_profile else "https://www.admin.algoview.in/login"
+help_center_link = company_profile.help_center_link if company_profile else "https://www.admin.algoview.in/login"  
+contact_number = company_profile.company_phone_number if company_profile else None
+
+smtp_details=CompanySmtpDetails.objects.first()
+default_from_email=smtp_details.default_from_email if smtp_details else None  
 # get Role Views
 class RoleListCreateView(generics.ListCreateAPIView):
     pagination_class = None
@@ -224,8 +229,8 @@ class ResendOTPView(APIView):
             otp = OTP.objects.create(user=user)
             otp.generate_otp()
             # Send OTP via email
-            self.send_email_otp(user.email, otp.otp_code)
-
+            # self.send_email_otp(user.email, otp.otp_code)
+            resend_otp_email_async.delay(user.email, otp.otp_code)
             return Response(
                 {"success": "A new OTP has been sent to your email."},
                 status=status.HTTP_200_OK
@@ -236,7 +241,7 @@ class ResendOTPView(APIView):
     def send_email_otp(self, email, otp_code):
         subject = 'Your OTP Code'
         message = f'Your OTP code is {otp_code}.'
-        from_email = settings.DEFAULT_FROM_EMAIL
+        from_email = default_from_email
         send_mail(subject, message, from_email, [email]) 
 #change password
 class ChangePasswordView(generics.GenericAPIView):
@@ -312,7 +317,7 @@ class PasswordResetRequestView(generics.GenericAPIView):
                 f"If you did not request this, please ignore this email.\n\n"
                 f"Best regards,\nYour Team"
             )
-            from_email = settings.DEFAULT_FROM_EMAIL
+            from_email = default_from_email
             send_mail(subject, message, from_email, [email])
             return Response({'detail': 'Password reset link sent.'}, status=status.HTTP_200_OK)
         except UserModel.DoesNotExist:
@@ -579,7 +584,7 @@ class KYCVerificationView(APIView):
         if not action:
             return Response({"detail": "Action is required (approve/reject)."}, status=status.HTTP_400_BAD_REQUEST)
         user_email = kyc.user.email 
-        from_email = settings.DEFAULT_FROM_EMAIL,
+        from_email = default_from_email,
         reason = request.data.get('reason', 'No reason provided')
         if action.lower() == 'approve':
             kyc.status = 'approved'
@@ -3710,6 +3715,84 @@ class TradeOrderHistoryFilterView(APIView):
             # Serialization
             serializer = TradeOrderHistoryFilterSerializer(result_page, many=True)
             return paginator.get_paginated_response(serializer.data)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+# #sub admin license details api
+import razorpay
+
+razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_SECRET))
+
+class CreateOrderView(APIView):
+
+    def post(self, request):
+        try:
+            user = request.user
+            license_qty = request.data.get("license_qty")
+            license_price = request.data.get("license_price")
+            upi_id = request.data.get("upi_id")
+
+            if not license_qty or not license_price:
+                return Response({"error": "License quantity and price are required"}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Validate UPI ID before proceeding
+        
+            total_amount = int(license_qty) * int(license_price) * 100  # Convert to paise
+
+            # Create Razorpay order
+            order_data = {
+                "amount": total_amount,
+                "currency": "INR",
+                "payment_capture": 1,
+                "method": "upi"  # Set payment method to UPI
+            }
+            razorpay_order = razorpay_client.order.create(order_data)
+
+            return Response({
+                "status": "success",
+                "message": "Order created successfully",
+                "razorpay_order_id": razorpay_order["id"],
+                "total_amount": total_amount // 100,
+                "resp":razorpay_order
+            }, status=status.HTTP_201_CREATED)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class PaymentCallbackView(APIView):
+    """ API to handle Razorpay payment callback """
+
+    def post(self, request):
+        try:
+            razorpay_order_id = request.data.get("razorpay_order_id")
+            razorpay_payment_id = request.data.get("razorpay_payment_id")
+            razorpay_signature = request.data.get("razorpay_signature")
+
+            payment = get_object_or_404(Payment, razorpay_order_id=razorpay_order_id)
+
+            # Verify the payment signature
+            params_dict = {
+                'razorpay_order_id': razorpay_order_id,
+                'razorpay_payment_id': razorpay_payment_id,
+                'razorpay_signature': razorpay_signature
+            }
+
+            try:
+                razorpay_client.utility.verify_payment_signature(params_dict)
+                payment.payment_status = True  # Mark payment as successful
+                payment.razorpay_payment_id = razorpay_payment_id
+                payment.razorpay_signature = razorpay_signature
+                payment.save()
+
+                # Activate the license
+                payment.license.is_active = True
+                payment.license.save()
+
+                return Response({"message": "Payment successful"}, status=status.HTTP_200_OK)
+
+            except razorpay.errors.SignatureVerificationError:
+                return Response({"error": "Payment verification failed"}, status=status.HTTP_400_BAD_REQUEST)
 
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

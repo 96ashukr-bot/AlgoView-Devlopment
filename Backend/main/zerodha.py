@@ -1,9 +1,10 @@
 from django.http import JsonResponse
 from kiteconnect import KiteConnect
 from main.Alice_Blue_Api import save_trade_order_history
-from main.models import ClientBrokerdetails
+from main.models import ClientBrokerdetails, CompanySmtpDetails
 import logging
-
+smtp_details=CompanySmtpDetails.objects.first()
+default_from_email=smtp_details.default_from_email if smtp_details else None
 logger = logging.getLogger('main')
 
 def place_zerodha_orders(access_token, Api_key, trade_symbol, transaction_type, symbol, quantity,
@@ -122,6 +123,9 @@ def place_zerodha_orders(access_token, Api_key, trade_symbol, transaction_type, 
                 
                 return response
             elif status=="rejected":
+                 # from_email = default_from_email,
+            # send_trade_email_async.delay(user.email, from_email,user.firstName,status, message)
+           
                 message = latest_status.get('status_message', "order rejected")
                 response = {"data": {"status": status, "message": message}}
                 save_trade_order_history(trade_order_status, user, trade_symbol, order_id, status, res_data, message,

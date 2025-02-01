@@ -4,7 +4,7 @@ from django.conf import settings
 from django.shortcuts import redirect
 from django.http import JsonResponse
 from main.Alice_Blue_Api import save_trade_order_history
-from main.models import ClientBrokerdetails
+from main.models import ClientBrokerdetails, CompanySmtpDetails
 # from django.urls import reverse
 import logging
 logger = logging.getLogger('main')
@@ -15,7 +15,8 @@ from django.http import JsonResponse
 from datetime import datetime
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
+smtp_details=CompanySmtpDetails.objects.first()
+default_from_email=smtp_details.default_from_email if smtp_details else None
 # # Constants (You can keep these in settings.py for better management)
 # CLIENT_ID = 'your_client_id'  # Replace with your Upstox Client ID
 # CLIENT_SECRET = 'your_api_secret'  # Replace with your Upstox API Secret
@@ -205,7 +206,7 @@ def handle_successful_order(
                                      strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,
                                      webhook_signal , Exchange, Segment,Index_Symbol ,order_params,broker="upstox")
             response={"data": {"status": "completed","message": "Order placed and details saved successfully."}}
-            # from_email = settings.DEFAULT_FROM_EMAIL,
+            # from_email = default_from_email,
             # send_trade_email_async.delay(user.email, from_email,user.firstName,status, message)
             # save_webhook_signals_logs(order_params['transactiontype'], symbol, price, strategy, user, status=order_details['data'].get('status'),failure_reason="your order place succesfully", json=json)
             return response
@@ -216,7 +217,7 @@ def handle_successful_order(
             strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, 
             Segment,Index_Symbol ,order_params , broker="Upstox")
             logger.info(f"Order Rejected reason!!!::{rejection_message} Order ID: {order_id}")
-            # from_email = settings.DEFAULT_FROM_EMAIL,
+            # from_email = default_from_email,
             # Send rejection email
             # print("user.firstName>>>>>",user.firstName)
             # send_trade_email_async.delay(user.email, from_email,user.firstName,status, rejection_message)

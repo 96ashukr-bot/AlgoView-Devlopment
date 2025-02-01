@@ -14,11 +14,17 @@ from rest_framework.validators import UniqueValidator
 from main.email import EmailService
 from django.utils import timezone
 
-support_email=settings.DEFAULT_FROM_EMAIL
-contact_number=settings.CONTACT_NUM
-login_link=settings.LOGIN_LINK
-help_center_link=settings.HELP_CENTER_LINK
-company_website=settings.COMPANY_WEBSITE    
+company_profile = CompanyProfileDetails.objects.first()
+support_email = company_profile.company_support_email if company_profile else "support@example.com"
+company_website = company_profile.company_website if company_profile else "https://example.com"
+logo_url = company_profile.company_logo if company_profile else "https://example.com/logo.png"
+login_link = company_profile.login_link if company_profile else "https://www.admin.algoview.in/login"
+help_center_link = company_profile.help_center_link if company_profile else "https://www.admin.algoview.in/login"  
+contact_number = company_profile.company_phone_number if company_profile else None
+
+smtp_details=CompanySmtpDetails.objects.first()
+default_from_email=smtp_details.default_from_email if smtp_details else None
+  
 class RoleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Role
@@ -165,7 +171,7 @@ class CustomLoginSerializer_sync(serializers.Serializer):
             send_email_async.delay(
                 subject='Your OTP Code',
                 message=f'Your OTP code is {otp_instance.otp_code}.',
-                from_email=settings.DEFAULT_FROM_EMAIL,
+                from_email=default_from_email,
                 recipient_list=[user.email]
             )
 
@@ -193,7 +199,7 @@ class CustomLoginSerializer_sync(serializers.Serializer):
             send_email_async.delay(
                 subject='Your OTP Code',
                 message=f'Your OTP code is {otp_instance.otp_code}.',
-                from_email=settings.DEFAULT_FROM_EMAIL,
+                from_email=default_from_email,
                 recipient_list=[user.email]
             )
             return {
@@ -333,7 +339,7 @@ class CustomLoginSerializer000000(serializers.Serializer):
     # def send_email_otp(self, email, otp_code):
     #     subject = 'Your OTP Code'
     #     message = f'Your OTP code is {otp_code}.'
-    #     from_email = settings.DEFAULT_FROM_EMAIL
+    #     from_email = default_from_email
         # send_mail(subject, message, from_email, [email])
 
 
@@ -1315,4 +1321,14 @@ class CompanySmtpSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = CompanySmtpDetails
+        fields = '__all__'
+
+class AdminLicenseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AdminLicense
+        fields = '__all__'
+
+class PaymentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Payment
         fields = '__all__'

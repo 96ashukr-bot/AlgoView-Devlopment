@@ -130,3 +130,10 @@ class CompanyProfileDetailsAdmin(admin.ModelAdmin):
 class CompanySmtpDetailsAdmin(admin.ModelAdmin):
     list_display = ('email_host', 'email_port', 'email_use_tls', 'email_host_user')
     search_fields = ('email_host', 'email_host_user')    
+    
+@admin.register(AdminLicense)   
+class LiecensdetailsAdmin(admin.ModelAdmin):
+    list_display =('id','sub_admin')
+@admin.register(Payment)   
+class PaymentdetailsAdmin(admin.ModelAdmin):
+    list_display = ('id','sub_admin')    

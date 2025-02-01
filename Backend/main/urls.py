@@ -142,7 +142,11 @@ urlpatterns = [
     path('get-company-profile/', CompanyProfileDetailView.as_view(), name='get-company_profile_detail'),
     path('update-company-profile/', CompanyProfileUpdateView.as_view(), name='put-company_profile_detail'),
     path('get-company-smtp/', CompanySmtpDetailView.as_view(), name='get-company-smtp-detail'),  
-    path('update-company-smtp/', CompanySmtpUpdateView.as_view(), name='put-company-smtp-detail'),  
+    path('update-company-smtp/', CompanySmtpUpdateView.as_view(), name='put-company-smtp-detail'), 
+    
+    path("create-order/", CreateOrderView.as_view(), name="create-order"),
+    path("payment-callback/", PaymentCallbackView.as_view(), name="payment-callback"),
+
     # path('callback/', views.oauth_callback, name='oauth_callback'),
     # path('login-5paisa/', views.login_redirect, name='login_redirect'),
     path("login-5paisa/",initiate_oauth_login, name="initiate_oauth"),
