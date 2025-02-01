@@ -14,14 +14,18 @@ from rest_framework.validators import UniqueValidator
 from main.email import EmailService
 from django.utils import timezone
 
-company_profile = CompanyProfileDetails.objects.first()
-support_email = company_profile.company_support_email if company_profile else "support@example.com"
-company_website = company_profile.company_website if company_profile else "https://example.com"
-logo_url = company_profile.company_logo if company_profile else "https://example.com/logo.png"
-login_link = company_profile.login_link if company_profile else "https://www.admin.algoview.in/login"
-help_center_link = company_profile.help_center_link if company_profile else "https://www.admin.algoview.in/login"  
-contact_number = company_profile.company_phone_number if company_profile else None
-
+# company_profile = CompanyProfileDetails.objects.first()
+# support_email = company_profile.company_support_email if company_profile else "support@example.com"
+# company_website = company_profile.company_website if company_profile else "https://example.com"
+# logo_url = company_profile.company_logo if company_profile else "https://example.com/logo.png"
+# login_link = company_profile.login_link if company_profile else "https://www.admin.algoview.in/login"
+# help_center_link = company_profile.help_center_link if company_profile else "https://www.admin.algoview.in/login"  
+# contact_number = company_profile.company_phone_number if company_profile else None
+support_email=settings.DEFAULT_FROM_EMAIL
+contact_number=settings.CONTACT_NUM
+login_link=settings.LOGIN_LINK
+help_center_link=settings.HELP_CENTER_LINK
+company_website=settings.COMPANY_WEBSITE  
 smtp_details=CompanySmtpDetails.objects.first()
 default_from_email=smtp_details.default_from_email if smtp_details else None
   
