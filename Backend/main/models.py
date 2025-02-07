@@ -500,6 +500,7 @@ class CompanyProfileDetails(models.Model):
     login_link = models.URLField(blank=True, null=True)  # Assuming this is a URL
     help_center_link = models.URLField(blank=True, null=True)  # Assuming this is a URL
     company_website = models.URLField(blank=True, null=True)  # Assuming this is a URL
+    company_sender_name = models.CharField(max_length=255, blank=True, null=True)
 
     def __str__(self):
         return self.company_name if self.company_name else "Unnamed Company"
