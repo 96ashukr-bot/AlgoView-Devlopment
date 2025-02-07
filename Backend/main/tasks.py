@@ -43,7 +43,8 @@ def send_client_acc_email_async(subject,messages,username,useremail):
             'user_name': username,          
             'support_email': support_email, 
             'company_website':company_website , 
-            "messages":messages
+            "messages":messages,
+            "company_name":company_name,
         }
         html_message = render_to_string('login_account_email.html', context)
         # print("html_message",html_message)
@@ -68,6 +69,7 @@ def send_email_async(user_name, otp_code, email):
         'support_email': support_email,  
         'company_website':company_website, 
         'logo':logo_url,
+        'company_name':company_name,
     }
 
     html_message = render_to_string('login_email.html', context)
@@ -101,7 +103,8 @@ def send_email_pass_async(email, password, user_name, login_link, support_email,
             'support_email': support_email,
             'help_center': help_center_link,
             'company_website': company_website,
-            'contact_number': contact_number
+            'contact_number': contact_number,
+            "company_name":company_name,
         }
         html_message = render_to_string('welcome_email.html', context)
         # print("html msg:::::::",html_message)
@@ -136,7 +139,8 @@ def send_kyc_email_async(email, from_email, user_name, action, reason):
         'support_email': support_email,
         'help_center': help_center_link,
         'company_website': company_website,
-        'contact_number': contact_number
+        'contact_number': contact_number,
+        "company_name":company_name,
     }
     html_message = render_to_string('kyc_email.html', context)
   
@@ -164,7 +168,8 @@ def send_trade_email_async(email, from_email, user_name, status, reason):
         'support_email': support_email,
         'help_center': help_center_link,
         'company_website': company_website,
-        'contact_number': contact_number
+        'contact_number': contact_number,
+        "company_name":company_name,
     }
     html_message = render_to_string('trade.html', context)
   
@@ -186,6 +191,7 @@ def resend_otp_email_async(user_email, otp_code):
         'support_email': support_email,
         'company_website': company_website,
         'logo': logo_url,
+        "company_name":company_name,
     }
 
     # Render the HTML message from the template

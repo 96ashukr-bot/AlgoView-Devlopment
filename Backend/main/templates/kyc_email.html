@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KYC Status Update - AlgoView Technologies</title>
+    <title>KYC Status Update -  {{ company_name }}</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -74,7 +74,7 @@
                     
                     {% if action == 'approve' %}
                         <p class="status-message approved">Congratulations! Your KYC request has been approved.</p>
-                        <p>Welcome to <strong>AlgoView Technologies</strong>! Your KYC is now verified, and you can fully access all our services.</p>
+                        <p>Welcome to <strong> {{ company_name }}</strong>! Your KYC is now verified, and you can fully access all our services.</p>
                     {% elif action == 'reject' %}
                         <p class="status-message rejected">We regret to inform you that your KYC request has been rejected.</p>
                         <p>Reason for rejection: {{ reason }}</p>
@@ -85,9 +85,9 @@
                         <p>Need help? Contact us at <a href="mailto:{{ support_email }}">{{ support_email }}</a> or visit our website at <a href="{{ company_website }}">{{ company_website }}</a>.</p>
                     </div>
 
-                    <p class="desigborder">Thank you for choosing AlgoView Technologies!</p>
+                    <p class="desigborder">Thank you for choosing  {{ company_name }}!</p>
                     
-                    <p>Best regards,<br>The AlgoView Technologies Team</p>
+                    <p>Best regards,<br>The {{ company_name }} Team</p>
                 </div>
             </div>
         </div>  
