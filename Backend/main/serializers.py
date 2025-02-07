@@ -14,11 +14,17 @@ from rest_framework.validators import UniqueValidator
 from main.email import EmailService
 from django.utils import timezone
 
-support_email=settings.DEFAULT_FROM_EMAIL
-contact_number=settings.CONTACT_NUM
-login_link=settings.LOGIN_LINK
-help_center_link=settings.HELP_CENTER_LINK
-company_website=settings.COMPANY_WEBSITE    
+company_profile = CompanyProfileDetails.objects.first()
+support_email = company_profile.company_support_email if company_profile else "support@example.com"
+company_website = company_profile.company_website if company_profile else "https://example.com"
+logo_url = company_profile.company_logo if company_profile else "https://example.com/logo.png"
+login_link = company_profile.login_link if company_profile else "https://www.admin.algoview.in/login"
+help_center_link = company_profile.help_center_link if company_profile else "https://www.admin.algoview.in/login"  
+contact_number = company_profile.company_phone_number if company_profile else None
+
+smtp_details=CompanySmtpDetails.objects.first()
+default_from_email=smtp_details.default_from_email if smtp_details else None
+  
 class RoleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Role
@@ -165,7 +171,7 @@ class CustomLoginSerializer_sync(serializers.Serializer):
             send_email_async.delay(
                 subject='Your OTP Code',
                 message=f'Your OTP code is {otp_instance.otp_code}.',
-                from_email=settings.DEFAULT_FROM_EMAIL,
+                from_email=default_from_email,
                 recipient_list=[user.email]
             )
 
@@ -193,7 +199,7 @@ class CustomLoginSerializer_sync(serializers.Serializer):
             send_email_async.delay(
                 subject='Your OTP Code',
                 message=f'Your OTP code is {otp_instance.otp_code}.',
-                from_email=settings.DEFAULT_FROM_EMAIL,
+                from_email=default_from_email,
                 recipient_list=[user.email]
             )
             return {
@@ -333,7 +339,7 @@ class CustomLoginSerializer000000(serializers.Serializer):
     # def send_email_otp(self, email, otp_code):
     #     subject = 'Your OTP Code'
     #     message = f'Your OTP code is {otp_code}.'
-    #     from_email = settings.DEFAULT_FROM_EMAIL
+    #     from_email = default_from_email
         # send_mail(subject, message, from_email, [email])
 
 
@@ -1256,3 +1262,73 @@ class TradeOrderHistoryFilterSerializer(serializers.ModelSerializer):
                 'broker', 'order_status', 'strategy', 'Entry_type', 'Entry_Price', 
                 'Exit_Price','Exit_type','EntryQty','ExitQty','trade_order_status',
                 'SignalEntry_time', 'SignalExit_time', 'Exchange', 'Segment','webhook_signal']
+        
+import re
+class CompanyProfileDetailsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CompanyProfileDetails
+        fields = '__all__'  # Includes all model fields
+class CompanyProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CompanyProfileDetails
+        fields = '__all__'  # Includes all model fields
+
+    def validate_company_email(self, value):
+        """Ensure email format is valid."""
+        email_regex = r'^[\w\.-]+@[\w\.-]+\.\w+$'
+        if not re.match(email_regex, value):
+            raise serializers.ValidationError("Invalid email format.")
+        return value
+
+    def validate_company_support_email(self, value):
+        """Ensure support email format is valid."""
+        email_regex = r'^[\w\.-]+@[\w\.-]+\.\w+$'
+        if value and not re.match(email_regex, value):
+            raise serializers.ValidationError("Invalid support email format.")
+        return value
+
+    def validate_company_phone_number(self, value):
+        """Ensure phone number is exactly 10 digits and numeric."""
+        if value is None:
+            return value  # Allow null values
+        
+        value_str = str(value)
+        if not value_str.isdigit():
+            raise serializers.ValidationError("Phone number must contain only digits.")
+        if len(value_str) != 10:
+            raise serializers.ValidationError("Phone number must be exactly 10 digits.")
+        return value
+
+
+class CompanySmtpDetailsSerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model = CompanySmtpDetails
+        fields = '__all__'
+
+    def validate_email_host_user(self, value):
+        """Ensure email_host_user is unique."""
+        if CompanySmtpDetails.objects.filter(email_host_user=value).exists():
+            raise serializers.ValidationError("Email host user already exists.")
+        return value
+    
+    def validate_default_from_email(self, value):
+        """Ensure default_from_email is unique."""
+        if CompanySmtpDetails.objects.filter(default_from_email=value).exists():
+            raise serializers.ValidationError("Default from email already exists.")
+        return value
+class CompanySmtpSerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model = CompanySmtpDetails
+        fields = '__all__'
+
+class AdminLicenseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AdminLicense
+        fields = '__all__'
+
+class PaymentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Payment
+        fields = '__all__'

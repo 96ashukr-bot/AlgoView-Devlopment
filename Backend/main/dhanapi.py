@@ -6,9 +6,11 @@ from django.conf import settings
 import pandas as pd
 
 from main.Alice_Blue_Api import save_trade_order_history
+from main.models import CompanySmtpDetails
 from main.tasks import send_trade_email_async
 logger = logging.getLogger('main')
-
+smtp_details=CompanySmtpDetails.objects.first()
+default_from_email=smtp_details.default_from_email if smtp_details else None
 def place_dhan_orders(access_token, client_id, trade_symbol, transaction_type, symbol, quantity,
     strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type, Entry_price, Exit_price, 
     EntryQty, ExitQty, webhook_signal, Exchange, Segment,Index_Symbol, triggerPrice, trade_order_status):
@@ -138,7 +140,7 @@ def place_dhan_orders(access_token, client_id, trade_symbol, transaction_type, s
                 return response
             elif status == "rejected":
                 message = res_data.get('omsErrorDescription', 'not any reason get').lower()
-                send_trade_email_async.delay(user.email, settings.DEFAULT_FROM_EMAIL, user.firstName, status, message)
+                send_trade_email_async.delay(user.email, default_from_email, user.firstName, status, message)
                 response = {"data": {"status": status}}
                 logger.info(f"Order is rejected for user {user}. Order ID: {order_id}")
                 
@@ -151,7 +153,7 @@ def place_dhan_orders(access_token, client_id, trade_symbol, transaction_type, s
                 return response
             elif status == "pending":
                 message = res_data.get('omsErrorDescription', 'not any reason get').lower()
-                send_trade_email_async.delay(user.email, settings.DEFAULT_FROM_EMAIL, user.firstName, status, message)
+                send_trade_email_async.delay(user.email, default_from_email, user.firstName, status, message)
                 response = {"data": {"status": status}}
                 logger.info(f"Order is pending for user {user}. Order ID: {order_id}")
                 

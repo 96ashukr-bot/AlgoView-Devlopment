@@ -1,6 +1,21 @@
 from django.conf import settings
 from django.core.mail import send_mail
 from django.utils.html import strip_tags
+from main.models import *
+company_profile = CompanyProfileDetails.objects.first()
+
+# Safely access the fields, ensuring company_profile is not None
+support_email = company_profile.company_support_email if company_profile else None
+contact_number = company_profile.company_phone_number if company_profile else None
+company_logo = company_profile.company_logo if company_profile else None
+
+# Access settings for static values
+login_link = company_profile.login_link if company_profile else None
+help_center_link = company_profile.help_center_link if company_profile else None
+company_website =company_profile.company_website if company_profile else None
+
+smtp_details=CompanySmtpDetails.objects.first()
+default_from_email=smtp_details.default_from_email if smtp_details else None
 class EmailServicesss:
     
     @staticmethod
@@ -33,7 +48,7 @@ class EmailServicesss:
             {company_website}
             {support_email} | {contact_number}
             """
-            from_email = settings.DEFAULT_FROM_EMAIL
+            from_email = default_from_email
             send_mail(subject, message, from_email, [email])
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
@@ -45,7 +60,7 @@ class EmailService:
     def send_password_email(email, password, user_name, login_link, support_email, help_center_link, company_website, contact_number):
         subject = 'Welcome to AlgoView Technologies! Your Registration is Complete'
         # subject = "Welcome to AlgoView Technologies"
-        from_email = settings.DEFAULT_FROM_EMAIL
+        from_email = default_from_email
         # Render the HTML template with context data
         context = {
             'user_name': user_name,
@@ -58,7 +73,7 @@ class EmailService:
         }
         html_message = render_to_string('welcome_email.html', context)
         # print("html msg:::::::",html_message)
-        from_email = settings.DEFAULT_FROM_EMAIL
+        from_email = default_from_email
         
         # Create the email
         email_message = EmailMultiAlternatives(subject, "", from_email, [email])
@@ -70,14 +85,14 @@ class EmailService:
     @staticmethod
     def send_login_email_otp(email, otp_code, user_name):
         subject='Your Login OTP for AlgoView Technologies'
-        from_email = settings.DEFAULT_FROM_EMAIL
+        from_email = default_from_email
         # Define the context for the email template
         context = {
             'user_name': user_name,           # User's name
             'otp_code': otp_code,             # One-Time Password
             'valid_for_minutes': 2,  # OTP expiration time
-            'support_email': 'support@company.com',  # Support email
-            'company_website':settings.COMPANY_WEBSITE ,  # Company website link
+            'support_email': 'support_email',  # Support email
+            'company_website':company_website,  # Company website link
         }
 
         # Render the HTML email template

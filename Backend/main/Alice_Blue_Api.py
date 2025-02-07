@@ -18,7 +18,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 import pandas as pd
-
+smtp_details=CompanySmtpDetails.objects.first()
+default_from_email=smtp_details.default_from_email if smtp_details else None
 USER_ID=config('USER_ID')
 ALICE_API_KEY=config('ALICE_API_KEY')
 
@@ -180,7 +181,7 @@ def place_alice_orders(api_skey,api_uid,trading_symbol_aliceblue,transaction_typ
                 return response
             elif status == "rejected": 
                 order_id=res_data.get ('Nstordno', 0) 
-                from_email = settings.DEFAULT_FROM_EMAIL,
+                from_email = default_from_email,
                 message=order_his.get('RejReason', 'not any reason get').lower()
                 send_trade_email_async.delay(user.email, from_email,user.firstName,status, message)
                 response = {"data": {"status": "rejected"}}
@@ -189,7 +190,7 @@ def place_alice_orders(api_skey,api_uid,trading_symbol_aliceblue,transaction_typ
                 return response
             elif status == "OPEN":   
                 order_id=res_data.get ('Nstordno', 0) 
-                from_email = settings.DEFAULT_FROM_EMAIL,
+                from_email = default_from_email,
                 message=order_his.get('RejReason', 'not any reason get').lower()
                 send_trade_email_async.delay(user.email, from_email,user.firstName,status, message)
                 response = {"data": {"status": "OPEN"}}

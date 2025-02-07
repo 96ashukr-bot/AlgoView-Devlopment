@@ -118,3 +118,22 @@ class ClientBrokerDetailgAdmin(admin.ModelAdmin):
 @admin.register(Tradeorderhistory)    
 class ClientTradeHistoryAdmin(admin.ModelAdmin):
     list_display=("id",'client','trading_symbol','date','order_id','broker','order_status',"SignalEntry_time")     
+  
+  
+@admin.register(CompanyProfileDetails)   
+class CompanyProfileDetailsAdmin(admin.ModelAdmin):
+    list_display = ('company_name', 'company_email', 'company_phone_number', 'company_logo')
+    search_fields = ('company_name', 'company_email')
+    list_filter = ('company_name',)
+    
+@admin.register(CompanySmtpDetails)   
+class CompanySmtpDetailsAdmin(admin.ModelAdmin):
+    list_display = ('email_host', 'email_port', 'email_use_tls', 'email_host_user')
+    search_fields = ('email_host', 'email_host_user')    
+    
+@admin.register(AdminLicense)   
+class LiecensdetailsAdmin(admin.ModelAdmin):
+    list_display =('id','sub_admin')
+@admin.register(Payment)   
+class PaymentdetailsAdmin(admin.ModelAdmin):
+    list_display = ('id','sub_admin')    

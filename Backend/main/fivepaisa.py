@@ -10,6 +10,8 @@ from main.models import *
 from main.tasks import send_trade_email_async
 import logging
 import uuid
+smtp_details=CompanySmtpDetails.objects.first()
+default_from_email=smtp_details.default_from_email if smtp_details else None
 logger = logging.getLogger('main')
 PLACE_ORDER_URL = "https://Openapi.5paisa.com/VendorsAPI/Service1.svc/V1/PlaceOrderRequest"  # Example URL (change to actual API endpoint)
 
@@ -375,7 +377,7 @@ def place_5paisa_order(api_key,access_token,trade_symbol,transaction_type, symbo
                     return response
                 elif status == "rejected by 5p":
                     order_id=res_data.get ('BrokerOrderId', 0) 
-                    from_email = settings.DEFAULT_FROM_EMAIL,
+                    from_email = default_from_email,
                     message=order_his.get('Reason', 'not any reason get').lower()
                     send_trade_email_async.delay(user.email, from_email,user.firstName,status, message)
                     status="rejected"
@@ -384,7 +386,7 @@ def place_5paisa_order(api_key,access_token,trade_symbol,transaction_type, symbo
                     save_trade_order_history(trade_order_status,user,trade_symbol, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol,order_params, broker="5paisa")
                 elif status == "rejected by Exch":
                     order_id=res_data.get ('BrokerOrderId', 0) 
-                    from_email = settings.DEFAULT_FROM_EMAIL,
+                    from_email = default_from_email,
                     message=order_his.get('Reason', 'not any reason get').lower()
                     send_trade_email_async.delay(user.email, from_email,user.firstName,status, message)
                     status="rejected"
@@ -393,7 +395,7 @@ def place_5paisa_order(api_key,access_token,trade_symbol,transaction_type, symbo
                     save_trade_order_history(trade_order_status,user,trade_symbol, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol,order_params, broker="5paisa")
                 elif status == "pending":
                     order_id=res_data.get ('BrokerOrderId', 0) 
-                    from_email = settings.DEFAULT_FROM_EMAIL,
+                    from_email = default_from_email,
                     message=order_his.get('Reason', 'not any reason get').lower()
                     send_trade_email_async.delay(user.email, from_email,user.firstName,status, message)
                     status="pending"

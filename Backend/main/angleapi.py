@@ -15,7 +15,10 @@ import logging
 import requests
 from main.Alice_Blue_Api import save_trade_order_history
 from main.dematemodule import get_lot_size
+from main.models import CompanySmtpDetails
 from main.tasks import send_trade_email_async
+smtp_details=CompanySmtpDetails.objects.first()
+default_from_email=smtp_details.default_from_email if smtp_details else None
 logger = logging.getLogger('main')
 # API_KEY = 'FNqcDPCk'#'Xp6znI3s'
 # USERNAME = 'A1420760'
@@ -151,7 +154,7 @@ def place_Angle_order(api_key,demate_user_name,totp,angle_pass,token, symbol, qu
                 message = responsedetails['data'].get('text', 'completed successfully ')
                 status=responsedetails['data'].get('status', 'completed')
                 save_trade_order_history(trade_order_status,user,symbol, order_id, status, res_data, message,   strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol ,order_params,broker="Angle One")
-                # from_email = settings.DEFAULT_FROM_EMAIL,
+                # from_email = default_from_email,
                 # send_trade_email_async.delay(user.email, from_email,user.firstName,status, message)
                 # save_webhook_signals_logs(order_params['transactiontype'], symbol, price, strategy, user, status=responsedetails['data'].get('status'),failure_reason="your order place succesfully", json=json)
                 response = {"data": {"status": status}}
@@ -162,7 +165,7 @@ def place_Angle_order(api_key,demate_user_name,totp,angle_pass,token, symbol, qu
                 logger.info(f"Order is pending state, Order ID: {order_id}")
                 # log_order(order_data, "orders_placed.csv")  
                 # send massage email aleart to client your order is trade 
-                from_email = settings.DEFAULT_FROM_EMAIL,
+                from_email = default_from_email,
                 # Send rejection email
                 message = responsedetails['data'].get('text', 'Unknown  reason')
                 status=responsedetails['data'].get('status', 'pending')
@@ -178,7 +181,7 @@ def place_Angle_order(api_key,demate_user_name,totp,angle_pass,token, symbol, qu
                 status=responsedetails['data'].get('status', 'rejected')
                 order_id=responsedetails['data']['orderid']     
                 logger.info(f"Order Rejected reason!!!::{rejection_message} Order ID: {order_id}")
-                from_email = settings.DEFAULT_FROM_EMAIL,
+                from_email = default_from_email,
                 # Send rejection email
                 print("user.firstName>>>>>",user.firstName)
                 send_trade_email_async.delay(user.email, from_email,user.firstName,status, rejection_message)

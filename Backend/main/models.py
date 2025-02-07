@@ -490,3 +490,68 @@ class Tradeorderhistory(models.Model):
     trade_order_status = models.CharField(max_length=15, null=True, blank=True)
     def __str__(self):
         return f"Order ID: {self.order_id}, Status: {self.order_status}"
+class CompanyProfileDetails(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="company_profile",null=True, blank=True)
+    company_name = models.CharField(max_length=255, blank=True, null=True)
+    company_email = models.EmailField(unique=True, blank=True, null=True)
+    company_support_email = models.EmailField(unique=True, blank=True, null=True)
+    company_phone_number = models.BigIntegerField(unique=True, blank=True, null=True)  
+    company_logo = models.ImageField(upload_to='company_logos/', blank=True, null=True)
+    login_link = models.URLField(blank=True, null=True)  # Assuming this is a URL
+    help_center_link = models.URLField(blank=True, null=True)  # Assuming this is a URL
+    company_website = models.URLField(blank=True, null=True)  # Assuming this is a URL
+
+    def __str__(self):
+        return self.company_name if self.company_name else "Unnamed Company"
+
+
+class CompanySmtpDetails(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="company_smtp",null=True, blank=True)  # Changed related_name
+    email_host = models.CharField(max_length=255, blank=True, null=True)
+    email_port = models.PositiveIntegerField(blank=True, null=True)
+    email_use_tls = models.BooleanField(default=True)
+    email_host_user = models.EmailField(blank=True, null=True)
+    email_host_password = models.CharField(max_length=255, blank=True, null=True)
+    default_from_email = models.EmailField(blank=True, null=True)
+
+    def __str__(self):
+        return self.email_host if self.email_host else "SMTP Configuration"
+
+
+PAYMENT_METHOD_CHOICES = [
+    ('UPI', 'UPI Scanner'),
+    ('CARD', 'Credit Card'),
+    ('QR', 'QR Code'),
+]
+
+class AdminLicense(models.Model):
+    sub_admin = models.ForeignKey(User, on_delete=models.CASCADE, related_name="admin_license", null=True, blank=True)
+    license_qty = models.IntegerField(null=True, blank=True)  
+    license_price = models.IntegerField(null=True, blank=True) 
+    total_amount = models.IntegerField(null=True, blank=True) 
+    is_active = models.BooleanField(default=False)  # Becomes True when payment is successful
+    created_at = models.DateTimeField(auto_now_add=True,null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        if self.license_qty and self.license_price:
+            self.total_amount = self.license_qty * self.license_price
+        super(AdminLicense, self).save(*args, **kwargs)
+
+    def __str__(self):
+        return f"License for {self.sub_admin.fullName if self.sub_admin else 'No Sub Admin'}"
+
+class Payment(models.Model):
+    sub_admin = models.ForeignKey(User, on_delete=models.CASCADE, related_name="payments", null=True, blank=True)
+    license = models.ForeignKey(AdminLicense, on_delete=models.CASCADE, related_name="payments", null=True, blank=True)
+    payment_method = models.CharField(max_length=10, choices=PAYMENT_METHOD_CHOICES)
+    amount_paid = models.DecimalField(max_digits=15, decimal_places=2)
+    transaction_id = models.CharField(max_length=100, unique=True, null=True, blank=True)  
+    payment_status = models.BooleanField(default=False)  # True if payment is successful
+    created_at = models.DateTimeField(auto_now_add=True,null=True, blank=True)
+    razorpay_order_id = models.CharField(max_length=100, unique=True)
+    razorpay_payment_id = models.CharField(max_length=100, null=True, blank=True)
+    razorpay_signature = models.CharField(max_length=256, null=True, blank=True)
+    upi_id = models.CharField(max_length=100, null=True, blank=True)  # Removed unique=True
+
+    def __str__(self):
+        return f"Payment {self.razorpay_order_id} - {'Success' if self.payment_status else 'Pending'}"
