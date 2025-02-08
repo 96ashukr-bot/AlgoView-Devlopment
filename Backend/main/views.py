@@ -447,7 +447,8 @@ class UserManagementView(APIView):
                     support_email,
                     help_center_link,
                     company_website,
-                    contact_number
+                    contact_number,
+                    company_name
                 )
             print("sub-admin or client password---",password)
             # EmailService.send_password_email(user.email, password,user.firstName,login_link,support_email,help_center_link,company_website,contact_number)
@@ -1349,7 +1350,8 @@ class ClientCreateView(APIView):
                     support_email,
                     help_center_link,
                     company_website,
-                    contact_number
+                    contact_number,
+                    company_name
                 )
             # EmailService.send_password_email(client.email, password,client.firstName,login_link,support_email,help_center_link,company_website,contact_number)
             end_time = time.time()  # Record the end time
