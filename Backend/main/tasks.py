@@ -84,12 +84,12 @@ def send_email_async(user_name, otp_code, email):
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 @shared_task
-def send_email_pass_async(email, password, user_name, login_link, support_email, help_center_link, company_website, contact_number, company_name):
+def send_email_pass_async(email, password, user_name, login_link, support_email, help_center_link, company_website, contact_number):
         smtp_connection = get_smtp_connection()
         if not smtp_connection:
             print("SMTP connection could not be established!")
             return
-        subject = 'Welcome to {company_name}! Your Registration is Complete'
+        subject = 'Welcome to AlgoView Technologies! Your Registration is Complete'
         # subject = "Welcome to AlgoView Technologies"
         print("email sentdd")
         from_email = default_from_email
@@ -101,8 +101,7 @@ def send_email_pass_async(email, password, user_name, login_link, support_email,
             'support_email': support_email,
             'help_center': help_center_link,
             'company_website': company_website,
-            'contact_number': contact_number,
-            'company_name': company_name,
+            'contact_number': contact_number
         }
         html_message = render_to_string('welcome_email.html', context)
         # print("html msg:::::::",html_message)
