@@ -21,6 +21,7 @@ logo_url = company_profile.company_logo if company_profile else "https://example
 login_link = company_profile.login_link if company_profile else "https://www.admin.algoview.in/login"
 help_center_link = company_profile.help_center_link if company_profile else "https://www.admin.algoview.in/login"  
 contact_number = company_profile.company_phone_number if company_profile else None
+company_name = company_profile.company_name if company_profile else "AlgoView"
 
 smtp_details=CompanySmtpDetails.objects.first()
 default_from_email=smtp_details.default_from_email if smtp_details else None
@@ -134,7 +135,8 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
                     support_email,
                     help_center_link,
                     company_website,
-                    contact_number
+                    contact_number,
+                    company_name
                 )
             except Exception as e:
                 user.delete()
