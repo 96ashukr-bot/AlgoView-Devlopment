@@ -34,21 +34,25 @@ FILE_UPLOAD_PERMISSIONS = 0o644
 # Optional: Set X-Frame-Options header to allow specific origins for embedding your site in frames
 X_FRAME_OPTIONS = 'ALLOWALL'
 
-CSRF_TRUSTED_ORIGINS = [
-    "https://sparksadmin.algoview.in",
-    "https://client.algoview.in",
-    "https://www.client.algoview.in",
-    "https://www.admin.algoview.in",
-    "http://www.admin.algoview.in",
+# CSRF_TRUSTED_ORIGINS = [
+#     # "https://sparksadmin.algoview.in",
+#     "https://client.algoview.in",
+#     "https://www.client.algoview.in",
+#     "https://www.admin.algoview.in",
+#     "http://www.admin.algoview.in",
    
-]
+# ]
+# CORS_ALLOWED_ORIGINS = [
+#     "http://localhost:3000",  # React development server
+#     "http://103.120.178.54:4000",
+# ]
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
    "http://103.120.178.54:4000",
    "https://www.admin.algoview.in",
     "https://client.algoview.in",
-    "https://sparksadmin.algoview.in/"
+    # "https://sparksadmin.algoview.in/"
 ]
 # Application definition
 

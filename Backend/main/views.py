@@ -305,9 +305,9 @@ class PasswordResetRequestView(generics.GenericAPIView):
             # reset_link = request.build_absolute_uri(
             #     f'/password-reset-confirm/?uidb64={uid}&token={token}'
             # )
-            reset_link = f'https://sparks.algoview.in/pages/authentication/reset-password/:{uid}/:{token}/:layout'
+            # reset_link = f'https://sparks.algoview.in/pages/authentication/reset-password/:{uid}/:{token}/:layout'
             # reset_link = f'https://www.admin.algoview.in/pages/authentication/reset-password/:{uid}/:{token}/:layout'
-            # reset_link = f'http://103.120.178.54:4000/pages/authentication/reset-password/:{uid}/:{token}/:layout'
+            reset_link = f'http://103.120.178.54:4000/pages/authentication/reset-password/:{uid}/:{token}/:layout'
             # reset_link = f'http://localhost:3000/pages/authentication/reset-password/:{uid}/:{token}/:layout'
             subject = "Password Reset Request"
             print("reset_link",reset_link)
@@ -3445,7 +3445,7 @@ from django.http import JsonResponse
 from kiteconnect import KiteConnect
 from django.contrib.auth.decorators import login_required
 from .models import ClientBrokerdetails
-REDIRECT_URI = "https://www.sparksadmin.algoview.in/callback"  
+REDIRECT_URI = "https://sparks.algoview.in/callback"  
 class BrokerLoginRedirectView(APIView):
     permission_classes = [IsAuthenticated]  
 
@@ -3732,7 +3732,6 @@ class CreateOrderView(APIView):
             user = request.user
             license_qty = request.data.get("license_qty")
             license_price = request.data.get("license_price")
-            upi_id = request.data.get("upi_id")
 
             if not license_qty or not license_price:
                 return Response({"error": "License quantity and price are required"}, status=status.HTTP_400_BAD_REQUEST)
@@ -3746,7 +3745,6 @@ class CreateOrderView(APIView):
                 "amount": total_amount,
                 "currency": "INR",
                 "payment_capture": 1,
-                "method": "upi"  # Set payment method to UPI
             }
             razorpay_order = razorpay_client.order.create(order_data)
 
@@ -3797,3 +3795,30 @@ class PaymentCallbackView(APIView):
 
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+class VerifyPaymentAPIView(APIView):
+    def post(self, request):
+        data = request.data
+        payment_id = data.get("razorpay_payment_id")
+        order_id = data.get("razorpay_order_id")
+        signature = data.get("razorpay_signature")
+        payment_method = data.get("payment_method")
+        upi_id = data.get("upi_id")
+
+        payment = Payment.objects.filter(razorpay_order_id=order_id).first()
+
+        if payment:
+            payment.razorpay_payment_id = payment_id
+            payment.razorpay_signature = signature
+            payment.payment_method = payment_method
+            payment.upi_id = upi_id if payment_method == "UPI" else None
+
+            try:
+                razorpay_client.utility.verify_payment_signature(data)
+                payment.payment_status = "Completed"
+                payment.save()
+                return Response({"message": "Payment successful"})
+            except:
+                payment.payment_status = "Failed"
+                payment.save()
+                return Response({"message": "Payment verification failed"}, status=400)
+        return Response({"message": "Order not found"}, status=404)

@@ -34,10 +34,14 @@ else:
 
 smtp_details=CompanySmtpDetails.objects.first()
 default_from_email=smtp_details.default_from_email if smtp_details else   "no-reply@example.com"
-
+print("default_from_email>>>>>>",default_from_email)
 #client inactive and license expir ations
 @shared_task
 def send_client_acc_email_async(subject,messages,username,useremail):
+        smtp_connection = get_smtp_connection()
+        if not smtp_connection:
+            print(f"SMTP connection could not be established!")
+            return
         subject=subject
         from_email =default_from_email
         context = {
@@ -50,7 +54,7 @@ def send_client_acc_email_async(subject,messages,username,useremail):
         html_message = render_to_string('login_account_email.html', context)
         # print("html_message",html_message)
 
-        email_message = EmailMultiAlternatives(subject, "", f"{company_sender_name} <{from_email}>", [useremail])
+        email_message = EmailMultiAlternatives(subject, "", f"{company_sender_name} <{from_email}>", [useremail],connection=smtp_connection)
         email_message.attach_alternative(html_message, "text/html") 
         email_message.send()
 #login opt email
@@ -211,9 +215,10 @@ def resend_otp_email_async(user_email, otp_code):
         print(f"Email sending failed: {e}")
 @shared_task
 def send_login_success_email(username, email, browser, ip_address, login_time):
-    """
-    Sends an email to the user when they successfully log in.
-    """
+    smtp_connection = get_smtp_connection()
+    if not smtp_connection:
+        print(f"SMTP connection could not be established!")
+        return
     subject = f"Login Alert for your {company_name} account!"
     from_email = default_from_email  # Ensure it's defined in settings.py
     recipient_email = email  # FIXED: Use actual email, not username
@@ -235,10 +240,10 @@ def send_login_success_email(username, email, browser, ip_address, login_time):
 
     # Render HTML email
     html_message = render_to_string('login_success_email.html', context)
-
+    print("from_email>>>>>>>",from_email)
     # Send Email
     try:
-        email_message = EmailMultiAlternatives(subject, "", f"{company_sender_name} <{from_email}>", [recipient_email])
+        email_message = EmailMultiAlternatives(subject, "", f"{company_sender_name} <{from_email}>", [recipient_email],connection=smtp_connection)
         email_message.attach_alternative(html_message, "text/html")
         email_message.send()
         print(f"Login success email sent to {recipient_email}")
