@@ -35,10 +35,12 @@ FILE_UPLOAD_PERMISSIONS = 0o644
 X_FRAME_OPTIONS = 'ALLOWALL'
 
 CSRF_TRUSTED_ORIGINS = [
+    "https://sparksadmin.algoview.in",
     "https://client.algoview.in",
     "https://www.client.algoview.in",
     "https://www.admin.algoview.in",
     "http://www.admin.algoview.in",
+   
 ]
 
 CORS_ALLOWED_ORIGINS = [
@@ -46,6 +48,7 @@ CORS_ALLOWED_ORIGINS = [
    "http://103.120.178.54:4000",
    "https://www.admin.algoview.in",
     "https://client.algoview.in",
+    "https://sparksadmin.algoview.in/"
 ]
 # Application definition
 
