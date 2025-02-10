@@ -1,7 +1,8 @@
 from django.forms import ValidationError
 import requests
 from rest_framework import serializers
-from main.tasks import send_client_acc_email_async, send_email_async, send_email_pass_async
+from main.tasks import send_client_acc_email_async, send_email_async, send_email_pass_async, send_login_success_email
+from main.utils import get_browser_info, get_client_ip, get_login_time
 from .models import *
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
@@ -15,6 +16,7 @@ from main.email import EmailService
 from django.utils import timezone
 
 company_profile = CompanyProfileDetails.objects.first()
+# company_profile=None
 support_email = company_profile.company_support_email if company_profile else "support@example.com"
 company_website = company_profile.company_website if company_profile else "https://example.com"
 logo_url = company_profile.company_logo if company_profile else "https://example.com/logo.png"
@@ -434,7 +436,14 @@ class OTPVerifySerializer(serializers.Serializer):
         if not user.is_new_password:
             message= 'Please change your password as this is a one-time temporary password.'
         else:
+            browser = get_browser_info(request)
+            ip_address = get_client_ip(request)
+            login_time = get_login_time()
             message="login successfully"
+            username=user.firstName
+            email=user.email
+            send_login_success_email.delay(username,email, browser, ip_address, login_time)
+
         return {
             'user_id': user.id,  # Use ID instead of User object
             'email': user.email,  # You can add any other fields you nee

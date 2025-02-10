@@ -15,8 +15,7 @@ from django.http import JsonResponse
 from datetime import datetime
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-smtp_details=CompanySmtpDetails.objects.first()
-default_from_email=smtp_details.default_from_email if smtp_details else None
+
 # # Constants (You can keep these in settings.py for better management)
 # CLIENT_ID = 'your_client_id'  # Replace with your Upstox Client ID
 # CLIENT_SECRET = 'your_api_secret'  # Replace with your Upstox API Secret
@@ -91,6 +90,8 @@ def place_upstox_orders(
     product_type, price, user, Lots, Entry_type, Exit_type,Entry_price,Exit_price, EntryQty,ExitQty,webhook_signal, Exchange,
     Segment, Index_Symbol, triggerPrice,trade_order_status):
     try:
+        smtp_details=CompanySmtpDetails.objects.first()
+        default_from_email=smtp_details.default_from_email if smtp_details else None
         # Fetch instrument details
         result = fetch_instrument_details(trade_symbol, "NSE")
         status="Failed"

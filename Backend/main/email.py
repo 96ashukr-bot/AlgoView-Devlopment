@@ -3,12 +3,12 @@ from django.core.mail import send_mail
 from django.utils.html import strip_tags
 from main.models import *
 company_profile = CompanyProfileDetails.objects.first()
-
+# company_profile=None
 # Safely access the fields, ensuring company_profile is not None
 support_email = company_profile.company_support_email if company_profile else None
 contact_number = company_profile.company_phone_number if company_profile else None
 company_logo = company_profile.company_logo if company_profile else None
-
+company_sender_name=company_profile.company_sender_name if company_profile else None
 # Access settings for static values
 login_link = company_profile.login_link if company_profile else None
 help_center_link = company_profile.help_center_link if company_profile else None
@@ -76,7 +76,7 @@ class EmailService:
         from_email = default_from_email
         
         # Create the email
-        email_message = EmailMultiAlternatives(subject, "", from_email, [email])
+        email_message = EmailMultiAlternatives(subject, "", f"{company_sender_name} <{from_email}>", [email])
         email_message.attach_alternative(html_message, "text/html")  # Attach the HTML version
 
         # Send the email
@@ -99,7 +99,7 @@ class EmailService:
         html_message = render_to_string('login_email.html', context)
         # plain_message = strip_tags(html_message)  # For non-HTML email clients
 # Create the email
-        email_message = EmailMultiAlternatives(subject, "", from_email, [email])
+        email_message = EmailMultiAlternatives(subject, "", f"{company_sender_name} <{from_email}>", [email])
         email_message.attach_alternative(html_message, "text/html")  # Attach the HTML version
 
         # Send the email

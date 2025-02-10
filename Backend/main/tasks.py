@@ -26,6 +26,7 @@ login_link = company_profile.login_link if company_profile else "https://www.adm
 help_center_link = company_profile.help_center_link if company_profile else "https://www.admin.algoview.in/login"  
 contact_number = company_profile.company_phone_number if company_profile else None
 company_name = company_profile.company_name if company_profile else "AlgoView"
+company_sender_name=company_profile.company_sender_name if company_profile else "AlgoAdmin"
 if company_profile and company_profile.company_logo:
     logo_url = settings.MEDIA_URL + str(company_profile.company_logo)  # Ensure full URL
 else:
@@ -48,7 +49,7 @@ def send_client_acc_email_async(subject,messages,username,useremail):
         html_message = render_to_string('login_account_email.html', context)
         # print("html_message",html_message)
 
-        email_message = EmailMultiAlternatives(subject, "", from_email, [useremail])
+        email_message = EmailMultiAlternatives(subject, "", f"{company_sender_name} <{from_email}>", [useremail])
         email_message.attach_alternative(html_message, "text/html") 
         email_message.send()
 #login opt email
@@ -58,7 +59,7 @@ def send_email_async(user_name, otp_code, email):
     if not smtp_connection:
         print(f"SMTP connection could not be established!")
         return
-    subject='Your Login OTP for AlgoView Technologies'
+    subject=f"Your OTP for {company_name} Login"
     from_email = default_from_email
     # Define the context for the email template
     context = {
@@ -67,12 +68,14 @@ def send_email_async(user_name, otp_code, email):
         'valid_for_minutes': 2, 
         'support_email': support_email,  
         'company_website':company_website, 
-        'logo':logo_url,
+        'logo_url':logo_url,
+        'help_center': help_center_link,
+        'contact_number': contact_number,
+        'company_name':company_name
     }
-
     html_message = render_to_string('login_email.html', context)
     try:
-        email_message = EmailMultiAlternatives(subject, "", from_email, [email], connection=smtp_connection)
+        email_message = EmailMultiAlternatives(subject, "", f"{company_sender_name} <{from_email}>", [email], connection=smtp_connection)
         email_message.attach_alternative(html_message, "text/html")
         email_message.send()
         print("Email sent successfully!")
@@ -89,7 +92,7 @@ def send_email_pass_async(email, password, user_name, login_link, support_email,
         if not smtp_connection:
             print("SMTP connection could not be established!")
             return
-        subject = 'Welcome to AlgoView Technologies! Your Registration is Complete'
+        subject = f'Welcome to {company_name}! Your Registration is Complete'
         # subject = "Welcome to AlgoView Technologies"
         print("email sentdd")
         from_email = default_from_email
@@ -101,14 +104,15 @@ def send_email_pass_async(email, password, user_name, login_link, support_email,
             'support_email': support_email,
             'help_center': help_center_link,
             'company_website': company_website,
-            'contact_number': contact_number
+            'contact_number': contact_number,
+            'company_name':company_name
         }
         html_message = render_to_string('welcome_email.html', context)
         # print("html msg:::::::",html_message)
         from_email = default_from_email
         
         # Create the email
-        email_message = EmailMultiAlternatives(subject, "", from_email, [email],connection=smtp_connection)
+        email_message = EmailMultiAlternatives(subject, "", f"{company_sender_name} <{from_email}>", [email],connection=smtp_connection)
         email_message.attach_alternative(html_message, "text/html")  # Attach the HTML version
 
         # Send the email
@@ -141,7 +145,7 @@ def send_kyc_email_async(email, from_email, user_name, action, reason):
     html_message = render_to_string('kyc_email.html', context)
   
     # Create the email with an HTML alternative
-    email_message = EmailMultiAlternatives(subject, "", from_email, [email],connection=smtp_connection)
+    email_message = EmailMultiAlternatives(subject, "",f"{company_sender_name} <{from_email}>", [email],connection=smtp_connection)
     email_message.attach_alternative(html_message, "text/html")
     email_message.send()
     
@@ -169,7 +173,7 @@ def send_trade_email_async(email, from_email, user_name, status, reason):
     html_message = render_to_string('trade.html', context)
   
     # Create the email with an HTML alternative
-    email_message = EmailMultiAlternatives(subject, "", from_email, [email],connection=smtp_connection)
+    email_message = EmailMultiAlternatives(subject, "", f"{company_sender_name} <{from_email}>", [email],connection=smtp_connection)
     email_message.attach_alternative(html_message, "text/html")
     email_message.send()
     
@@ -195,9 +199,44 @@ def resend_otp_email_async(user_email, otp_code):
     from_email = default_from_email  # Or whatever the default is for your project
     
     try:
-        email_message = EmailMultiAlternatives(subject, "", from_email, [user_email],connection=smtp_connection)
+        email_message = EmailMultiAlternatives(subject, "", f"{company_sender_name} <{from_email}>", [user_email],connection=smtp_connection)
         email_message.attach_alternative(html_message, "text/html")
         email_message.send()
         print("Email sent successfully!")
     except Exception as e:
         print(f"Email sending failed: {e}")
+@shared_task
+def send_login_success_email(username, email, browser, ip_address, login_time):
+    """
+    Sends an email to the user when they successfully log in.
+    """
+    subject = f"Login Alert for your {company_name} account!"
+    from_email = default_from_email  # Ensure it's defined in settings.py
+    recipient_email = email  # FIXED: Use actual email, not username
+
+    # Email context
+    context = {
+        'user_name': username,
+        'user_email': email,
+        'device': browser,
+        'time': login_time,
+        'ip_address': ip_address,
+        'company_name': company_name,
+        'company_url':company_website,
+        'appstore_icon_url': "https://link-to-appstore-icon.png",
+        'contact_number': contact_number,
+        'address': "123 Business Street,indore M.P.",
+        'logout_link': "https://sparksadmin.algoview.in/logout",
+    }
+
+    # Render HTML email
+    html_message = render_to_string('login_success_email.html', context)
+
+    # Send Email
+    try:
+        email_message = EmailMultiAlternatives(subject, "", f"{company_sender_name} <{from_email}>", [recipient_email])
+        email_message.attach_alternative(html_message, "text/html")
+        email_message.send()
+        print(f"Login success email sent to {recipient_email}")
+    except Exception as e:
+        print(f"Failed to send login success email: {e}")

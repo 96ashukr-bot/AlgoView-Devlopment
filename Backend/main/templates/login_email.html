@@ -1,108 +1,106 @@
 <!DOCTYPE html>
-{% load static %}
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login OTP - AlgoView Technologies</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            margin: 0;
-            padding: 0;
-        }
-        .email-container {
-            width: 100%;
-            {% comment %} padding: 20px; {% endcomment %}
-            background-color: #f4f4f4;
-        }
-        .email-content {
-            {% comment %} max-width: 600px; {% endcomment %}
-            margin: 0 auto;
-            background-color: #ffffff;
-            padding: 30px;
-            {% comment %} border-radius: 8px; {% endcomment %}
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        }
-        h1 {
-            color: #333333;
-            font-size: 24px;
-            font-weight: 400;
-        }
-        p {
-            color: #555555;
-            font-size: 16px;
-            line-height: 1.6;
-        }
-        .otp-code {
-            background-color: #eaeaea;
-            padding: 10px;
-            border-radius: 5px;
-            display: inline-block;
-            font-size: 20px;
-            font-weight: bold;
-            color: #000000;
-        }
-        a {
-            color: #1a73e8;
-            text-decoration: none;
-        }
-        .footer {
-            {% comment %} margin-top: 30px; {% endcomment %}
-            {% comment %} text-align: center; {% endcomment %}
-            color: #888888;
-            font-size: 14px;
-            border-top: 1px solid #c6c6c6;
-            padding: 16px 0px 1px 0px;
-        }
-        .desigborder{
-            border-top: 1px solid #c6c6c6;
-            padding: 29px 0px 1px 0px;
-
-        }
-    </style>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <style>
+       /* Inline CSS for email compatibility */
+       body {
+           font-family: Arial, sans-serif;
+           margin: 0;
+           padding: 0;
+           background-color: #f6f6f6;
+           color: #333;
+       }
+       .email-container {
+           max-width: 600px;
+           margin: 20px auto;
+           background-color: #ffffff;
+           border: 1px solid #ddd;
+           border-radius: 5px;
+       }
+       .header {
+           background-color: #19387f;
+           color: #ffffff;
+           padding: 20px;
+           text-align: center;
+           border-top-left-radius: 5px;
+           border-top-right-radius: 5px;
+       }
+       .header img {
+           max-height: 40px;
+       }
+       .content {
+           padding: 20px;
+           text-align: left;
+       }
+       .content h1 {
+           font-size: 20px;
+           margin-bottom: 15px;
+       }
+       .content p {
+           font-size: 14px;
+           line-height: 1.6;
+           margin: 10px 0;
+       }
+       .otp-code {
+           font-size: 22px;
+           font-weight: bold;
+           color: #19387f;
+           text-align: center;
+           margin: 15px 0;
+       }
+       .footer {
+           text-align: center;
+           padding: 10px;
+           font-size: 12px;
+           color: #666;
+       }
+       .button {
+           display: inline-block;
+           padding: 10px 15px;
+           margin-top: 10px;
+           background-color: #19387f;
+           color: #ffffff;
+           text-decoration: none;
+           border-radius: 5px;
+           font-size: 14px;
+       }
+   </style>
+   <title>Email Template</title>
 </head>
-<body style="font-family: Arial, sans-serif; color: #666;">
-    <div style="width: 100%; background-color: #f7f7f7; padding: 20px;">
-        <div style="max-width: 800px; margin: auto; background-color: #ffffff; border: 1px solid #e5e5e5; border-radius: 5px;">
-    <div style="text-align: center; background-color: #f7f7f7; padding: 20px; border-bottom: 1px solid #ebebeb;">
-        <img src="http://103.120.178.54:4000/algo-view/static/media/Algotradelogo.0b789089a2eb8ed3f7d0.png" style="width: 200px;">
-        {% comment %} <img src="/media/company_logos/download.png" alt="Company Logo" width="150" height="100"/> {% endcomment %}
+<body>
+   <div class="email-container">
+       <!-- Header -->
+       <div class="header">
+           <img src="https://sparksadmin.algoview.in/{{logo_url}}" alt="AlgoView Logo">
+       </div>
 
+       <!-- Content -->
+       <div class="content">
+           <h1>Dear {{user_name}},</h1>
+           <p>Your One-Time Password (OTP) for logging into <strong>{{company_name}}</strong> is:</p>
+           <p class="otp-code">{{otp_code}}</p>
+           <p>This OTP is valid for <strong>{{valid_for_minutes}}</strong> minutes. Please enter it on the login page to access your account.</p>
+           <p>If you didn’t request this OTP, please contact our support team immediately.</p>
 
-    </div>
- 
-    <div class="email-container">
-        <div class="email-content">
-            <h1>Dear {{ user_name }},</h1>
-            
-            <p>We received a request to log in to your account at <strong>AlgoView Technologies</strong>.</p>
-            
-            <p>Your One-Time Password (OTP) for logging in is: </p>
-            
-            <p class="otp-code">{{ otp_code }}</p>
-            
-            <p>This OTP is valid for <strong>{{ valid_for_minutes }} minutes</strong>. Please enter it on the login page to access your account.</p>
-            
-            <p>If you didn’t request this OTP, please contact our support team immediately at <a href="mailto:{{ support_email }}">{{ support_email }}</a>.</p>
-            <div class="footer">
-                <p>Need help? Contact us at <a href="mailto:{{ support_email }}">{{ support_email }}</a> or visit our website at <a href="{{ company_website }}">{{ company_website }}</a>.</p>
-            </div>
+           <h3>Need help?</h3>
+           <p>For any questions or support, don’t hesitate to contact us at 
+              <a href="mailto:{{ support_email }}">{{ support_email }}</a> or visit our help center: 
+              <a href="{{help_center}}">{{help_center}}</a>.
+           </p>
+           <p>We’re excited to have you on board and look forward to supporting your journey with us!</p>
+       </div>
 
-            <p class="desigborder">Thank you for using our services!</p>
-            
-            <p>Best regards,<br>The AlgoView Technologies Team</p>
-            
-            {% comment %} <div class="footer">
-                <p>Need help? Contact us at <a href="mailto:{{ support_email }}">{{ support_email }}</a> or visit our website at <a href="{{ company_website }}">{{ company_website }}</a>.</p>
-            </div> {% endcomment %}
-        </div>
-    </div>  
-</div>  
-</div>  
+       <!-- Footer -->
+       <div class="footer">
+           <p>Thank you,</p>
+           <p>The AlgoView Technologies Team</p>
+           <p>
+               <a href="mailto:{{support_email}}">{{support_email}}</a> | 
+               <a href="{{company_website}}">{{company_website}}</a>
+           </p>
+       </div>
+   </div>
 </body>
 </html>
-
-

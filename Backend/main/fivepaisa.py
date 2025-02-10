@@ -10,8 +10,6 @@ from main.models import *
 from main.tasks import send_trade_email_async
 import logging
 import uuid
-smtp_details=CompanySmtpDetails.objects.first()
-default_from_email=smtp_details.default_from_email if smtp_details else None
 logger = logging.getLogger('main')
 PLACE_ORDER_URL = "https://Openapi.5paisa.com/VendorsAPI/Service1.svc/V1/PlaceOrderRequest"  # Example URL (change to actual API endpoint)
 
@@ -255,6 +253,9 @@ def place_5paisa_order(api_key,access_token,trade_symbol,transaction_type, symbo
         ,Exchange, Segment,Index_Symbol,triggerPrice,trade):
         
         print("transaction_type>>",transaction_type,ordertype)
+        
+        smtp_details=CompanySmtpDetails.objects.first()
+        default_from_email=smtp_details.default_from_email if smtp_details else None
         segment="nse_fo"
         if Exchange=="NSE" or Exchange=="NFO":
             Exch="N"

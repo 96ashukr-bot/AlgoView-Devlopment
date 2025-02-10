@@ -62,7 +62,7 @@ logger = logging.getLogger('main')
 UserModel = get_user_model()
 
 company_profile = CompanyProfileDetails.objects.first()
-
+# company_profile=None
 support_email = company_profile.company_support_email if company_profile else "support@example.com"
 company_website = company_profile.company_website if company_profile else "https://example.com"
 logo_url = company_profile.company_logo if company_profile else "https://example.com/logo.png"
