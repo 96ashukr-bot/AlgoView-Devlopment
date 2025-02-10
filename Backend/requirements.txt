@@ -45,3 +45,4 @@ dhanhq== 2.0.2
 
 celery
 razorpay== 1.4.2
+user-agents ==2.2.0

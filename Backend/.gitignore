@@ -18,6 +18,8 @@ algoview/__pycache__
  Backend/media/strategy/
   Backend/media/kyc_documents/
   Backend/media/profile_pictures
+   Backend/media/company_logos/*.png
+ 
 Backend/logs/
 NFO.csv
 ANGLE_NFO.csv

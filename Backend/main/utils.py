@@ -1,4 +1,5 @@
 from django.core.mail import get_connection
+import requests
 from main.models import CompanySmtpDetails
 
 def get_smtp_connection():
@@ -37,3 +38,34 @@ def get_smtp_connection():
     except Exception as e:
         print(f"Error setting up SMTP connection: {e}")
         return None
+
+
+from user_agents import parse
+
+def get_browser_info(request):
+    user_agent = request.META.get('HTTP_USER_AGENT', '')  # Get User-Agent
+    ua = parse(user_agent)  # Parse it using user-agents library
+    browser = ua.browser.family  # Browser name (Chrome, Firefox, etc.)
+    return browser
+def get_client_ip(request):
+    """Fetches the real client IP address, considering proxy headers."""
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    # if x_forwarded_for:
+    #     ip = x_forwarded_for.split(',')[0]  # Get the first IP in the list
+    # else:
+    #     ip = request.META.get('REMOTE_ADDR')  # Direct IP
+    ip=requests.get('https://api.ipify.org').text     
+    print("ip>>",ip)    
+    return ip
+
+from django.utils import timezone
+
+from datetime import datetime
+import pytz
+
+def get_login_time():
+    """Returns the current time in IST (Indian Standard Time)."""
+    ist = pytz.timezone('Asia/Kolkata')  # Indian Timezone
+    ist_time = datetime.now(ist).strftime('%Y-%m-%d %H:%M:%S')  # Format YYYY-MM-DD HH:MM:SS
+
+    return ist_time

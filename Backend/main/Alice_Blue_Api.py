@@ -18,8 +18,6 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 import pandas as pd
-smtp_details=CompanySmtpDetails.objects.first()
-default_from_email=smtp_details.default_from_email if smtp_details else None
 USER_ID=config('USER_ID')
 ALICE_API_KEY=config('ALICE_API_KEY')
 
@@ -30,6 +28,9 @@ from pya3 import Aliceblue, TransactionType, OrderType, ProductType
 def place_alice_orders(api_skey,api_uid,trading_symbol_aliceblue,transaction_type, symbol, quantity, strategy, 
     order_type, product_type, price, user,Lots, trade_order_status, Entry_type,Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal, Exchange, Segment,Index_Symbol, trigger_price=None):
     try:
+        smtp_details=CompanySmtpDetails.objects.first()
+        default_from_email=smtp_details.default_from_email if smtp_details else None
+
         print(f"Order Type: {order_type}, Price: {price}, Trigger Price: {trigger_price}")
         # # Convert price and trigger price to float if provided
         price = float(price) if price is not None else None

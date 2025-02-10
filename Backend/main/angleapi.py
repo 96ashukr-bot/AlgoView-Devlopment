@@ -17,8 +17,6 @@ from main.Alice_Blue_Api import save_trade_order_history
 from main.dematemodule import get_lot_size
 from main.models import CompanySmtpDetails
 from main.tasks import send_trade_email_async
-smtp_details=CompanySmtpDetails.objects.first()
-default_from_email=smtp_details.default_from_email if smtp_details else None
 logger = logging.getLogger('main')
 # API_KEY = 'FNqcDPCk'#'Xp6znI3s'
 # USERNAME = 'A1420760'
@@ -31,6 +29,9 @@ def place_Angle_order(api_key,demate_user_name,totp,angle_pass,token, symbol, qu
         Segment,Index_Symbol ,user=None, strategy=None):
 
     try:
+        
+        smtp_details=CompanySmtpDetails.objects.first()
+        default_from_email=smtp_details.default_from_email if smtp_details else None
         logger.info(f"Angle one api order placement for user: {user} & trading symbol is: {symbol}")
         print("product_type>>>",product_type)
         if product_type:

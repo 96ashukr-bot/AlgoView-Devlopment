@@ -1,52 +1,101 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>{{subject}}</title>
-    <style>
-        .paddtop{
-            border-top: 1px solid #c6c6c6;
-            padding: 25px 0 6px 0;
-        }
-.paddboder{
-    border-bottom: 1px solid #c6c6c6;
-    padding: 0px 0px 29px 0;
-}
-    </style>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <style>
+       /* Inline CSS for email compatibility */
+       body {
+           font-family: 'Century Gothic', Arial, sans-serif;
+           margin: 0;
+           padding: 0;
+           background-color: #f6f6f6;
+           color: #333;
+       }
+       .email-container {
+           max-width: 600px;
+           margin: 20px auto;
+           background-color: #fff;
+           border: 1px solid #ddd;
+           border-radius: 5px;
+       }
+       .header {
+           background-color: #19387f; /* Header color */
+           color: #fff;
+           padding: 20px;
+           text-align: center;
+           border-radius: 5px 5px 0 0;
+       }
+       .header img {
+           max-height: 40px;
+       }
+       .content {
+           padding: 20px;
+           text-align: left; /* Left-aligned content */
+       }
+       .content h1 {
+           font-size: 20px;
+           margin-bottom: 15px;
+       }
+       .content p {
+           font-size: 14px;
+           line-height: 1.6;
+           margin: 10px 0;
+       }
+       .button {
+           display: inline-block;
+           padding: 10px 15px;
+           margin: 10px 0;
+           background-color: #19387f;
+           color: #fff;
+           text-decoration: none;
+           border-radius: 5px;
+           font-size: 14px;
+       }
+       .footer {
+           text-align: center;
+           padding: 10px;
+           font-size: 12px;
+           color: #666;
+       }
+   </style>
+   <title>Welcome to {{company_name}}</title>
 </head>
-<body style="font-family: Arial, sans-serif; color: #666;">
-    <div style="width: 100%; background-color: #f7f7f7; padding: 20px;">
-        <div style="max-width: 800px; margin: auto; background-color: #ffffff; border: 1px solid #e5e5e5; border-radius: 5px;">
-            <div style="text-align: center; background-color: #f7f7f7; padding: 20px; border-bottom: 1px solid #ebebeb;">
-                {% comment %} <img src="http://103.120.178.54:4000/algo-view/static/media/Algotradelogo.0b789089a2eb8ed3f7d0.png" style="width: 200px;"> {% endcomment %}
-                <img src="http://103.120.178.54:4000/algo-view/static/media/Algotradelogo.0b789089a2eb8ed3f7d0.png"  alt="Logo" width="150" height="100"/>
+<body>
+   <div class="email-container">
+       <!-- Header -->
+       <div class="header">
+           <h1>{{company_name}}</h1>
+       </div>
 
-            </div>
-            <div style="padding: 30px;">
-                <p><strong>Dear {{ user_name }},</strong></p>
-                <p>Your account has been successfully created. Below are your default password and login link:</p>
-                <p><strong>Default Password:</strong> {{ password }}</p>
-                <p><strong>Login Link:</strong> <a href="{{ login_link }}" target="_blank">{{ login_link }}</a></p>
-                <p>We recommend changing your password after your first login for security reasons. You can update your password from the settings section of your dashboard.</p>
+       <!-- Content -->
+       <div class="content">
+           <h1>Welcome to {{company_name}}!</h1>
+           <p>Dear {{user_name}},</p>
+           <p>Thank you for registering with {{company_name}}! Your account has been successfully created, and you are now part of our community.</p>
+           <p>To help you get started, here is your default password and a link to proceed with your first login:</p>
+           <p><strong>Default Password:</strong> {{password}}</p>
+           <p><strong>Login Link:</strong> <a href="{{login_link}}" class="button" style="color: #fff">Login Here</a></p>
+           <p>We recommend changing your password after your first login for enhanced security. You can update your password by navigating to the settings section within your dashboard.</p>
 
-                <p>Thank you for registering with <strong> {{ company_name }}</strong>. We're excited to have you on board!</p>
+           <h2>What’s next?</h2>
+           <ul>
+               <li>Click the login link above to sign into your account.</li>
+               <li>After logging in, take a moment to explore the platform and familiarize yourself with our features.</li>
+               <li>If you need assistance, feel free to reach out to our support team at <a href="mailto:{{support_email}}">{{support_email}}</a>.</li>
+           </ul>
 
-                <h3 class="paddtop">What's next?</h3>
-                <ul>
-                    <li>Click the login link to access your account.</li>
-                    <li>Explore the platform and familiarize yourself with the features.</li>
-                    <li>If you need any assistance, feel free to contact our support team at <a href="mailto:{{ support_email }}">{{ support_email }}</a>.</li>
-                </ul>
+           <h3>Need help?</h3>
+           <p>For any questions or support, don’t hesitate to contact us at <a href="mailto:{{support_email}}">{{support_email}}</a> or visit our help center: <a href="{{help_center}}">{{help_center}}</a>.</p>
+           <p>We’re excited to have you on board and look forward to supporting your journey with us!</p>
+       </div>
 
-                <h3>Need Help?</h3>
-                <p class="paddboder">If you have any questions or need support, you can contact us at <a href="mailto:{{ support_email }}">{{ support_email }}</a> or visit our help center at <a href="{{ help_center }}">Help Center</a>.</p>
-
-                <p>Best regards,</p>
-                <p><strong>The  {{ company_name }} Team</strong></p>
-                <p><a href="{{ company_website }}">{{ company_website }}</a></p>    
-                <p><a href="mailto:{{ support_email }}">{{ support_email }}</a> | {{ contact_number }}</p>
-            </div>
-        </div>
-    </div>
+       <!-- Footer -->
+       <div class="footer">
+           <p>Best regards,</p>
+           <p>The AlgoView Technologies Team</p>
+           <p><a href="{{company_website}}">{{company_website}}</a> | <a href="mailto:{{support_email}}">{{support_email}}</a> | {{contact_number}}</p>
+       </div>
+   </div>
 </body>
 </html>
-

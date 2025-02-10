@@ -3,8 +3,6 @@ from kiteconnect import KiteConnect
 from main.Alice_Blue_Api import save_trade_order_history
 from main.models import ClientBrokerdetails, CompanySmtpDetails
 import logging
-smtp_details=CompanySmtpDetails.objects.first()
-default_from_email=smtp_details.default_from_email if smtp_details else None
 logger = logging.getLogger('main')
 
 def place_zerodha_orders(access_token, Api_key, trade_symbol, transaction_type, symbol, quantity,
@@ -12,6 +10,9 @@ def place_zerodha_orders(access_token, Api_key, trade_symbol, transaction_type, 
     EntryQty, ExitQty, webhook_signal, Exchange, Segment,Index_Symbol, triggerPrice, trade_order_status):
     print("index symbolllllll",Index_Symbol)
     try:
+        
+        smtp_details=CompanySmtpDetails.objects.first()
+        default_from_email=smtp_details.default_from_email if smtp_details else None
         order_id = 0
         status = "Failed"
         res_data = "Unknown response"
