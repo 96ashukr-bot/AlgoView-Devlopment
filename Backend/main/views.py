@@ -310,7 +310,7 @@ class PasswordResetRequestView(generics.GenericAPIView):
             # reset_link = f'http://103.120.178.54:4000/pages/authentication/reset-password/:{uid}/:{token}/:layout'
             # reset_link = f'http://localhost:3000/pages/authentication/reset-password/:{uid}/:{token}/:layout'
             subject = "Password Reset Request"
-            # print("reset_link",reset_link)
+            print("reset_link",reset_link)
             message = (
                 f"Hello,\n\n"
                 f"You've requested a password reset. Click the link below to reset your password:\n"
@@ -3459,7 +3459,7 @@ class BrokerLoginRedirectView(APIView):
             # Retrieve broker details for the logged-in user
             broker_details = ClientBrokerdetails.objects.get(client=user)
             broker_name = broker_details.broker_name.broker_name.lower()
-            # print("broker_name>>>",broker_name)
+            print("broker_name>>>",broker_name)
             # broker_name=request.GET.get('state')
             if broker_name == "zerodha":
                 # request.GET.get('request_token')
