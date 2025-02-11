@@ -7,8 +7,10 @@ GET_ORDER_BOOK_API="placeOrder/fetchOrderBook"
 GET_ORDER_BOOK_URL=BASE_URL+GET_ORDER_BOOK_API
 GET_TREAD_BOOK_API="placeOrder/fetchTradeBook"
 GET_TREAD_BOOK_URL=BASE_URL+GET_TREAD_BOOK_API
+import os
 from django.conf import settings
-from pya3 import *
+# from pya3 import *
+from alice_blue import *
 from decouple import config
 import pytz
 from main.models import *
@@ -91,7 +93,7 @@ def place_alice_orders(api_skey,api_uid,trading_symbol_aliceblue,transaction_typ
         # Place the order
         if Exchange=="NFO":
             logger.info(f"exchnage symbole....{trading_symbol_aliceblue}")
-            instrument = alice.get_instrument_by_symbol("NFO", trading_symbol_aliceblue)
+            instrument = alice.get_instrument_by_symbol("NFO", "BANKNIFTY27FEB25C49600")
             logger.info(f"instrument>>>{instrument}")
         elif Exchange=="BSE":
             instrument = alice.get_instrument_by_symbol("BSE", trading_symbol_aliceblue)
@@ -404,10 +406,11 @@ class SymbolExpirDateListView(APIView):
 
             # Check if the file exists and is up-to-date
             if os.path.exists(csv_file_path):
+                print("csv is updateddddddddddd")
                 # Get the file's last modified time
                 file_modified_time = datetime.fromtimestamp(os.path.getmtime(csv_file_path))
                 # Check if the file is older than a month
-                if datetime.now() - file_modified_time > timedelta(days=30):
+                if datetime.now() - file_modified_time > timedelta(days=5):
                     print("File is outdated. Downloading fresh NFO.csv...")
                     self.download_nfo_csv(csv_file_path)
                 else:

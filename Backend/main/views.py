@@ -2539,24 +2539,29 @@ class PlaceOrderWebhookView(APIView):
                     continue
                 if trade.symbol.upper() == symbols.upper():
                     if default_expiry:
-                        default_expiry_date = trade.expiry_date.date()  # This is a datetime.date object
-                        # Convert it to a timezone-aware datetime object
-                        default_expiry_datetime = make_aware(datetime.combine(default_expiry_date, datetime.min.time()))
-                        # Use localtime with the timezone-aware datetime object
-                        default_expiry = localtime(default_expiry_datetime)
+                        # Convert to IST
+                        default_expiry_ist = localtime(default_expiry)
+
+                        # Extract only the date part
+                        default_expiry_date = default_expiry_ist.date()
+                        logger.info(f"default_expiry_date>>>>>>>>>>>>{default_expiry_date}")
+                        logger.info(f"default_expiry (IST)>>>>>>>>>>>>{default_expiry_ist}")
                         # default_expiry=localtime(trade.expiry_date.date())
                         # expiry_date = datetime.strptime(default_expiry, "%d-%m-%Y")
-                        expiry_date=default_expiry
+                        expiry_date=default_expiry_ist
+                        default_expiry=default_expiry_ist
                         day = expiry_date.strftime("%d")
                         month = expiry_date.strftime("%b").upper()
                         year = expiry_date.strftime("%y")
                         fullyear=expiry_date.strftime("%Y")
                     else:
+                        default_expiry= localtime(default_expiry)
                         logger.error(f"Expiry date is missing {trade.symbol} for user {trade.client}. Skipping trade.")
                         order_id=0
                         message=f"Expiry date is missing {trade.symbol} for user {trade.client}. so can not get trading symbol"
                         save_trade_order_history(trade_order_status,user,trade_symbol, order_id, status, res_data, message,  strategy, Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal , Exchange, Segment,Index_Symbol,order_params,broker=trade.broker)
                         continue 
+                    default_expiry=localtime(default_expiry)
                     order_params = {"symbol": trade.symbol,"Exchange": exch_seg, "quantity": trade.quantity or default_quantity,"product_type": trade.product_type,
                     "transaction_type":buy_sell,"price": limitPrice or 0 ,"ordertype": default_ordertype, "expiry": default_expiry,"strategy": trade.strategy}
                     order_params = serialize_to_json(order_params)
