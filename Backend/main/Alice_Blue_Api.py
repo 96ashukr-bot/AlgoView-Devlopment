@@ -61,15 +61,16 @@ def place_alice_orders(api_skey,api_uid,trading_symbol_aliceblue,transaction_typ
         elif transaction_type.upper()=="SELL":
             transaction_type=TransactionType.Sell
         if product_type:
-            if product_type.upper() =="NRML":
+            # print("product_type>>>>",product_type)
+            if product_type.upper() =="NRML" or product_type.upper()=="NORMAL":
                product_type= ProductType.Normal
-            elif product_type.upper() == "MIS":
+            elif product_type.upper() == "MIS" or product_type.upper()=="INTRADAY":
                product_type = ProductType.Intraday
-            elif product_type.upper() =="CNC":      
+            elif product_type.upper() =="CNC" or product_type.upper()=="DELIVERY":    
                 product_type = ProductType.Delivery
         else:
             product_type=None
-            
+
         # Initialize Aliceblue API
         # alice = Aliceblue(user_id=USER_ID, api_key=ALICE_API_KEY)
         alice = Aliceblue(user_id=api_uid, api_key=api_skey)  # Example user attributes
@@ -93,11 +94,11 @@ def place_alice_orders(api_skey,api_uid,trading_symbol_aliceblue,transaction_typ
         # Place the order
         if Exchange=="NFO":
             logger.info(f"exchnage symbole....{trading_symbol_aliceblue}")
-            instrument = alice.get_instrument_by_symbol("NFO", "BANKNIFTY27FEB25C49600")
+            instrument = alice.get_instrument_by_symbol("NFO", trading_symbol_aliceblue)
             logger.info(f"instrument>>>{instrument}")
         elif Exchange=="BSE":
             instrument = alice.get_instrument_by_symbol("BSE", trading_symbol_aliceblue)
-        print("instrument>>>",instrument)
+        # print("instrument>>>",instrument)
         # Check if the instrument is valid
         if isinstance(instrument, Instrument):
             logger.info(f"Instrument found: {instrument.symbol}")
@@ -139,79 +140,91 @@ def place_alice_orders(api_skey,api_uid,trading_symbol_aliceblue,transaction_typ
         #     save_trade_order_history(trade_order_status,user,trading_symbol_aliceblue, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal , Exchange, Segment,Index_Symbol, order_params,broker="Angle One")
 
         #     return {"data": {"status": "error", "message": f"Quantity must be a multiple of lot size: {lot}"}}
-        if order_type=="LIMIT":
+        if order_type.upper()=="LIMIT":
             order_type=OrderType.Limit
             response = alice.place_order(transaction_type = transaction_type,
-                        instrument = instrument, 
-                        quantity = quantity, 
-                        order_type = order_type, 
-                        product_type = product_type,
-                        # price=price,
-                        )
-        elif order_type=="MARKET":
-            order_type= OrderType.Market
+                    instrument = instrument, 
+                    quantity = quantity, 
+                    order_type = order_type, 
+                    product_type = product_type,
+                    price=price,
+                    )
+        elif order_type.upper()=="MARKET":
+            print("inside market order")
             response = alice.place_order(transaction_type = transaction_type,
                         instrument = instrument, 
                         quantity = quantity, 
-                        order_type = order_type, 
+                        order_type = OrderType.Market, 
                         product_type = product_type,
                         trigger_price=trigger_price)
 
         print(f"Order Response:::: {response}")
+        if response is not None:
         # Log and save order details
-        if response.get("stat") == "Ok":
-            order_id=response.get("NOrdNo")
-            order_his=alice.get_order_history(order_id)
-            # Extract the status
-            status = order_his.get('Status', '').lower()  # Retrieve 'Status' key, fallback to '' if not found
-            res_data=order_his
-            logger.info(f"history of alice blue order_____________{order_his}")
-            logger.info(f"status......{status}")
-            if status == "completed":
-                order_id=res_data.get ('Nstordno', 0)   
-                trasaction_type=res_data.get('Trantype','')
-                if trasaction_type == "B":
-                    Entry_type="LE"
-                    Entry_price=res_data.get ('Avgprc', 0.0)
-                    EntryQty=res_data.get ('Qty', 0)
-                elif trasaction_type == "S": 
-                    Exit_type="LX"
-                    Exit_price=res_data.get ('Avgprc', 0.0)  
-                    ExitQty= res_data.get ('Qty', 0)
-                response = {"data": {"status": "completed"}}
-                logger.info(f"Order placed successfully for user {user}. Order ID: : {order_id}")
-                print("Entry_type>>>",Entry_type)
-                message=f"Order placed successfully for user {user}. Response: {response}"
-                save_trade_order_history(trade_order_status,user,trading_symbol_aliceblue, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type,Entry_price,Exit_price ,EntryQty,ExitQty,webhook_signal , Exchange, Segment,Index_Symbol,order_params, broker="Alice Blue")
-                return response
-            elif status == "rejected": 
-                order_id=res_data.get ('Nstordno', 0) 
-                from_email = default_from_email,
-                message=order_his.get('RejReason', 'not any reason get').lower()
-                send_trade_email_async.delay(user.email, from_email,user.firstName,status, message)
-                response = {"data": {"status": "rejected"}}
-                logger.info(f"Order is rejected  for user {user}. Order ID: {order_id}")
-                save_trade_order_history(trade_order_status,user,trading_symbol_aliceblue, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol,order_params, broker="Alice Blue")
-                return response
-            elif status == "OPEN":   
-                order_id=res_data.get ('Nstordno', 0) 
-                from_email = default_from_email,
-                message=order_his.get('RejReason', 'not any reason get').lower()
-                send_trade_email_async.delay(user.email, from_email,user.firstName,status, message)
-                response = {"data": {"status": "OPEN"}}
-                logger.info(f"Order  order is active and open in the market  for user {user}. Order ID:  :{order_id}")
-                save_trade_order_history(trade_order_status,user,trading_symbol_aliceblue, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol,order_params, broker="Alice Blue")
-                return response
-        # elif response.get("stat") == 'Not_ok':
-        #     print("Not_okNot_okNot_okNot_ok")
-        #     # error_message = response.get("message", "Unknown error")
-        #     response ={"data": {"status": "Failed"}}
-        #     error_message="401 - Unauthorized"
-        #     order_id=None
-        #     status="Failed"
-        #     res_data="login in"
-        #     logger.error(f"Order placement Failed for user {user}. Error: {error_message}")
-        #     save_trade_order_history(trade_order_status,user,trading_symbol_aliceblue, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type ,webhook_signal , Exchange, Segment,Index_Symbol, order_params,broker="Alice Blue")
+            if response.get("stat") == "Ok":
+                order_id=response.get("NOrdNo")
+                order_his=alice.get_order_history(order_id)
+                # Extract the status
+                status = order_his.get('Status', '').lower()  # Retrieve 'Status' key, fallback to '' if not found
+                res_data=order_his
+                logger.info(f"history of alice blue order_____________{order_his}")
+                logger.info(f"status......{status}")
+                if status == "completed":
+                    order_id=res_data.get ('Nstordno', 0)   
+                    trasaction_type=res_data.get('Trantype','')
+                    if trasaction_type == "B":
+                        Entry_type="LE"
+                        Entry_price=res_data.get ('Avgprc', 0.0)
+                        EntryQty=res_data.get ('Qty', 0)
+                    elif trasaction_type == "S": 
+                        Exit_type="LX"
+                        Exit_price=res_data.get ('Avgprc', 0.0)  
+                        ExitQty= res_data.get ('Qty', 0)
+                    response = {"data": {"status": "completed"}}
+                    logger.info(f"Order placed successfully for user {user}. Order ID: : {order_id}")
+                    print("Entry_type>>>",Entry_type)
+                    message=f"Order placed successfully for user {user}. Response: {response}"
+                    save_trade_order_history(trade_order_status,user,trading_symbol_aliceblue, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type,Entry_price,Exit_price ,EntryQty,ExitQty,webhook_signal , Exchange, Segment,Index_Symbol,order_params, broker="Alice Blue")
+                    return response
+                elif status == "rejected": 
+                    order_id=res_data.get ('Nstordno', 0) 
+                    from_email = default_from_email,
+                    message=order_his.get('RejReason', 'not any reason get').lower()
+                    send_trade_email_async.delay(user.email, from_email,user.firstName,status, message)
+                    response = {"data": {"status": "rejected"}}
+                    logger.info(f"Order is rejected  for user {user}. Order ID: {order_id}")
+                    save_trade_order_history(trade_order_status,user,trading_symbol_aliceblue, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol,order_params, broker="Alice Blue")
+                    return response
+                elif status == "OPEN":   
+                    order_id=res_data.get ('Nstordno', 0) 
+                    from_email = default_from_email,
+                    message=order_his.get('RejReason', 'not any reason get').lower()
+                    send_trade_email_async.delay(user.email, from_email,user.firstName,status, message)
+                    response = {"data": {"status": "OPEN"}}
+                    logger.info(f"Order  order is active and open in the market  for user {user}. Order ID:  :{order_id}")
+                    save_trade_order_history(trade_order_status,user,trading_symbol_aliceblue, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol,order_params, broker="Alice Blue")
+                    return response
+            # elif response.get("stat") == 'Not_ok':
+            #     print("Not_okNot_okNot_okNot_ok")
+            #     # error_message = response.get("message", "Unknown error")
+            #     response ={"data": {"status": "Failed"}}
+            #     error_message="401 - Unauthorized"
+            #     order_id=None
+            #     status="Failed"
+            #     res_data="login in"
+            #     logger.error(f"Order placement Failed for user {user}. Error: {error_message}")
+            #     save_trade_order_history(trade_order_status,user,trading_symbol_aliceblue, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type ,webhook_signal , Exchange, Segment,Index_Symbol, order_params,broker="Alice Blue")
+            else:
+                # error_message = response.get("message", "Unknown error")
+                response ={"data": {"status": "Failed"}}
+                error_message="error when placing order"
+                order_id=None
+                status="Failed"
+                res_data="Not any reponse Failed"
+                logger.error(f"Order placement Failed for user {user}. Error: {error_message}")
+                
+                save_trade_order_history(trade_order_status,user,trading_symbol_aliceblue, order_id, status, res_data, message,  strategy,   Entry_type,Exit_type,Entry_price,Exit_price,EntryQty,ExitQty  ,webhook_signal , Exchange, Segment,Index_Symbol, order_params,broker="Alice Blue")
+                return response       
         else:
             # error_message = response.get("message", "Unknown error")
             response ={"data": {"status": "Failed"}}
@@ -222,20 +235,19 @@ def place_alice_orders(api_skey,api_uid,trading_symbol_aliceblue,transaction_typ
             logger.error(f"Order placement Failed for user {user}. Error: {error_message}")
             
             save_trade_order_history(trade_order_status,user,trading_symbol_aliceblue, order_id, status, res_data, message,  strategy,   Entry_type,Exit_type,Entry_price,Exit_price,EntryQty,ExitQty  ,webhook_signal , Exchange, Segment,Index_Symbol, order_params,broker="Alice Blue")
-            return response       
-
+            return response 
     except ValueError as val_err:
         logger.error(f"Validation error: {val_err}")
-        return {"status": "error", "message": str(val_err)}
+        return {"data":{"status": "error", "message": str(val_err)}}
 
     except AttributeError as attr_err:
         logger.error(f"Attribute error: {attr_err}")
-        return {"status": "error", "message": str(attr_err)}
+        return {"data":{"status": "error", "message": str(attr_err)}}
 
     except Exception as e:
         logger.exception(f"Unexpected error while placing order for user {user}")
         # save_webhook_signals_logs(transaction_type, symbol, price, strategy, user, "Failed", failure_reason=str(e),json=json)
-        return {"status": "error", "message": "An unexpected error occurred"}
+        return {"data":{"status": "error", "message": "An unexpected error occurred"}}
 
 def save_trade_order_history(trade_order_status,client, trading_symbol, order_id, order_status, response_data, failure_reason,
       strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal, Exchange, Segment,Index_Symbol ,order_params=None,broker=None ):

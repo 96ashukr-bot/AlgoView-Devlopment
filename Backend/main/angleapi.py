@@ -198,7 +198,8 @@ def place_Angle_order(api_key,demate_user_name,totp,angle_pass,token, symbol, qu
             return response
     except Exception as e:
         logging.error(f"An unexpected error occurred: {e}")
-        return  e
+        response = {"data": {"status": e}}
+        return response
 
 from datetime import datetime, timedelta    
 # Order logging function
