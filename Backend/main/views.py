@@ -305,9 +305,9 @@ class PasswordResetRequestView(generics.GenericAPIView):
             # reset_link = request.build_absolute_uri(
             #     f'/password-reset-confirm/?uidb64={uid}&token={token}'
             # )
-            reset_link = f'https://sparks.algoview.in/pages/authentication/reset-password/:{uid}/:{token}/:layout'
+            # reset_link = f'https://sparks.algoview.in/pages/authentication/reset-password/:{uid}/:{token}/:layout'
             # reset_link = f'https://www.admin.algoview.in/pages/authentication/reset-password/:{uid}/:{token}/:layout'
-            # reset_link = f'http://103.120.178.54:4000/pages/authentication/reset-password/:{uid}/:{token}/:layout'
+            reset_link = f'http://103.120.178.54:4000/pages/authentication/reset-password/:{uid}/:{token}/:layout'
             # reset_link = f'http://localhost:3000/pages/authentication/reset-password/:{uid}/:{token}/:layout'
             subject = "Password Reset Request"
             print("reset_link",reset_link)
@@ -2539,24 +2539,29 @@ class PlaceOrderWebhookView(APIView):
                     continue
                 if trade.symbol.upper() == symbols.upper():
                     if default_expiry:
-                        default_expiry_date = trade.expiry_date.date()  # This is a datetime.date object
-                        # Convert it to a timezone-aware datetime object
-                        default_expiry_datetime = make_aware(datetime.combine(default_expiry_date, datetime.min.time()))
-                        # Use localtime with the timezone-aware datetime object
-                        default_expiry = localtime(default_expiry_datetime)
+                        # Convert to IST
+                        default_expiry_ist = localtime(default_expiry)
+
+                        # Extract only the date part
+                        default_expiry_date = default_expiry_ist.date()
+                        logger.info(f"default_expiry_date>>>>>>>>>>>>{default_expiry_date}")
+                        logger.info(f"default_expiry (IST)>>>>>>>>>>>>{default_expiry_ist}")
                         # default_expiry=localtime(trade.expiry_date.date())
                         # expiry_date = datetime.strptime(default_expiry, "%d-%m-%Y")
-                        expiry_date=default_expiry
+                        expiry_date=default_expiry_ist
+                        default_expiry=default_expiry_ist
                         day = expiry_date.strftime("%d")
                         month = expiry_date.strftime("%b").upper()
                         year = expiry_date.strftime("%y")
                         fullyear=expiry_date.strftime("%Y")
                     else:
+                        default_expiry= localtime(default_expiry)
                         logger.error(f"Expiry date is missing {trade.symbol} for user {trade.client}. Skipping trade.")
                         order_id=0
                         message=f"Expiry date is missing {trade.symbol} for user {trade.client}. so can not get trading symbol"
                         save_trade_order_history(trade_order_status,user,trade_symbol, order_id, status, res_data, message,  strategy, Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal , Exchange, Segment,Index_Symbol,order_params,broker=trade.broker)
                         continue 
+                    default_expiry=localtime(default_expiry)
                     order_params = {"symbol": trade.symbol,"Exchange": exch_seg, "quantity": trade.quantity or default_quantity,"product_type": trade.product_type,
                     "transaction_type":buy_sell,"price": limitPrice or 0 ,"ordertype": default_ordertype, "expiry": default_expiry,"strategy": trade.strategy}
                     order_params = serialize_to_json(order_params)
@@ -3732,7 +3737,6 @@ class CreateOrderView(APIView):
             user = request.user
             license_qty = request.data.get("license_qty")
             license_price = request.data.get("license_price")
-            upi_id = request.data.get("upi_id")
 
             if not license_qty or not license_price:
                 return Response({"error": "License quantity and price are required"}, status=status.HTTP_400_BAD_REQUEST)
@@ -3746,7 +3750,6 @@ class CreateOrderView(APIView):
                 "amount": total_amount,
                 "currency": "INR",
                 "payment_capture": 1,
-                "method": "upi"  # Set payment method to UPI
             }
             razorpay_order = razorpay_client.order.create(order_data)
 
@@ -3762,38 +3765,46 @@ class CreateOrderView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class PaymentCallbackView(APIView):
-    """ API to handle Razorpay payment callback """
-
-    def post(self, request):
+    def get(self, request):
         try:
-            razorpay_order_id = request.data.get("razorpay_order_id")
-            razorpay_payment_id = request.data.get("razorpay_payment_id")
-            razorpay_signature = request.data.get("razorpay_signature")
-
-            payment = get_object_or_404(Payment, razorpay_order_id=razorpay_order_id)
-
-            # Verify the payment signature
-            params_dict = {
-                'razorpay_order_id': razorpay_order_id,
-                'razorpay_payment_id': razorpay_payment_id,
-                'razorpay_signature': razorpay_signature
-            }
-
-            try:
-                razorpay_client.utility.verify_payment_signature(params_dict)
-                payment.payment_status = True  # Mark payment as successful
-                payment.razorpay_payment_id = razorpay_payment_id
-                payment.razorpay_signature = razorpay_signature
+            order_id ="order_Pu1KH38Ka6STIt"# request.data.get("order_id")
+            order_details = razorpay_client.order.fetch(order_id)
+            
+            # Check if payment is successful
+            if order_details['status'] == 'paid':
+                payment = Payment.objects.get(razorpay_order_id=order_id)
+                payment.payment_status = True
                 payment.save()
 
-                # Activate the license
-                payment.license.is_active = True
-                payment.license.save()
+            return Response({"status": order_details['status'], "order_details": order_details})
 
-                return Response({"message": "Payment successful"}, status=status.HTTP_200_OK)
+        except razorpay.errors.BadRequestError:
+            return Response({"error": "Invalid Order ID"}, status=400)
 
-            except razorpay.errors.SignatureVerificationError:
-                return Response({"error": "Payment verification failed"}, status=status.HTTP_400_BAD_REQUEST)
+class VerifyPaymentAPIView(APIView):
+    def post(self, request):
+        data = request.data
+        payment_id = data.get("razorpay_payment_id")
+        order_id = data.get("razorpay_order_id")
+        signature = data.get("razorpay_signature")
+        payment_method = data.get("payment_method")
+        upi_id = data.get("upi_id")
 
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        payment = Payment.objects.filter(razorpay_order_id=order_id).first()
+
+        if payment:
+            payment.razorpay_payment_id = payment_id
+            payment.razorpay_signature = signature
+            payment.payment_method = payment_method
+            payment.upi_id = upi_id if payment_method == "UPI" else None
+
+            try:
+                razorpay_client.utility.verify_payment_signature(data)
+                payment.payment_status = "Completed"
+                payment.save()
+                return Response({"message": "Payment successful"})
+            except:
+                payment.payment_status = "Failed"
+                payment.save()
+                return Response({"message": "Payment verification failed"}, status=400)
+        return Response({"message": "Order not found"}, status=404)
