@@ -90,9 +90,11 @@ def place_alice_orders(api_skey,api_uid,trading_symbol_aliceblue,transaction_typ
         
         # Place the order
         if Exchange=="NFO":
-           instrument = alice.get_instrument_by_symbol("NFO", trading_symbol_aliceblue)
+            logger.info(f"exchnage symbole....{trading_symbol_aliceblue}")
+            instrument = alice.get_instrument_by_symbol("NFO", trading_symbol_aliceblue)
+            logger.info(f"instrument>>>{instrument}")
         elif Exchange=="BSE":
-           instrument = alice.get_instrument_by_symbol("BSE", trading_symbol_aliceblue)
+            instrument = alice.get_instrument_by_symbol("BSE", trading_symbol_aliceblue)
         print("instrument>>>",instrument)
         # Check if the instrument is valid
         if isinstance(instrument, Instrument):

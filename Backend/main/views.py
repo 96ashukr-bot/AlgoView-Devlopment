@@ -3760,41 +3760,22 @@ class CreateOrderView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class PaymentCallbackView(APIView):
-    """ API to handle Razorpay payment callback """
-
-    def post(self, request):
+    def get(self, request):
         try:
-            razorpay_order_id = request.data.get("razorpay_order_id")
-            razorpay_payment_id = request.data.get("razorpay_payment_id")
-            razorpay_signature = request.data.get("razorpay_signature")
-
-            payment = get_object_or_404(Payment, razorpay_order_id=razorpay_order_id)
-
-            # Verify the payment signature
-            params_dict = {
-                'razorpay_order_id': razorpay_order_id,
-                'razorpay_payment_id': razorpay_payment_id,
-                'razorpay_signature': razorpay_signature
-            }
-
-            try:
-                razorpay_client.utility.verify_payment_signature(params_dict)
-                payment.payment_status = True  # Mark payment as successful
-                payment.razorpay_payment_id = razorpay_payment_id
-                payment.razorpay_signature = razorpay_signature
+            order_id ="order_Pu1KH38Ka6STIt"# request.data.get("order_id")
+            order_details = razorpay_client.order.fetch(order_id)
+            
+            # Check if payment is successful
+            if order_details['status'] == 'paid':
+                payment = Payment.objects.get(razorpay_order_id=order_id)
+                payment.payment_status = True
                 payment.save()
 
-                # Activate the license
-                payment.license.is_active = True
-                payment.license.save()
+            return Response({"status": order_details['status'], "order_details": order_details})
 
-                return Response({"message": "Payment successful"}, status=status.HTTP_200_OK)
+        except razorpay.errors.BadRequestError:
+            return Response({"error": "Invalid Order ID"}, status=400)
 
-            except razorpay.errors.SignatureVerificationError:
-                return Response({"error": "Payment verification failed"}, status=status.HTTP_400_BAD_REQUEST)
-
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 class VerifyPaymentAPIView(APIView):
     def post(self, request):
         data = request.data
