@@ -48,7 +48,7 @@ CORS_ALLOWED_ORIGINS = [
    "http://103.120.178.54:4000",
    "https://www.admin.algoview.in",
     "https://client.algoview.in",
-    "https://sparksadmin.algoview.in/"
+    "https://sparksadmin.algoview.in"
 ]
 # Application definition
 

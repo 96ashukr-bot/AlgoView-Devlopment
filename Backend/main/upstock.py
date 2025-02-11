@@ -97,6 +97,13 @@ def place_upstox_orders(
         status="Failed"
         order_id=0
         message=""
+        order_params = {
+            "quantity": quantity,
+            "price": price if ordertype.upper() == "LIMIT" else 0,
+            "order_type": ordertype.upper(),
+            "transaction_type": transaction_type.upper(),
+            'validity': 'DAY',  
+            'trigger_price': 0 }
         instrument_key = result.get("instrument_key")
         if not instrument_key:
             logger.error(f"Instrument details not found for {trade_symbol}. Response: {result}")

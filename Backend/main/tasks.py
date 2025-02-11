@@ -211,9 +211,10 @@ def resend_otp_email_async(user_email, otp_code):
         print(f"Email sending failed: {e}")
 @shared_task
 def send_login_success_email(username, email, browser, ip_address, login_time):
-    """
-    Sends an email to the user when they successfully log in.
-    """
+    smtp_connection = get_smtp_connection()
+    if not smtp_connection:
+        print("SMTP connection could not be established!")
+        return
     subject = f"Login Alert for your {company_name} account!"
     from_email = default_from_email  # Ensure it's defined in settings.py
     recipient_email = email  # FIXED: Use actual email, not username
@@ -238,7 +239,7 @@ def send_login_success_email(username, email, browser, ip_address, login_time):
 
     # Send Email
     try:
-        email_message = EmailMultiAlternatives(subject, "", f"{company_sender_name} <{from_email}>", [recipient_email])
+        email_message = EmailMultiAlternatives(subject, "", f"{company_sender_name} <{from_email}>", [recipient_email],connection=smtp_connection)
         email_message.attach_alternative(html_message, "text/html")
         email_message.send()
         print(f"Login success email sent to {recipient_email}")

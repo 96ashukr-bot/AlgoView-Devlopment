@@ -3445,7 +3445,7 @@ from django.http import JsonResponse
 from kiteconnect import KiteConnect
 from django.contrib.auth.decorators import login_required
 from .models import ClientBrokerdetails
-REDIRECT_URI = "https://www.sparksadmin.algoview.in/callback"  
+REDIRECT_URI = "https://sparks.algoview.in/callback"  
 class BrokerLoginRedirectView(APIView):
     permission_classes = [IsAuthenticated]  
 
