@@ -9,8 +9,8 @@ GET_TREAD_BOOK_API="placeOrder/fetchTradeBook"
 GET_TREAD_BOOK_URL=BASE_URL+GET_TREAD_BOOK_API
 import os
 from django.conf import settings
-# from pya3 import *
-from alice_blue import *
+from pya3 import *
+#from alice_blue import *
 from decouple import config
 import pytz
 from main.models import *
