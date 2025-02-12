@@ -52,10 +52,10 @@ admin.site.register(Permission)
 admin.site.register(RolePermission)
 
 @admin.register(SignalOrderLog)
-class OtpAdmin(admin.ModelAdmin):
-    list_display = ['id','symbol','order_type','created_at','json_data']
-    search_fields = ['order_type',]
-    ordering = ['order_type',]       
+class SignalOrderLogAdmin(admin.ModelAdmin):
+    list_display = ['id','order_type','json_data','symbol','created_at']
+    # search_fields = ['order_type',]
+    # ordering = ['order_type',]       
     
 @admin.register(UserActivityLog)
 class UserActivity_logs(admin.ModelAdmin):

@@ -1,14 +1,4 @@
-import asyncio
-import json
-import logging
-import os
-import requests
-logger = logging.getLogger('main')
-from channels.generic.websocket import AsyncWebsocketConsumer
-from SmartApi.smartWebSocketV2 import SmartWebSocketV2
-from SmartApi import SmartConnect
-import pyotp
-from urllib.parse import parse_qs
+
 # logger = logging.getLogger(__name__)
 # API_KEY = 'Xp6znI3s'  
 # USERNAME = 'AAAB519761'  
@@ -16,25 +6,275 @@ from urllib.parse import parse_qs
 # Totp = "RFFORAS7ASFH7KIZWD7FCSVK2Y" 
 
 # Smart API credentials
-API_KEY = 'FNqcDPCk'#'Xp6znI3s'
-USERNAME = 'A1420760'
-TOTP_SECRET= "7DFMHZE3BDRCIHMLFT4N3QVCPU"
-PASSWORD="1986"
 # API_KEY = 'StvD7EVL'  
 # USERNAME = 'AAAB519761'  
 # PASSWORD = '1234' 
 # TOTP_SECRET = "RFFORAS7ASFH7KIZWD7FCSVK2Y" 
+
+import asyncio
+import json
+import logging
+import requests
+from channels.generic.websocket import AsyncWebsocketConsumer
+from SmartApi.smartWebSocketV2 import SmartWebSocketV2
+from SmartApi import SmartConnect
+import pyotp
+from urllib.parse import parse_qs
+
+logger = logging.getLogger('main')
+
+# Smart API credentials
+API_KEY = 'FNqcDPCk'
+USERNAME = 'A1420760'
+TOTP_SECRET = "7DFMHZE3BDRCIHMLFT4N3QVCPU"
+PASSWORD = "1986"
+
 obj = SmartConnect(api_key=API_KEY)
 totp = pyotp.TOTP(TOTP_SECRET).now()
 data = obj.generateSession(USERNAME, PASSWORD, totp)
 feedToken = obj.getfeedToken()
 FEED_TOKEN = feedToken
 AUTH_TOKEN = data['data']['refreshToken']
-print(">>>>>>>>>>>consumerrrrrrrr")
 correlation_id = "abc123"
-mode = 3#1  # Subscription mode
+mode = 3  # Subscription mode
 
 class StockTradingConsumer(AsyncWebsocketConsumer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.last_prices = {}
+        self.sws = None
+        self.event_loop = asyncio.get_event_loop()
+
+    async def connect(self):
+        query_params = parse_qs(self.scope['query_string'].decode())
+        self.exchange_type = int(query_params.get("exchange_type", [1])[0])
+        self.symbol_tokens = query_params.get("symbol_tokens", [""])[0].split(",")
+        self.token_list = [{"exchangeType": self.exchange_type, "tokens": self.symbol_tokens}]
+
+        await self.accept()
+
+        self.sws = SmartWebSocketV2(AUTH_TOKEN, API_KEY, USERNAME, FEED_TOKEN)
+        self.sws.on_open = self.on_open
+        self.sws.on_data = self.on_data
+        self.sws.on_error = self.on_error
+        self.sws.on_close = self.on_close
+
+        loop = asyncio.get_event_loop()
+        loop.run_in_executor(None, self.sws.connect)
+
+    def on_open(self, wsapp):
+        logger.info("WebSocket connection established for stock live data.")
+        self.sws.subscribe(correlation_id, mode, self.token_list)
+
+    def on_data(self, wsapp, message, *args):
+        try:
+            tick_data = message
+            current_price = tick_data.get('last_traded_price')
+            close_price = tick_data.get('closed_price')
+
+            if current_price is None or close_price is None:
+                logger.error(f"Missing critical data: {tick_data}")
+                return
+
+            current_price = current_price / 100.0
+            close_price = close_price / 100.0
+
+            difference = current_price - close_price
+            percentage = (difference / close_price) * 100
+            trend_symbol = "+" if difference > 0 else "-"
+
+            formatted_price = f"{current_price:,.2f}"
+            formatted_difference = f"{trend_symbol}{abs(difference):,.2f}"
+            formatted_percentage = f"({trend_symbol}{abs(percentage):.2f}%)"
+
+            token = tick_data.get("token", "unknown")
+            self.last_prices[token] = current_price
+            logger.info("live data market********************")
+            asyncio.run_coroutine_threadsafe(
+                self.send(text_data=json.dumps({
+                    "token": token,
+                    "price": formatted_price,
+                    "trend": trend_symbol,
+                    "difference": formatted_difference,
+                    "percentage": formatted_percentage,
+                    "close": close_price,
+                })),
+                self.event_loop
+            )
+        except Exception as e:
+            logger.error(f"Error processing data: {e}")
+
+    def on_error(self, wsapp, error, *args):
+        logger.error(f"WebSocket error: {error}")
+
+    def on_close(self, wsapp, *args):
+        logger.info("WebSocket connection closed for stock live data. Cleaning up resources.")
+        if self.sws is not None:
+            self.sws.close_connection()
+            self.sws = None
+
+    async def disconnect(self, close_code):
+        logger.info("WebSocket connection closed.")
+        if hasattr(self, "sws") and self.sws is not None:
+            logger.info("Closing SmartWebSocketV2 connection...stock live data....")
+            self.sws.close_connection()
+            self.sws = None
+
+class StockChainConsumer(AsyncWebsocketConsumer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.last_prices = {}
+        self.token_to_symbol = {}
+        self.token_to_strike_price = {}
+        self.token_to_category = {}
+        self.symbol_name = None
+        self.expiry_date = None
+        self.sws = None
+        self.event_loop = asyncio.get_event_loop()
+
+    async def connect(self):
+        query_params = parse_qs(self.scope['query_string'].decode('utf-8'))
+        self.symbol_name = query_params.get('name', [None])[0]
+        self.expiry_date = query_params.get('expiry_date', [None])[0]
+
+        if not self.symbol_name:
+            await self.close(code=4001)
+            return
+
+        logger.info(f"Requested symbol: {self.symbol_name}, Expiry Date: {self.expiry_date or 'ALL DATES'}")
+
+        tokens = await self.get_symbol_tokens(self.symbol_name, self.expiry_date)
+        if not tokens:
+            await self.close(code=4002)
+            return
+
+        self.token_list = [{"exchangeType": 2, "tokens": tokens}]
+        await self.accept()
+
+        self.sws = SmartWebSocketV2(AUTH_TOKEN, API_KEY, USERNAME, FEED_TOKEN)
+        self.sws.on_open = self.on_open
+        self.sws.on_data = self.on_data
+        self.sws.on_error = self.on_error
+        self.sws.on_close = self.on_close
+
+        loop = asyncio.get_event_loop()
+        loop.run_in_executor(None, self.sws.connect)
+
+    async def get_symbol_tokens(self, symbol_name, expiry_date):
+        try:
+            url = "https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json"
+            response = requests.get(url)
+            response.raise_for_status()
+            data = response.json()
+
+            token_to_symbol = {}
+            token_to_strike_price = {}
+            token_to_category = {}
+
+            for entry in data:
+                if entry.get('exch_seg') == 'NFO' and entry.get('name') == symbol_name.upper():
+                    if expiry_date and entry.get('expiry').upper() != expiry_date.upper():
+                        continue
+
+                    token = entry['token']
+                    symbol = entry['symbol']
+                    strike_price = entry['strike']
+                    category = 'CE' if 'CE' in symbol else 'PE' if 'PE' in symbol else 'Unknown'
+
+                    token_to_symbol[token] = symbol
+                    token_to_strike_price[token] = strike_price
+                    token_to_category[token] = category
+
+            self.token_to_symbol = token_to_symbol
+            self.token_to_strike_price = token_to_strike_price
+            self.token_to_category = token_to_category
+
+            return list(token_to_symbol.keys())
+        except requests.RequestException as e:
+            logger.error(f"Error fetching tokens for symbol {symbol_name}: {e}")
+            return []
+        except Exception as e:
+            logger.error(f"Unexpected error: {e}")
+            return []
+
+    def on_open(self, wsapp):
+        logger.info("WebSocket connection established. for option chain......")
+        if not self.token_list:
+            logger.error("No tokens to subscribe to!")
+            return
+        self.sws.subscribe(correlation_id, mode, self.token_list)
+
+    def on_data(self, wsapp, message, *args):
+        try:
+            tick_data = message if isinstance(message, dict) else json.loads(message)
+            token = tick_data.get("token")
+            current_price = tick_data.get('last_traded_price', 0) / 100.0
+            volume = tick_data.get("volume_trade_for_the_day", 0)
+            close_price = tick_data.get("closed_price", 0) / 100.0
+
+            symbol = self.token_to_symbol.get(token, "Unknown Symbol")
+            strike_price = self.token_to_strike_price.get(token, "Unknown Strike Price")
+            category = self.token_to_category.get(token, "Unknown")
+
+            if current_price is None or close_price is None:
+                logger.error(f"Missing critical data: {tick_data}")
+                return
+
+            current_price = current_price / 100.0
+            close_price = close_price / 100.0
+
+            difference = current_price - close_price
+            percentage = (difference / close_price) * 100
+            trend_symbol = "+" if difference > 0 else "-"
+
+            formatted_price = f"{current_price:,.2f}"
+            formatted_difference = f"{trend_symbol}{abs(difference):,.2f}"
+            formatted_percentage = f"({trend_symbol}{abs(percentage):.2f}%)"
+
+            if category not in ["CE", "PE"]:
+                return
+            logger.info("option chain data::::::::::::")
+            asyncio.run_coroutine_threadsafe(
+                self.send(text_data=json.dumps({
+                    "symbol": symbol,
+                    "strike_price": strike_price,
+                    "ltp": f"{current_price:.2f}",
+                    "volume": volume,
+                    "category": category,
+                    "formatted_difference": formatted_difference,
+                    "formatted_percentage": formatted_percentage,
+                    "close_price": close_price
+                })),
+                self.event_loop
+            )
+        except json.JSONDecodeError as e:
+            logger.error(f"Error decoding JSON data: {e}")
+        except Exception as e:
+            logger.error(f"Error processing data: {e}")
+
+    def on_error(self, wsapp, error, *args):
+        logger.error(f"WebSocket error: {error}")
+
+    def on_close(self, wsapp, close_status_code, close_msg, *args):
+        logger.info(f"WebSocket connection closed for option chain... Status code: {close_status_code}, Message: {close_msg}")
+
+    async def disconnect(self, close_code):
+        logger.info("WebSocket connection closed.for option chain....")
+        if hasattr(self, "sws") and self.sws is not None:
+            self.sws.close_connection()
+            self.sws = None
+
+
+
+
+
+
+
+
+
+
+
+class StockTradingConsumertttttttt(AsyncWebsocketConsumer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.last_prices = {}  # Dictionary to store last known prices for tokens
@@ -143,7 +383,7 @@ class StockTradingConsumer(AsyncWebsocketConsumer):
         self.sws.close_connection()
         
 
-class StockChainConsumer(AsyncWebsocketConsumer):
+class StockChainConsumerwwwwwwwwwwwwww(AsyncWebsocketConsumer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.last_prices = {}
