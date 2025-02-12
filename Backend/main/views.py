@@ -2583,6 +2583,7 @@ class PlaceOrderWebhookView(APIView):
                     user = trade.client
                     strategy = trade.strategy
                     quantity = trade.quantity or default_quantity
+                    logger.info("quantity of trade>>>{quantity}")
                     product_type = trade.product_type
                     price = limitPrice
                     ordertype = default_ordertype
