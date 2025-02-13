@@ -255,7 +255,7 @@ def place_5paisa_order(api_key,access_token,trade_symbol,transaction_type, symbo
         print("transaction_type>>",transaction_type,ordertype)
         
         smtp_details=CompanySmtpDetails.objects.first()
-        default_from_email=smtp_details.default_from_email if smtp_details else None
+        default_from_email=smtp_details.email_host_user if smtp_details else   "no-reply@example.com" 
         segment="nse_fo"
         if Exchange=="NSE" or Exchange=="NFO":
             Exch="N"

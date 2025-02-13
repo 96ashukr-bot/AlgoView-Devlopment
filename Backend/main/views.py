@@ -23,7 +23,7 @@ from main.dematemodule import trading_Symbol_sum
 from main.dhanapi import place_dhan_orders
 from main.fivepaisa import fetch_access_token_5paisa, place_5paisa_order
 from main.permissions import  IsAdminRole
-from main.tasks import resend_otp_email_async, send_kyc_email_async, send_trade_email_async
+from main.tasks import resend_otp_email_async, send_kyc_email_async, send_trade_email_async,send_password_reset_email
 from rest_framework import status
 # from django.utils.timezone import make_aware
 # from django.utils.timezone import localtime
@@ -71,7 +71,7 @@ help_center_link = company_profile.help_center_link if company_profile else "htt
 contact_number = company_profile.company_phone_number if company_profile else None
 
 smtp_details=CompanySmtpDetails.objects.first()
-default_from_email=smtp_details.default_from_email if smtp_details else None  
+default_from_email=smtp_details.email_host_user if smtp_details else   "no-reply@example.com" 
 # get Role Views
 class RoleListCreateView(generics.ListCreateAPIView):
     pagination_class = None
@@ -307,19 +307,23 @@ class PasswordResetRequestView(generics.GenericAPIView):
             # )
             # reset_link = f'https://sparks.algoview.in/pages/authentication/reset-password/:{uid}/:{token}/:layout'
             # reset_link = f'https://www.admin.algoview.in/pages/authentication/reset-password/:{uid}/:{token}/:layout'
-            reset_link = f'http://103.120.178.54:4000/pages/authentication/reset-password/:{uid}/:{token}/:layout'
+            # reset_link = f'http://103.120.178.54:4000/pages/authentication/reset-password/:{uid}/:{token}/:layout'
             # reset_link = f'http://localhost:3000/pages/authentication/reset-password/:{uid}/:{token}/:layout'
-            subject = "Password Reset Request"
-            print("reset_link",reset_link)
-            message = (
-                f"Hello,\n\n"
-                f"You've requested a password reset. Click the link below to reset your password:\n"
-                f"{reset_link}\n\n"
-                f"If you did not request this, please ignore this email.\n\n"
-                f"Best regards,\nYour Team"
-            )
-            from_email = default_from_email
-            send_mail(subject, message, from_email, [email])
+            # subject = "Password Reset Request"
+            # print("reset_link",reset_link)
+            # message = (
+            #     f"Hello,\n\n"
+            #     f"You've requested a password reset. Click the link below to reset your password:\n"
+            #     f"{reset_link}\n\n"
+            #     f"If you did not request this, please ignore this email.\n\n"
+            #     f"Best regards,\nYour Team"
+            # )
+            # send_mail(subject, message, from_email, [email])
+            # Retrieve the default from email from your SMTP settings.
+            dynamic_email = default_from_email 
+            username = user.firstName
+            print("default_from_email>>>>", dynamic_email)
+            send_password_reset_email(uid,email,username ,token)
             return Response({'detail': 'Password reset link sent.'}, status=status.HTTP_200_OK)
         except UserModel.DoesNotExist:
             return Response({'detail': 'User with this email does not exist.'}, status=status.HTTP_404_NOT_FOUND)
@@ -2609,6 +2613,12 @@ class PlaceOrderWebhookView(APIView):
                             transaction_type = "SELL-C"
                             buy_sell, Type = manage_order(transaction_type, buy_sell, Type)
                             transaction_type=buy_sell
+                            # if buy_sell=="BUY" and Type=="CE":
+                            #     Entry_type="LE"
+                            # elif buy_sell=="SELL" and  Type=="PE":
+                            #     Exit_type="LX" 
+                            # elif buy_sell=="SELL" and  Type=="CE":
+                            #     Entry_type="LE"       
                             logger.info(f"Placing first order: Action={buy_sell}, Type={Type}")
                             trading_Symbol_sum(trade, symbols, day, month, year, Type, default_price)
                             order_response = place_order_broker(

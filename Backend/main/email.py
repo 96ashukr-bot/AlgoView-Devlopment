@@ -15,7 +15,7 @@ help_center_link = company_profile.help_center_link if company_profile else None
 company_website =company_profile.company_website if company_profile else None
 
 smtp_details=CompanySmtpDetails.objects.first()
-default_from_email=smtp_details.default_from_email if smtp_details else None
+default_from_email=smtp_details.email_host_user if smtp_details else   "no-reply@example.com" 
 class EmailServicesss:
     
     @staticmethod

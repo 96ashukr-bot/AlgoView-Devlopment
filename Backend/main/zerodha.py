@@ -12,7 +12,7 @@ def place_zerodha_orders(access_token, Api_key, trade_symbol, transaction_type, 
     try:
         
         smtp_details=CompanySmtpDetails.objects.first()
-        default_from_email=smtp_details.default_from_email if smtp_details else None
+        default_from_email=smtp_details.email_host_user if smtp_details else   "no-reply@example.com"
         order_id = 0
         status = "Failed"
         res_data = "Unknown response"

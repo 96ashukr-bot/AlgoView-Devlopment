@@ -31,8 +31,7 @@ def place_alice_orders(api_skey,api_uid,trading_symbol_aliceblue,transaction_typ
     order_type, product_type, price, user,Lots, trade_order_status, Entry_type,Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal, Exchange, Segment,Index_Symbol, trigger_price=None):
     try:
         smtp_details=CompanySmtpDetails.objects.first()
-        default_from_email=smtp_details.default_from_email if smtp_details else None
-
+        default_from_email=smtp_details.email_host_user if smtp_details else   "no-reply@example.com" 
         print(f"Order Type: {order_type}, Price: {price}, Trigger Price: {trigger_price}")
         # # Convert price and trigger price to float if provided
         price = float(price) if price is not None else None

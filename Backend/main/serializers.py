@@ -25,8 +25,7 @@ help_center_link = company_profile.help_center_link if company_profile else "htt
 contact_number = company_profile.company_phone_number if company_profile else None
 
 smtp_details=CompanySmtpDetails.objects.first()
-default_from_email=smtp_details.default_from_email if smtp_details else None
-  
+default_from_email=smtp_details.email_host_user if smtp_details else   "no-reply@example.com" 
 class RoleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Role

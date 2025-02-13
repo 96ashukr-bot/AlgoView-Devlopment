@@ -91,7 +91,7 @@ def place_upstox_orders(
     Segment, Index_Symbol, triggerPrice,trade_order_status):
     try:
         smtp_details=CompanySmtpDetails.objects.first()
-        default_from_email=smtp_details.default_from_email if smtp_details else None
+        default_from_email=smtp_details.email_host_user if smtp_details else   "no-reply@example.com" 
         # Fetch instrument details
         result = fetch_instrument_details(trade_symbol, "NSE")
         status="Failed"

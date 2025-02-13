@@ -31,7 +31,7 @@ def place_Angle_order(api_key,demate_user_name,totp,angle_pass,token, symbol, qu
     try:
         
         smtp_details=CompanySmtpDetails.objects.first()
-        default_from_email=smtp_details.default_from_email if smtp_details else None
+        default_from_email=smtp_details.email_host_user if smtp_details else   "no-reply@example.com" 
         logger.info(f"Angle one api order placement for user: {user} & trading symbol is: {symbol}")
         print("product_type>>>",product_type)
         if product_type:

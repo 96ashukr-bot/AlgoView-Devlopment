@@ -33,7 +33,7 @@ else:
     logo_url = static('company_logos/download.png')  # Fallback to a default logo
 
 smtp_details=CompanySmtpDetails.objects.first()
-default_from_email=smtp_details.default_from_email if smtp_details else   "no-reply@example.com"
+default_from_email=smtp_details.email_host_user if smtp_details else   "no-reply@example.com"
 print("default_from_email>>>>>>",default_from_email)
 #client inactive and license expir ations
 @shared_task
@@ -249,3 +249,34 @@ def send_login_success_email(username, email, browser, ip_address, login_time):
         print(f"Login success email sent to {recipient_email}")
     except Exception as e:
         print(f"Failed to send login success email: {e}")
+
+@shared_task
+def send_password_reset_email(uid, email, username, token):
+    print("reset passfunction calling")
+    smtp_connection = get_smtp_connection()
+    if not smtp_connection:
+        print("SMTP connection could not be established!")
+        return
+    # Build your reset link
+    # reset_link = f'http://localhost:3000/pages/authentication/reset-password/{uid}/{token}'
+    reset_link=f'https://sparks.algoview.in/pages/authentication/reset-password/:{uid}/:{token}/:layout'
+    
+    subject = "Password Reset Request"
+    context = {
+        'user_name': username,
+        'reset_link': reset_link,
+        'company_name': company_name, 
+        'company_url': company_website,
+        'support_email': support_email
+    }
+    
+    html_message = render_to_string('password_reset_email.html', context)
+    from_email = default_from_email
+    try:
+        email_message = EmailMultiAlternatives(subject, "", f"{company_sender_name} <{from_email}>", [email],connection=smtp_connection)
+      
+        email_message.attach_alternative(html_message, "text/html")
+        email_message.send()
+        print(f"Password reset email sent to {email}")
+    except Exception as e:
+        print(f"Failed to send password reset email: {e}")
