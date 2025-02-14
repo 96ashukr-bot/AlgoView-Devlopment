@@ -63,21 +63,53 @@ def place_dhan_orders(access_token, client_id, trade_symbol, transaction_type, s
         if Exchange=="NFO":
             Exchange="NSE_FNO"
         # Updated order_params with type casting
+        # CNC  INTRA MARGIN MTF CO BO
+        # print("product_type>>>>",product_type)
+        # Validate and map product_type
+        if product_type.upper() in ["NRML", "NORMAL"]:
+            product_type = dhan.NORMAL
+        elif product_type.upper() in ["MIS", "INTRADAY"]:
+            product_type = dhan.INTRA
+        elif product_type.upper() in ["CNC", "DELIVERY"]:
+            product_type = dhan.CNC
+        else:
+            print("Invalid product type:", product_type)
+            return {"status": "error", "message": "Invalid product type"}
+
+        # Validate transaction_type
+        if transaction_type.upper() == "BUY":
+            transaction_type = dhan.BUY
+        elif transaction_type.upper() == "SELL":
+            transaction_type = dhan.SELL
+        else:
+            print("Invalid transaction type:", transaction_type)
+            return {"status": "error", "message": "Invalid transaction type"}
+
+        # Validate order_type
+        if ordertype.upper() == "MARKET":
+            ordertype = dhan.MARKET
+        elif ordertype.upper() == "LIMIT":
+            ordertype = dhan.LIMIT
+        elif ordertype.upper() == "SL":
+            ordertype = dhan.SL
+        else:
+            print("Invalid order type:", ordertype)
+            return {"status": "error", "message": "Invalid order type"}
+
+        # Reconstruct order_params with valid values
         order_params = {
             "transaction_type": transaction_type,
             "exchange_segment": Exchange,
             "product_type": product_type,
-            "order_type": ordertype,#ordertype,
-            "validity": 'DAY',
-            "security_id": int(security_id),  # Convert to Python int
-            "quantity": int(quantity) if quantity else 0,       # Convert to Python int
-            "price": float(price) if ordertype.upper() == "LIMIT" else 0,
-            "trigger_price": float(triggerPrice) if ordertype.upper() == "SL" else 0,
-            # "after_market_order":True,
-            # "amo_time":'OPEN',
+            "order_type": ordertype,
+            "validity": "DAY",
+            "security_id": str(security_id),
+            "quantity": int(quantity),
+            "price": float(price) if ordertype == dhan.LIMIT else 0,
+            "trigger_price": float(triggerPrice) if ordertype == dhan.SL else 0,
         }
-    
-        print("order_params>>>>>>",order_params)
+
+        print("Final order_params:", order_params)
         try:
             order_response = dhan.place_order(**order_params)
             print("order_response",order_response)
