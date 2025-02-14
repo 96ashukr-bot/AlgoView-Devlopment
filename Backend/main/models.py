@@ -449,7 +449,7 @@ class ClientBrokerdetails(models.Model):
     broker_Totp_Authcode=models.CharField(max_length=250,null=True, blank=True)
     broker_pass=models.CharField(max_length=50,null=True, blank=True)
     # New fields for token management
-    request_token = models.CharField(max_length=250, null=True, blank=True)  # Temporary request token
+    request_token = models.CharField(max_length=500, null=True, blank=True)  # Temporary request token
     access_token = models.CharField(max_length=500, null=True, blank=True)  # Persistent access token
     access_token_expiry = models.DateTimeField(null=True, blank=True)  # Expiry of the access token (if applicable)
     
