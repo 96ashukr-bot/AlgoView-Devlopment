@@ -1123,7 +1123,7 @@ class ClientTradeSettingSerializer(serializers.ModelSerializer):
         fields = ['id', 'client', 'segment', 'sub_segment', 'symbol', 
                   'strategy', 'broker', 'product_type', 'buy_sell', 'quantity', 
                   'trade_limit', 'max_loss_for_day', 'min_loss_for_day', 
-                  'max_profit_for_day', 'min_profit_for_day', 'expiry_date', 'is_tread_status']
+                  'max_profit_for_day', 'min_profit_for_day', 'expiry_date', 'is_tread_status','sl_type','stop_loss']
 from django.utils.timezone import localtime
 class GetclientTradedataSettingSerializer(serializers.ModelSerializer):
     segment = SegmentSerializer()  # Use the SegmentSerializer to include all segment details
@@ -1145,7 +1145,7 @@ class GetclientTradedataSettingSerializer(serializers.ModelSerializer):
         fields = ['id', 'client', 'segment', 'sub_segment', 'symbol', 
                   'strategy', 'broker', 'product_type', 'buy_sell', 'quantity', 
                   'trade_limit', 'max_loss_for_day', 'min_loss_for_day', 
-                  'max_profit_for_day', 'min_profit_for_day', 'expiry_date', 'is_tread_status']
+                  'max_profit_for_day', 'min_profit_for_day', 'expiry_date', 'is_tread_status','sl_type','stop_loss']
 
 class SegmentSerializer(serializers.ModelSerializer):
     class Meta:
@@ -1170,7 +1170,7 @@ class ClientSegementsSerializer(serializers.ModelSerializer):
             'id', 'client', 'segment', 'sub_segment','is_tread_status','symbol', 
             'strategy', 'broker', 'product_type', 'buy_sell', 'quantity', 
             'trade_limit', 'max_loss_for_day', 'min_loss_for_day', 
-            'max_profit_for_day', 'min_profit_for_day', 'expiry_date', 'is_tread_status']
+            'max_profit_for_day', 'min_profit_for_day', 'expiry_date', 'is_tread_status','sl_type','stop_loss']
 
 class TreadLogSerializer(serializers.ModelSerializer):
     class Meta:

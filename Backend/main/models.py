@@ -436,7 +436,8 @@ class ClientTradeSetting(models.Model):
 
     # Corrected 'is_tread_status' field definition
     is_tread_status = models.BooleanField(default=True)  # Default to True or False as required
-    
+    sl_type=models.CharField(max_length=50, null=True, blank=True)
+    stop_loss=models.IntegerField( null=True, blank=True)
     def __str__(self):
         return f"Trade Setting {self.segment.name} - {self.sub_segment.name}"
 class ClientBrokerdetails(models.Model):
@@ -488,6 +489,7 @@ class Tradeorderhistory(models.Model):
     EntryQty=models.IntegerField( null=True, blank=True)
     ExitQty=models.IntegerField( null=True, blank=True)
     trade_order_status = models.CharField(max_length=15, null=True, blank=True)
+
     def __str__(self):
         return f"Order ID: {self.order_id}, Status: {self.order_status}"
 class CompanyProfileDetails(models.Model):
