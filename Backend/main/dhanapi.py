@@ -61,7 +61,9 @@ def place_dhan_orders(access_token, client_id, trade_symbol, transaction_type, s
         security_id = trading_symbol.get('SECURITY_ID', 0) 
         quantity = int(quantity) 
         if Exchange=="NFO":
-            Exchange="NSE_FNO"
+            Exchange=dhan.NSE_FNO
+        elif Exchange=="NSE":
+            Exchange= dhan.NSE    
         # Updated order_params with type casting
         # CNC  INTRA MARGIN MTF CO BO
         # print("product_type>>>>",product_type)

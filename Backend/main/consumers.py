@@ -32,7 +32,7 @@ TOTP_SECRET = "RFFORAS7ASFH7KIZWD7FCSVK2Y"
 #USERNAME = 'A1420760'
 #TOTP_SECRET = "7DFMHZE3BDRCIHMLFT4N3QVCPU"
 #PASSWORD = "1986"
-
+access_token="jdcjac"
 obj = SmartConnect(api_key=API_KEY)
 totp = pyotp.TOTP(TOTP_SECRET).now()
 data = obj.generateSession(USERNAME, PASSWORD, totp)
@@ -65,8 +65,7 @@ class UpstoxMarketDataConsumer(AsyncWebsocketConsumer):
 
         self.api_version = '2.0'
         self.configuration = upstox_client.Configuration()
-        self.configuration.access_token ='eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiI0NkI0VVIiLCJqdGkiOiI2N2IzMDliODQwNzdjYjUyN2Y5OTQyNWIiLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaWF0IjoxNzM5Nzg2NjgwLCJpc3MiOiJ1ZGFwaS1nYXRld2F5LXNlcnZpY2UiLCJleHAiOjE3Mzk4Mjk2MDB9.6RmPsLu_SIvnxRzpD9AoRSEKTTJ55dbO-1CZOdwQmeM'
-        # 'eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiI0NkI0VVIiLCJqdGkiOiI2N2IzMDJmY2QwMDJjMjQzYTI4OWM2MGEiLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaWF0IjoxNzM5Nzg0OTU2LCJpc3MiOiJ1ZGFwaS1nYXRld2F5LXNlcnZpY2UiLCJleHAiOjE3Mzk4Mjk2MDB9.ayEGveAbMLIPpexSslk7YutIcPkJiY20yv3C8a2sSy8'
+        self.configuration.access_token =access_token
         self.last_prices = {}
 
         asyncio.create_task(self.fetch_market_data())
