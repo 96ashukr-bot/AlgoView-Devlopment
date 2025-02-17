@@ -12,6 +12,7 @@
 # TOTP_SECRET = "RFFORAS7ASFH7KIZWD7FCSVK2Y" 
 
 import asyncio
+import csv
 import json
 import logging
 import requests
@@ -37,7 +38,158 @@ FEED_TOKEN = feedToken
 AUTH_TOKEN = data['data']['refreshToken']
 correlation_id = "abc123"
 mode = 3  # Subscription mode
+import json
+import ssl
+import upstox_client
+import websockets
+from google.protobuf.json_format import MessageToDict
+from main import MarketDataFeed_pb2 as pb
+class UpstoxMarketDataConsumer(AsyncWebsocketConsumer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.event_loop = asyncio.get_event_loop()
+    async def connect(self):
+        """Connect to WebSocket and accept dynamic instruments"""
+        query_params = parse_qs(self.scope["query_string"].decode())
+        self.tokens = query_params.get("symbol_tokens", [" "])[0].split(",")
+        self.id = query_params.get("id", [" "])[0].split(",")
+        self.exchange_type = int(query_params.get("exchange_type", [1])[0])
+ 
+        self.instrument_keys = self.get_instrument_keys_from_csv(self.tokens)
+        print(f"Connected with Instruments: {self.instrument_keys}")
 
+        await self.accept()
+
+        self.api_version = '2.0'
+        self.configuration = upstox_client.Configuration()
+        self.configuration.access_token ='eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiI0NkI0VVIiLCJqdGkiOiI2N2IzMDliODQwNzdjYjUyN2Y5OTQyNWIiLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaWF0IjoxNzM5Nzg2NjgwLCJpc3MiOiJ1ZGFwaS1nYXRld2F5LXNlcnZpY2UiLCJleHAiOjE3Mzk4Mjk2MDB9.6RmPsLu_SIvnxRzpD9AoRSEKTTJ55dbO-1CZOdwQmeM'
+        # 'eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiI0NkI0VVIiLCJqdGkiOiI2N2IzMDJmY2QwMDJjMjQzYTI4OWM2MGEiLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaWF0IjoxNzM5Nzg0OTU2LCJpc3MiOiJ1ZGFwaS1nYXRld2F5LXNlcnZpY2UiLCJleHAiOjE3Mzk4Mjk2MDB9.ayEGveAbMLIPpexSslk7YutIcPkJiY20yv3C8a2sSy8'
+        self.last_prices = {}
+
+        asyncio.create_task(self.fetch_market_data())
+
+    async def disconnect(self, close_code):
+        """Handle WebSocket disconnect"""
+        print("WebSocket Disconnected")
+
+    def get_market_data_feed_authorize(self):
+        """Get authorization for market data feed."""
+        api_instance = upstox_client.WebsocketApi(upstox_client.ApiClient(self.configuration))
+        return api_instance.get_market_data_feed_authorize(self.api_version)
+
+    def decode_protobuf(self, buffer):
+        """Decode Protobuf message"""
+        try:
+            feed_response = pb.FeedResponse()
+            feed_response.ParseFromString(buffer)
+            return feed_response
+        except Exception as e:
+            print(f"Error decoding Protobuf message: {e}")
+            return None
+
+    def get_instrument_keys_from_csv(self, tokens):
+        """Convert tokens to instrument keys using CSV file"""
+        instrument_map = {}
+        reverse_map = {} 
+        csv_path = "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/complete.csv"
+
+        try:
+            with open(csv_path, "r") as csvfile:
+                reader = csv.DictReader(csvfile)
+                for row in reader:
+                    # print("ttttttttt",row)
+                    instrument_map[row["exchange_token"]] = row["instrument_key"]
+                    reverse_map[row["instrument_key"]] = row["exchange_token"] 
+
+            self.reverse_instrument_map = reverse_map  
+
+            return [instrument_map[token] for token in tokens if token in instrument_map]
+        except Exception as e:
+            print(f"Error reading CSV file: {e}")
+            return []
+
+    async def fetch_market_data(self):
+        """Fetch live market data from Upstox WebSocket"""
+        ssl_context = ssl.create_default_context()
+        ssl_context.check_hostname = False
+        ssl_context.verify_mode = ssl.CERT_NONE
+
+        response = self.get_market_data_feed_authorize()
+
+        async with websockets.connect(response.data.authorized_redirect_uri, ssl=ssl_context) as websocket:
+            print(f'Connected to Upstox WebSocket for Instruments: {self.instrument_keys}')
+            
+            await asyncio.sleep(1)
+
+            
+            data = {
+                "guid": "someguid",
+                "method": "sub",
+                "data": {
+                    "mode": "full",
+                    "instrumentKeys": self.instrument_keys  
+                }
+            }
+
+            binary_data = json.dumps(data).encode('utf-8')
+            await websocket.send(binary_data)
+
+            while True:
+                message = await websocket.recv()
+                decoded_data = self.decode_protobuf(message)
+
+                if decoded_data:
+                    data_dict = MessageToDict(decoded_data)  
+                    await self.process_market_data(data_dict)
+                else:
+                    print("Failed to decode message, skipping...")
+
+    async def process_market_data(self, tick_data):
+        """Process incoming tick data and send structured response"""
+        feeds = tick_data.get("feeds", {})
+
+        for token, data in feeds.items():
+            try:
+                token = self.reverse_instrument_map.get(token, token) 
+                ff_data = data.get("ff", {})
+                market_ff = ff_data.get("marketFF", {})
+                index_ff = ff_data.get("indexFF", {})
+
+                ltpc_data = market_ff.get("ltpc", {}) or index_ff.get("ltpc", {})
+                efeed_details = market_ff.get("eFeedDetails", {}) or index_ff.get("ltpc", {})
+
+                current_price = ltpc_data.get("ltp") or ltpc_data.get("cp")
+                close_price = efeed_details.get("cp") 
+
+                if current_price is None or close_price is None:
+                    print(f"Missing critical data for {token}: {tick_data}")
+                    continue
+
+                difference = current_price - close_price
+                percentage = (difference / close_price) * 100
+                trend_symbol = "+" if difference > 0 else "-"
+
+                formatted_price = f"{current_price:,.2f}"
+                formatted_difference = f"{trend_symbol}{abs(difference):,.2f}"
+                formatted_percentage = f"({trend_symbol}{abs(percentage):.2f}%)"
+
+                self.last_prices[token] = current_price
+
+                asyncio.run_coroutine_threadsafe(
+                self.send(text_data=json.dumps({
+                    "token": token,
+                    "price": formatted_price,
+                    "trend": trend_symbol,
+                    "difference": formatted_difference,
+                    "percentage": formatted_percentage,
+                    "close": close_price,
+                })),
+                self.event_loop
+            )
+               
+
+            except Exception as e:
+                print(f"Error processing data for {token}: {e}")
 class StockTradingConsumer(AsyncWebsocketConsumer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
