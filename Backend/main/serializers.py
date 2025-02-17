@@ -1231,7 +1231,24 @@ class ClientListdetailsSerializer(serializers.ModelSerializer):
         # Return a list of broker names
         return [broker.broker_name.broker_name for broker in brokers if broker.broker_name]
 
+class ClientnameSerializer(serializers.ModelSerializer):
+    full_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User  # Your User model
+        fields = ['id', 'firstName', 'middleName', 'lastName', 'email', 'full_name']
+
+    def get_full_name(self, obj):
+        names = [obj.firstName]
+        if obj.middleName:
+            names.append(obj.middleName)
+        if obj.lastName:
+            names.append(obj.lastName)
+        return " ".join(names)
+
 class TradeorderhistorySerializer(serializers.ModelSerializer):
+    client = ClientnameSerializer(read_only=True)  # Use the nested serializer
+
     class Meta:
         model = Tradeorderhistory
         fields = ['id', 'client', 'date', 'trading_symbol', 'Index_Symbol', 'order_id', 'order_status'
