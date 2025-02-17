@@ -438,6 +438,7 @@ class ClientTradeSetting(models.Model):
     is_tread_status = models.BooleanField(default=True)  # Default to True or False as required
     sl_type=models.CharField(max_length=50, null=True, blank=True)
     stop_loss=models.IntegerField( null=True, blank=True)
+    target=models.IntegerField( null=True, blank=True)
     def __str__(self):
         return f"Trade Setting {self.segment.name} - {self.sub_segment.name}"
 class ClientBrokerdetails(models.Model):
