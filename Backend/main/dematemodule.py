@@ -6,7 +6,8 @@ import time
 import requests
 import logging
 
-from main.models import ClientBrokerdetails
+from main.models import ClientBrokerdetails, Tradeorderhistory
+from main.upstock import place_upstox_orders
 logger = logging.getLogger('main')
 from datetime import datetime, timedelta    
 def get_lot_size(trading_symbol):
@@ -127,3 +128,67 @@ class LoginDematAPIView(APIView):
             return JsonResponse({"error": str(e)}, status=404)
         except Exception as e:
             return JsonResponse({"error": "An error occurred. Please try again later.", "details": str(e)}, status=500)
+
+
+def  exit_existing_buy_position(broker,LivePrice,Type,day,month,year,access_token, trade_symbol, transaction_type,symbol, quantity, strategy, ordertype, product_type, price, user,
+        Lots, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, Segment,
+        Index_Symbol, triggerPrice,trade_order_status
+    ):
+    
+    """
+    Checks if there is an open BUY order for the given user and symbol.
+    If found, places a SELL order to exit that position.
+    Always returns a dict with a "data" key.
+    """
+    print("symbol...",symbol,"user>>>>",user)
+    print("trade_symbol...",trade_symbol)
+    # open_buy_order = Tradeorderhistory.objects.filter(
+    #     client=user, 
+    #     Index_Symbol__iexact=symbol,  # Use dynamic symbol
+    #     # transaction_type="BUY",  # Ensures it's a buy order
+    #     # trade_order_status="rejected" , # Make sure the order is active
+    #     order_params__transaction_type__iexact="BUY"
+    # ).last()
+    open_buy_order = Tradeorderhistory.objects.filter(
+            client=user, 
+            Index_Symbol="BANKNIFTY",
+            transaction_type="BUY",
+            order_status="rejected",
+            order_id__gt=0
+        ).last()
+    print("open_buy_order>>>>>>>",open_buy_order)
+    if open_buy_order:
+        # Extract existing order details
+        Entry_price = open_buy_order.Entry_Price
+        Entry_type = open_buy_order.Entry_type
+        EntryQty = open_buy_order.EntryQty
+        oid = open_buy_order.order_id
+        price_of_order=open_buy_order.LivePrice
+        print("price_of_order>>>",int(price_of_order))
+        trade_symbol = f"{symbol}{int(price_of_order)}{Type}{day}{month}{year}"
+        print("trade_symbol>>>>",trade_symbol)
+        logger.info(f"privious order {oid}  enrty price is::::: {Entry_price}Found open BUY order for {symbol}. Exiting position. Order ID: {open_buy_order.order_id}")
+
+        sell_response = place_upstox_orders(LivePrice,access_token, trade_symbol, transaction_type, symbol, quantity, strategy, ordertype,
+            product_type, price, user, Lots, Entry_type, Exit_type,Entry_price,Exit_price, EntryQty,ExitQty,webhook_signal, Exchange,
+            Segment, Index_Symbol, triggerPrice,trade_order_status)
+        
+        status_value = sell_response.get("data", {}).get("status")
+        if status_value in ["completed","rejected", "closed"]:
+            logger.info(f"Existing BUY position successfully exited for {symbol}.")
+            return sell_response
+        else:
+            logger.error(f"Failed to exit existing BUY position for {symbol}. Response: {sell_response}")
+            return {"data": {"status": "error", "message": "Failed to exit existing position."}}
+    else:
+        logger.info(f"No open BUY position found for {symbol} for user {user}.")
+        message=f"No open BUY position found for {symbol} for user {user}."
+        
+        # save_trade_order_history(transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message, strategy,
+        #                                 Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty, webhook_signal,
+        #                                 Exchange, Segment, Index_Symbol, order_params, broker="Upstox")
+        # logger.error(message)
+        # return {"data": {"status": "Failed", "message": message}} 
+        return {"data": {"status": "none", "message": "No open BUY position found."}}
+
+

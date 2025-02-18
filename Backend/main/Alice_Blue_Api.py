@@ -248,37 +248,44 @@ def place_alice_orders(api_skey,api_uid,trading_symbol_aliceblue,transaction_typ
         # save_webhook_signals_logs(transaction_type, symbol, price, strategy, user, "Failed", failure_reason=str(e),json=json)
         return {"data":{"status": "error", "message": "An unexpected error occurred"}}
 
-def save_trade_order_history(trade_order_status,client, trading_symbol, order_id, order_status, response_data, failure_reason,
+def save_trade_order_history(LivePrice,transaction_type,trade_order_status,client, trading_symbol, order_id, order_status, response_data, failure_reason,
       strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal, Exchange, Segment,Index_Symbol ,order_params=None,broker=None ):
-    print("Exit_type>>>>",Exit_type,"Entry_type>>>",Entry_type)
+    print("Exit_type>>>>",Exit_type,"Entry_type>>>",Entry_type,)
+    print("Entry_price....",Entry_price,"LivePrice",LivePrice)
     try:
         # Calculate signal times based on entry and exit types
         SignalEntry_time = now() if Entry_type else None
         SignalExit_time = now() if Exit_type else None
         # Create a new Tradeorderhistory record
+        if transaction_type.upper()=="BUY":
+            transaction_type="BUY"
+        elif transaction_type.upper()=="SELL":
+            transaction_type="SELL"
         trade_history = Tradeorderhistory.objects.create(
         client=client,
         trading_symbol=trading_symbol,
+        transaction_type=transaction_type,
         order_id=order_id,
+        LivePrice=LivePrice,
         order_status=order_status,
         response_data=response_data or None,    
         failure_reason=failure_reason or None,    
         broker=broker or None,    
-        order_params=order_params or None,    
-        strategy= strategy or None,     
-        Entry_type=Entry_type or None,  
-        Exit_type=Exit_type or None   ,
-        Entry_Price=Entry_price  or None,  
-        Exit_Price=Exit_price or None,     
+        order_params=order_params,    
+        strategy= strategy,     
+        Entry_type=Entry_type,  
+        Exit_type=Exit_type,
+        Entry_Price=Entry_price,  
+        Exit_Price=Exit_price,     
         SignalEntry_time=SignalEntry_time,     
         SignalExit_time=SignalExit_time, 
-        Exchange=Exchange or None,     
-        Segment=Segment or None,     
-        Index_Symbol=Index_Symbol or None,
-        webhook_signal=webhook_signal or None,
-        trade_order_status=trade_order_status or None,
-        EntryQty=EntryQty or None,
-        ExitQty=ExitQty or None
+        Exchange=Exchange,     
+        Segment=Segment ,     
+        Index_Symbol=Index_Symbol ,
+        webhook_signal=webhook_signal ,
+        trade_order_status=trade_order_status,
+        EntryQty=EntryQty ,
+        ExitQty=ExitQty
     )
 
         # Log success (optional)

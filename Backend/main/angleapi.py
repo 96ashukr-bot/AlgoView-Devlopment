@@ -15,7 +15,7 @@ import logging
 import requests
 from main.Alice_Blue_Api import save_trade_order_history
 from main.dematemodule import get_lot_size
-from main.models import CompanySmtpDetails
+from main.models import CompanySmtpDetails, Tradeorderhistory
 from main.tasks import send_trade_email_async
 logger = logging.getLogger('main')
 # API_KEY = 'FNqcDPCk'#'Xp6znI3s'
@@ -24,7 +24,7 @@ logger = logging.getLogger('main')
 # PASSWORD="1986"
 # smart_client = SmartConnect(api_key=API_KEY)
 # totp = pyotp.TOTP(Totp).now()
-def place_Angle_order(api_key,demate_user_name,totp,angle_pass,token, symbol, quantity, product_type, transactiontype, 
+def place_Angle_order(LivePrice,api_key,demate_user_name,totp,angle_pass,token, symbol, quantity, product_type, transactiontype, 
         price, ordertype,lot_size, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal, Exchange,trade_order_status,
         Segment,Index_Symbol ,user=None, strategy=None):
 
@@ -78,7 +78,7 @@ def place_Angle_order(api_key,demate_user_name,totp,angle_pass,token, symbol, qu
         if order_params['quantity'] % lot != 0:
             logger.error(f"Invalid quantity {symbol}, it should be in multiples of lot size: {lot}")
             message=f"Invalid quantity {symbol}, it should be in multiples of lot size: {lot}"
-            save_trade_order_history(trade_order_status,user,symbol, order_id, status, res_data, message,  strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol , order_params,broker="Angle One")
+            save_trade_order_history(LivePrice,transactiontype,trade_order_status,user,symbol, order_id, status, res_data, message,  strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol , order_params,broker="Angle One")
 
             return {"data": {"status": "error", "message": f"Quantity must be a multiple of lot size: {lot}"}}
 
@@ -95,7 +95,7 @@ def place_Angle_order(api_key,demate_user_name,totp,angle_pass,token, symbol, qu
                     logger.error("Failed to log in: %s", error_message)
                     res_data = "Invalid API key or invalid credentials"
                     message = error_message
-                    save_trade_order_history(
+                    save_trade_order_history(LivePrice,transactiontype,
                         trade_order_status, user, symbol, order_id, status, res_data, message,
                         strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
                         webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="Angle One"
@@ -106,7 +106,7 @@ def place_Angle_order(api_key,demate_user_name,totp,angle_pass,token, symbol, qu
                 logger.error("An error occurred: %s", e)
                 res_data = "An exception occurred during login."
                 message = str(e)
-                save_trade_order_history(
+                save_trade_order_history(LivePrice,transactiontype,
                     trade_order_status, user, symbol, order_id, status, res_data, message,
                     strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
                     webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="Angle One"
@@ -118,9 +118,9 @@ def place_Angle_order(api_key,demate_user_name,totp,angle_pass,token, symbol, qu
             logger.info(f"Angle API Response: {response}")
             if response is None:
                 logger.error("Received None response from API.")
-                message=f"somthing wrong or token is invalid"
+                message = f"somthing wrong or token is invalid"
                 res_data="None response from API"
-                save_trade_order_history(trade_order_status,user,symbol, order_id, status, res_data, message,  strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol , order_params,broker="Angle One")
+                save_trade_order_history(LivePrice,transactiontype,trade_order_status,user,symbol, order_id, status, res_data, message,  strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol , order_params,broker="Angle One")
                 return {"data": {"status": "faild", "message": message}}
 
             uniqueorderid = response.get('data', {}).get('uniqueorderid', None)
@@ -154,7 +154,7 @@ def place_Angle_order(api_key,demate_user_name,totp,angle_pass,token, symbol, qu
                 # log_order(order_data, "orders_placed.csv")  
                 message = responsedetails['data'].get('text', 'completed successfully ')
                 status=responsedetails['data'].get('status', 'completed')
-                save_trade_order_history(trade_order_status,user,symbol, order_id, status, res_data, message,   strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol ,order_params,broker="Angle One")
+                save_trade_order_history(LivePrice,transactiontype,trade_order_status,user,symbol, order_id, status, res_data, message,   strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol ,order_params,broker="Angle One")
                 # from_email = default_from_email,
                 # send_trade_email_async.delay(user.email, from_email,user.firstName,status, message)
                 # save_webhook_signals_logs(order_params['transactiontype'], symbol, price, strategy, user, status=responsedetails['data'].get('status'),failure_reason="your order place succesfully", json=json)
@@ -163,7 +163,16 @@ def place_Angle_order(api_key,demate_user_name,totp,angle_pass,token, symbol, qu
             
             elif responsedetails['data']['status'] == "open":
                 order_id=responsedetails['data']['orderid']     
-                logger.info(f"Order is pending state, Order ID: {order_id}")
+                logger.info(f"Order is pending or open state, Order ID: {order_id}")
+                trasaction_type=responsedetails['data'].get('transactiontype', '')
+                if trasaction_type == "BUY":
+                    Entry_type="LE"
+                    Entry_price=responsedetails['data'].get('averageprice', 0.0)
+                    EntryQty=responsedetails['data'].get('quantity', 0)
+                elif trasaction_type == "SELL": 
+                    Exit_type="LX"
+                    Exit_price=responsedetails['data'].get('averageprice', 0.0) 
+                    ExitQty= responsedetails['data'].get('quantity', 0)#disclosedquantity
                 # log_order(order_data, "orders_placed.csv")  
                 # send massage email aleart to client your order is trade 
                 from_email = default_from_email,
@@ -173,21 +182,40 @@ def place_Angle_order(api_key,demate_user_name,totp,angle_pass,token, symbol, qu
                 print("user.firstName>>>>>",user.firstName)
                 send_trade_email_async.delay(user.email, from_email,user.firstName,status, message)
                 logger.info(f"Order is pending or in process reason is !!!::{message}")
-                save_trade_order_history(trade_order_status,user,symbol, order_id, status, res_data, message,  strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol ,order_params, broker="Angle One")
+                save_trade_order_history(LivePrice,transactiontype,trade_order_status,user,symbol, order_id, status, res_data, message,  strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol ,order_params, broker="Angle One")
                 response = {"data": {"status": status}}
                 return response
-                
-            else:
+            
+            elif responsedetails['data']['status'] == "rejected":
                 rejection_message = responsedetails['data'].get('text', 'Unknown rejection reason')
                 status=responsedetails['data'].get('status', 'rejected')
-                order_id=responsedetails['data']['orderid']     
+                order_id=responsedetails['data']['orderid']    
+                trasaction_type=responsedetails['data'].get('transactiontype', '')
+                if trasaction_type == "BUY":
+                    Entry_type="LE"
+                    Entry_price=responsedetails['data'].get('averageprice', 0.0)
+                    EntryQty=responsedetails['data'].get('quantity', 0)
+                elif trasaction_type == "SELL": 
+                    Exit_type="LX"
+                    Exit_price=responsedetails['data'].get('averageprice', 0.0) 
+                    ExitQty= responsedetails['data'].get('quantity', 0)#disclosedquantity 
+                    print("enrty exit price ",Entry_price,Exit_price,"entry and type",Entry_type,Exit_type)
                 logger.info(f"Order Rejected reason!!!::{rejection_message} Order ID: {order_id}")
                 from_email = default_from_email,
                 # Send rejection email
                 print("user.firstName>>>>>",user.firstName)
                 send_trade_email_async.delay(user.email, from_email,user.firstName,status, rejection_message)
-                save_trade_order_history(trade_order_status,user,symbol, order_id, status, res_data, rejection_message,  strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol ,order_params ,broker="Angle One")
+                save_trade_order_history(LivePrice,transactiontype,trade_order_status,user,symbol, order_id, status, res_data, rejection_message,  strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol ,order_params ,broker="Angle One")
                 # save_webhook_signals_logs(order_params['transactiontype'], symbol, price, strategy, user, status=responsedetails['data'].get('status'),
+                response = {"data": {"status": status}}
+                return response
+                
+            else:
+                rejection_message = responsedetails['data'].get('text', 'Unknown rejection reason')
+                status=responsedetails['data'].get('status', 'pending')
+                order_id=responsedetails['data']['orderid']     
+                logger.info(f"Order Rejected reason!!!::{rejection_message} Order ID: {order_id}")
+                save_trade_order_history(LivePrice,transactiontype,trade_order_status,user,symbol, order_id, status, res_data, rejection_message,  strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol ,order_params ,broker="Angle One")
                 response = {"data": {"status": status}}
                 return response
         except Exception as e:
@@ -395,94 +423,84 @@ class SymbolExpiryDateListView(APIView):
 
         except Exception as e:
             return Response({"error": str(e)}, status=500)
-    # def get(self, request, *args, **kwargs):
-    #     # Extract symbol from query parameters
-    #     symbol = request.query_params.get('symbol', None)
-    #     if not symbol:
-    #         return Response({"error": "Symbol parameter is required"}, status=400)
+   
+   
+def exit_existing_buy_position_angleone(
+     LivePrice, Type, day, month, year, api_key, demate_user_name, totp, angle_pass,
+    token, symbol, quantity, product_type, transactiontype, price, ordertype, lot_size,
+    Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty, webhook_signal,
+    Exchange, trade_order_status, Segment, Index_Symbol, user, strategy
+):
+    try:
+        print("symbol...", Index_Symbol, "user>>>>", user)
+        print("trade_symbol...", symbol)
 
-    #     # Path to the CSV file where all symbols' data is stored
-    #     csv_file = "ANGLE_NFO.csv"
+        all_order_user = Tradeorderhistory.objects.filter(
+            client=user, 
+            Index_Symbol="BANKNIFTY",
+            transaction_type="BUY",
+            # order_status="rejected"
+        ).last()
+        print("all_order_user>>>",all_order_user)
+        try:
+            open_buy_order = Tradeorderhistory.objects.filter(
+            client=user, 
+            Index_Symbol="BANKNIFTY",
+            transaction_type="BUY",
+            order_status="rejected",
+            order_id__gt=0
+        ).last()
+            print("Exact Order Found:", open_buy_order)
+        except Tradeorderhistory.DoesNotExist:
+            logger.info(f"No open BUY position found for {symbol} for user {user}.")
+            return {"data": {"status": "none", "message": "No open BUY position found."}}
+
+
+        if open_buy_order:
+            # Extract existing order details
+            Entry_price = open_buy_order.Entry_Price
+            Entry_type = open_buy_order.Entry_type
+            EntryQty = open_buy_order.EntryQty
+            oid = open_buy_order.order_id
+            print("oid>>>>",oid)
+            try:
+                price_of_order = int(float(open_buy_order.LivePrice))  # Safe conversion
+            except (ValueError, TypeError):
+                price_of_order = 0  # Default to 0 if conversion fails
+
+            print("price_of_order>>>", price_of_order)
+
+            trading_symbol = f"{Index_Symbol}{day}{month}{year}{price_of_order}{Type}"
+            print("trade_symbol>>>>", trading_symbol)
+
+            logger.info(
+                f"Previous order {oid} entry price is::::: {Entry_price}. Found open BUY order for {Index_Symbol}. "
+                f"Exiting position. Order ID: {open_buy_order.order_id}"
+            )
+            sell_response = place_Angle_order(
+                LivePrice, api_key, demate_user_name, totp, angle_pass, token, trading_symbol,
+                quantity, product_type, transactiontype, price, ordertype, lot_size,
+                Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
+                webhook_signal, Exchange, trade_order_status, Segment, Index_Symbol,
+                user, strategy
+            )
+
+            status_value = sell_response.get("data", {}).get("status", "")
+
+            if status_value in ["completed", "rejected", "closed"]:
+                logger.info(f"Existing BUY position successfully exited for {symbol}.")
+                return sell_response
+            elif status_value in ["Failed"]:
+                logger.error(f"Failed to exit existing BUY position for {symbol}. Response: {sell_response}")
+                return {"data": {"status": "error", "message": "Failed to exit existing position."}}
+            else:
+                logger.error(f"Failed to exit existing BUY position for {symbol}. Response: {sell_response}")
+                return {"data": {"status": "error", "message": "Failed to exit existing position."}}
         
-    #     # Check if the CSV file exists and if it's updated within the last month
-    #     if os.path.exists(csv_file):
-    #         file_mod_time = os.path.getmtime(csv_file)
-    #         file_mod_date = datetime.fromtimestamp(file_mod_time)
-    #         if file_mod_date.date() == datetime.now().date():
-    #             # The file was updated today, use the cached file
-    #             return self.get_expiry_dates_from_csv(csv_file, symbol)
-        
-    #         # if file_mod_date > datetime.now() - timedelta(days=30):
-    #         #     # The file was updated within the last 30 days, use the cached file
-    #         #     return self.get_expiry_dates_from_csv(csv_file, symbol)
-        
-    #     # If the file is outdated or doesn't exist, fetch fresh data
-    #     return self.update_csv_and_get_expiry_dates(symbol, csv_file)
+        else:
+            logger.info(f"No open BUY position found for {symbol} for user {user}.")
+            return {"data": {"status": "none", "message": "No open BUY position found."}}
 
-    # def get_expiry_dates_from_csv(self, csv_file, symbol):
-    #     # Read expiry dates from the existing CSV file
-    #     try:
-    #         data = pd.read_csv(csv_file)
-    #         filtered_data = data[data['name'].str.upper() == symbol.upper()]
-    #         expiry_dates = sorted(set(filtered_data['expiry'].unique()), key=lambda x: datetime.strptime(x, '%d%b%Y'))
-    #         current_date = datetime.now()
-    #         # Filter out past expiry dates
-    #         expiry_dates = [
-    #             datetime.strptime(date, '%d%b%Y').strftime('%d%b%Y') 
-    #             for date in expiry_dates 
-    #             if datetime.strptime(date, '%d%b%Y') >= current_date
-    #         ]   
-    #         return Response({"symbol": symbol, "expiry_dates": expiry_dates}, status=200)
-    #     except Exception as e:
-    #         return Response({"error": f"Error reading CSV: {str(e)}"}, status=500)
-
-    # def update_csv_and_get_expiry_dates(self, symbol, csv_file):
-    #     try:
-    #         # Fetch data from Angel One Smart API
-    #         url = "https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json"
-    #         headers = {
-    #             "API_KEY": "API_KEY",
-    #             "USERNAME": "USERNAME",
-    #             "PASSWORD": "PASSWORD",
-    #             "Totp": "Totp"
-    #         }
-            
-    #         response = requests.get(url, headers=headers)
-    #         if response.status_code != 200:
-    #             return Response({"error": "Failed to retrieve data from Angel One API"}, status=response.status_code)
-
-    #         # Parse response data
-    #         data = response.json()
-    #         if not data:
-    #             return Response({"error": "No data received from API"}, status=404)
-    #             # Filter and write to the CSV file
-    #         expiry_dates = []
-    #         with open(csv_file, mode='w', newline='') as file:
-    #             writer = csv.writer(file)
-    #             writer.writerow(['token', 'symbol', 'name', 'exch_seg', 'expiry', 'instrumenttype'])
-
-    #             for entry in data:
-    #                 if entry.get('exch_seg') == 'NFO':  # Filter only NFO segments
-    #                     expiry = entry.get('expiry', '')
-    #                     if expiry:
-    #                         try:
-    #                             # Parse the expiry date using the correct format
-    #                             parsed_date = datetime.strptime(expiry, '%d%b%Y')
-    #                             expiry_dates.append(parsed_date.strftime('%d%b%Y'))  # Format to a readable format
-    #                         except ValueError:
-    #                             continue  # Skip invalid date formats
-    #                     writer.writerow([entry.get('token', ''), entry.get('symbol', ''),
-    #                                      entry.get('name', ''), entry.get('exch_seg', ''),
-    #                                      expiry, entry.get('instrumenttype', '')])
-
-    #         unique_expiry_dates = sorted(set(expiry_dates), key=lambda x: datetime.strptime(x, '%d%b%Y'))
-    #         filtered_expiry_dates = [expiry for expiry in unique_expiry_dates if symbol.lower() in expiry.lower()]
-            
-    #         return Response({"symbol": symbol, "expiry_dates": filtered_expiry_dates}, status=200)
-
-    #     except Exception as e:
-    #         return Response({"error": str(e)}, status=500)
-
-
-
-
+    except Exception as e:
+        logger.error(f"Error in exit_existing_buy_position_angleone: {str(e)}")
+        return {"data": {"status": "error", "message": str(e)}}

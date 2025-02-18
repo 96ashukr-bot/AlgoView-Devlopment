@@ -470,7 +470,7 @@ class Tradeorderhistory(models.Model):
     failure_reason = models.TextField(null=True, blank=True)  # Store failure reason if any
     broker=models.CharField(max_length=255, null=True, blank=True)
     order_params= models.JSONField(null=True, blank=True) 
-    
+    transaction_type=models.CharField(max_length=15, null=True, blank=True)#BUY,Sell
     #add this fileds
     strategy=models.CharField(max_length=50, null=True, blank=True)
     Entry_type=models.CharField(max_length=50, null=True, blank=True)#but or sell LE/LX
