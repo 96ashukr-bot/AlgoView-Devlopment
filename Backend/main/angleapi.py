@@ -447,7 +447,7 @@ def exit_existing_buy_position_angleone(
             client=user, 
             Index_Symbol="BANKNIFTY",
             transaction_type="BUY",
-            order_status="rejected",
+            # order_status="rejected",
             order_id__gt=0
         ).last()
             print("Exact Order Found:", open_buy_order)

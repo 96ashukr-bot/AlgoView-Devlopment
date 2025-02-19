@@ -33,7 +33,7 @@ TOTP_SECRET = "RFFORAS7ASFH7KIZWD7FCSVK2Y"
 #USERNAME = 'A1420760'
 #TOTP_SECRET = "7DFMHZE3BDRCIHMLFT4N3QVCPU"
 #PASSWORD = "1986"
-access_token="eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiI0NkI0VVIiLCJqdGkiOiI2N2I0OGY5YzViODMwODc4NDZmYmZiMmMiLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaWF0IjoxNzM5ODg2NDkyLCJpc3MiOiJ1ZGFwaS1nYXRld2F5LXNlcnZpY2UiLCJleHAiOjE3Mzk5MTYwMDB9.V6QR6ML9VEEAD_6rf7N2fhHiucehJSpBzSE2wnC75dw"
+access_token="eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiI0NkI0VVIiLCJqdGkiOiI2N2I1NjIzOGEzODI2NTQwZTMyZDdlZTgiLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaWF0IjoxNzM5OTQwNDA4LCJpc3MiOiJ1ZGFwaS1nYXRld2F5LXNlcnZpY2UiLCJleHAiOjE3NDAwMDI0MDB9.OBXNLa_GtBh5vQ0iLk8xgbRlPZu6SPg_cDejd-N5dk8"
 obj = SmartConnect(api_key=API_KEY)
 totp = pyotp.TOTP(TOTP_SECRET).now()
 data = obj.generateSession(USERNAME, PASSWORD, totp)
@@ -48,6 +48,7 @@ import upstox_client
 import websockets
 from google.protobuf.json_format import MessageToDict
 from main import MarketDataFeed_pb2 as pb
+
 class UpstoxMarketDataConsumer(AsyncWebsocketConsumer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -94,7 +95,7 @@ class UpstoxMarketDataConsumer(AsyncWebsocketConsumer):
         """Convert tokens to instrument keys using CSV file"""
         instrument_map = {}
         reverse_map = {} 
-        csv_path = "/home/ubuntu/Backend/AlgoView-Devlopment/Backend/main/complete.csv"
+        csv_path = "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/complete.csv"
 
         try:
             with open(csv_path, "r") as csvfile:
@@ -193,6 +194,9 @@ class UpstoxMarketDataConsumer(AsyncWebsocketConsumer):
 
             except Exception as e:
                 print(f"Error processing data for {token}: {e}")
+
+
+
 class UpstoxChainConsumer(AsyncWebsocketConsumer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -210,6 +214,7 @@ class UpstoxChainConsumer(AsyncWebsocketConsumer):
         self.symbol_name = query_params.get('name', [None])[0]
         self.expiry_date = query_params.get('expiry_date', [None])[0]
 
+        # Get the instrument keys for the tokens
         self.instrument_keys = self.get_instrument_keys_from_csv(self.symbol_name)
 
         await self.accept()
@@ -246,7 +251,8 @@ class UpstoxChainConsumer(AsyncWebsocketConsumer):
         reverse_map = {}
         strike_price_map = {}
         tradingsymbol_map = {}
-        csv_path = "/home/ubuntu/Backend/AlgoView-Devlopment/Backend/main/complete.csv"
+        category_map = {}
+        csv_path = "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/complete.csv"
 
         try:
             try:
@@ -264,6 +270,7 @@ class UpstoxChainConsumer(AsyncWebsocketConsumer):
 
                 for row in reader:
                     if row["name"] == name and row["expiry"] == formatted_expiry_date:
+                        exchange_token = row["exchange_token"]
                         instrument_map[row["exchange_token"]] = row["instrument_key"]
                         reverse_map[row["instrument_key"]] = row["exchange_token"]
 
@@ -273,9 +280,14 @@ class UpstoxChainConsumer(AsyncWebsocketConsumer):
                         if "tradingsymbol" in row:
                             tradingsymbol_map[row["exchange_token"]] = row["tradingsymbol"]
 
+                        if "option_type" in row:
+                            category_map[row["exchange_token"]] = row["option_type"]
+                        
+
             self.reverse_instrument_map = reverse_map
             self.token_to_strike_price = strike_price_map
             self.token_to_symbol = tradingsymbol_map
+            self.token_to_category = category_map
 
             return list(instrument_map.values())
         except KeyError as e:
@@ -286,7 +298,7 @@ class UpstoxChainConsumer(AsyncWebsocketConsumer):
             return []
 
     async def fetch_market_data(self):
-        """Fetch live market data from Upstox WebSocket"""
+            
         ssl_context = ssl.create_default_context()
         ssl_context.check_hostname = False
         ssl_context.verify_mode = ssl.CERT_NONE
@@ -375,7 +387,6 @@ class UpstoxChainConsumer(AsyncWebsocketConsumer):
             )
             except Exception as e:
                 print(f"Error processing data for {token}: {e}")
-                
 class StockTradingConsumer(AsyncWebsocketConsumer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

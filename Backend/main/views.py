@@ -2207,7 +2207,7 @@ def place_order_broker(LivePrice,
         # logger.info(f"Fetched API credentials for {trade.broker}: SKEY={api_key}, USER={demate_user_name}")
             # continue  # Skip to next user if token data is not found
         logger.info(f"!!!!Placing order for user: {user} Brocker is: {trade.broker} & trading symbol is: {trade.symbol}")
-        response=place_dhan_orders(access_token, client_id, trade_symbol, transaction_type, symbol, quantity,
+        response=place_dhan_orders(LivePrice,access_token, client_id, trade_symbol, transaction_type, symbol, quantity,
                 strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type, Entry_price, Exit_price, 
                 EntryQty, ExitQty, webhook_signal, Exchange, Segment,Index_Symbol, triggerPrice, trade_order_status)
         logger.info(f" dhan api. Response: {response}")
@@ -2244,7 +2244,7 @@ def place_order_broker(LivePrice,
         # logger.info(f"Fetched API credentials for {trade.broker}: SKEY={api_key}, USER={demate_user_name}")
             # continue  # Skip to next user if token data is not found
         logger.info(f"!!!!Placing order for user: {user} Brocker is: {trade.broker} & trading symbol is: {trade.symbol}")
-        response=place_5paisa_order(api_key,access_token,trade_symbol,transaction_type, symbol, quantity,strategy,ordertype,
+        response=place_5paisa_order(LivePrice,api_key,access_token,trade_symbol,transaction_type, symbol, quantity,strategy,ordertype,
             product_type, price,user, Lots,trade_order_status,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal ,Exchange, Segment,Index_Symbol,triggerPrice,trade)
 
         logger.info(f" 5paisa blue. Response: {response}")
@@ -2277,7 +2277,7 @@ def place_order_broker(LivePrice,
         # logger.info(f"Fetched API credentials for broker {trade.broker}.")
         logger.info(f"Placing order for user: {user}, Broker: {trade.broker}, Symbol: {trade.symbol}")
 
-        response = place_zerodha_orders(access_token,Api_key,trade_symbol, transaction_type, symbol, quantity,
+        response = place_zerodha_orders(LivePrice,access_token,Api_key,trade_symbol, transaction_type, symbol, quantity,
             strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type,Entry_price,Exit_price,
             EntryQty,ExitQty,webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice,trade_order_status
         )
@@ -2373,7 +2373,7 @@ def place_order_broker(LivePrice,
         logger.info(f"Fetched API credentials for {trade.broker}: SKEY={api_skey}, UID={api_uid}")
 
         logger.info(f"!!!!Placing order for user: {user} Brocker is: {trade.broker} & trading symbol is: {trade.symbol}")
-        response=place_alice_orders(api_skey,api_uid,trade_symbol,transaction_type, symbol, quantity,strategy,ordertype,
+        response=place_alice_orders(LivePrice,api_skey,api_uid,trade_symbol,transaction_type, symbol, quantity,strategy,ordertype,
         product_type, price,user, Lots,trade_order_status,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal ,Exchange, Segment,Index_Symbol,triggerPrice)
         logger.info(f" Alice blue. Response: {response}")
     elif trade.broker.lower() == "angle one":
@@ -3855,3 +3855,183 @@ class VerifyPaymentAPIView(APIView):
                 payment.save()
                 return Response({"message": "Payment verification failed"}, status=400)
         return Response({"message": "Order not found"}, status=404)
+    
+
+# get startegy of client for trade history filter
+class StrategyListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        try:
+            # Fetch unique strategy names from the Strategies model
+            strategies = Strategies.objects.values('name').distinct()
+            
+            # Prepare the list of strategy names
+            strategy_list = [strategy['name'] for strategy in strategies]
+
+            # Return the list of strategies
+            return Response({"strategies": strategy_list}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+# for get the client strategy
+
+class ClientStrategyListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request,*args, **kwargs):
+        try:
+            # Fetch unique strategy names from the Strategies model
+            strategies = ClientTradeSetting.objects.values('strategy').distinct()
+            
+            # Prepare the list of strategy names
+            strategy_list = [strategy['strategy'] for strategy in strategies]
+
+            # Return the list of strategies
+            return Response({"strategies": strategy_list}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# filter api
+
+
+
+#trading history api demate rejected and success status
+class TradeorderhistoryListViewnew(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request,*args, **kwargs):
+        try:
+            user = request.user
+            
+            # Get filters from request data
+            from_date = request.GET.get('from_date', None)  # Using GET instead of POST
+            to_date = request.GET.get('to_date', None)
+            strategy = request.GET.get('strategy', None)
+            Index_Symbol = request.GET.get('index_symbol', None)
+            broker = request.GET.get('broker', None)
+            
+            
+            if user.role and user.role.name.lower() == 'super-admin':
+                # Super-admin can see all clients' trade order histories
+                clients = User.objects.filter(type_of_user='is_client', is_client=True)
+                trade_history = Tradeorderhistory.objects.exclude(order_id=0).filter(client__in=clients).order_by('-id')
+            elif user.role and user.role.name.lower() == 'sub-admin':
+                # Sub-admin can see trade order histories of their assigned clients
+                clients = User.objects.filter(assigned_client=user,created_by=user,type_of_user='is_client', is_client=True)
+                trade_history = Tradeorderhistory.objects.exclude(order_id=0).filter(client__in=clients).order_by('-id')
+            else:
+                trade_history = Tradeorderhistory.objects.exclude(order_id=0).filter(client=user).order_by('-id')
+
+            
+            # Dynamically apply filters based on the provided parameters
+            filters = Q()
+
+            # Apply date filter (from_date and to_date)
+            if from_date:
+                from_date = datetime.strptime(from_date, "%Y-%m-%d")
+                filters &= Q(date__gte=from_date)
+            if to_date:
+                to_date = datetime.strptime(to_date, "%Y-%m-%d")
+                filters &= Q(date__lte=to_date)
+
+            # Apply symbol filter
+            if strategy and strategy.lower() != 'all':
+                filters &= Q(strategy=strategy)
+
+            # Apply index_symbol filter
+            if Index_Symbol and Index_Symbol.lower() != 'all':
+                filters &= Q(Index_Symbol=Index_Symbol)
+
+            # Apply strategy filter
+            if broker and broker.lower() != 'all':
+                filters &= Q(broker=broker)
+# 
+            # Apply the filters to the query
+            trade_history = trade_history.filter(filters)
+
+            
+            
+            paginator = CustomPageNumberPagination()
+            result_page = paginator.paginate_queryset(trade_history, request)
+
+            serializer = TradeorderhistorySerializer(result_page, many=True)
+            return paginator.get_paginated_response(serializer.data)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        
+#CLIENT trade all history data 
+class ClientTradeListView_new(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request, *args, **kwargs):
+        try:
+            user = request.user
+            # Get filters from request data
+            from_date = request.GET.get('from_date', None)  # Using GET instead of POST
+            to_date = request.GET.get('to_date', None)
+            symbol = request.GET.get('symbol', None)
+            Index_Symbol = request.GET.get('index_symbol', None)
+            strategy = request.GET.get('strategy', None)
+
+            
+            if user.role and user.role.name.lower() == 'super-admin':
+                # Super-admin can see all clients' trade order histories
+                clients = User.objects.all()#filter(type_of_user='is_client', is_client=True)
+                trade_history = Tradeorderhistory.objects.filter(client__in=clients).order_by('-id')
+            elif user.role and user.role.name.lower() == 'sub-admin':
+                print("Sub-AdminSub-AdminSub-AdminSub-Admin")
+                # Sub-admin can see trade order histories of their assigned clients
+                clients = User.objects.filter(assigned_client=user,created_by=user)#,type_of_user='is_client', is_client=True)
+                trade_history = Tradeorderhistory.objects.filter(client__in=clients).order_by('-id')
+            else:
+                trade_history = Tradeorderhistory.objects.filter(client=user).order_by('-id')
+                
+                
+            # Dynamically apply filters based on the provided parameters
+            filters = Q()
+
+            # Apply date filter (from_date and to_date)
+            if from_date:
+                try:
+                    from_date = datetime.strptime(from_date, "%Y-%m-%d")
+                    filters &= Q(date__gte=from_date)
+                except ValueError:
+                    return Response({"error": "Invalid from_date format, expected YYYY-MM-DD."}, status=status.HTTP_400_BAD_REQUEST)
+            
+            if to_date:
+                try:
+                    to_date = datetime.strptime(to_date, "%Y-%m-%d")
+                    filters &= Q(date__lte=to_date)
+                except ValueError:
+                    return Response({"error": "Invalid from_date format, expected YYYY-MM-DD."}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Apply symbol filter
+            if symbol and symbol.lower() != 'all':
+                filters &= Q(symbol=symbol)
+
+            # Apply index_symbol filter
+            if Index_Symbol and Index_Symbol.lower() != 'all':
+                filters &= Q(Index_Symbol=Index_Symbol)
+
+            # Apply strategy filter
+            if strategy and strategy.lower() != 'all':
+                filters &= Q(strategy=strategy)
+
+            # Apply the filters to the query
+            trade_history = trade_history.filter(filters)
+
+
+            paginator = CustomPageNumberPagination()
+            result_page = paginator.paginate_queryset(trade_history, request)
+
+            serializer = TradeorderhistorySerializer(result_page, many=True)
+            return paginator.get_paginated_response(serializer.data)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+           

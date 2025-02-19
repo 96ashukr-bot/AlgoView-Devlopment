@@ -9,7 +9,7 @@ from main.Alice_Blue_Api import save_trade_order_history
 from main.models import CompanySmtpDetails
 from main.tasks import send_trade_email_async
 logger = logging.getLogger('main')
-def place_dhan_orders(access_token, client_id, trade_symbol, transaction_type, symbol, quantity,
+def place_dhan_orders(LivePrice,access_token, client_id, trade_symbol, transaction_type, symbol, quantity,
     strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type, Entry_price, Exit_price, 
     EntryQty, ExitQty, webhook_signal, Exchange, Segment,Index_Symbol, triggerPrice, trade_order_status):
     print("dhan api  Exchange is::",Exchange," product typweeee",product_type)
@@ -41,7 +41,7 @@ def place_dhan_orders(access_token, client_id, trade_symbol, transaction_type, s
             message = f"API key and access token are Not valid for. {user}"
             res_data = f"{str(e)}"
             response={"data": {"status": status,"message":message}}
-            save_trade_order_history(trade_order_status, user, trade_symbol, order_id, status, res_data, message,  
+            save_trade_order_history(LivePrice,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message,  
                         strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
                         webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan")
             return response
@@ -52,7 +52,7 @@ def place_dhan_orders(access_token, client_id, trade_symbol, transaction_type, s
             message = "Instrument details not found"
             res_data = "Trading symbol not found."
             response={"data": {"status": status,"message":message}}
-            save_trade_order_history(trade_order_status, user, trade_symbol, order_id, status, res_data, message,  
+            save_trade_order_history(LivePrice,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message,  
                     strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
                     webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan")
             return response
@@ -121,7 +121,7 @@ def place_dhan_orders(access_token, client_id, trade_symbol, transaction_type, s
                 res_data = order_response
                 status='Failed'
                 response={"data": {"status": status,"message":message}}
-                save_trade_order_history(trade_order_status, user, trade_symbol, order_id, status, res_data, message,
+                save_trade_order_history(LivePrice,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message,
                             strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
                             webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan")
                 return response
@@ -132,7 +132,7 @@ def place_dhan_orders(access_token, client_id, trade_symbol, transaction_type, s
                 message = order_response.get('error_message',"")
                 res_data = order_response.get(order_response,"No order ID returned")
                 response={"data": {"status": status,"message":message}}
-                save_trade_order_history(trade_order_status, user, trade_symbol, order_id, status, res_data, message,
+                save_trade_order_history(LivePrice,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message,
                             strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
                             webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan")
                 return response
@@ -169,7 +169,7 @@ def place_dhan_orders(access_token, client_id, trade_symbol, transaction_type, s
                 Index_Symbol = res_data.get('tradingSymbol', 'UNKNOWN')
 
                 response = {"data": {"status": "completed", "message": "Order placed and details saved successfully."}}
-                save_trade_order_history(trade_order_status, user, trade_symbol, order_id, status, res_data, message,
+                save_trade_order_history(LivePrice,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message,
                                         strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
                                         webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan")
                 return response
@@ -182,7 +182,7 @@ def place_dhan_orders(access_token, client_id, trade_symbol, transaction_type, s
                 # Ensure Index_Symbol is provided
                 Index_Symbol = res_data.get('tradingSymbol', 'UNKNOWN')
                 
-                save_trade_order_history(trade_order_status, user, trade_symbol, order_id, status, res_data, message,
+                save_trade_order_history(LivePrice,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message,
                                         strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
                                         webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan")
                 return response
@@ -195,7 +195,7 @@ def place_dhan_orders(access_token, client_id, trade_symbol, transaction_type, s
                 # Ensure Index_Symbol is provided
                 Index_Symbol = res_data.get('tradingSymbol', 'UNKNOWN')
                 
-                save_trade_order_history(trade_order_status, user, trade_symbol, order_id, status, res_data, message,
+                save_trade_order_history(LivePrice,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message,
                                         strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
                                         webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan")
                 return response
@@ -208,7 +208,7 @@ def place_dhan_orders(access_token, client_id, trade_symbol, transaction_type, s
                 # Ensure Index_Symbol is provided
                 Index_Symbol = res_data.get('tradingSymbol', 'UNKNOWN')
                 
-                save_trade_order_history(trade_order_status, user, trade_symbol, order_id, status, res_data, message,
+                save_trade_order_history(LivePrice,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message,
                                         strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
                                         webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan")
                 return response    
@@ -221,7 +221,7 @@ def place_dhan_orders(access_token, client_id, trade_symbol, transaction_type, s
             # Ensure Index_Symbol is provided
             Index_Symbol = res_data.get('tradingSymbol', 'UNKNOWN')
             
-            save_trade_order_history(trade_order_status, user, trading_symbol, order_id, "Failed", None, str(e),
+            save_trade_order_history(LivePrice,transaction_type,trade_order_status, user, trading_symbol, order_id, "Failed", None, str(e),
                                 strategy,  Entry_type,Exit_type,Entry_price,Exit_price,EntryQty,ExitQty , webhook_signal, Exchange,
                                     Segment, Index_Symbol, order_params, broker="dhan")
             return response
@@ -232,7 +232,7 @@ def place_dhan_orders(access_token, client_id, trade_symbol, transaction_type, s
         logger.error(error_message)
         order_id = 0
         response={"data": {"status": status,"message": str(e)}}
-        save_trade_order_history(trade_order_status, user, trading_symbol, order_id, "Failed", None, str(e),
+        save_trade_order_history(LivePrice,transaction_type,trade_order_status, user, trading_symbol, order_id, "Failed", None, str(e),
                                     strategy, Entry_type,Exit_type,Entry_price,Exit_price,EntryQty,ExitQty , webhook_signal, Exchange,
                                     Segment, Index_Symbol, order_params, broker="dhan")
         return response
