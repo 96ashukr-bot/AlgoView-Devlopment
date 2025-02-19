@@ -2179,6 +2179,7 @@ def place_order_broker(LivePrice,
     res_data = "Unknown response"
     
     if trade.broker.lower() == "dhan":
+        symbol=symbol.upper()
         print("dhan fun   calleddddddddd")
         trade_symbol = f"{symbol}{month}{fullyear}{default_price}{Type}" 
         print(">>>>>>>trade_symbol>>>>>>>>>>>",trade_symbol)
@@ -2213,6 +2214,7 @@ def place_order_broker(LivePrice,
         logger.info(f" dhan api. Response: {response}")
         
     elif trade.broker.lower() == "5paisa":
+        symbol=symbol.upper()
         print("5 paisa function is calleddddddddd")
         formated_prc=f"{default_price:.2f}"
         trade_symbol = f"{symbol}{day}{month}{fullyear}{Type}{formated_prc}" 
@@ -2250,6 +2252,7 @@ def place_order_broker(LivePrice,
         logger.info(f" 5paisa blue. Response: {response}")
         
     elif trade.broker.lower() == "zerodha":
+        symbol=symbol.upper()
         trade_symbol = f"{symbol}{year}{month}{default_price}{Type}"
         print("Trading Symbol zerodha: ", symbol)
         # Fetch client broker details
@@ -2264,7 +2267,7 @@ def place_order_broker(LivePrice,
             return {"data": {"status": "Failed", "message": message}}
         access_token=client_broker.access_token
         Api_key=client_broker.broker_API_KEY
-        print("acesssssss",access_token,"Api_key.....",Api_key)
+        print("zerodha access token",access_token,"Api_key.....",Api_key)
         if not access_token or not Api_key:
             message = f"API credentials  token not found for client {trade.client} and broker {trade.broker}."
             save_trade_order_history(LivePrice,transaction_type,trade_order_status,user, trade_symbol, order_id, status, res_data, message, strategy,
@@ -2284,6 +2287,7 @@ def place_order_broker(LivePrice,
         logger.info(f" Zerodha Order . Response: {response}")
 
     elif trade.broker.lower() == "upstox":
+        symbol=symbol.upper()
         trade_symbol = f"{symbol}{default_price}{Type}{day}{month}{year}"
         logger.info(f"Trading Symbol (Upstox): {trade_symbol}")
         broker="upstox"
@@ -2319,7 +2323,6 @@ def place_order_broker(LivePrice,
             Lots, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, Segment,
             Index_Symbol, triggerPrice,trade_order_status)
             # If the exit failed, do not proceed.
-            print("response>>>>>>",response)
             if response.get("data", {}).get("status") == "error":
                 message = f"Cannot place new BUY order because existing BUY position for {trade_symbol} could not be closed."
                 save_trade_order_history(LivePrice,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message, strategy,
@@ -2348,6 +2351,7 @@ def place_order_broker(LivePrice,
         #     return {"data": {"status": "Failed", "message": message}}
   
     elif trade.broker.lower() == "alice blue":
+        symbol=symbol.upper()
         trading_symbol_aliceblue = f"{symbol}{day}{month}{year}{Type[0]}{default_price}"
         logger.info("trading_symbol_aliceblue.. %s %s", trading_symbol_aliceblue,symbol)
         trade_symbol=trading_symbol_aliceblue
@@ -2425,7 +2429,6 @@ def place_order_broker(LivePrice,
             # continue  # Skip to next user if token data is not found
         # Place order for Angle One
         if transaction_type.upper() == "SELL":
-            print("LivePrice>>>>",LivePrice)
             response = exit_existing_buy_position_angleone(LivePrice=LivePrice,Type=Type,day=day,month=month,year=year,
                 api_key=api_key,demate_user_name=demate_user_name,totp=totp,angle_pass=angle_pass,
                 token=token,symbol=symbol,quantity=quantity,product_type=product_type, 
@@ -2620,6 +2623,8 @@ class PlaceOrderWebhookView(APIView):
         
                     # Extract user-specific configurations
                     symbol = trade.symbol
+                    if symbol:
+                        symbol = symbol.upper()
                     user = trade.client
                     strategy = trade.strategy
                     quantity = trade.quantity or default_quantity

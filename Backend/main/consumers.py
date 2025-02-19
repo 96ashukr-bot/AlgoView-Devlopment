@@ -33,7 +33,7 @@ TOTP_SECRET = "RFFORAS7ASFH7KIZWD7FCSVK2Y"
 #USERNAME = 'A1420760'
 #TOTP_SECRET = "7DFMHZE3BDRCIHMLFT4N3QVCPU"
 #PASSWORD = "1986"
-access_token="eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiI0NkI0VVIiLCJqdGkiOiI2N2I1NjIzOGEzODI2NTQwZTMyZDdlZTgiLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaWF0IjoxNzM5OTQwNDA4LCJpc3MiOiJ1ZGFwaS1nYXRld2F5LXNlcnZpY2UiLCJleHAiOjE3NDAwMDI0MDB9.OBXNLa_GtBh5vQ0iLk8xgbRlPZu6SPg_cDejd-N5dk8"
+access_token="eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiI0NkI0VVIiLCJqdGkiOiI2N2I1ODJkYmZjMWQ3MTEwMDQ2NDExNmYiLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaWF0IjoxNzM5OTQ4NzYzLCJpc3MiOiJ1ZGFwaS1nYXRld2F5LXNlcnZpY2UiLCJleHAiOjE3NDAwMDI0MDB9.HFZhxt0QpuWIjJwcn_8Uyat31MBxx1wL-Sz02dXzZm0"
 obj = SmartConnect(api_key=API_KEY)
 totp = pyotp.TOTP(TOTP_SECRET).now()
 data = obj.generateSession(USERNAME, PASSWORD, totp)
@@ -95,8 +95,8 @@ class UpstoxMarketDataConsumer(AsyncWebsocketConsumer):
         """Convert tokens to instrument keys using CSV file"""
         instrument_map = {}
         reverse_map = {} 
-        csv_path = "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/complete.csv"
-
+        # csv_path = "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/complete.csv"
+        csv_path = "/home/ubuntu/Backend/AlgoView-Devlopment/Backend/main/complete.csv"
         try:
             with open(csv_path, "r") as csvfile:
                 reader = csv.DictReader(csvfile)
@@ -252,7 +252,8 @@ class UpstoxChainConsumer(AsyncWebsocketConsumer):
         strike_price_map = {}
         tradingsymbol_map = {}
         category_map = {}
-        csv_path = "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/complete.csv"
+        # csv_path = "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/complete.csv"
+        csv_path = "/home/ubuntu/Backend/AlgoView-Devlopment/Backend/main/complete.csv"
 
         try:
             try:

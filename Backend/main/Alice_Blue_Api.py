@@ -55,6 +55,7 @@ def place_alice_orders(LivePrice,api_skey,api_uid,trading_symbol_aliceblue,trans
 
         # Serialize `order_params` and other fields if necessary
         order_params = serialize_data(order_params)
+        print("transaction_type>>>>",transaction_type)
         if transaction_type.upper() == "BUY":
            transaction_type = TransactionType.Buy
         elif transaction_type.upper()=="SELL":
@@ -256,11 +257,12 @@ def save_trade_order_history(LivePrice,transaction_type,trade_order_status,clien
         # Calculate signal times based on entry and exit types
         SignalEntry_time = now() if Entry_type else None
         SignalExit_time = now() if Exit_type else None
+        
         # Create a new Tradeorderhistory record
-        if transaction_type.upper()=="BUY":
-            transaction_type="BUY"
-        elif transaction_type.upper()=="SELL":
-            transaction_type="SELL"
+        # if transaction_type.upper()=="BUY":
+        #     transaction_type="BUY"
+        # elif transaction_type.upper()=="SELL":
+        #     transaction_type="SELL"
         trade_history = Tradeorderhistory.objects.create(
         client=client,
         trading_symbol=trading_symbol,

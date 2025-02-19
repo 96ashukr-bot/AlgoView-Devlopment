@@ -110,7 +110,9 @@ def place_upstox_orders(LivePrice,
             status="Failed"
             message="Instrument details not found"
             res_data=result
-            save_trade_order_history(LivePrice,transaction_type,trade_order_status,user,symbol, order_id, status, res_data, message,  
+            if not trade_symbol:
+                trade_symbol=symbol
+            save_trade_order_history(LivePrice,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, message,  
             strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,
             webhook_signal , Exchange, Segment,Index_Symbol ,order_params,broker="upstox")
             return {
@@ -118,7 +120,6 @@ def place_upstox_orders(LivePrice,
                     "status": "error", "message": "Instrument details not found.",  "error_details": result,}
                 }
         logger.info(f"Fetched Instrument Key: {instrument_key}")
-
         # Map product types to API-compatible values
         product_mapping = {"NRML": "N", "MIS": "I", "CNC": "D"}
         product_code = product_mapping.get(product_type.upper(), product_type)
@@ -137,7 +138,6 @@ def place_upstox_orders(LivePrice,
         }
         
         headers = {"Authorization": f"Bearer {access_token}"}
-        print("order_params>>>>>>>",order_params)
         # Place the order
         response = requests.post(PLACE__ORDER_URL, headers=headers, json=order_params)
         response_data = response.json()
@@ -172,13 +172,34 @@ def place_upstox_orders(LivePrice,
             strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,
             webhook_signal , Exchange, Segment,Index_Symbol ,order_params,broker="upstox")
             return { "data": {"status": "error","message":res_data}}
-               
+        elif response.status_code == 400:
+            errors = response_data.get("errors", [])
+            
+            # Extract the first error message if available, otherwise use a default message
+            if errors and isinstance(errors, list):
+                message = errors[0].get("message", "Unknown error occurred")
+            else:
+                message = "Unknown error occurred"
+
+            logger.error(f"Resource not Found. Reason: {message}")
+            
+            status = "errors"
+            res_data = response_data if response_data else "Unknown error"
+
+            save_trade_order_history(
+                LivePrice, transaction_type, trade_order_status, user, trade_symbol, order_id,
+                status, res_data, message, strategy, Entry_type, Exit_type, Entry_price, Exit_price,
+                EntryQty, ExitQty, webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="upstox"
+            )
+
+            return {"data": {"status": "error", "message": message}}
+       
         else:
             logger.error(f"Order placement Failed. Response: {response_data}")
             status="error"
             message="Order placement Failed"
             res_data=response_data
-            save_trade_order_history(LivePrice,transaction_type,trade_order_status,user,symbol, order_id, status, res_data, message, 
+            save_trade_order_history(LivePrice,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, message, 
             strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,
             webhook_signal , Exchange, Segment,Index_Symbol ,order_params,broker="upstox")          
             return {"data": { "status": "Failed", "message": "Order placement Failed.",  "error_details": response_data}}
@@ -257,6 +278,7 @@ def handle_successful_order(LivePrice,transaction_type,
         rejection_message="error while fetching order"
         status="Failed"
         res_data=str(e)
+        print("trade_symbolfff>>>",trade_symbol)
         logger.exception(f"Error while fetching order details for Order ID {order_id}: {str(e)}")
         save_trade_order_history(LivePrice,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, rejection_message, 
         strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, 

@@ -18,6 +18,7 @@ from main.dematemodule import get_lot_size
 from main.models import CompanySmtpDetails, Tradeorderhistory
 from main.tasks import send_trade_email_async
 logger = logging.getLogger('main')
+from django.db.models import Q
 # API_KEY = 'FNqcDPCk'#'Xp6znI3s'
 # USERNAME = 'A1420760'
 # Totp     = "7DFMHZE3BDRCIHMLFT4N3QVCPU"
@@ -437,20 +438,20 @@ def exit_existing_buy_position_angleone(
 
         all_order_user = Tradeorderhistory.objects.filter(
             client=user, 
-            Index_Symbol="BANKNIFTY",
+            Index_Symbol=Index_Symbol,
             transaction_type="BUY",
             # order_status="rejected"
         ).last()
         print("all_order_user>>>",all_order_user)
         try:
             open_buy_order = Tradeorderhistory.objects.filter(
-            client=user, 
-            Index_Symbol="BANKNIFTY",
-            transaction_type="BUY",
-            # order_status="rejected",
-            order_id__gt=0
-        ).last()
-            print("Exact Order Found:", open_buy_order)
+                client=user, 
+                Index_Symbol=Index_Symbol,
+                transaction_type="BUY",
+                order_id__gt=0,
+                order_status__in=["rejected", "completed", "complete", "open"]
+            ).last()
+            print("Exact Order Found angle one :", open_buy_order)
         except Tradeorderhistory.DoesNotExist:
             logger.info(f"No open BUY position found for {symbol} for user {user}.")
             return {"data": {"status": "none", "message": "No open BUY position found."}}

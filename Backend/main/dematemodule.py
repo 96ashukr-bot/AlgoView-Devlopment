@@ -5,7 +5,7 @@ from rest_framework.response import Response
 import time
 import requests
 import logging
-
+from django.db.models import Q
 from main.models import ClientBrokerdetails, Tradeorderhistory
 from main.upstock import place_upstox_orders
 logger = logging.getLogger('main')
@@ -150,12 +150,11 @@ def  exit_existing_buy_position(broker,LivePrice,Type,day,month,year,access_toke
     #     order_params__transaction_type__iexact="BUY"
     # ).last()
     open_buy_order = Tradeorderhistory.objects.filter(
-            client=user, 
-            Index_Symbol="BANKNIFTY",
-            transaction_type="BUY",
-            order_status="rejected",
-            order_id__gt=0
-        ).last()
+        client=user, 
+        Index_Symbol=symbol,
+        transaction_type="BUY",
+        order_id__gt=0
+    ).filter(Q(order_status="rejected") | Q(order_status="completed") | Q(order_status="complete")| Q(order_status="open")).last()
     print("open_buy_order>>>>>>>",open_buy_order)
     if open_buy_order:
         # Extract existing order details
@@ -165,6 +164,7 @@ def  exit_existing_buy_position(broker,LivePrice,Type,day,month,year,access_toke
         oid = open_buy_order.order_id
         price_of_order=open_buy_order.LivePrice
         print("price_of_order>>>",int(price_of_order))
+        symbol=symbol.upper()
         trade_symbol = f"{symbol}{int(price_of_order)}{Type}{day}{month}{year}"
         print("trade_symbol>>>>",trade_symbol)
         logger.info(f"privious order {oid}  enrty price is::::: {Entry_price}Found open BUY order for {symbol}. Exiting position. Order ID: {open_buy_order.order_id}")
