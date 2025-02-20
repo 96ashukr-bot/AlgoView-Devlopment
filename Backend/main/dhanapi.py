@@ -319,7 +319,8 @@ def fetch_order_details(order_id,dhan):
         
 def get_trading_symbol_security_id(symbol, segment, Exch):
     try:
-        csv_file_path ="/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/dhantoken.csv"# "/home/ubuntu/Backend/AlgoView-Devlopment/Backend/main/dhantoken.csv"
+        csv_file_path = "/home/ubuntu/Backend/AlgoView-Devlopment/Backend/main/dhantoken.csv"
+        # csv_file_path ="/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/dhantoken.csv"
         df = pd.read_csv(csv_file_path, low_memory=False)
         
         df['SEM_TRADING_SYMBOL'] = df['SEM_TRADING_SYMBOL'].str.replace("-", "").str.strip()
