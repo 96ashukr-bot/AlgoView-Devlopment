@@ -435,7 +435,7 @@ class ClientTradeSetting(models.Model):
     expiry_date = models.DateTimeField(null=True, blank=True)  # Allows manual input (client-defined)
 
     # Corrected 'is_tread_status' field definition
-    is_tread_status = models.BooleanField(default=True)  # Default to True or False as required
+    is_tread_status = models.BooleanField(default=False)  # Default to True or False as required
     sl_type=models.CharField(max_length=50, null=True, blank=True)
     stop_loss=models.IntegerField( null=True, blank=True)
     target=models.IntegerField( null=True, blank=True)

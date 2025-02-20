@@ -111,7 +111,7 @@ def place_dhan_orders(LivePrice,access_token, client_id, trade_symbol, transacti
             "trigger_price": float(triggerPrice) if ordertype == dhan.SL else 0,
         }
 
-        print("Final order_params:", order_params)
+        print("Final order_params dhan order:", order_params)
         try:
             order_response = dhan.place_order(**order_params)
             print("order_response",order_response)

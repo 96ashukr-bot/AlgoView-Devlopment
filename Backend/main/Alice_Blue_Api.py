@@ -78,9 +78,9 @@ def place_alice_orders(LivePrice,api_skey,api_uid,trading_symbol_aliceblue,trans
             logger.error(f"Unauthorized access for user {user}. Reason: {error_message}")
             return response
         if transaction_type.upper() == "BUY":
-           transaction_type = TransactionType.Buy
+           transaction_type_alice = TransactionType.Buy
         elif transaction_type.upper()=="SELL":
-            transaction_type=TransactionType.Sell
+            transaction_type_alice=TransactionType.Sell
         if product_type:
             # print("product_type>>>>",product_type)
             if product_type.upper() =="NRML" or product_type.upper()=="NORMAL":
@@ -121,7 +121,7 @@ def place_alice_orders(LivePrice,api_skey,api_uid,trading_symbol_aliceblue,trans
         # order_params_json = json.dumps(order_params, indent=4)
         # logger.info(f"order payload for alice blue...",order_params)
                 
-        logger.info(f"Transaction: {transaction_type}, Instrument: {instrument}, "
+        logger.info(f"Transaction: {transaction_type_alice}, Instrument: {instrument}, "
               f"Quantity: {quantity}, Order Type: {order_type}, Product Type: {product_type}, "
               f"Price: {price}, Trigger Price: {trigger_price}")
         response=None
@@ -142,7 +142,7 @@ def place_alice_orders(LivePrice,api_skey,api_uid,trading_symbol_aliceblue,trans
         #     return {"data": {"status": "error", "message": f"Quantity must be a multiple of lot size: {lot}"}}
         if order_type.upper()=="LIMIT":
             order_type=OrderType.Limit
-            response = alice.place_order(transaction_type = transaction_type,
+            response = alice.place_order(transaction_type = transaction_type_alice,
                     instrument = instrument, 
                     quantity = quantity, 
                     order_type = order_type, 
@@ -151,7 +151,7 @@ def place_alice_orders(LivePrice,api_skey,api_uid,trading_symbol_aliceblue,trans
                     )
         elif order_type.upper()=="MARKET":
             print("inside market order")
-            response = alice.place_order(transaction_type = transaction_type,
+            response = alice.place_order(transaction_type = transaction_type_alice,
                         instrument = instrument, 
                         quantity = quantity, 
                         order_type = OrderType.Market, 
