@@ -1357,3 +1357,8 @@ class PaymentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Payment
         fields = '__all__'
+
+class WebsocketDetailsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WebsocketDetails
+        fields = ["id", "Auth_token", "token_status"]

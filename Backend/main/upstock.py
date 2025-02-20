@@ -222,6 +222,7 @@ def handle_successful_order(LivePrice,transaction_type,
                 Entry_price=order_details['data'].get('average_price', 0.0)
                 EntryQty=order_details['data'].get('quantity', 0)
             elif trasaction_type == "SELL": 
+                # trade_order_status="CLOSE"
                 Exit_type="LX"
                 Exit_price=order_details['data'].get('average_price', 0.0) 
                 ExitQty= order_details['data'].get('quantity', 0)#disclosedquantity
@@ -245,11 +246,13 @@ def handle_successful_order(LivePrice,transaction_type,
             trasaction_type=order_details['data'].get('transaction_type', '')
             print("trasaction_type.........",trasaction_type)
             if trasaction_type == "BUY":
+                # trade_order_status="OPEN"
                 Entry_type="LE"
                 Entry_price=order_details['data'].get('average_price', 0.0)
                 print("Entry_price>>>",Entry_price)
                 EntryQty=order_details['data'].get('quantity', 0)
             elif trasaction_type == "SELL": 
+                # trade_order_status="CLOSE"
                 Exit_type="LX"
                 Exit_price=order_details['data'].get('average_price', 0.0) 
                 ExitQty= order_details['data'].get('quantity', 0)#disclosedquantity
@@ -265,10 +268,35 @@ def handle_successful_order(LivePrice,transaction_type,
             # save_webhook_signals_logs(order_params['transactiontype'], symbol, price, strategy, user, status=responsedetails['data'].get('status'),
             response = {"data": {"status": status,"message": "Order is rejected "}}
             return response
+        elif order_details['data']['status'] == "open":
+            logger.info(f"Upstox order is active and open in the market. for order ID: {order_id}")
+            rejection_message= order_details['data'].get('status_message', 'Unknown Open reason')
+            status=order_details['data'].get('status', 'open')
+            trasaction_type=order_details['data'].get('transaction_type', '')
+            # print("trasaction_type.........",trasaction_type)
+            if trasaction_type == "BUY":
+                # trade_order_status="OPEN"
+                Entry_type="LE"
+                Entry_price=order_details['data'].get('average_price', 0.0)
+                print("Entry_price>>>",Entry_price)
+                EntryQty=order_details['data'].get('quantity', 0)
+            elif trasaction_type == "SELL": 
+                # trade_order_status="CLOSE"
+                Exit_type="LX"
+                Exit_price=order_details['data'].get('average_price', 0.0) 
+                ExitQty= order_details['data'].get('quantity', 0)#disclosedquantity
+
+            save_trade_order_history(LivePrice,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, rejection_message, 
+            strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, 
+            Segment,Index_Symbol ,order_params , broker="Upstox")
+            logger.info(f"Order  active and open in the market reason!!!::{rejection_message} Order ID: {order_id}")
+            response = {"data": {"status": status,"message": "Order is Open "}}
+            return response
         else:
+            
             status=order_details['data']['status']
             rejection_message= order_details['data'].get('status_message', 'Unknown rejection reason')
-            logger.warning(f"Failed to fetch order details for Order ID {order_id}")
+            logger.warning(f"Failed to fetch order details for Order ID {order_id} with status {status} broker is :upstox")
             save_trade_order_history(LivePrice,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, rejection_message, 
             strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, 
             Segment,Index_Symbol ,order_params , broker="Upstox")

@@ -117,7 +117,7 @@ class ClientBrokerDetailgAdmin(admin.ModelAdmin):
     
 @admin.register(Tradeorderhistory)    
 class ClientTradeHistoryAdmin(admin.ModelAdmin):
-    list_display=("id",'client','trading_symbol','date','order_id','broker','order_status',"SignalEntry_time")     
+    list_display=("id",'client','transaction_type','trading_symbol','date','order_id','broker','order_status',"SignalEntry_time")     
   
   
 @admin.register(CompanyProfileDetails)   
@@ -137,3 +137,7 @@ class LiecensdetailsAdmin(admin.ModelAdmin):
 @admin.register(Payment)   
 class PaymentdetailsAdmin(admin.ModelAdmin):
     list_display = ('id','sub_admin')    
+    
+@admin.register(WebsocketDetails)
+class WebsocketDetailsAdmin(admin.ModelAdmin):  
+    list_display = ('id','token_status')     

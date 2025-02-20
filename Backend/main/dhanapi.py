@@ -14,7 +14,7 @@ def place_dhan_orders(LivePrice,access_token, client_id, trade_symbol, transacti
     EntryQty, ExitQty, webhook_signal, Exchange, Segment,Index_Symbol, triggerPrice, trade_order_status):
     print("dhan api  Exchange is::",Exchange," product typweeee",product_type)
     try:
-        
+        Index_Symbol = symbol
         smtp_details=CompanySmtpDetails.objects.first()
         default_from_email=smtp_details.email_host_user if smtp_details else   "no-reply@example.com" 
         order_id = 0
@@ -146,8 +146,20 @@ def place_dhan_orders(LivePrice,access_token, client_id, trade_symbol, transacti
             res_data = order_history_response['data'][0] if isinstance(order_history_response['data'], list) else order_history_response['data']
             
             status = res_data.get('orderStatus', 'UNKNOWN').lower()
-            logger.info(f"status dhan api res{status}")
-            if status == 'complete':
+            logger.info(f"status dhan api res _data {status}")
+            if not status or status==None:
+                status = "Failed"
+                order_id=0
+                message =  'None response from api '
+                response = {"data": {"status": status,"message":message}}
+                logger.info(f"Order response if None for user {user}. Order ID: {order_id}")
+                # Ensure Index_Symbol is provided
+                Index_Symbol = symbol
+                save_trade_order_history(LivePrice,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message,
+                                        strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
+                                        webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan")
+                return response
+            elif status == 'complete':
                 message = res_data.get('omsErrorDescription', "Order complete")
                 logger.info(f"Order placed successfully. Order ID: {order_id}")
                 transaction_type = res_data.get('transactionType', '')
@@ -175,8 +187,22 @@ def place_dhan_orders(LivePrice,access_token, client_id, trade_symbol, transacti
                 return response
             elif status == "rejected":
                 message = res_data.get('omsErrorDescription', 'not any reason get').lower()
+                transaction_type = res_data.get('transactionType', '')
+                
+                Entry_type = Exit_type = ""
+                Entry_price = Exit_price = 0.0
+                EntryQty = ExitQty = 0
+                
+                if transaction_type == "BUY":
+                    Entry_type = "LE"
+                    Entry_price = res_data.get('averageTradedPrice', 0.0)
+                    EntryQty = res_data.get('quantity', 0)
+                elif transaction_type == "SELL":
+                    Exit_type = "LX"
+                    Exit_price = res_data.get('averageTradedPrice', 0.0)
+                    ExitQty = res_data.get('quantity', 0)
                 send_trade_email_async.delay(user.email, default_from_email, user.firstName, status, message)
-                response = {"data": {"status": status}}
+                response = {"data": {"status": status,"message":message}}
                 logger.info(f"Order is rejected for user {user}. Order ID: {order_id}")
                 
                 # Ensure Index_Symbol is provided
@@ -188,38 +214,80 @@ def place_dhan_orders(LivePrice,access_token, client_id, trade_symbol, transacti
                 return response
             elif status == "pending":
                 message = res_data.get('omsErrorDescription', 'not any reason get').lower()
-                send_trade_email_async.delay(user.email, default_from_email, user.firstName, status, message)
-                response = {"data": {"status": status}}
+                transaction_type = res_data.get('transactionType', '')
+                
+                Entry_type = Exit_type = ""
+                Entry_price = Exit_price = 0.0
+                EntryQty = ExitQty = 0
+                
+                if transaction_type == "BUY":
+                    Entry_type = "LE"
+                    Entry_price = res_data.get('averageTradedPrice', 0.0)
+                    EntryQty = res_data.get('quantity', 0)
+                elif transaction_type == "SELL":
+                    Exit_type = "LX"
+                    Exit_price = res_data.get('averageTradedPrice', 0.0)
+                    ExitQty = res_data.get('quantity', 0)
+                response = {"data": {"status": status,"message":message}}
                 logger.info(f"Order is pending for user {user}. Order ID: {order_id}")
                 
                 # Ensure Index_Symbol is provided
-                Index_Symbol = res_data.get('tradingSymbol', 'UNKNOWN')
+                Index_Symbol = res_data.get('tradingSymbol', symbol)
                 
                 save_trade_order_history(LivePrice,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message,
                                         strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
                                         webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan")
                 return response
-       	    elif status == "TRANSIT":
+            elif status == "transit" or status == "TRANSIT":
                 message = res_data.get('omsErrorDescription', 'not any reason get').lower()
-                send_trade_email_async.delay(user.email, default_from_email, user.firstName, status, message)
-                response = {"data": {"status": status}}
+                transaction_type = res_data.get('transactionType', '')
+                
+                Entry_type = Exit_type = ""
+                # Entry_price = Exit_price = 0.0
+                # EntryQty = ExitQty = 0
+                
+                if transaction_type == "BUY":
+                    Entry_type = "LE"
+                    Entry_price = res_data.get('averageTradedPrice', 0.0)
+                    EntryQty = res_data.get('quantity', 0)
+                elif transaction_type == "SELL":
+                    Exit_type = "LX"
+                    Exit_price = res_data.get('averageTradedPrice', 0.0)
+                    ExitQty = res_data.get('quantity', 0)
+                response = {"data": {"status": status,"message":message}}
                 logger.info(f"Order is TRANSIT for user {user}. Order ID: {order_id}")
                 
                 # Ensure Index_Symbol is provided
-                Index_Symbol = res_data.get('tradingSymbol', 'UNKNOWN')
+                Index_Symbol = res_data.get('tradingSymbol', symbol)
                 
                 save_trade_order_history(LivePrice,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message,
                                         strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
                                         webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan")
-                return response    
+                return response
+            else:
+                message = res_data.get('omsErrorDescription', 'not any reason get').lower()
+                # send_trade_email_async.delay(user.email, default_from_email, user.firstName, status, message)
+                response = {"data": {"status": status,"message":message}}
+                if status:
+                    status="Failed"
+                response= {"data": {"status": "Failed","message": "Order placed but details could not be fetched."}}
+                logger.info(f"Order is TRANSIT for user {user}. Order ID: {order_id}")
+                
+                # Ensure Index_Symbol is provided
+                Index_Symbol = res_data.get('tradingSymbol', symbol)
+                
+                save_trade_order_history(LivePrice,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message,
+                                        strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
+                                        webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan")
+                return response     
         except Exception as e:
             error_message = f"Failed to place order: {str(e)}"
             logger.error(error_message)
             order_id = 0
-            response = {"data": {"status": status, "message": str(e)}}
+            response = {"data": {"status": "Failed", "message": str(e)}}
             print("error in dhan api :::::",{str(e)})
             # Ensure Index_Symbol is provided
-            Index_Symbol = res_data.get('tradingSymbol', 'UNKNOWN')
+            Index_Symbol = symbol
             
             save_trade_order_history(LivePrice,transaction_type,trade_order_status, user, trading_symbol, order_id, "Failed", None, str(e),
                                 strategy,  Entry_type,Exit_type,Entry_price,Exit_price,EntryQty,ExitQty , webhook_signal, Exchange,
@@ -231,7 +299,7 @@ def place_dhan_orders(LivePrice,access_token, client_id, trade_symbol, transacti
         error_message = f"Failed to place order: {str(e)}"
         logger.error(error_message)
         order_id = 0
-        response={"data": {"status": status,"message": str(e)}}
+        response={"data": {"status": "error","message": str(e)}}
         save_trade_order_history(LivePrice,transaction_type,trade_order_status, user, trading_symbol, order_id, "Failed", None, str(e),
                                     strategy, Entry_type,Exit_type,Entry_price,Exit_price,EntryQty,ExitQty , webhook_signal, Exchange,
                                     Segment, Index_Symbol, order_params, broker="dhan")
@@ -251,7 +319,7 @@ def fetch_order_details(order_id,dhan):
         
 def get_trading_symbol_security_id(symbol, segment, Exch):
     try:
-        csv_file_path = "/home/ubuntu/Backend/AlgoView-Devlopment/Backend/main/dhantoken.csv"
+        csv_file_path ="/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/dhantoken.csv"# "/home/ubuntu/Backend/AlgoView-Devlopment/Backend/main/dhantoken.csv"
         df = pd.read_csv(csv_file_path, low_memory=False)
         
         df['SEM_TRADING_SYMBOL'] = df['SEM_TRADING_SYMBOL'].str.replace("-", "").str.strip()
@@ -264,10 +332,12 @@ def get_trading_symbol_security_id(symbol, segment, Exch):
             return {"status": "success", "SECURITY_ID": SECURITY_ID}
         else:
             status={"status": "error", "message": "No records found matching the given symbol and exchange."}
-            logger.info(f"status")
+            logger.info(f"{status}")
             return  None
     
     except Exception as e:
-        return {"status": "error", "message": "An error occurred.", "details": str(e)}
+        msg= f"status is :error An error occurred.details: {str(e)}"
+        logger.info(f"{msg}")
+        return  None
 
 

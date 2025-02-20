@@ -6,6 +6,49 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
 from main.serializers import *#CompanyProfileSerializer
+from django.utils.timezone import now
+
+class WebsocketTokenView(APIView):
+    def get(self, request, *args, **kwargs):
+        """Retrieve the latest valid token from the database."""
+        token = WebsocketDetails.objects.order_by("-id").first()
+
+        if token and token.token_status not in ["expired", "not valid"]:
+            return Response(
+                {"status": "success", "auth_token": token.Auth_token, "token_status": token.token_status},
+                status=status.HTTP_200_OK
+            )
+        return Response(
+            {"status": "failed", "message": "No valid token found."},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    def put(self, request, *args, **kwargs):
+        """Update or create the token when it's expired or unauthorized."""
+        data = request.data
+        auth_token = data.get("auth_token")
+        token_status = data.get("token_status")
+
+        if not auth_token:
+            return Response(
+                {"status": "failed", "message": "Auth token is required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Update if exists or create a new entry
+        token, created = WebsocketDetails.objects.update_or_create(
+            id=WebsocketDetails.objects.order_by("-id").first().id if WebsocketDetails.objects.exists() else None,
+            defaults={"Auth_token": auth_token, "token_status": token_status},
+        )
+
+        return Response(
+            {
+                "status": "success",
+                "message": "Token updated successfully." if not created else "New token created.",
+                "data": {"auth_token": token.Auth_token, "token_status": token.token_status},
+            },
+            status=status.HTTP_200_OK if not created else status.HTTP_201_CREATED
+        )
 
 class CompanyProfileDetailView(APIView):
 

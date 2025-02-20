@@ -2318,6 +2318,7 @@ def place_order_broker(LivePrice,
         # try:
         logger.info(f"Placing order for user: {user}, Broker: {trade.broker}, Symbol: {symbol}.transaction_type--{transaction_type}")
 
+
         if transaction_type.upper() == "SELL":
             response = exit_existing_buy_position(broker,LivePrice,Type,day,month,year,access_token, trade_symbol, transaction_type,symbol, quantity, strategy, ordertype, product_type, price, user,
             Lots, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, Segment,
@@ -2338,6 +2339,7 @@ def place_order_broker(LivePrice,
             )
         
         logger.info(f" Upstox  Order. Response: {response}")
+
         #     return response
         # except Exception as e:
         #     # Handle unexpected errors during order placement
@@ -2473,7 +2475,7 @@ def serialize_to_json(data):
 
 SESSION_ID = None
 SESSION_EXPIRATION = None
-# Webhook  trade Alert
+# Webhooks-trade-Alert
 class PlaceOrderWebhookView(APIView):
     def post(self, request):
         alert_data = request.data
@@ -2520,8 +2522,9 @@ class PlaceOrderWebhookView(APIView):
             "NIFTY BANK": "BANKNIFTY",
             "NIFTY 50": "NIFTY",
             "NIFTY FIN SERVICE": "FINNIFTY",
-            "MID CAP NIFTY": "MIDCAPNIFTY"
+            "MID CAP NIFTY": "MIDCPNIFTY"
         }
+        print("raw_symbol")
         symbols = symbol_mapping.get(raw_symbol, raw_symbol)  # Default to raw_symbol if no matc
         if symbols.upper()=="SENSEX":
             exch_seg="BSE"

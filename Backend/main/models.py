@@ -504,10 +504,14 @@ class CompanyProfileDetails(models.Model):
     help_center_link = models.URLField(blank=True, null=True)  # Assuming this is a URL
     company_website = models.URLField(blank=True, null=True)  # Assuming this is a URL
     company_sender_name = models.CharField(max_length=255, blank=True, null=True)
-
     def __str__(self):
         return self.company_name if self.company_name else "Unnamed Company"
-
+class WebsocketDetails(models.Model):
+    Auth_token = models.TextField(blank=True, null=True) 
+    token_status= models.CharField(max_length=255, blank=True, null=True)
+    # expiry_time = models.DateTimeField(auto_now_add=True, blank=True, null=True)
+    def __str__(self):
+        return f"Auth_token: {self.Auth_token}"
 
 class CompanySmtpDetails(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="company_smtp",null=True, blank=True)  # Changed related_name

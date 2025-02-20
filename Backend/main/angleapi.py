@@ -333,7 +333,122 @@ def login_user(username, password, token_secret, smartApi):
 
 
 from django.core.cache import cache
+import time
+import os
+import csv
+import requests
+import pandas as pd
+from datetime import datetime
+from django.core.cache import cache
+from rest_framework.response import Response
+from rest_framework.views import APIView
+import logging
+
+logger = logging.getLogger("main")
+
 class SymbolExpiryDateListView(APIView):
+    CSV_FILE = "ANGLE_NFO.csv"
+
+    def get(self, request, *args, **kwargs):
+        start_time = time.time()  # Track start time
+        symbol = request.query_params.get('symbol', None)
+        if not symbol:
+            return Response({"error": "Symbol parameter is required"}, status=400)
+
+        # Check last update timestamp from cache
+        last_update = cache.get("csv_last_update")
+        logger.info(f"Last CSV update timestamp: {last_update}")
+
+        today_date = datetime.now().date()
+        last_update_date = datetime.strptime(last_update, "%Y-%m-%d").date() if last_update else None
+
+        # If the CSV is already updated today, use it
+        if last_update_date == today_date and os.path.exists(self.CSV_FILE):
+            logger.info("Using today's updated CSV file.")
+            response = self.get_expiry_dates_from_csv(symbol)
+        else:
+            logger.info("Updating CSV file with fresh expiry dates.")
+            response = self.update_csv_and_get_expiry_dates(symbol)
+
+        end_time = time.time()  # Track end time
+        elapsed_time = round(end_time - start_time, 2)
+        logger.info(f"Total execution time: {elapsed_time} seconds")
+
+        return response
+
+    def get_expiry_dates_from_csv(self, symbol):
+        """ Reads expiry dates from the existing CSV file """
+        try:
+            data = pd.read_csv(self.CSV_FILE)
+            filtered_data = data[data['name'].str.upper() == symbol.upper()]
+            expiry_dates = sorted(set(filtered_data['expiry'].dropna().unique()), key=lambda x: datetime.strptime(x, '%d%b%Y'))
+
+            # Remove past expiry dates
+            current_date = datetime.now()
+            expiry_dates = [date for date in expiry_dates if datetime.strptime(date, '%d%b%Y') >= current_date]
+
+            if not expiry_dates:
+                logger.warning(f"No future expiry dates found for {symbol}.")
+
+            logger.info(f"Expiry dates found: {expiry_dates}")
+            return Response({"symbol": symbol, "expiry_dates": expiry_dates}, status=200)
+
+        except Exception as e:
+            logger.error(f"Error reading CSV: {e}")
+            return Response({"error": f"Error reading CSV: {str(e)}"}, status=500)
+
+    def update_csv_and_get_expiry_dates(self, symbol):
+        """ Fetch fresh data from the API and update the CSV file once per day """
+        try:
+            url = "https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json"
+            logger.info("Fetching data from Angel One API.")
+
+            response = requests.get(url)
+            if response.status_code != 200:
+                logger.error("Failed to retrieve data from Angel One API.")
+                return Response({"error": "Failed to retrieve data from Angel One API"}, status=response.status_code)
+
+            data = response.json()
+            if not data:
+                logger.warning("No data received from API.")
+                return Response({"error": "No data received from API"}, status=404)
+
+            expiry_dates = []
+            with open(self.CSV_FILE, mode='w', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow(['token', 'symbol', 'name', 'exch_seg', 'expiry', 'instrumenttype'])
+
+                for entry in data:
+                    if entry.get('exch_seg') == 'NFO':
+                        expiry = entry.get('expiry', '')
+                        if expiry:
+                            try:
+                                parsed_date = datetime.strptime(expiry, '%d%b%Y')
+                                expiry_dates.append(parsed_date.strftime('%d%b%Y'))
+                            except ValueError:
+                                continue  
+                        writer.writerow([entry.get('token', ''), entry.get('symbol', ''),
+                                         entry.get('name', ''), entry.get('exch_seg', ''),
+                                         expiry, entry.get('instrumenttype', '')])
+
+            # Store update timestamp in cache (valid for 24 hours)
+            cache.set("csv_last_update", datetime.now().strftime("%Y-%m-%d"), timeout=86400)
+
+            # Process expiry dates
+            unique_expiry_dates = sorted(set(expiry_dates), key=lambda x: datetime.strptime(x, '%d%b%Y'))
+            filtered_expiry_dates = [expiry for expiry in unique_expiry_dates if symbol.lower() in expiry.lower()]
+
+            if not filtered_expiry_dates:
+                logger.warning(f"No expiry dates found for {symbol} after CSV update.")
+
+            logger.info(f"Filtered expiry dates: {filtered_expiry_dates}")
+            return Response({"symbol": symbol, "expiry_dates": filtered_expiry_dates}, status=200)
+
+        except Exception as e:
+            logger.error(f"Error updating CSV: {e}")
+            return Response({"error": str(e)}, status=500)
+
+class SymbolExpiryDateListViewsssss(APIView):
     CSV_FILE = "ANGLE_NFO.csv"
     def get(self, request, *args, **kwargs):
         symbol = request.query_params.get('symbol', None)
@@ -342,7 +457,7 @@ class SymbolExpiryDateListView(APIView):
 
         # Check last update timestamp from cache (store it once per day)
         last_update = cache.get("csv_last_update")
-
+        logger.info(f"last_update symbol expiry date csv::{last_update}")
         if last_update:
             last_update_date = datetime.strptime(last_update, "%Y-%m-%d").date()
         else:
@@ -352,6 +467,7 @@ class SymbolExpiryDateListView(APIView):
 
         # If the file is updated today, use it
         if last_update_date == today_date and os.path.exists(self.CSV_FILE):
+            logger.info(f"If the file is updated today, use it")
             return self.get_expiry_dates_from_csv(symbol)
 
         # Otherwise, update the CSV file
@@ -370,7 +486,7 @@ class SymbolExpiryDateListView(APIView):
                 for date in expiry_dates 
                 if datetime.strptime(date, '%d%b%Y') >= current_date
             ]
-
+            logger.info(f"expiry_dates:::::::::",expiry_dates)
             return Response({"symbol": symbol, "expiry_dates": expiry_dates}, status=200)
 
         except Exception as e:
@@ -387,7 +503,7 @@ class SymbolExpiryDateListView(APIView):
                 "PASSWORD": "PASSWORD",
                 "Totp": "Totp"
             }
-
+            logger.info(f"update csv file to get expiry dates")
             response = requests.get(url, headers=headers)
             if response.status_code != 200:
                 return Response({"error": "Failed to retrieve data from Angel One API"}, status=response.status_code)
@@ -419,7 +535,7 @@ class SymbolExpiryDateListView(APIView):
 
             unique_expiry_dates = sorted(set(expiry_dates), key=lambda x: datetime.strptime(x, '%d%b%Y'))
             filtered_expiry_dates = [expiry for expiry in unique_expiry_dates if symbol.lower() in expiry.lower()]
-
+            logger.info(f"filtered_expiry_dates>>>>>>>>>>>>>>{filtered_expiry_dates}")
             return Response({"symbol": symbol, "expiry_dates": filtered_expiry_dates}, status=200)
 
         except Exception as e:
