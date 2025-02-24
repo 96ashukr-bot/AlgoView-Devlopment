@@ -166,9 +166,9 @@ urlpatterns = [
     path('trade-history-filter/', TradeOrderHistoryFilterView.as_view(), name='trade_history_filter'),
     path("websocket/token/", WebsocketTokenView.as_view(), name="websocket-token"),
 
-    # path('get-strategies-tradehistory/', StrategyListView.as_view(), name='get-strategies-tradehistory'), # for get the tradehistory strategy
+    path('get-strategies-tradehistory/', StrategyListView.as_view(), name='get-strategies-tradehistory'), # for get the tradehistory strategy
 
-    # path('get-client-strategies-tradesetting/', ClientStrategyListView.as_view(), name='get-client-strategies-tradesetting'),
+    path('get-client-strategies-tradesetting/', ClientStrategyListView.as_view(), name='get-client-strategies-tradesetting'),
 
 ]
 

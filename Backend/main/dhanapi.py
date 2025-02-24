@@ -144,9 +144,10 @@ def place_dhan_orders(LivePrice,access_token, client_id, trade_symbol, transacti
 
             # Assuming order_history_response['data'] is a list, we need to access the first element
             res_data = order_history_response['data'][0] if isinstance(order_history_response['data'], list) else order_history_response['data']
-            
+            # TRANSIT PENDING REJECTED CANCELLED TRADED EXPIRED
             status = res_data.get('orderStatus', 'UNKNOWN').lower()
             logger.info(f"status dhan api res _data {status}")
+            
             if not status or status==None:
                 status = "Failed"
                 order_id=0
@@ -159,7 +160,8 @@ def place_dhan_orders(LivePrice,access_token, client_id, trade_symbol, transacti
                                         strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
                                         webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan")
                 return response
-            elif status == 'complete':
+            
+            elif status.lower() == 'complete':
                 message = res_data.get('omsErrorDescription', "Order complete")
                 logger.info(f"Order placed successfully. Order ID: {order_id}")
                 transaction_type = res_data.get('transactionType', '')
@@ -185,7 +187,7 @@ def place_dhan_orders(LivePrice,access_token, client_id, trade_symbol, transacti
                                         strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
                                         webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan")
                 return response
-            elif status == "rejected":
+            elif status.lower() == "rejected":
                 message = res_data.get('omsErrorDescription', 'not any reason get').lower()
                 transaction_type = res_data.get('transactionType', '')
                 
@@ -212,7 +214,7 @@ def place_dhan_orders(LivePrice,access_token, client_id, trade_symbol, transacti
                                         strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
                                         webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan")
                 return response
-            elif status == "pending":
+            elif status.lower() == "pending":
                 message = res_data.get('omsErrorDescription', 'not any reason get').lower()
                 transaction_type = res_data.get('transactionType', '')
                 
@@ -238,7 +240,7 @@ def place_dhan_orders(LivePrice,access_token, client_id, trade_symbol, transacti
                                         strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
                                         webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan")
                 return response
-            elif status == "transit" or status == "TRANSIT":
+            elif status.lower() == "transit" or status == "TRANSIT":
                 message = res_data.get('omsErrorDescription', 'not any reason get').lower()
                 transaction_type = res_data.get('transactionType', '')
                 

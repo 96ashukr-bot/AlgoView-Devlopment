@@ -6,7 +6,7 @@ import time
 import requests
 import logging
 from django.db.models import Q
-from main.Alice_Blue_Api import save_trade_order_history
+from main.Alice_Blue_Api import place_alice_orders, save_trade_order_history
 from main.models import ClientBrokerdetails, Tradeorderhistory
 from main.upstock import place_upstox_orders
 logger = logging.getLogger('main')
@@ -155,6 +155,7 @@ def  exit_existing_buy_position(broker,LivePrice,Type,day,month,year,access_toke
         client=user, 
         Index_Symbol=symbol,
         transaction_type="BUY",
+        strategy=strategy,
         order_id__gt=0
     ).filter(Q(order_status="rejected") | Q(order_status="completed") | Q(order_status="complete")| Q(order_status="open")).last()
     print("open_buy_order>>>>>>>",open_buy_order)
@@ -170,13 +171,28 @@ def  exit_existing_buy_position(broker,LivePrice,Type,day,month,year,access_toke
         trade_symbol = f"{symbol}{int(price_of_order)}{Type}{day}{month}{year}"
         print("trade_symbol>>>>",trade_symbol)
         logger.info(f"privious order {oid}  enrty price is::::: {Entry_price}Found open BUY order for {symbol}. Exiting position. Order ID: {open_buy_order.order_id}")
-
+        LivePrice=open_buy_order.LivePrice
+        old_trade_symbol=open_buy_order.trading_symbol
+        buy_order_close_status=open_buy_order.trade_order_status
+        if buy_order_close_status=="CLOSE":
+            message=f"Existing BUY order already closed for {Index_Symbol} for user {user}."
+            order_id=0
+            status="Failed"
+            order_params=""
+            res_data=""
+            logger.info(f"{message}")
+            save_trade_order_history(LivePrice,transaction_type,trade_order_status,user,old_trade_symbol, order_id, status, res_data, message, 
+            strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, 
+            Segment,Index_Symbol ,order_params , broker="Alice Blue")
         sell_response = place_upstox_orders(LivePrice,access_token, trade_symbol, transaction_type, symbol, quantity, strategy, ordertype,
             product_type, price, user, Lots, Entry_type, Exit_type,Entry_price,Exit_price, EntryQty,ExitQty,webhook_signal, Exchange,
             Segment, Index_Symbol, triggerPrice,trade_order_status)
         
         status_value = sell_response.get("data", {}).get("status")
-        if status_value in ["completed","rejected", "closed"]:
+        if status_value in ["completed","rejected", "closed","open"]:
+            trade_order = Tradeorderhistory.objects.get(order_id=oid)
+            trade_order.trade_order_status="CLOSE"
+            trade_order.save()
             logger.info(f"Existing BUY position successfully exited for {symbol}.")
             return sell_response
         else:
@@ -258,12 +274,73 @@ def  exit_existing_buy_positionqqqqq(broker,LivePrice,Type,day,month,year,access
     else:
         logger.info(f"No open BUY position found for {symbol} for user {user}.")
         message=f"No open BUY position found for {symbol} for user {user}."
+        return {"data": {"status": "none", "message": "No open BUY position found."}}
+
+
+
+
+def exit_existing_buy_position_Aliceblue(LivePrice,Type,day,month,year,api_skey,api_uid,trade_symbol,transaction_type, symbol, quantity,strategy,ordertype,
+    product_type, price,user, Lots,trade_order_status,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,
+    ExitQty,webhook_signal ,Exchange, Segment,Index_Symbol,triggerPrice):
+
+    print("symbol...",symbol,"user>>>>",user)
+    print("trade_symbol...",trade_symbol,"strategy>>>",strategy)
+    open_buy_order = Tradeorderhistory.objects.filter(
+        client=user, 
+        Index_Symbol=symbol,
+        transaction_type="BUY",
+        strategy=strategy,
+        order_id__gt=0
+    ).filter(Q(order_status="rejected") | Q(order_status="completed") |Q(order_status="complete")| Q(order_status="open")).last()
+    print("open_buy_order alice blue >>>>>>>",open_buy_order)
+    if open_buy_order:
+        # Extract existing order details
+        Entry_price = open_buy_order.Entry_Price
+        Entry_type = open_buy_order.Entry_type
+        EntryQty = open_buy_order.EntryQty
+        oid = open_buy_order.order_id
+        price_of_order=open_buy_order.LivePrice
+        LivePrice=open_buy_order.LivePrice
+        old_trade_symbol=open_buy_order.trading_symbol
+        buy_order_close_status=open_buy_order.trade_order_status
+        if buy_order_close_status=="CLOSE":
+            message=f"Existing BUY order already closed for {Index_Symbol} for user {user}."
+            order_id=0
+            status="Failed"
+            order_params={}
+            res_data=""
+            logger.info(f"{message}")
+            save_trade_order_history(LivePrice,transaction_type,trade_order_status,user,old_trade_symbol, order_id, status, res_data, message, 
+            strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, 
+            Segment,Index_Symbol ,order_params , broker="Alice Blue")
+            return {"data": {"status": "error", "message": f"Existing BUY order already closed for {old_trade_symbol} for user {user}"}}
+
+        print("price_of_order>>>",int(price_of_order))
+        symbol=symbol.upper()
+        trade_symbol = f"{symbol}{day}{month}{year}{Type[0]}{int(price_of_order)}"
+        print("trade_symbol alice blue >>>>",trade_symbol)
+        logger.info(f"privious order {oid}  enrty price is::::: {Entry_price}Found open BUY order for {symbol}. Exiting position. Order ID: {open_buy_order.order_id}")
+
+        sell_response =place_alice_orders(LivePrice,api_skey,api_uid,trade_symbol,transaction_type, symbol, quantity,strategy,ordertype,
+        product_type, price,user, Lots,trade_order_status,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal ,Exchange, Segment,Index_Symbol,triggerPrice)
+        
+        status_value = sell_response.get("data", {}).get("status")
+        if status_value in ["completed","rejected", "closed","open"]:
+            trade_order = Tradeorderhistory.objects.get(order_id=oid)
+            trade_order.trade_order_status="CLOSE"
+            trade_order.save()
+            logger.info(f"Existing BUY position successfully exited for {symbol}.")
+            return sell_response
+        else:
+            logger.error(f"Failed to exit existing BUY position for {symbol}. Response: {sell_response}")
+            return {"data": {"status": "error", "message": "Failed to exit existing position."}}
+    else:
+        logger.info(f"No open BUY position found for {symbol} for user {user}.")
+        message=f"No open BUY position found for {symbol} for user {user}."
         
         # save_trade_order_history(transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message, strategy,
         #                                 Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty, webhook_signal,
         #                                 Exchange, Segment, Index_Symbol, order_params, broker="Upstox")
         # logger.error(message)
         # return {"data": {"status": "Failed", "message": message}} 
-        return {"data": {"status": "none", "message": "No open BUY position found."}}
-
-
+        return {"data": {"status": "error", "message": "No open BUY position found."}}

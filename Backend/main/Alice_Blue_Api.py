@@ -169,6 +169,7 @@ def place_alice_orders(LivePrice,api_skey,api_uid,trading_symbol_aliceblue,trans
                 res_data=order_his
                 logger.info(f"history of alice blue order_____________{order_his}")
                 logger.info(f"status......{status}")
+                print("trade_order_status alice blue>>>>>>",trade_order_status)
                 if status == "completed":
                     order_id=res_data.get ('Nstordno', 0)   
                     trasaction_type=res_data.get('Trantype','')

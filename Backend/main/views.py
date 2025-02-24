@@ -19,7 +19,7 @@ from django.conf import settings
 import time
 from rest_framework.generics import ListAPIView,UpdateAPIView
 from main.angleapi import exit_existing_buy_position_angleone, get_token_details, place_Angle_order
-from main.dematemodule import exit_existing_buy_position, trading_Symbol_sum
+from main.dematemodule import exit_existing_buy_position, exit_existing_buy_position_Aliceblue, trading_Symbol_sum
 from main.dhanapi import place_dhan_orders
 from main.fivepaisa import fetch_access_token_5paisa, place_5paisa_order
 from main.permissions import  IsAdminRole
@@ -2325,7 +2325,7 @@ def place_order_broker(LivePrice,
             Index_Symbol, triggerPrice,trade_order_status)
             # If the exit failed, do not proceed.
             if response.get("data", {}).get("status") == "error":
-                message = f"Cannot place new BUY order because existing BUY position for {trade_symbol} could not be closed."
+                message = f"before place new BUY order please close existing BUY position  {symbol} could not be closed."
                 save_trade_order_history(LivePrice,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message, strategy,
                                         Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty, webhook_signal,
                                         Exchange, Segment, Index_Symbol, order_params, broker="Upstox")
@@ -2353,6 +2353,7 @@ def place_order_broker(LivePrice,
         #     return {"data": {"status": "Failed", "message": message}}
   
     elif trade.broker.lower() == "alice blue":
+        print("alice blue is matchedddddddddddddddddd")
         symbol=symbol.upper()
         trading_symbol_aliceblue = f"{symbol}{day}{month}{year}{Type[0]}{default_price}"
         logger.info("trading_symbol_aliceblue.. %s %s", trading_symbol_aliceblue,symbol)
@@ -2379,12 +2380,27 @@ def place_order_broker(LivePrice,
         logger.info(f"Fetched API credentials for {trade.broker}: SKEY={api_skey}, UID={api_uid}")
 
         logger.info(f"!!!!Placing order for user: {user} Brocker is: {trade.broker} & trading symbol is: {trade.symbol}")
-        response=place_alice_orders(LivePrice,api_skey,api_uid,trade_symbol,transaction_type, symbol, quantity,strategy,ordertype,
-        product_type, price,user, Lots,trade_order_status,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal ,Exchange, Segment,Index_Symbol,triggerPrice)
+        if transaction_type.upper() == "SELL":
+            print("ALICE BLUE SELLL ORDER:::")
+            response = exit_existing_buy_position_Aliceblue(LivePrice,Type,day,month,year,api_skey,api_uid,trade_symbol,transaction_type, symbol, quantity,strategy,ordertype,
+        product_type, price,user, Lots,trade_order_status,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,
+        ExitQty,webhook_signal ,Exchange, Segment,Index_Symbol,triggerPrice)
+            # If the exit failed, do not proceed.
+            if response.get("data", {}).get("status") == "error" or response.get("data", {}).get("status") == "Failed":
+                message = f"before place new BUY order close existing BUY position for {symbol} could not be closed."
+                save_trade_order_history(LivePrice,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message, strategy,
+                                        Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty, webhook_signal,
+                                        Exchange, Segment, Index_Symbol, order_params, broker="Upstox")
+                logger.error(message)
+                return {"data": {"status": "Failed", "message": message}} 
+        if transaction_type.upper() == "BUY":
+            response=place_alice_orders(LivePrice,api_skey,api_uid,trade_symbol,transaction_type, symbol, quantity,strategy,ordertype,
+            product_type, price,user, Lots,trade_order_status,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal ,Exchange, Segment,Index_Symbol,triggerPrice)
         logger.info(f" Alice blue. Response: {response}")
     elif trade.broker.lower() == "angle one":
         broker="Angle One"
         trade_symbol = f"{symbol}{day}{month}{year}{default_price}{Type}" 
+        logger.info(f"Angle one trading symbol is created:::::{trade_symbol}")
         # Fetch client broker details
         client_broker = ClientBrokerdetails.objects.filter(client=trade.client, broker_name__broker_name__iexact=trade.broker).first()
         if not client_broker:
@@ -2411,29 +2427,13 @@ def place_order_broker(LivePrice,
         logger.info(f"Fetched API credentials for {trade.broker}: SKEY={api_key}, USER={demate_user_name}")
 
         logger.info(f"!!!!Placing order for user: {user} Brocker is: {trade.broker} & trading symbol is: {trade.symbol}")
-        tokendata = get_token_details(trade_symbol) 
-        if tokendata["status"] == "success":  
-            token = tokendata.get("token")
-            symbol = tokendata.get("symbol")
-            if not token or not symbol:
-                logger.error(f"Missing token or symbol for trading symbol: {trade.symbol}")
-                response= {"data":{"status": "error", "message": "token symbole not found"}}
-                return response# continue
-        else:
-            message= f"trading symbol is not found for this :{trade.symbol}"
-            save_trade_order_history(LivePrice,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data,
-                                     message, strategy,  Entry_type,Exit_type, Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal , 
-                                     Exchange, Segment,Index_Symbol, order_params,broker="Angle One")
-                
-            logger.info(f"No token data found for trading symbol: {trade.symbol}")
-            response= {"data":{"status": "error", "message": "token symbole not found"}}
-            return response
-            # continue  # Skip to next user if token data is not found
+        logger.info(f"trade_symbol of angle order is: {trade_symbol}")
+        # continue  # Skip to next user if token data is not found
         # Place order for Angle One
         if transaction_type.upper() == "SELL":
             response = exit_existing_buy_position_angleone(LivePrice=LivePrice,Type=Type,day=day,month=month,year=year,
                 api_key=api_key,demate_user_name=demate_user_name,totp=totp,angle_pass=angle_pass,
-                token=token,symbol=symbol,quantity=quantity,product_type=product_type, 
+                usertrade=trade,tradingsymbol=trade_symbol,quantity=quantity,product_type=product_type, 
                 transactiontype=transaction_type,price=price,ordertype=ordertype,lot_size=Lots,
                 Entry_type=Entry_type, Exit_type=Exit_type,Entry_price=Entry_price,Exit_price=Exit_price,EntryQty=EntryQty,ExitQty=ExitQty,
                 webhook_signal=webhook_signal,Exchange=Exchange,Segment=Segment,trade_order_status=trade_order_status,
@@ -2441,15 +2441,17 @@ def place_order_broker(LivePrice,
             # If the exit failed, do not proceed.
             print("response>>>>>>",response)
             if response.get("data", {}).get("status") == "error":
-                message = f"Cannot place new BUY order because existing BUY position for {trade_symbol} could not be closed."
+                message = response.get("data", {}).get("message", f"Existing BUY position for {symbol} could not be closed.")
+
+                # message = f"before place new BUY order close existing BUY position {symbol} could not be closed."
                 # save_trade_order_history(LivePrice,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message, strategy,
                 #                         Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty, webhook_signal,
                 #                         Exchange, Segment, Index_Symbol, order_params, broker="Angle One")
                 logger.error(message)
                 return {"data": {"status": "Failed", "message": message}} 
         if transaction_type.upper() == "BUY":
-            response =place_Angle_order(LivePrice,api_key=api_key,demate_user_name=demate_user_name,totp=totp,angle_pass=angle_pass,
-                token=token,symbol=symbol,quantity=quantity,product_type=product_type, 
+            response =place_Angle_order(LivePrice,api_key=api_key,demate_user_name=demate_user_name,totp=totp,
+                angle_pass=angle_pass,usertrade=trade,tradingsymbol=trade_symbol,quantity=quantity,product_type=product_type, 
                 transactiontype=transaction_type,price=price,ordertype=ordertype,lot_size=Lots,
                 Entry_type=Entry_type, Exit_type=Exit_type,Entry_price=Entry_price,Exit_price=Exit_price,EntryQty=EntryQty,ExitQty=ExitQty,
                 webhook_signal=webhook_signal,Exchange=Exchange,Segment=Segment,trade_order_status=trade_order_status,
@@ -2722,7 +2724,10 @@ class PlaceOrderWebhookView(APIView):
                               
                         # Check order response and log or handle failures
                         print("final order repsone :::::::::::::::::::::",order_response)
-                        if order_response['data']['status'] == "Unauthorized":
+                        if not order_response['data']['status']:
+                            order_status="Failed"
+                            order_status=f"Order response failed for {trade.symbol} with broker {trade.broker}"
+                        elif order_response['data']['status'] == "Unauthorized":
                             order_status = f"Unauthorized Order placement failed for {trade.symbol} with broker {trade.broker}"
                             logger.warning(order_status)  # Log the unauthorized order status
                             continue  # Skip to the next client trade if unauthorized
@@ -2742,6 +2747,8 @@ class PlaceOrderWebhookView(APIView):
                             order_status=f"Order placement failed for {trade.symbol} with broker {trade.broker}"
                      
                         else:
+                            if not order_response['data']['status']:
+                                order_status="Failed"
                             order_status=f"Order placement failed for {trade.symbol} with broker {trade.broker}"
                     else:
                         logger.info("Market is closed. Do not proceed with the trade.") 
@@ -3027,7 +3034,7 @@ class SubSegmentsListView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 #trading history api demate rejected and success status
-class TradeorderhistoryListView(APIView):
+class TradeorderhistoryListView_old(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
@@ -3053,7 +3060,7 @@ class TradeorderhistoryListView(APIView):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 #CLIENT trade all history data 
-class ClientTradeListView(APIView):
+class ClientTradeListView_old(APIView):
     permission_classes = [IsAuthenticated]
     def get(self, request, *args, **kwargs):
         try:
@@ -3908,7 +3915,7 @@ class ClientStrategyListView(APIView):
 
 
 #trading history api demate rejected and success status
-class TradeorderhistoryListViewnew(APIView):
+class TradeorderhistoryListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request,*args, **kwargs):
@@ -3919,9 +3926,9 @@ class TradeorderhistoryListViewnew(APIView):
             from_date = request.GET.get('from_date', None)  # Using GET instead of POST
             to_date = request.GET.get('to_date', None)
             strategy = request.GET.get('strategy', None)
-            Index_Symbol = request.GET.get('index_symbol', None)
+            Index_Symbol = request.GET.get('Index_symbol', None)
             broker = request.GET.get('broker', None)
-            
+            print(f"broker:{broker} Index_Symbol:{Index_Symbol}")
             
             if user.role and user.role.name.lower() == 'super-admin':
                 # Super-admin can see all clients' trade order histories
@@ -3948,15 +3955,16 @@ class TradeorderhistoryListViewnew(APIView):
 
             # Apply symbol filter
             if strategy and strategy.lower() != 'all':
-                filters &= Q(strategy=strategy)
-
+                filters &= Q(strategy__iexact=strategy)
+     
             # Apply index_symbol filter
             if Index_Symbol and Index_Symbol.lower() != 'all':
-                filters &= Q(Index_Symbol=Index_Symbol)
+               
+                filters &= Q(Index_Symbol__iexact=Index_Symbol)
 
             # Apply strategy filter
             if broker and broker.lower() != 'all':
-                filters &= Q(broker=broker)
+                filters &= Q(broker__iexact=broker)
 # 
             # Apply the filters to the query
             trade_history = trade_history.filter(filters)
@@ -3974,7 +3982,7 @@ class TradeorderhistoryListViewnew(APIView):
         
         
 #CLIENT trade all history data 
-class ClientTradeListView_new(APIView):
+class ClientTradeListView(APIView):
     permission_classes = [IsAuthenticated]
     def get(self, request, *args, **kwargs):
         try:
@@ -3983,9 +3991,9 @@ class ClientTradeListView_new(APIView):
             from_date = request.GET.get('from_date', None)  # Using GET instead of POST
             to_date = request.GET.get('to_date', None)
             symbol = request.GET.get('symbol', None)
-            Index_Symbol = request.GET.get('index_symbol', None)
+            Index_Symbol = request.GET.get('Index_Symbol', None)
             strategy = request.GET.get('strategy', None)
-
+            print(f"client strategy:{strategy} symbol:{Index_Symbol}")
             
             if user.role and user.role.name.lower() == 'super-admin':
                 # Super-admin can see all clients' trade order histories
@@ -4020,15 +4028,15 @@ class ClientTradeListView_new(APIView):
 
             # Apply symbol filter
             if symbol and symbol.lower() != 'all':
-                filters &= Q(symbol=symbol)
+                filters &= Q(symbol__iexact=symbol)
 
             # Apply index_symbol filter
             if Index_Symbol and Index_Symbol.lower() != 'all':
-                filters &= Q(Index_Symbol=Index_Symbol)
+                filters &= Q(Index_Symbol__iexact=Index_Symbol)
 
             # Apply strategy filter
             if strategy and strategy.lower() != 'all':
-                filters &= Q(strategy=strategy)
+                filters &= Q(strategy__iexact=strategy)
 
             # Apply the filters to the query
             trade_history = trade_history.filter(filters)

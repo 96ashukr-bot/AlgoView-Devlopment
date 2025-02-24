@@ -93,7 +93,13 @@ def place_upstox_orders(LivePrice,
         smtp_details=CompanySmtpDetails.objects.first()
         default_from_email=smtp_details.email_host_user if smtp_details else   "no-reply@example.com" 
         # Fetch instrument details
-        result = fetch_instrument_details(trade_symbol, "NSE")
+        if Exchange=="NFO":
+            logger.info(f"exchnage symbole....{trade_symbol}")
+            result = fetch_instrument_details(trade_symbol, "NSE")
+            # logger.info(f"instrument>>>{trade_symbol}")
+        elif Exchange=="BSE":
+            result = fetch_instrument_details(trade_symbol, "BSE")
+        
         status="Failed"
         order_id=0
         message=""
@@ -218,11 +224,12 @@ def handle_successful_order(LivePrice,transaction_type,
         if order_details['data']['status'] =="complete":
             trasaction_type=order_details['data'].get('transaction_type', '')
             if trasaction_type == "BUY":
+                trade_order_status="OPEN"
                 Entry_type="LE"
                 Entry_price=order_details['data'].get('average_price', 0.0)
                 EntryQty=order_details['data'].get('quantity', 0)
             elif trasaction_type == "SELL": 
-                # trade_order_status="CLOSE"
+                trade_order_status="CLOSE"
                 Exit_type="LX"
                 Exit_price=order_details['data'].get('average_price', 0.0) 
                 ExitQty= order_details['data'].get('quantity', 0)#disclosedquantity
@@ -230,7 +237,7 @@ def handle_successful_order(LivePrice,transaction_type,
             # log_order(order_data, "orders_placed.csv")  
             message = order_details['data'].get('status_message', 'completed successfully ')
             res_data=order_details
-            trade_order_status="success"
+            
             status=order_details['data']['status'] 
             save_trade_order_history(LivePrice,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, message,  
                                      strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,
@@ -272,6 +279,30 @@ def handle_successful_order(LivePrice,transaction_type,
             logger.info(f"Upstox order is active and open in the market. for order ID: {order_id}")
             rejection_message= order_details['data'].get('status_message', 'Unknown Open reason')
             status=order_details['data'].get('status', 'open')
+            trasaction_type=order_details['data'].get('transaction_type', '')
+            # print("trasaction_type.........",trasaction_type)
+            if trasaction_type == "BUY":
+                # trade_order_status="OPEN"
+                Entry_type="LE"
+                Entry_price=order_details['data'].get('average_price', 0.0)
+                print("Entry_price>>>",Entry_price)
+                EntryQty=order_details['data'].get('quantity', 0)
+            elif trasaction_type == "SELL": 
+                # trade_order_status="CLOSE"
+                Exit_type="LX"
+                Exit_price=order_details['data'].get('average_price', 0.0) 
+                ExitQty= order_details['data'].get('quantity', 0)#disclosedquantity
+
+            save_trade_order_history(LivePrice,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, rejection_message, 
+            strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, 
+            Segment,Index_Symbol ,order_params , broker="Upstox")
+            logger.info(f"Order  active and open in the market reason!!!::{rejection_message} Order ID: {order_id}")
+            response = {"data": {"status": status,"message": "Order is Open "}}
+            return response
+        elif order_details['data']['status'] == "put order req received":
+            logger.info(f"Upstox order is active and open in the market. for order ID: {order_id}")
+            rejection_message= order_details['data'].get('status_message', 'Unknown Open reason')
+            status=order_details['data'].get('status', 'put order req received')
             trasaction_type=order_details['data'].get('transaction_type', '')
             # print("trasaction_type.........",trasaction_type)
             if trasaction_type == "BUY":
