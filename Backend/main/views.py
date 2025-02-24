@@ -2544,7 +2544,7 @@ class PlaceOrderWebhookView(APIView):
         buy_sell_type=transaction_type
         all_enable_users = ClientTradeSetting.objects.filter(is_tread_status=True,client__is_enable=True, broker__isnull=False)
         user_count = all_enable_users.count()
-        print("all_enable_users>>",all_enable_users,">>>count>>>>",user_count)
+        logger.info(f"all_enable_users for trading is ::{all_enable_users} no of clients count is {user_count}")
         default_expiry=None 
         order_status=None        
         try:
@@ -2561,7 +2561,7 @@ class PlaceOrderWebhookView(APIView):
                 Type=None
                 trade_symbol=symbols 
                 user=trade.client
-                print("trade for user >>",trade.client)
+                logger.info(f"trade for Client which is :*****{trade.client} and symbol of trade:::{trade.symbol}")
                 Type=None
                 strategy=trade.strategy
                 Segment=trade.segment.name if trade.segment else None
