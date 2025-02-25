@@ -45,7 +45,7 @@ def place_dhan_orders(LivePrice,access_token, client_id, trade_symbol, transacti
                         strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
                         webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan")
             return response
-
+        print("trade_symbol, dhan,Exchange>>>>>",trade_symbol, dhan,Exchange)
         trading_symbol = get_trading_symbol_security_id(trade_symbol, dhan,Exchange)
         if not trading_symbol:
             logger.error(f"trading_symbol details not found for {trade_symbol}")
@@ -155,7 +155,7 @@ def place_dhan_orders(LivePrice,access_token, client_id, trade_symbol, transacti
                 response = {"data": {"status": status,"message":message}}
                 logger.info(f"Order response if None for user {user}. Order ID: {order_id}")
                 # Ensure Index_Symbol is provided
-                Index_Symbol = symbol
+                # Index_Symbol = symbol
                 save_trade_order_history(LivePrice,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message,
                                         strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
                                         webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan")
@@ -208,7 +208,7 @@ def place_dhan_orders(LivePrice,access_token, client_id, trade_symbol, transacti
                 logger.info(f"Order is rejected for user {user}. Order ID: {order_id}")
                 
                 # Ensure Index_Symbol is provided
-                Index_Symbol = res_data.get('tradingSymbol', 'UNKNOWN')
+                # Index_Symbol = res_data.get('tradingSymbol', 'UNKNOWN')
                 
                 save_trade_order_history(LivePrice,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message,
                                         strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
@@ -218,9 +218,9 @@ def place_dhan_orders(LivePrice,access_token, client_id, trade_symbol, transacti
                 message = res_data.get('omsErrorDescription', 'not any reason get').lower()
                 transaction_type = res_data.get('transactionType', '')
                 
-                Entry_type = Exit_type = ""
-                Entry_price = Exit_price = 0.0
-                EntryQty = ExitQty = 0
+                # Entry_type = Exit_type = ""
+                # Entry_price = Exit_price = 0.0
+                # EntryQty = ExitQty = 0
                 
                 if transaction_type == "BUY":
                     Entry_type = "LE"

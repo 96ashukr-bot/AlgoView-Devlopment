@@ -736,7 +736,10 @@ def exit_existing_buy_position_angleone(
 
             trading_symbol = f"{Index_Symbol}{day}{month}{year}{price_of_order}{Type}"
             print("new trade_symbol for sell prvious buy order >>>>", trading_symbol)
-
+            if trading_symbol != old_trade_symbol:
+                    msg=f"sell request not matching with existing order :{old_trade_symbol} new symbol: {trading_symbol} client: {user}"
+                    logger.info(f"{msg}")  
+                    return {"data": {"status": "error", "message": msg}}
             logger.info(
                 f"Previous order {oid} entry price is::::: {Entry_price}. Found open BUY order for {Index_Symbol}. "
                 f"Exiting position. Order ID: {open_buy_order.order_id}"

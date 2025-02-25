@@ -19,7 +19,7 @@ from django.conf import settings
 import time
 from rest_framework.generics import ListAPIView,UpdateAPIView
 from main.angleapi import exit_existing_buy_position_angleone, get_token_details, place_Angle_order
-from main.dematemodule import exit_existing_buy_position, exit_existing_buy_position_Aliceblue, trading_Symbol_sum
+from main.dematemodule import  exit_existing_buy_position_5PaisaOrder, exit_existing_buy_position_Aliceblue, exit_existing_buy_position_DhanOrder, exit_existing_buy_position_Upstox, exit_existing_buy_position_zerodha_order, trading_Symbol_sum
 from main.dhanapi import place_dhan_orders
 from main.fivepaisa import fetch_access_token_5paisa, place_5paisa_order
 from main.permissions import  IsAdminRole
@@ -2180,9 +2180,9 @@ def place_order_broker(LivePrice,
     
     if trade.broker.lower() == "dhan":
         symbol=symbol.upper()
-        print("dhan fun   calleddddddddd")
+        print("dhan fun   calleddddddddd",symbol)
         trade_symbol = f"{symbol}{month}{fullyear}{default_price}{Type}" 
-        print(">>>>>>>trade_symbol>>>>>>>>>>>",trade_symbol)
+        print(">>>>>>>trade_symbol DHANNNNNNNNNNNN>>>>>>>>>>>",trade_symbol)
         # Fetch client broker details
         client_broker = ClientBrokerdetails.objects.filter(client=trade.client, broker_name__broker_name__iexact=trade.broker).first()
         if not client_broker:
@@ -2198,17 +2198,23 @@ def place_order_broker(LivePrice,
         access_token = client_broker.access_token
         if not access_token or not client_id:
             message = f"API credentials not found for client {trade.client} and broker {trade.broker}."
-            save_trade_order_history(LivePrice,transaction_type,
-                trade_order_status,user, trade_symbol, order_id, status, res_data, message, strategy,
-                Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, 
-                Segment, Index_Symbol,order_params, broker="dhan"
+            save_trade_order_history(LivePrice,transaction_type,trade_order_status,user, trade_symbol, order_id, status, res_data, message, strategy,Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,order_params, broker="dhan"
             )
             logger.error(message)
             return {"data": {"status": "Failed", "message": message}}
-        # logger.info(f"Fetched API credentials for {trade.broker}: SKEY={api_key}, USER={demate_user_name}")
-            # continue  # Skip to next user if token data is not found
         logger.info(f"!!!!Placing order for user: {user} Brocker is: {trade.broker} & trading symbol is: {trade.symbol}")
-        response=place_dhan_orders(LivePrice,access_token, client_id, trade_symbol, transaction_type, symbol, quantity,
+        if transaction_type=="SELL":
+            response = exit_existing_buy_position_DhanOrder(LivePrice,Type,day,month,fullyear,access_token, client_id, trade_symbol, transaction_type, symbol, quantity,strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty, webhook_signal, Exchange, Segment,Index_Symbol, triggerPrice, trade_order_status)
+            # If the exit failed, do not proceed.
+            if response.get("data", {}).get("status") == "error":
+                message = response.get("data", {}).get("message", f"Existing BUY position for {symbol} could not be closed.")
+
+                # message = f"before place new BUY order please close existing BUY position  {symbol} could not be closed."
+                save_trade_order_history(LivePrice,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message, strategy,Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty, webhook_signal,Exchange, Segment, Index_Symbol, order_params, broker="dhan")
+                logger.error(message)
+                return {"data": {"status": "Failed", "message": message}} 
+        if transaction_type == "BUY": 
+            response=place_dhan_orders(LivePrice,access_token, client_id, trade_symbol, transaction_type, symbol, quantity,
                 strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type, Entry_price, Exit_price, 
                 EntryQty, ExitQty, webhook_signal, Exchange, Segment,Index_Symbol, triggerPrice, trade_order_status)
         logger.info(f" dhan api. Response: {response}")
@@ -2218,15 +2224,13 @@ def place_order_broker(LivePrice,
         print("5 paisa function is calleddddddddd")
         formated_prc=f"{default_price:.2f}"
         trade_symbol = f"{symbol}{day}{month}{fullyear}{Type}{formated_prc}" 
-        print(">>>>>>>trade_symbol>>>>>>>>>>>",trade_symbol)
+        print(">>>>>>>trade_symbol 5paisa>>>>>>>>>>>",trade_symbol)
         # Fetch client broker details
         client_broker = ClientBrokerdetails.objects.filter(client=trade.client, broker_name__broker_name__iexact=trade.broker).first()
         if not client_broker:
             message= f"No broker details found for client {trade.client} and broker {trade.broker}"
             response= {"data":{"status": "Failed", "message":message }}
-            save_trade_order_history(LivePrice,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, message, strategy,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,
-                        ExitQty,webhook_signal , Exchange, Segment,Index_Symbol, order_params,broker="5paisa")
-                
+            save_trade_order_history(LivePrice,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, message, strategy,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal , Exchange, Segment,Index_Symbol, order_params,broker="5paisa")
             logger.error(f"No broker details found for client {trade.client} and broker {trade.broker}")
             return response # continue
 
@@ -2236,17 +2240,25 @@ def place_order_broker(LivePrice,
         access_token = client_broker.access_token
         if not access_token or not api_key:
             message = f"API credentials not found for client {trade.client} and broker {trade.broker}."
-            save_trade_order_history(LivePrice,transaction_type,
-                trade_order_status,user, trade_symbol, order_id, status, res_data, message, strategy,
-                Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, 
-                Segment, Index_Symbol,order_params, broker="5paisa"
+            save_trade_order_history(LivePrice,transaction_type,trade_order_status,user, trade_symbol, order_id, status, res_data, message, strategy,Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,order_params, broker="5paisa"
             )
             logger.error(message)
             return {"data": {"status": "Failed", "message": message}}
         # logger.info(f"Fetched API credentials for {trade.broker}: SKEY={api_key}, USER={demate_user_name}")
             # continue  # Skip to next user if token data is not found
         logger.info(f"!!!!Placing order for user: {user} Brocker is: {trade.broker} & trading symbol is: {trade.symbol}")
-        response=place_5paisa_order(LivePrice,api_key,access_token,trade_symbol,transaction_type, symbol, quantity,strategy,ordertype,
+        if transaction_type == "SELL": 
+            response = exit_existing_buy_position_5PaisaOrder(LivePrice,Type,day,month,fullyear,api_key,access_token,trade_symbol,transaction_type, symbol, quantity,strategy,ordertype,
+            product_type, price,user, Lots,trade_order_status,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal ,Exchange, Segment,Index_Symbol,triggerPrice,trade)
+
+            # If the exit failed, do not proceed.
+            if response.get("data", {}).get("status") == "error":
+                message = response.get("data", {}).get("message", f"Existing BUY position for {symbol} could not be closed.")
+                save_trade_order_history(LivePrice,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message, strategy,Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty, webhook_signal,Exchange, Segment, Index_Symbol, order_params, broker="5paisa")
+                logger.error(message)
+                return {"data": {"status": "Failed", "message": message}} 
+        if transaction_type == "BUY": 
+            response=place_5paisa_order(LivePrice,api_key,access_token,trade_symbol,transaction_type, symbol, quantity,strategy,ordertype,
             product_type, price,user, Lots,trade_order_status,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal ,Exchange, Segment,Index_Symbol,triggerPrice,trade)
 
         logger.info(f" 5paisa blue. Response: {response}")
@@ -2259,9 +2271,7 @@ def place_order_broker(LivePrice,
         client_broker = ClientBrokerdetails.objects.filter(client=trade.client, broker_name__broker_name__iexact=trade.broker).first()
         if not client_broker:
             message = f"No broker details found for client {trade.client} and broker {trade.broker}"
-            save_trade_order_history(LivePrice,transaction_type,trade_order_status,user, trade_symbol, order_id, status, res_data, message, strategy,
-                Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,
-                order_params, broker="zerodha"
+            save_trade_order_history(LivePrice,transaction_type,trade_order_status,user, trade_symbol, order_id, status, res_data, message, strategy,Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,order_params, broker="zerodha"
             )
             logger.error(message)
             return {"data": {"status": "Failed", "message": message}}
@@ -2279,11 +2289,19 @@ def place_order_broker(LivePrice,
 
         # logger.info(f"Fetched API credentials for broker {trade.broker}.")
         logger.info(f"Placing order for user: {user}, Broker: {trade.broker}, Symbol: {trade.symbol}")
-
-        response = place_zerodha_orders(LivePrice,access_token,Api_key,trade_symbol, transaction_type, symbol, quantity,
-            strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type,Entry_price,Exit_price,
-            EntryQty,ExitQty,webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice,trade_order_status
-        )
+        if transaction_type == "SELL":
+            response = exit_existing_buy_position_zerodha_order(LivePrice,Type,day,month,year,access_token,Api_key,trade_symbol, transaction_type, symbol, quantity,strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type,Entry_price,Exit_price,
+                EntryQty,ExitQty,webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice,trade_order_status)
+            if response.get("data", {}).get("status") == "error":
+                message = response.get("data", {}).get("message", f"Existing BUY position for {symbol} could not be closed.")
+                save_trade_order_history(LivePrice,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message, strategy,Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty, webhook_signal,Exchange, Segment, Index_Symbol, order_params, broker="zerodha")
+                logger.error(message)
+                return {"data": {"status": "Failed", "message": message}} 
+        if transaction_type =="BUY":
+            response = place_zerodha_orders(LivePrice,access_token,Api_key,trade_symbol, transaction_type, symbol, quantity,
+                strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type,Entry_price,Exit_price,
+                EntryQty,ExitQty,webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice,trade_order_status)
+        
         logger.info(f" Zerodha Order . Response: {response}")
 
     elif trade.broker.lower() == "upstox":
@@ -2294,9 +2312,7 @@ def place_order_broker(LivePrice,
         client_broker = ClientBrokerdetails.objects.filter(client=trade.client, broker_name__broker_name__iexact=trade.broker).first()
         if not client_broker:
             message = f"No broker details found for client {trade.client} and broker {trade.broker}."
-            save_trade_order_history(LivePrice,transaction_type,trade_order_status,user, trade_symbol, order_id, status, res_data, message, strategy,
-                Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,
-                order_params, broker="Upstox"
+            save_trade_order_history(LivePrice,transaction_type,trade_order_status,user, trade_symbol, order_id, status, res_data, message, strategy,Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,order_params, broker="Upstox"
             )
             logger.error(message)
             return {"data": {"status": "Failed", "message": message}}
@@ -2307,9 +2323,7 @@ def place_order_broker(LivePrice,
 
         if not access_token: #or not api_skey or not api_uid:
             message = f"API credentials  token not found for client {trade.client} and broker {trade.broker}."
-            save_trade_order_history(LivePrice,transaction_type,trade_order_status,user, trade_symbol, order_id, status, res_data, message, strategy,
-                Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal, Exchange, Segment, Index_Symbol,
-                order_params, broker="Upstox"
+            save_trade_order_history(LivePrice,transaction_type,trade_order_status,user, trade_symbol, order_id, status, res_data, message, strategy,Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal, Exchange, Segment, Index_Symbol,order_params, broker="Upstox"
             )
             logger.error(message)
             return {"data": {"status": "Failed", "message": message}}
@@ -2320,15 +2334,13 @@ def place_order_broker(LivePrice,
 
 
         if transaction_type.upper() == "SELL":
-            response = exit_existing_buy_position(broker,LivePrice,Type,day,month,year,access_token, trade_symbol, transaction_type,symbol, quantity, strategy, ordertype, product_type, price, user,
-            Lots, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, Segment,
-            Index_Symbol, triggerPrice,trade_order_status)
+            response = exit_existing_buy_position_Upstox(broker,LivePrice,Type,day,month,year,access_token, trade_symbol, transaction_type,symbol, quantity, strategy, ordertype, product_type, price, user,Lots, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, Segment,Index_Symbol, triggerPrice,trade_order_status)
             # If the exit failed, do not proceed.
             if response.get("data", {}).get("status") == "error":
-                message = f"before place new BUY order please close existing BUY position  {symbol} could not be closed."
-                save_trade_order_history(LivePrice,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message, strategy,
-                                        Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty, webhook_signal,
-                                        Exchange, Segment, Index_Symbol, order_params, broker="Upstox")
+                message = response.get("data", {}).get("message", f"Existing BUY position for {symbol} could not be closed.")
+
+                # message = f"before place new BUY order please close existing BUY position  {symbol} could not be closed."
+                save_trade_order_history(LivePrice,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message, strategy,Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty, webhook_signal,Exchange, Segment, Index_Symbol, order_params, broker="Upstox")
                 logger.error(message)
                 return {"data": {"status": "Failed", "message": message}} 
         if transaction_type.upper() == "BUY":
@@ -2373,7 +2385,7 @@ def place_order_broker(LivePrice,
             message = f"API credentials not found for client {trade.client} and broker {trade.broker}."
             save_trade_order_history(LivePrice,transaction_type,trade_order_status,user, trade_symbol, order_id, status, res_data, message, strategy,
                 Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,
-                order_params, broker="Upstox"
+                order_params, broker="Alice Blue"
             )
             logger.error(message)
             return {"data": {"status": "Failed", "message": message}}
@@ -2383,11 +2395,11 @@ def place_order_broker(LivePrice,
         if transaction_type.upper() == "SELL":
             print("ALICE BLUE SELLL ORDER:::")
             response = exit_existing_buy_position_Aliceblue(LivePrice,Type,day,month,year,api_skey,api_uid,trade_symbol,transaction_type, symbol, quantity,strategy,ordertype,
-        product_type, price,user, Lots,trade_order_status,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,
-        ExitQty,webhook_signal ,Exchange, Segment,Index_Symbol,triggerPrice)
+                product_type, price,user, Lots,trade_order_status,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,
+                ExitQty,webhook_signal ,Exchange, Segment,Index_Symbol,triggerPrice)
             # If the exit failed, do not proceed.
             if response.get("data", {}).get("status") == "error" or response.get("data", {}).get("status") == "Failed":
-                message = f"before place new BUY order close existing BUY position for {symbol} could not be closed."
+                message = response.get("data", {}).get("message", f"Existing BUY position for {symbol} could not be closed.")
                 save_trade_order_history(LivePrice,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message, strategy,
                                         Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty, webhook_signal,
                                         Exchange, Segment, Index_Symbol, order_params, broker="Upstox")
@@ -2539,10 +2551,12 @@ class PlaceOrderWebhookView(APIView):
         Lots=1
         triggerPrice=0
         LivePrice=default_price
+        # print("symbols webhook >>>>",symbols)
+        webhook_symbols=symbols.upper()
         # producttype=None
         save_webhook_signals_logs(buy_sell, symbols, default_price, strategy, json=alert_data)
         buy_sell_type=transaction_type
-        all_enable_users = ClientTradeSetting.objects.filter(is_tread_status=True,client__is_enable=True, broker__isnull=False)
+        all_enable_users = ClientTradeSetting.objects.filter(is_tread_status=True,client__is_enable=True, broker__isnull=False,symbol=webhook_symbols)
         user_count = all_enable_users.count()
         logger.info(f"all_enable_users for trading is ::{all_enable_users} no of clients count is {user_count}")
         default_expiry=None 
@@ -2575,6 +2589,7 @@ class PlaceOrderWebhookView(APIView):
                 order_params = {"symbol":trade.symbol if trade.symbol else trade_symbol,"Exchange": exch_seg, "quantity": trade.quantity or default_quantity,"product_type": trade.product_type,
                 "transaction_type":buy_sell,"price": limitPrice or 0 ,"ordertype": default_ordertype,"strategy": trade.strategy}
                 order_params = serialize_to_json(order_params)
+                print("symbol of tade>>>",trade.symbol)
                 if not trade.symbol:
                     logger.error(f"Symbol is missing for trade by user {trade.client}. Skipping this trade.")
                     message = f"Trade skipped due to missing symbol for user {trade.client}."
@@ -2585,6 +2600,7 @@ class PlaceOrderWebhookView(APIView):
                         order_params, broker=trade.broker
                     )
                     continue
+                print("trade.symbol.upper()>>>",trade.symbol.upper(), "getting symbol is >>>",symbols.upper())
                 if trade.symbol.upper() == symbols.upper():
                     if default_expiry:
                         # Convert to IST
@@ -2754,8 +2770,13 @@ class PlaceOrderWebhookView(APIView):
                         logger.info("Market is closed. Do not proceed with the trade.") 
                         order_status=f" can not Trade Order becouse the Market is closed. Do not proceed with the trade"                  
                 else:
-                    order_status=f"Skipping trade for symbol {trade.symbol} as it doesn't match the specified symbol and transaction type."
-                    print(f"Skipping trade for symbol {trade.symbol} as it doesn't match the specified symbol and buy_sell.")
+                    order_status=f"Skipping trade for symbol {trade.symbol} as it doesn't match the specified webhook symbol{symbols} or transaction type."
+                    res_data=order_status
+                    status="Failed"
+                    message=f"Skipping trade  for {trade.client} : webhook trading symbol {symbols} does not match with the client trade symbol {trade.symbol}"
+                    logger.info(f"{message}")
+                    # save_trade_order_history(LivePrice,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, message,  strategy, Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal , Exchange, Segment,Index_Symbol,order_params,broker=trade.broker)
+                    # print(f"Skipping trade for symbol {trade.symbol} as it doesn't match the specified symbol and buy_sell.")
                     continue  # Skip to the next trade if the symbol and buy_sell don't match
                     
                 # return Response({"status": order_status})#, status=status.HTTP_200_OK)
