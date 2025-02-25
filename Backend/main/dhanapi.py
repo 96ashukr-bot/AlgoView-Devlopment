@@ -166,9 +166,9 @@ def place_dhan_orders(LivePrice,access_token, client_id, trade_symbol, transacti
                 logger.info(f"Order placed successfully. Order ID: {order_id}")
                 transaction_type = res_data.get('transactionType', '')
                 
-                Entry_type = Exit_type = ""
-                Entry_price = Exit_price = 0.0
-                EntryQty = ExitQty = 0
+                # Entry_type = Exit_type = ""
+                # Entry_price = Exit_price = 0.0
+                # EntryQty = ExitQty = 0
                 
                 if transaction_type == "BUY":
                     Entry_type = "LE"
@@ -191,9 +191,9 @@ def place_dhan_orders(LivePrice,access_token, client_id, trade_symbol, transacti
                 message = res_data.get('omsErrorDescription', 'not any reason get').lower()
                 transaction_type = res_data.get('transactionType', '')
                 
-                Entry_type = Exit_type = ""
-                Entry_price = Exit_price = 0.0
-                EntryQty = ExitQty = 0
+                # Entry_type = Exit_type = ""
+                # Entry_price = Exit_price = 0.0
+                # EntryQty = ExitQty = 0
                 
                 if transaction_type == "BUY":
                     Entry_type = "LE"
