@@ -21,6 +21,8 @@ algoview/__pycache__
 Backend/media/strategy/**/*.png
 Backend/media/strategy/**/*.jpg
 Backend/media/strategy/**/*.jpeg
+media/strategy/Strategy_Tester/*.jpg
+
 
 Backend/media/kyc_documents/**/*.png
 Backend/media/kyc_documents/**/*.jpg

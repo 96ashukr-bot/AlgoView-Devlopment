@@ -516,8 +516,13 @@ class SymbolExpiryDateListView(APIView):
             expiry_dates = sorted(set(filtered_data['expiry'].dropna().unique()), key=lambda x: datetime.strptime(x, '%d%b%Y'))
 
             # Remove past expiry dates
-            current_date = datetime.now()
-            expiry_dates = [date for date in expiry_dates if datetime.strptime(date, '%d%b%Y') >= current_date]
+            
+            #current_date = datetime.now()
+           # expiry_dates = [date for date in expiry_dates if datetime.strptime(date, '%d%b%Y') >= current_date]
+            current_date = datetime.now().date()
+            #print(f"all expiry date for symbol:::{symbol}", expiry_dates)
+            expiry_dates = [date for date in expiry_dates if datetime.strptime(date, '%d%b%Y').date() >= current_date]
+
 
             if not expiry_dates:
                 logger.warning(f"No future expiry dates found for {symbol}.")

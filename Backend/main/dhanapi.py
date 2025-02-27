@@ -180,7 +180,7 @@ def place_dhan_orders(LivePrice,access_token, client_id, trade_symbol, transacti
                     ExitQty = res_data.get('quantity', 0)
 
                 # Ensure Index_Symbol is provided
-                Index_Symbol = res_data.get('tradingSymbol', 'UNKNOWN')
+             #   Index_Symbol = res_data.get('tradingSymbol', 'UNKNOWN')
 
                 response = {"data": {"status": "completed", "message": "Order placed and details saved successfully."}}
                 save_trade_order_history(LivePrice,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message,
@@ -234,7 +234,7 @@ def place_dhan_orders(LivePrice,access_token, client_id, trade_symbol, transacti
                 logger.info(f"Order is pending for user {user}. Order ID: {order_id}")
                 
                 # Ensure Index_Symbol is provided
-                Index_Symbol = res_data.get('tradingSymbol', symbol)
+                #Index_Symbol = res_data.get('tradingSymbol', symbol)
                 
                 save_trade_order_history(LivePrice,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message,
                                         strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
@@ -244,7 +244,7 @@ def place_dhan_orders(LivePrice,access_token, client_id, trade_symbol, transacti
                 message = res_data.get('omsErrorDescription', 'not any reason get').lower()
                 transaction_type = res_data.get('transactionType', '')
                 
-                Entry_type = Exit_type = ""
+               # Entry_type = Exit_type = ""
                 # Entry_price = Exit_price = 0.0
                 # EntryQty = ExitQty = 0
                 
@@ -260,7 +260,7 @@ def place_dhan_orders(LivePrice,access_token, client_id, trade_symbol, transacti
                 logger.info(f"Order is TRANSIT for user {user}. Order ID: {order_id}")
                 
                 # Ensure Index_Symbol is provided
-                Index_Symbol = res_data.get('tradingSymbol', symbol)
+                #Index_Symbol = res_data.get('tradingSymbol', symbol)
                 
                 save_trade_order_history(LivePrice,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message,
                                         strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
@@ -276,7 +276,7 @@ def place_dhan_orders(LivePrice,access_token, client_id, trade_symbol, transacti
                 logger.info(f"Order is TRANSIT for user {user}. Order ID: {order_id}")
                 
                 # Ensure Index_Symbol is provided
-                Index_Symbol = res_data.get('tradingSymbol', symbol)
+               # Index_Symbol = res_data.get('tradingSymbol', symbol)
                 
                 save_trade_order_history(LivePrice,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message,
                                         strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
