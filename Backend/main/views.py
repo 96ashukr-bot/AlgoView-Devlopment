@@ -3292,7 +3292,7 @@ def login_zerodha_redirect(request):
     # api_key=broker_details.broker_API_UID
     # Zerodha API credentials
     api_key = "jsdgh8p7k3yvfii8"  # Replace with your API Key
-    redirect_url ="https://software.algosparks.co.in/#/login"# "http://127.0.0.1:8000/callback-zerodha/"  # Your callback URL
+    redirect_url ="https://sparks.algoview.in/callback"# "http://127.0.0.1:8000/callback-zerodha/"  # Your callback URL
     state = "zerodha"  # Optional, to track the request state
 
     # Construct the URL

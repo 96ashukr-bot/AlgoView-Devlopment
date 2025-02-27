@@ -564,6 +564,7 @@ class BrokerLoginRedirectView(APIView):
     def redirect_to_zerodha(self, broker_details):
         api_key = broker_details.broker_API_KEY
         # redirect_url ="https://www.admin.algoview.in/callback"  # Replace with your callback URL
+        
         state = "zerodha"  # Include user-specific state
         zerodha_url = (
             f"https://kite.zerodha.com/connect/login?api_key={api_key}&v=3"
