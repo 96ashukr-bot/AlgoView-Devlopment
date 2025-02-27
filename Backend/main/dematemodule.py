@@ -641,10 +641,14 @@ class BrokerCallbackView(APIView):
             session_data = kite.generate_session(request_token, api_secret=broker_details.broker_API_SKEY)
             access_token = session_data['access_token']
             if access_token:
-                # Save access token and other details
+                # Calculate expiry at 6 AM next day
+                expiry_time = datetime.combine(now().date() + timedelta(days=1), datetime.min.time()) + timedelta(hours=6)
+
+                # Save details
                 broker_details.request_token = request_token
                 broker_details.access_token = access_token
-                broker_details.access_token_expiry = now() + timedelta(days=1)  # Assuming 1-day validity
+                broker_details.access_token_expiry = expiry_time
+                broker_details.isTokenExpired = False
                 broker_details.save()
                 return JsonResponse({"message": "success", "access_token": access_token})
             else:
@@ -732,6 +736,7 @@ class BrokerCallbackView(APIView):
                 broker_details.access_token = access_token
                 broker_details.access_token_expiry = expiry_time
                 broker_details.isTokenExpired = False
+                broker_details.tokenCreatedAt = now()
                 broker_details.save()
                 
                 # Save access token and other details
@@ -759,9 +764,10 @@ class CheckTokenValidityView(APIView):
             if broker_details.access_token_expiry and now() > broker_details.access_token_expiry:
                 broker_details.isTokenExpired = True
                 broker_details.save()
-                return Response({"message": "Token has expired", "isTokenExpired": True}, status=status.HTTP_401_UNAUTHORIZED)
-
-            return Response({"message": "Token is valid", "isTokenExpired": False}, status=status.HTTP_200_OK)
+                
+                return Response({"message": "Token has expired", "isTokenExpired": broker_details.isTokenExpired}, status=status.HTTP_401_UNAUTHORIZED)
+            
+            return Response({"message": "Token is valid", "isTokenExpired": broker_details.isTokenExpired}, status=status.HTTP_200_OK)
 
         except ClientBrokerdetails.DoesNotExist:
             return Response({"error": "Broker details not found"}, status=status.HTTP_404_NOT_FOUND)
