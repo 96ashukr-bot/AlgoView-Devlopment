@@ -731,6 +731,7 @@ class BrokerCallbackView(APIView):
                 broker_details.request_token = request_token
                 broker_details.access_token = access_token
                 broker_details.access_token_expiry = expiry_time
+                broker_details.isTokenExpired = False
                 broker_details.save()
                 
                 # Save access token and other details
