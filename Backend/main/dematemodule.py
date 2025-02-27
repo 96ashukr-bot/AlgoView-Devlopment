@@ -746,5 +746,25 @@ class BrokerCallbackView(APIView):
         
         except Exception as e:
             return JsonResponse({"message":"Failed","error": str(e)}, status=500)
-    
+
+from rest_framework import status
+class CheckTokenValidityView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        try:
+            user = request.user  
+            broker_details = ClientBrokerdetails.objects.get(client=user)
+
+            if broker_details.access_token_expiry and now() > broker_details.access_token_expiry:
+                broker_details.isTokenExpired = True
+                broker_details.save()
+                return Response({"message": "Token has expired", "isTokenExpired": True}, status=status.HTTP_401_UNAUTHORIZED)
+
+            return Response({"message": "Token is valid", "isTokenExpired": False}, status=status.HTTP_200_OK)
+
+        except ClientBrokerdetails.DoesNotExist:
+            return Response({"error": "Broker details not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)    
     

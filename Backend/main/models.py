@@ -454,7 +454,7 @@ class ClientBrokerdetails(models.Model):
     request_token = models.CharField(max_length=500, null=True, blank=True)  # Temporary request token
     access_token = models.CharField(max_length=500, null=True, blank=True)  # Persistent access token
     access_token_expiry = models.DateTimeField(null=True, blank=True)  # Expiry of the access token (if applicable)
-    
+    isTokenExpired=models.BooleanField(default=False)
     
     def __str__(self):
         return f"Trade Setting {self.broker_name} - {self.broker_API_SKEY}"
