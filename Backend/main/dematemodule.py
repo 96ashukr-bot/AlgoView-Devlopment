@@ -609,9 +609,8 @@ class BrokerCallbackView(APIView):
             broker_details = ClientBrokerdetails.objects.get(client=user)
             print("broker_details:::::::::::",broker_details)
             broker  = broker_details.broker_name.broker_name
-            broker_name="upstox"
             print("broker_name>>>>",broker)
-            # broker_name=request.GET.get('state',"") 
+            broker_name=request.GET.get('state',"") 
             # Handle different brokers
             if broker_name == "zerodha":
                 request_token = request.GET.get('code')
