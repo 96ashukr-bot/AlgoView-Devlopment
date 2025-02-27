@@ -373,48 +373,27 @@ def fetch_instrument_details(symbol_name, exchange="NSE"):
     except Exception as e:
         return {"error": f"Exception occurred: {str(e)}"}
 
-
 def get_order_details(order_id, access_token):
     try:
-        if not order_id:
-            return {"error": "Order ID is required"}
-        
-        url = f"https://api.upstox.com/v2/order/details?order_id={order_id}"
-        headers = {
-            'Accept': 'application/json',
-            'Authorization': f'Bearer {access_token}'
-        }
-
-        response = requests.get(url, headers=headers)
-
-        try:
-            response_dict = response.json()  # Parse JSON response
-            logger.info(f"Response of order details: {response_dict}")
-
-            if response.status_code == 200:
-                order_data = response_dict.get("data", {})
-                order_status = order_data.get("status", "").lower()
-
-                if order_status == "complete":
-                    transaction_type = order_data.get("transaction_type", "")
-                    logger.info(f"Transaction Type: {transaction_type}")
-                
+        if order_id:
+            url = f"https://api.upstox.com/v2/order/details?order_id={order_id}"
+            
+            headers = {
+                'Accept': 'application/json',
+                'Authorization': f'Bearer {access_token}'
+            }
+            response = requests.get(url, headers=headers)
+            try:
+                response_dict = response.json()  # Use response.json() instead of json.loads(response)
+                print("Response of order details>>", response_dict)
                 return response_dict
-            else:
+            except json.JSONDecodeError:
+                print("Error: Failed to parse the order details response as JSON.")
                 return {
-                    "error": f"Failed to fetch order details. Status code: {response.status_code}",
-                    "details": response.text
-                }
-
-        except requests.exceptions.JSONDecodeError:
-            logger.error("Failed to parse the order details response as JSON.")
-            return {
-                "error": "Failed to parse response as JSON",
+                "error": f"Failed to fetch order details. Status code: {response.status_code}",
                 "details": response.text
             }
-
     except Exception as e:
-        logger.error(f"Exception occurred: {str(e)}")
-        return {"error": f"Exception occurred: {str(e)}"}
-
+        logger.info(f"Exception occurred: {str(e)}")
+        return {"error":"None" }
 
