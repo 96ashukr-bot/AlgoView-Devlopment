@@ -224,6 +224,7 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC' 
 
 CONTACT_NUM="+919988746583"
+REDIRECT_URL="https://sparks.algoview.in/callback"
 #LOGIN_LINK="'http://localhost:3000/login"
 #HELP_CENTER_LINK="'http://localhost:3000"
 #COMPANY_WEBSITE="'http://localhost:3000"

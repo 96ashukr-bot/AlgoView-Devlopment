@@ -220,15 +220,19 @@ def handle_successful_order(LivePrice,transaction_type,
     try:
         order_details = get_order_details(order_id, access_token)
         res_data=order_details
-        order_id=order_details['data']['order_id']
+        # order_id=order_details['data']['order_id']
+        order_status = order_details['data'].get('status', '').lower()
+        logger.info(f"order_status:::{order_status}")
+        order_id = order_details['data'].get('order_id', '')
+        # print("order_id>>",order_id)
         if order_details['data']['status'] =="complete":
-            trasaction_type=order_details['data'].get('transaction_type', '')
-            if trasaction_type == "BUY":
+            transaction_type=order_details['data'].get('transaction_type', '')
+            if transaction_type == "BUY":
                 trade_order_status="OPEN"
                 Entry_type="LE"
                 Entry_price=order_details['data'].get('average_price', 0.0)
                 EntryQty=order_details['data'].get('quantity', 0)
-            elif trasaction_type == "SELL": 
+            elif transaction_type == "SELL": 
                 trade_order_status="CLOSE"
                 Exit_type="LX"
                 Exit_price=order_details['data'].get('average_price', 0.0) 
@@ -250,15 +254,15 @@ def handle_successful_order(LivePrice,transaction_type,
         elif order_details['data']['status'] == "rejected":
             rejection_message= order_details['data'].get('status_message', 'Unknown rejection reason')
             status=order_details['data'].get('status', 'rejected')
-            trasaction_type=order_details['data'].get('transaction_type', '')
-            print("trasaction_type.........",trasaction_type)
-            if trasaction_type == "BUY":
+            transaction_type=order_details['data'].get('transaction_type', '')
+            print("transaction_type.........",transaction_type)
+            if transaction_type == "BUY":
                 # trade_order_status="OPEN"
                 Entry_type="LE"
                 Entry_price=order_details['data'].get('average_price', 0.0)
                 print("Entry_price>>>",Entry_price)
                 EntryQty=order_details['data'].get('quantity', 0)
-            elif trasaction_type == "SELL": 
+            elif transaction_type == "SELL": 
                 # trade_order_status="CLOSE"
                 Exit_type="LX"
                 Exit_price=order_details['data'].get('average_price', 0.0) 
@@ -279,15 +283,15 @@ def handle_successful_order(LivePrice,transaction_type,
             logger.info(f"Upstox order is active and open in the market. for order ID: {order_id}")
             rejection_message= order_details['data'].get('status_message', 'Unknown Open reason')
             status=order_details['data'].get('status', 'open')
-            trasaction_type=order_details['data'].get('transaction_type', '')
-            # print("trasaction_type.........",trasaction_type)
-            if trasaction_type == "BUY":
+            transaction_type=order_details['data'].get('transaction_type', '')
+            # print("transaction_type.........",transaction_type)
+            if transaction_type == "BUY":
                 # trade_order_status="OPEN"
                 Entry_type="LE"
                 Entry_price=order_details['data'].get('average_price', 0.0)
                 print("Entry_price>>>",Entry_price)
                 EntryQty=order_details['data'].get('quantity', 0)
-            elif trasaction_type == "SELL": 
+            elif transaction_type == "SELL": 
                 # trade_order_status="CLOSE"
                 Exit_type="LX"
                 Exit_price=order_details['data'].get('average_price', 0.0) 
@@ -303,15 +307,15 @@ def handle_successful_order(LivePrice,transaction_type,
             logger.info(f"Upstox order is active and open in the market. for order ID: {order_id}")
             rejection_message= order_details['data'].get('status_message', 'Unknown Open reason')
             status=order_details['data'].get('status', 'put order req received')
-            trasaction_type=order_details['data'].get('transaction_type', '')
-            # print("trasaction_type.........",trasaction_type)
-            if trasaction_type == "BUY":
+            transaction_type=order_details['data'].get('transaction_type', '')
+            # print("transaction_type.........",transaction_type)
+            if transaction_type == "BUY":
                 # trade_order_status="OPEN"
                 Entry_type="LE"
                 Entry_price=order_details['data'].get('average_price', 0.0)
                 print("Entry_price>>>",Entry_price)
                 EntryQty=order_details['data'].get('quantity', 0)
-            elif trasaction_type == "SELL": 
+            elif transaction_type == "SELL": 
                 # trade_order_status="CLOSE"
                 Exit_type="LX"
                 Exit_price=order_details['data'].get('average_price', 0.0) 
@@ -369,26 +373,48 @@ def fetch_instrument_details(symbol_name, exchange="NSE"):
     except Exception as e:
         return {"error": f"Exception occurred: {str(e)}"}
 
+
 def get_order_details(order_id, access_token):
     try:
-        if order_id:
-            url = f"https://api.upstox.com/v2/order/details?order_id={order_id}"
-            
-            headers = {
-                'Accept': 'application/json',
-                'Authorization': f'Bearer {access_token}'
-            }
-            response = requests.get(url, headers=headers)
-            try:
-                response_dict = response.json()  # Use response.json() instead of json.loads(response)
-                print("Response of order details>>", response_dict)
+        if not order_id:
+            return {"error": "Order ID is required"}
+        
+        url = f"https://api.upstox.com/v2/order/details?order_id={order_id}"
+        headers = {
+            'Accept': 'application/json',
+            'Authorization': f'Bearer {access_token}'
+        }
+
+        response = requests.get(url, headers=headers)
+
+        try:
+            response_dict = response.json()  # Parse JSON response
+            logger.info(f"Response of order details: {response_dict}")
+
+            if response.status_code == 200:
+                order_data = response_dict.get("data", {})
+                order_status = order_data.get("status", "").lower()
+
+                if order_status == "complete":
+                    transaction_type = order_data.get("transaction_type", "")
+                    logger.info(f"Transaction Type: {transaction_type}")
+                
                 return response_dict
-            except json.JSONDecodeError:
-                print("Error: Failed to parse the order details response as JSON.")
+            else:
                 return {
-                "error": f"Failed to fetch order details. Status code: {response.status_code}",
+                    "error": f"Failed to fetch order details. Status code: {response.status_code}",
+                    "details": response.text
+                }
+
+        except requests.exceptions.JSONDecodeError:
+            logger.error("Failed to parse the order details response as JSON.")
+            return {
+                "error": "Failed to parse response as JSON",
                 "details": response.text
             }
+
     except Exception as e:
+        logger.error(f"Exception occurred: {str(e)}")
         return {"error": f"Exception occurred: {str(e)}"}
+
 

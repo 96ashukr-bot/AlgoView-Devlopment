@@ -182,12 +182,12 @@ def place_alice_orders(LivePrice,api_skey,api_uid,trading_symbol_aliceblue,trans
             print("trade_order_status alice blue>>>>>>",trade_order_status)
             if status == "completed":
                 order_id=res_data.get ('Nstordno', 0)   
-                trasaction_type=res_data.get('Trantype','')
-                if trasaction_type == "B":
+                transaction_type=res_data.get('Trantype','')
+                if transaction_type == "B":
                     Entry_type="LE"
                     Entry_price=res_data.get ('Avgprc', 0.0)
                     EntryQty=res_data.get ('Qty', 0)
-                elif trasaction_type == "S": 
+                elif transaction_type == "S": 
                     Exit_type="LX"
                     Exit_price=res_data.get ('Avgprc', 0.0)  
                     ExitQty= res_data.get ('Qty', 0)
@@ -198,12 +198,12 @@ def place_alice_orders(LivePrice,api_skey,api_uid,trading_symbol_aliceblue,trans
                 save_trade_order_history(LivePrice,transaction_type,trade_order_status,user,trading_symbol_aliceblue, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type,Entry_price,Exit_price ,EntryQty,ExitQty,webhook_signal , Exchange, Segment,Index_Symbol,order_params, broker="Alice Blue")
                 return response
             elif status == "rejected": 
-                trasaction_type=res_data.get('Trantype','')
-                if trasaction_type == "B":
+                transaction_type=res_data.get('Trantype','')
+                if transaction_type == "B":
                     Entry_type="LE"
                     Entry_price=res_data.get ('Avgprc', 0.0)
                     EntryQty=res_data.get ('Qty', 0)
-                elif trasaction_type == "S": 
+                elif transaction_type == "S": 
                     Exit_type="LX"
                     Exit_price=res_data.get ('Avgprc', 0.0)  
                     ExitQty= res_data.get ('Qty', 0)
@@ -216,12 +216,12 @@ def place_alice_orders(LivePrice,api_skey,api_uid,trading_symbol_aliceblue,trans
                 save_trade_order_history(LivePrice,transaction_type,trade_order_status,user,trading_symbol_aliceblue, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol,order_params, broker="Alice Blue")
                 return response
             elif status == "OPEN":   
-                trasaction_type=res_data.get('Trantype','')
-                if trasaction_type == "B":
+                transaction_type=res_data.get('Trantype','')
+                if transaction_type == "B":
                     Entry_type="LE"
                     Entry_price=res_data.get ('Avgprc', 0.0)
                     EntryQty=res_data.get ('Qty', 0)
-                elif trasaction_type == "S": 
+                elif transaction_type == "S": 
                     Exit_type="LX"
                     Exit_price=res_data.get ('Avgprc', 0.0)  
                     ExitQty= res_data.get ('Qty', 0)
