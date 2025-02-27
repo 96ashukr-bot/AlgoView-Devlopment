@@ -454,7 +454,7 @@ class ClientBrokerdetails(models.Model):
     request_token = models.CharField(max_length=500, null=True, blank=True)  # Temporary request token
     access_token = models.CharField(max_length=500, null=True, blank=True)  # Persistent access token
     access_token_expiry = models.DateTimeField(null=True, blank=True)  # Expiry of the access token (if applicable)
-    isTokenExpired=models.BooleanField(default=False)
+    isTokenExpired=models.BooleanField(default=False,null=True, blank=True)
     tokenCreatedAt=models.DateTimeField(auto_now_add=True,null=True, blank=True)
     
     def __str__(self):
