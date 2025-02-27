@@ -165,13 +165,13 @@ def place_Angle_order(LivePrice,api_key,demate_user_name,totp,angle_pass,usertra
             res_data=responsedetails 
             logger.info(f"responsedetails>>>>{responsedetails}")
             if responsedetails['data']['status'] =="completed":
-                trasaction_type=responsedetails['data'].get('transactiontype', '')
-                if trasaction_type == "BUY":
+                transaction_type=responsedetails['data'].get('transactiontype', '')
+                if transaction_type == "BUY":
                     trade_order_status="OPEN"
                     Entry_type="LE"
                     Entry_price=responsedetails['data'].get('averageprice', 0.0)
                     EntryQty=responsedetails['data'].get('quantity', 0)
-                elif trasaction_type == "SELL": 
+                elif transaction_type == "SELL": 
                     trade_order_status="CLOSE"
                     Exit_type="LX"
                     Exit_price=responsedetails['data'].get('averageprice', 0.0) 
@@ -195,12 +195,12 @@ def place_Angle_order(LivePrice,api_key,demate_user_name,totp,angle_pass,usertra
                 if not order_id:
                     order_id=uniqueorderid     
                 logger.info(f"Order is pending or open state, Order ID: {order_id}")
-                trasaction_type=responsedetails['data'].get('transactiontype', '')
-                if trasaction_type == "BUY":
+                transaction_type=responsedetails['data'].get('transactiontype', '')
+                if transaction_type == "BUY":
                     Entry_type="LE"
                     Entry_price=responsedetails['data'].get('averageprice', 0.0)
                     EntryQty=responsedetails['data'].get('quantity', 0)
-                elif trasaction_type == "SELL": 
+                elif transaction_type == "SELL": 
                     Exit_type="LX"
                     Exit_price=responsedetails['data'].get('averageprice', 0.0) 
                     ExitQty= responsedetails['data'].get('quantity', 0)#disclosedquantity
@@ -224,12 +224,12 @@ def place_Angle_order(LivePrice,api_key,demate_user_name,totp,angle_pass,usertra
                 order_id=""
                 if not order_id:
                     order_id=uniqueorderid  
-                trasaction_type=responsedetails['data'].get('transactiontype', '')
-                if trasaction_type == "BUY":
+                transaction_type=responsedetails['data'].get('transactiontype', '')
+                if transaction_type == "BUY":
                     Entry_type="LE"
                     Entry_price=responsedetails['data'].get('averageprice', 0.0)
                     EntryQty=responsedetails['data'].get('quantity', 0)
-                elif trasaction_type == "SELL": 
+                elif transaction_type == "SELL": 
                     Exit_type="LX"
                     Exit_price=responsedetails['data'].get('averageprice', 0.0) 
                     ExitQty= responsedetails['data'].get('quantity', 0)#disclosedquantity 
@@ -493,7 +493,7 @@ class SymbolExpiryDateListView(APIView):
 
         today_date = datetime.now().date()
         last_update_date = datetime.strptime(last_update, "%Y-%m-%d").date() if last_update else None
-
+        print("last_update_date:::",last_update_date)
         # If the CSV is already updated today, use it
         if last_update_date == today_date and os.path.exists(self.CSV_FILE):
             logger.info("Using today's updated CSV file.")
@@ -516,14 +516,14 @@ class SymbolExpiryDateListView(APIView):
             expiry_dates = sorted(set(filtered_data['expiry'].dropna().unique()), key=lambda x: datetime.strptime(x, '%d%b%Y'))
 
             # Remove past expiry dates
-            
-            #current_date = datetime.now()
-           # expiry_dates = [date for date in expiry_dates if datetime.strptime(date, '%d%b%Y') >= current_date]
+
             current_date = datetime.now().date()
-            #print(f"all expiry date for symbol:::{symbol}", expiry_dates)
+            print(f"all expiry date for symbol:::{symbol}", expiry_dates)
             expiry_dates = [date for date in expiry_dates if datetime.strptime(date, '%d%b%Y').date() >= current_date]
 
-
+            # current_date = datetime.now()
+            # print(f"all expiry date for symbol:::{symbol}", expiry_dates)
+            # expiry_dates = [date for date in expiry_dates if datetime.strptime(date, '%d%b%Y') >= current_date]
             if not expiry_dates:
                 logger.warning(f"No future expiry dates found for {symbol}.")
 

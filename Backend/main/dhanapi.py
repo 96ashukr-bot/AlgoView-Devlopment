@@ -161,26 +161,29 @@ def place_dhan_orders(LivePrice,access_token, client_id, trade_symbol, transacti
                                         webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan")
                 return response
             
-            elif status.lower() == 'complete':
+            elif status.lower() == 'complete' or status.lower()=="traded" or status.upper()=="TRADED":
                 message = res_data.get('omsErrorDescription', "Order complete")
                 logger.info(f"Order placed successfully. Order ID: {order_id}")
                 transaction_type = res_data.get('transactionType', '')
-                
+                status=status.lower()
                 # Entry_type = Exit_type = ""
                 # Entry_price = Exit_price = 0.0
                 # EntryQty = ExitQty = 0
                 
                 if transaction_type == "BUY":
+                    trade_order_status="OPEN"
                     Entry_type = "LE"
                     Entry_price = res_data.get('averageTradedPrice', 0.0)
                     EntryQty = res_data.get('quantity', 0)
                 elif transaction_type == "SELL":
+                    trade_order_status="CLOSE"
                     Exit_type = "LX"
                     Exit_price = res_data.get('averageTradedPrice', 0.0)
                     ExitQty = res_data.get('quantity', 0)
 
                 # Ensure Index_Symbol is provided
-             #   Index_Symbol = res_data.get('tradingSymbol', 'UNKNOWN')
+                # Index_Symbol = res_data.get('tradingSymbol', 'UNKNOWN')
+
 
                 response = {"data": {"status": "completed", "message": "Order placed and details saved successfully."}}
                 save_trade_order_history(LivePrice,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message,
@@ -243,11 +246,6 @@ def place_dhan_orders(LivePrice,access_token, client_id, trade_symbol, transacti
             elif status.lower() == "transit" or status == "TRANSIT":
                 message = res_data.get('omsErrorDescription', 'not any reason get').lower()
                 transaction_type = res_data.get('transactionType', '')
-                
-               # Entry_type = Exit_type = ""
-                # Entry_price = Exit_price = 0.0
-                # EntryQty = ExitQty = 0
-                
                 if transaction_type == "BUY":
                     Entry_type = "LE"
                     Entry_price = res_data.get('averageTradedPrice', 0.0)
@@ -277,7 +275,7 @@ def place_dhan_orders(LivePrice,access_token, client_id, trade_symbol, transacti
                 
                 # Ensure Index_Symbol is provided
                # Index_Symbol = res_data.get('tradingSymbol', symbol)
-                
+
                 save_trade_order_history(LivePrice,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message,
                                         strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
                                         webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan")

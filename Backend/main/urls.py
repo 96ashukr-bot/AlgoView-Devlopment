@@ -13,7 +13,7 @@ from main.fivepaisa import *
 from .views import *
 from django.conf.urls.static import static
 from main import views
-from main.dematemodule import LoginDematAPIView
+from main.dematemodule import BrokerCallbackView, LoginDematAPIView,BrokerLoginRedirectView
 urlpatterns = [
     path('signup/', UserRegistrationView.as_view(), name='user-registration'),
     path('login/', CustomLoginView.as_view(), name='login'),

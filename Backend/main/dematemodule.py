@@ -1,5 +1,6 @@
 
 import csv
+from django.forms import ValidationError
 from rest_framework.views import APIView
 from rest_framework.response import Response
 import time
@@ -8,12 +9,14 @@ import logging
 from django.db.models import Q
 from main.Alice_Blue_Api import place_alice_orders, save_trade_order_history
 from main.dhanapi import place_dhan_orders
-from main.fivepaisa import place_5paisa_order
+from main.fivepaisa import fetch_access_token_5paisa, place_5paisa_order
 from main.models import ClientBrokerdetails, Tradeorderhistory
 from main.upstock import place_upstox_orders
 from main.zerodha import place_zerodha_orders
 logger = logging.getLogger('main')
-from datetime import datetime, timedelta    
+from datetime import datetime, timedelta  
+from django.conf import settings
+  
 def get_lot_size(trading_symbol):
     # URL to fetch instrument details (for example, for Angel One)
     url = "https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json"
@@ -84,6 +87,7 @@ class LoginDematAPIView(APIView):
             
             broker = broker_details.broker_name
             print("broker>>>>>>",broker)
+            
             # Generate login URL based on broker
             if str(broker).lower() == "upstox":
                 state = "upstox"
@@ -308,7 +312,9 @@ def exit_existing_buy_position_DhanOrder(LivePrice, Type, day, month, fullyear, 
             transaction_type="BUY",
             strategy=strategy,
             order_id__gt=0,
-        ).filter(Q(order_status="rejected") |Q(order_status="TRANSIT")| Q(order_status="transit")| Q(order_status="completed") | Q(order_status="complete") | Q(order_status="open")).last()
+        ).filter(Q(order_status="rejected") | Q(order_status="traded") | Q(order_status="TRADED")
+                |Q(order_status="TRANSIT")| Q(order_status="transit")| Q(order_status="completed")  
+                | Q(order_status="complete") | Q(order_status="open")).last()
         
         print("open_buy_order alice blue >>>>>>>", open_buy_order)
 
@@ -360,7 +366,7 @@ def exit_existing_buy_position_DhanOrder(LivePrice, Type, day, month, fullyear, 
 
         status_value = sell_response.get("data", {}).get("status")
 
-        if status_value in ["completed", "rejected", "closed", "open", "transit", "TRANSIT"]:
+        if status_value in ["completed", "rejected", "closed", "open", "transit", "TRANSIT","TRADED","traded"]:
             try:
                 trade_order = Tradeorderhistory.objects.get(order_id=oid)
                 trade_order.trade_order_status = "CLOSE"
@@ -510,3 +516,235 @@ def exit_existing_buy_position_zerodha_order(LivePrice,Type,day,month,year,acces
         message=f"No open BUY position found for {symbol} for user {user}."
         
         return {"data": {"status": "error", "message": "No open BUY position found."}}     
+
+
+
+
+from django.utils.timezone import now
+from django.shortcuts import redirect
+from kiteconnect import KiteConnect
+from django.contrib.auth.decorators import login_required
+REDIRECT_URI=settings.REDIRECT_URL
+class BrokerLoginRedirectView(APIView):
+    permission_classes = [IsAuthenticated]  
+
+    def get(self, request, *args, **kwargs):
+        print("broker login api is called...................")
+        user = request.user  
+        if not user.is_authenticated:
+            return Response({"error": "User not authenticated"}, status=403)
+
+        try:
+            # Retrieve broker details for the logged-in user
+            broker_details = ClientBrokerdetails.objects.get(client=user)
+            broker_name = broker_details.broker_name.broker_name.lower()
+            print("broker_name>>>",broker_name)
+            # broker_name=request.GET.get('state')
+            if broker_name == "zerodha":
+                # request.GET.get('request_token')
+                return self.redirect_to_zerodha(broker_details)
+
+            elif broker_name == "5paisa":
+                return self.redirect_to_5paisa(broker_details)
+
+            elif broker_name == "alice blue":
+                return self.redirect_to_alice_blue(broker_details)
+
+            elif broker_name == "upstox":
+                return self.redirect_to_upstox(broker_details)
+
+            else:
+                return Response({"error": "Unsupported broker"}, status=400)
+
+        except ClientBrokerdetails.DoesNotExist:
+            return Response({"error": "Broker details not found for the user"}, status=404)
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
+
+    def redirect_to_zerodha(self, broker_details):
+        api_key = broker_details.broker_API_KEY
+        # redirect_url ="https://www.admin.algoview.in/callback"  # Replace with your callback URL
+        state = "zerodha"  # Include user-specific state
+        zerodha_url = (
+            f"https://kite.zerodha.com/connect/login?api_key={api_key}&v=3"
+            f"&redirect_uri={REDIRECT_URI}&state={state}"
+        )
+        return Response({"redirect_url": zerodha_url})
+
+    def redirect_to_5paisa(self, broker_details):
+        # redirect_url ="https://www.admin.algoview.in/callback" 
+        VENDOR_KEY = broker_details.broker_API_KEY
+        state="5paisa"
+        paisa_url = (f"https://dev-openapi.5paisa.com/WebVendorLogin/VLogin/Index?"f"VendorKey={VENDOR_KEY}&ResponseURL={REDIRECT_URI}&State={state}"
+    )    
+        return Response({"redirect_url": paisa_url})
+
+    def redirect_to_alice_blue(self, broker_details):
+        return redirect("login-aliceblue")  
+
+    def redirect_to_upstox(self, broker_details):
+        CLIENT_KEY = broker_details.broker_API_KEY
+        print("CLIENT_KEY>>>",CLIENT_KEY)
+        CLIENT_SECRET = broker_details.broker_API_SKEY
+        state="upstox"
+        AUTH_URL = "https://api.upstox.com/v2/login/authorization/dialog"
+        # Ensure REDIRECT_URI is properly defined
+        login_url = (
+            f"{AUTH_URL}?client_id={CLIENT_KEY}&"
+            f"redirect_uri={REDIRECT_URI}&"
+            f"response_type=Auth_code&"
+            f"state={state}"
+        )
+        print("login_url>>", login_url)
+        return Response({"redirect_url": login_url})
+
+class BrokerCallbackView(APIView):
+    permission_classes = [IsAuthenticated]  
+
+    def get(self, request, *args, **kwargs):
+        print("callback url calleddd......")
+        # Get the authorization code and state from the URL
+        try:
+            user = request.user  
+            broker_details = ClientBrokerdetails.objects.get(client=user)
+            print("broker_details:::::::::::",broker_details)
+            broker  = broker_details.broker_name.broker_name
+            broker_name="upstox"
+            print("broker_name>>>>",broker)
+            # broker_name=request.GET.get('state',"") 
+            # Handle different brokers
+            if broker_name == "zerodha":
+                request_token = request.GET.get('code')
+                return self.handle_zerodha(request_token, broker_details)
+
+            elif broker_name == "5paisa":
+                request_token = request.GET.get('code')
+                return self.handle_5paisa(request_token, broker_details)
+
+            elif broker_name == "alice blue":
+                return self.handle_alice_blue(request_token, broker_details)
+
+            elif broker_name == "upstox":
+                request_token = request.GET.get('code')
+                return self.handle_upstox(request_token, broker_details)
+
+            else:
+                raise ValidationError("Unsupported broker")
+
+        except ClientBrokerdetails.DoesNotExist:
+            raise ValidationError("Broker details not found for the user")
+        except Exception as e:
+            raise ValidationError(str(e))
+
+    def handle_zerodha(self, request_token, broker_details):
+        try:
+            kite = KiteConnect(api_key=broker_details.broker_API_KEY)
+            session_data = kite.generate_session(request_token, api_secret=broker_details.broker_API_SKEY)
+            access_token = session_data['access_token']
+            if access_token:
+                # Save access token and other details
+                broker_details.request_token = request_token
+                broker_details.access_token = access_token
+                broker_details.access_token_expiry = now() + timedelta(days=1)  # Assuming 1-day validity
+                broker_details.save()
+                return JsonResponse({"message": "success", "access_token": access_token})
+            else:
+                return JsonResponse({"message": "success", "access_token": access_token})
+        except Exception as e:
+            return JsonResponse({"message":"Failed","error": str(e)}, status=500)
+            # try:
+            #     AUTH_TOKEN_URL="https://api.kite.trade/session/token"
+            #     headers={
+            #             "api_key": broker_details.broker_API_SKEY,
+            #             "request_token": request_token,
+            #             "checksum": generate_checksum(broker_details.broker_API_SKEY, broker_details.broker_API_UID, request_token),
+            #         }
+            #     # Make a POST request to fetch the access token
+            #     response = requests.post(AUTH_TOKEN_URL,headers)
+            #     response_data = response.json()
+            #     print("response_data>>>",response_data)
+            #     return JsonResponse({
+            #         "message": "Callback successful",
+            #         "access_token": response_data.get("access_token"),
+                    
+            #     })
+            # except Exception as e:
+            #     return JsonResponse({"error": str(e)}, status=500)
+    def handle_5paisa(self, request_token, broker_details):
+        try:
+            access_token = fetch_access_token_5paisa(request_token,broker_details)
+            if access_token:
+                broker_details.request_token = request_token
+                broker_details.access_token = access_token
+                broker_details.access_token_expiry = now() + timedelta(days=1) 
+                broker_details.save()
+                return JsonResponse({"message": "success", "access_token": access_token})
+            else:
+                return JsonResponse({"message": "Failed"}, status=400)
+        except Exception as e:
+            return JsonResponse({"message":"Failed","error": str(e)}, status=500)
+    def handle_alice_blue(self, request_token, broker_details):
+        try: 
+            access_token = "aliceblue_access_token_placeholder" 
+            if access_token:
+                # Save access token and other details
+                broker_details.request_token = request_token
+                broker_details.access_token = access_token
+                broker_details.access_token_expiry = now() + timedelta(days=1)  # Assuming 1-day validity
+                broker_details.save()
+                
+                return JsonResponse({"message": "success", "access_token": access_token})
+            else:
+                return JsonResponse({"message": "Failed"}, status=400)
+        
+        except Exception as e:
+            return JsonResponse({"message":"Failed","error": str(e)}, status=500)
+
+    def handle_upstox(self, request_token, broker_details):
+        try:
+            # Example Upstox-specific token generation logic
+            TOKEN_URL = 'https://api.upstox.com/v2/login/authorization/token' 
+            auth_code = request_token  # Assuming `request_token` is the auth code
+            
+            if not auth_code:
+                return JsonResponse({"error": "Authorization code not provided"}, status=400)
+            CLIENT_KEY=broker_details.broker_API_KEY
+            CLIENT_SECRET=broker_details.broker_API_SKEY
+            print("CLIENT_KEY>>>>",CLIENT_KEY,">>skey>>>>>",CLIENT_SECRET)
+            REDIRECT_URI="https://sparks.algoview.in/callback"
+            data = {
+                'code': auth_code,
+                'client_id': CLIENT_KEY,
+                'client_secret': CLIENT_SECRET,
+                'redirect_uri': REDIRECT_URI,
+                'grant_type': 'authorization_code'
+            }
+            response = requests.post(TOKEN_URL, data=data)
+            print("response>>>>",response)
+            if response.status_code == 200:
+                access_token = response.json().get('access_token')
+                # Calculate Expiry Time (Fixed at 3:30 AM the Next Day)
+                now_time = now()
+                expiry_date = now_time.date() if now_time.hour < 3 or (now_time.hour == 3 and now_time.minute < 30) else now_time.date() + timedelta(days=1)
+                expiry_time = datetime.combine(expiry_date, datetime.min.time()) + timedelta(hours=3, minutes=30)
+                print("expiry_time>>>>",expiry_time)
+                # Save access token and expiry time
+                broker_details.request_token = request_token
+                broker_details.access_token = access_token
+                broker_details.access_token_expiry = expiry_time
+                broker_details.save()
+                
+                # Save access token and other details
+                # broker_details.request_token = request_token
+                # broker_details.access_token = access_token
+                # broker_details.access_token_expiry = now() + timedelta(days=1)  # Assuming 1-day validity
+                # broker_details.save()
+                logger.info(f"Upstox callback processed successfully")
+                return JsonResponse({"message": "success", "access_token": access_token})
+            else:
+                return JsonResponse({"message": "Failed"}, status=400)
+        
+        except Exception as e:
+            return JsonResponse({"message":"Failed","error": str(e)}, status=500)
+    
+    
