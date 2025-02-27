@@ -13,7 +13,7 @@ from main.fivepaisa import *
 from .views import *
 from django.conf.urls.static import static
 from main import views
-from main.dematemodule import BrokerCallbackView, LoginDematAPIView,BrokerLoginRedirectView
+from main.dematemodule import BrokerCallbackView, CheckTokenValidityView, LoginDematAPIView,BrokerLoginRedirectView
 urlpatterns = [
     path('signup/', UserRegistrationView.as_view(), name='user-registration'),
     path('login/', CustomLoginView.as_view(), name='login'),
@@ -169,7 +169,7 @@ urlpatterns = [
     path('get-strategies-tradehistory/', StrategyListView.as_view(), name='get-strategies-tradehistory'), # for get the tradehistory strategy
 
     path('get-client-strategies-tradesetting/', ClientStrategyListView.as_view(), name='get-client-strategies-tradesetting'),
-
+    path('get-broker-token-expiry/',CheckTokenValidityView.as_view(),name="client-broker-istokenexpiry")
 ]
 
 
