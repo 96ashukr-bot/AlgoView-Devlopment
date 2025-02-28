@@ -105,13 +105,13 @@ def place_dhan_orders(LivePrice,access_token, client_id, trade_symbol, transacti
             "product_type": product_type,
             "order_type": ordertype,
             "validity": "DAY",
-            "security_id": str(security_id),
+            "security_id": int(security_id),
             "quantity": int(quantity),
             "price": float(price) if ordertype == dhan.LIMIT else 0,
             "trigger_price": float(triggerPrice) if ordertype == dhan.SL else 0,
         }
 
-        print("Final order_params dhan order:", order_params)
+        logger.info(f"Final order_params dhan order:{order_params}")
         try:
             order_response = dhan.place_order(**order_params)
             print("order_response",order_response)
@@ -319,8 +319,8 @@ def fetch_order_details(order_id,dhan):
         
 def get_trading_symbol_security_id(symbol, segment, Exch):
     try:
-        csv_file_path = "/home/ubuntu/Backend/AlgoView-Devlopment/Backend/main/dhantoken.csv"
-        # csv_file_path ="/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/dhantoken.csv"
+        #csv_file_path = "/home/ubuntu/Backend/AlgoView-Devlopment/Backend/main/dhantoken.csv"
+        csv_file_path ="/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/dhantoken.csv"
         df = pd.read_csv(csv_file_path, low_memory=False)
         
         df['SEM_TRADING_SYMBOL'] = df['SEM_TRADING_SYMBOL'].str.replace("-", "").str.strip()
