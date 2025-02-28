@@ -219,6 +219,7 @@ def handle_successful_order(LivePrice,transaction_type,
     Segment, Index_Symbol, order_params, access_token,trade_order_status):
     try:
         order_details = get_order_details(order_id, access_token)
+        logger.info(f"after order deatis are fetched resp::{order_details}")
         res_data=order_details
         # order_id=order_details['data']['order_id']
         order_status = order_details['data'].get('status', '').lower()
@@ -383,12 +384,13 @@ def get_order_details(order_id, access_token):
                 'Authorization': f'Bearer {access_token}'
             }
             response = requests.get(url, headers=headers)
+            logger.info(f"response details upstox:::::{response}")
             try:
                 response_dict = response.json()  # Use response.json() instead of json.loads(response)
-                print("Response of order details>>", response_dict)
+                logger.info(f"Response of order details>>{response_dict}")
                 return response_dict
             except json.JSONDecodeError:
-                print("Error: Failed to parse the order details response as JSON.")
+                logger.info(f"Error: Failed to parse the order details response as JSON.")
                 return {
                 "error": f"Failed to fetch order details. Status code: {response.status_code}",
                 "details": response.text
