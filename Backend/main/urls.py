@@ -169,7 +169,9 @@ urlpatterns = [
     path('get-strategies-tradehistory/', StrategyListView.as_view(), name='get-strategies-tradehistory'), # for get the tradehistory strategy
 
     path('get-client-strategies-tradesetting/', ClientStrategyListView.as_view(), name='get-client-strategies-tradesetting'),
-    path('get-broker-token-expiry/',CheckTokenValidityView.as_view(),name="client-broker-istokenexpiry")
+    path('get-broker-token-expiry/',CheckTokenValidityView.as_view(),name="client-broker-istokenexpiry"),
+    path('get-client-broker-status-by-id/<int:pk>/', AdminGetClientBrokerStatusView.as_view(), name='client-status'),
+    path("get-client-broker-details-by-id/<int:pk>/", AdminClientBrokerDetailsView.as_view(), name='get-client-broker'),
 ]
 
 

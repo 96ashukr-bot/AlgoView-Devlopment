@@ -2973,7 +2973,35 @@ class ClientBrokerDetailsView(APIView):
         except Exception as e:
             return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+#get broker details by Admin
+class AdminClientBrokerDetailsView(APIView):
+    permission_classes = [IsAuthenticated]
 
+    def get(self, request, *args, **kwargs):
+        """
+        Retrieve broker details for the authenticated client.
+        """
+        client_id = kwargs.get("pk")  # Fetch client ID from URL params
+        print(f"Client ID: {client_id}, Args: {args}, Kwargs: {kwargs}")
+
+        try:
+            # Fetch broker details
+            broker_detail = ClientBrokerdetails.objects.filter(client_id=client_id).first()
+
+            if not broker_detail:
+                return Response(
+                    {"error": "Broker details not found for the client."},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+
+            # Serialize the broker details
+            serializer = ClientBrokerDetailsSerializer(broker_detail)
+            return Response({"data": serializer.data}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        
 #demate status manage api for client trade
 class EnableDisableBrokerView(APIView):
     permission_classes = [IsAuthenticated]
@@ -3023,7 +3051,26 @@ class EnableDisableBrokerView(APIView):
             },
             status=status.HTTP_200_OK
         )
-        
+#admin can get client broker status
+class AdminGetClientBrokerStatusView(APIView):
+    def get(self, request, *args, **kwargs):
+        client_id = kwargs.get("pk")  
+        try:
+            client = User.objects.get(id=client_id)
+        except User.DoesNotExist:
+            return Response({"error": "Client not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Fetch and return the broker's status
+        return Response(
+            {
+                "id": client.id,
+                "username": client.fullName,
+                "email": client.email,
+                "is_enable": client.is_enable,  
+            },
+            status=status.HTTP_200_OK
+        )
+
 class SubSegmentsListView(APIView):
     permission_classes = [IsAuthenticated]
 
