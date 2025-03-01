@@ -774,11 +774,16 @@ class ServiceSerializer(serializers.ModelSerializer):
         representation['segment'] = SegmentSerializer(instance.segment).data
         representation['category'] = CategorySerializer(instance.category).data
         return representation           
+class StrategydataSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Strategies
+        fields = '__all__'
 class GroupServiceSerializer(serializers.ModelSerializer):
-    segment = SegmentSerializer()  
+    segment = SegmentSerializer() 
+    Strategy = StrategydataSerializer(many=True)
     class Meta:
         model = GroupService
-        fields = ['id', 'group_name', 'json_data', 'segment']     
+        fields = ['id', 'group_name', 'json_data', 'segment','Strategy']     
 class CreateGroupServiceSerializer(serializers.ModelSerializer):
     segment = serializers.PrimaryKeyRelatedField(queryset=Segment.objects.all())
 
@@ -793,7 +798,7 @@ class GroupServiceUpdateSerializer(serializers.ModelSerializer):
     segment = serializers.PrimaryKeyRelatedField(queryset=Segment.objects.all())
     class Meta:
         model = GroupService  
-        fields = ['id', 'group_name', 'json_data', 'segment']        
+        fields = ['id', 'group_name', 'json_data', 'segment','Strategy']        
 class StrategySerializer(serializers.ModelSerializer):
     category = serializers.PrimaryKeyRelatedField(queryset=categories.objects.all())
     segment = serializers.PrimaryKeyRelatedField(queryset=Segment.objects.all())  # Ensure you have a queryset for segment
@@ -816,13 +821,7 @@ class GetStrategySerializer(serializers.ModelSerializer):
     class Meta:
         model = Strategies
         fields =  '__all__'
-class GetStrategySerializer(serializers.ModelSerializer):
-    category = CategorySerializer()
-    segment = SegmentSerializer()
-    clients=clientSerializer(many=True)
-    class Meta:
-        model = Strategies
-        fields =  '__all__'
+
         
 class GetBrokerSerializer(serializers.ModelSerializer):
     class Meta:
@@ -1120,10 +1119,11 @@ class ClientTradeSettingSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ClientTradeSetting
-        fields = ['id', 'client', 'segment', 'sub_segment', 'symbol', 
-                  'strategy', 'broker', 'product_type', 'buy_sell', 'quantity', 
-                  'trade_limit', 'max_loss_for_day', 'min_loss_for_day', 
-                  'max_profit_for_day', 'min_profit_for_day', 'expiry_date', 'is_tread_status','sl_type','stop_loss','target']
+        fields = '__all__'
+        # ['id', 'client', 'segment', 'sub_segment', 'symbol', 'group_service'
+        #           'strategy', 'broker', 'product_type', 'buy_sell', 'quantity', 
+        #           'trade_limit', 'max_loss_for_day', 'min_loss_for_day', 
+        #           'max_profit_for_day', 'min_profit_for_day', 'expiry_date', 'is_tread_status','sl_type','stop_loss','target']
 from django.utils.timezone import localtime
 class GetclientTradedataSettingSerializer(serializers.ModelSerializer):
     segment = SegmentSerializer()  # Use the SegmentSerializer to include all segment details
@@ -1142,7 +1142,7 @@ class GetclientTradedataSettingSerializer(serializers.ModelSerializer):
         return representation
     class Meta:
         model = ClientTradeSetting
-        fields = ['id', 'client', 'segment', 'sub_segment', 'symbol', 
+        fields = ['id', 'client', 'segment', 'sub_segment', 'symbol', 'group_service',
                   'strategy', 'broker', 'product_type', 'buy_sell', 'quantity', 
                   'trade_limit', 'max_loss_for_day', 'min_loss_for_day', 
                   'max_profit_for_day', 'min_profit_for_day', 'expiry_date', 'is_tread_status','sl_type','stop_loss','target']
@@ -1167,7 +1167,7 @@ class ClientSegementsSerializer(serializers.ModelSerializer):
     class Meta:
         model = ClientTradeSetting
         fields = [
-            'id', 'client', 'segment', 'sub_segment','is_tread_status','symbol', 
+            'id', 'client', 'segment', 'sub_segment','is_tread_status','symbol', 'group_service',
             'strategy', 'broker', 'product_type', 'buy_sell', 'quantity', 
             'trade_limit', 'max_loss_for_day', 'min_loss_for_day', 
             'max_profit_for_day', 'min_profit_for_day', 'expiry_date', 'is_tread_status','sl_type','stop_loss','target']

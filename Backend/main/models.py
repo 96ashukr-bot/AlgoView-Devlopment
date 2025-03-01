@@ -380,7 +380,7 @@ class GroupService(models.Model):
     group_name = models.CharField(max_length=100)
     segment = models.ForeignKey(Segment, on_delete=models.SET_NULL, null=True, blank=True, related_name='group_Segments')
     # description = models.TextField(null=True, blank=True)
-    # service_count=
+    Strategy = models.ManyToManyField("Strategies", related_name='client_Group_service_strategy', blank=True)
     json_data = models.JSONField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -430,7 +430,7 @@ class ClientTradeSetting(models.Model):
     max_profit_for_day = models.DecimalField(max_digits=10, decimal_places=2,null=True, blank=True)
     min_profit_for_day = models.DecimalField(max_digits=10, decimal_places=2,null=True, blank=True)
     current_date = models.DateTimeField(auto_now_add=True)
-    
+    group_service =  models.CharField(max_length=255, null=True, blank=True)
     # Allow manual input for expiry_date, not auto field
     expiry_date = models.DateTimeField(null=True, blank=True)  # Allows manual input (client-defined)
 
@@ -462,6 +462,7 @@ class ClientBrokerdetails(models.Model):
     
 class Tradeorderhistory(models.Model):
     client = models.ForeignKey('User', on_delete=models.CASCADE)
+    GroupService =  models.CharField(max_length=255, null=True, blank=True)
     date = models.DateField(auto_now_add=True, null=True, blank=True)
     trading_symbol = models.CharField(max_length=255, null=True, blank=True)
     Index_Symbol    = models.CharField(max_length=255, null=True, blank=True)

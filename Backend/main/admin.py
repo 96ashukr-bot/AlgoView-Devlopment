@@ -59,10 +59,7 @@ class SignalOrderLogAdmin(admin.ModelAdmin):
     
 @admin.register(UserActivityLog)
 class UserActivity_logs(admin.ModelAdmin):
-    list_display = ['user','action_type','last_login_time']
-@admin.register(GroupService)
-class GroupServicelogs(admin.ModelAdmin):
-    list_display = ['id','group_name','segment']       
+    list_display = ['user','action_type','last_login_time']    
     
 @admin.register(State)
 class StatesAdmin(admin.ModelAdmin):
@@ -141,3 +138,7 @@ class PaymentdetailsAdmin(admin.ModelAdmin):
 @admin.register(WebsocketDetails)
 class WebsocketDetailsAdmin(admin.ModelAdmin):  
     list_display = ('id','token_status')     
+    
+@admin.register(GroupService)
+class GroupServiceAdmin(admin.ModelAdmin):
+    list_display = ['id','group_name','segment']         

@@ -1327,11 +1327,14 @@ class ClientCreateView(APIView):
             subsegments = data.get("subsegment", [])
             
             if segment_id and subsegments:
+                group_name = client.Group_service.group_name if hasattr(client, "Group_service") else None
+
                 for subsegment_id in subsegments:
                     trade_settings_data = {
                         "client": client.id,
                         "segment": segment_id,
                         "sub_segment": subsegment_id,
+                        "group_service": group_name
                         # Add any other fields required for ClientTradeSetting
                     }
                     trade_setting_serializer = ClientTradeSettingSerializer(data=trade_settings_data)
@@ -1371,31 +1374,34 @@ class ClientCreateView(APIView):
         
         if serializer.is_valid():
             serializer.save()
-                    # Handle segment and subsegment update
+
+            # Handle segment and subsegment update
             segment_id = request.data.get("segment")
             subsegments = request.data.get("subsegment", [])
-            
+
             if segment_id and subsegments:
-                # Clear existing subsegments for this client and segment
-                ClientTradeSetting.objects.filter(client=client, segment=segment_id).delete()
-                
-                # Add the new segment and subsegments
                 for subsegment_id in subsegments:
-                    trade_settings_data = {
-                        "client": client.id,
-                        "segment": segment_id,
-                        "sub_segment": subsegment_id,
-                        # Add any additional fields required
-                    }
-                    trade_setting_serializer = ClientTradeSettingSerializer(data=trade_settings_data)
-                    if trade_setting_serializer.is_valid():
-                        trade_setting_serializer.save()
+                    # Clear existing subsegments for this client and segment
+                    # ClientTradeSetting.objects.filter(client=client, segment=segment_id).delete()
+                    group_name = client.Group_service.group_name if hasattr(client, "Group_service") else None
+
+                    # Check if trade setting already exists
+                    trade_setting, created = ClientTradeSetting.objects.update_or_create(
+                        client=client,
+                        segment_id=segment_id,
+                        sub_segment_id=subsegment_id,
+                        defaults={"group_service": group_name}  # Update only this field
+                    )
+
+                    if created:
+                        print(f"Created new trade setting for {client} - {segment_id} - {subsegment_id}")
                     else:
-                        print("Trade Setting Update Error:", trade_setting_serializer.errors)
-            
-            return Response(ClientListSerializer(client).data, status=status.HTTP_201_CREATED)
+                        print(f"Updated existing trade setting for {client} - {segment_id} - {subsegment_id}")
+
+            return Response(ClientListSerializer(client).data, status=status.HTTP_200_OK)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
     def delete(self, request, *args, **kwargs):
         client_id = kwargs.get('pk', None)
         if not client_id:
@@ -2501,10 +2507,12 @@ class PlaceOrderWebhookView(APIView):
         logger.info(f"Received alert: {alert_data}")
         # Extract parameters with defaults
         raw_symbol = request.data.get('text', '').upper()
-        # default_price = round(float(alert_data.get('signalprice', 0)))
+        # default_price = round(float(alert_data.get('signalprice', 0)))   "stratergyid": "Sparks Lite",
         signal_price=alert_data.get('signalprice', 0)
         default_price = round_price(signal_price)
         print("Round of price:::::::::::",default_price)
+        strategy_id=alert_data.get('stratergyid', 0)
+        logger.info(f"strategy_id get from alert ::::{strategy_id}")
         transaction_type = request.data.get('ordertype', 'BUY-O').upper()
         order_type_mapping = {
             "BUY-O": "Buy CE",
