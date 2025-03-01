@@ -220,11 +220,44 @@ def handle_successful_order(LivePrice,transaction_type,
     try:
         order_details = get_order_details(order_id, access_token)
         logger.info(f"after order deatis are fetched resp::{order_details}")
+        # Extract order status and ID safely
+        if 'data' in order_details and isinstance(order_details['data'], dict):
+            order_status = order_details['data'].get('status', '').lower()
+            order_id = order_details['data'].get('order_id', '')
+        else:
+            print("Error: 'data' key missing in API response")
+            order_status = "Failed"
+            # order_id = 0
+            rejection_message="error while fetching order due to network issue"
+            status="success"
+            res_data=str(e)
+            if transaction_type=="BUY":
+                Entry_type="LE"
+                Entry_price=LivePrice
+                EntryQty=order_params['quantity']
+            elif transaction_type=="SELL":
+                Exit_type="LX"
+                Exit_price=LivePrice
+                ExitQty=order_params['quantity']    
+            logger.exception(f"Error while fetching order details for Order ID {order_id}: {str(e)}")
+            save_trade_order_history(LivePrice,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, rejection_message, 
+            strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, 
+            Segment,Index_Symbol ,order_params , broker="Upstox")
+            return {
+                "data": {
+                    "status": "error",
+                    "message": "Error while fetching order details.but order is placed successfully.",
+                    "error_details": str(e),
+                }
+            }
+
+        print(f"Order Status: {order_status}, Order ID: {order_id}")
+
         res_data=order_details
         # order_id=order_details['data']['order_id']
-        order_status = order_details['data'].get('status', '').lower()
+        # order_status = order_details['data'].get('status', '').lower()
         logger.info(f"order_status:::{order_status}")
-        order_id = order_details['data'].get('order_id', '')
+        # order_id = order_details['data'].get('order_id', '')
         # print("order_id>>",order_id)
         if order_details['data']['status'] =="complete":
             transaction_type=order_details['data'].get('transaction_type', '')
@@ -374,7 +407,45 @@ def fetch_instrument_details(symbol_name, exchange="NSE"):
     except Exception as e:
         return {"error": f"Exception occurred: {str(e)}"}
 
+
 def get_order_details(order_id, access_token):
+    try:
+        if not order_id:
+            return {"error": "Invalid order ID"}
+
+        url = f"https://api.upstox.com/v2/order/details?order_id={order_id}"
+        headers = {
+            'Accept': 'application/json',
+            'Authorization': f'Bearer {access_token}'
+        }
+
+        print(f"Making API request to: {url}")
+        response = requests.get(url, headers=headers)
+
+        print(f"API Response Status Code: {response.status_code}")
+
+        try:
+            response_dict = response.json()  # Corrected JSON parsing
+        except json.JSONDecodeError:
+            print("Error: Failed to parse JSON response")
+            return {
+                "error": f"Failed to parse response. Status code: {response.status_code}",
+                "details": response.text
+            }
+
+        print("Full API Response:", json.dumps(response_dict, indent=4))  # Pretty-print JSON
+
+        return response_dict
+
+    except requests.RequestException as e:
+        print(f"Network error: {e}")
+        return {"error": "Network issue occurred", "details": str(e)}
+
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return {"error": "Unexpected error occurred", "details": str(e)}
+
+def get_order_details2222(order_id, access_token):
     try:
         if order_id:
             url = f"https://api.upstox.com/v2/order/details?order_id={order_id}"
