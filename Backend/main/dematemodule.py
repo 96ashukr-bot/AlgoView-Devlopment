@@ -139,7 +139,7 @@ class LoginDematAPIView(APIView):
 
 
 def exit_existing_buy_position_Upstox(
-    broker, LivePrice, Type, day, month, year, access_token, trade_symbol, transaction_type, symbol, quantity,
+    group_service, LivePrice, Type, day, month, year, access_token, trade_symbol, transaction_type, symbol, quantity,
     strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type, Entry_price, Exit_price,
     EntryQty, ExitQty, webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice, trade_order_status
 ):
@@ -150,13 +150,22 @@ def exit_existing_buy_position_Upstox(
     """
     try:
         print("symbol...", symbol, "user>>>>", user)
-        print("trade_symbol...", trade_symbol)
-
+        logger.info(f"trade_symbol...:::{trade_symbol} or group_service strategy:::{group_service}")
+        open_buy_order_get = Tradeorderhistory.objects.filter(
+            client=user,
+            Index_Symbol=symbol,
+            transaction_type="BUY",
+            # strategy=strategy,
+            GroupService=group_service,
+            order_id__gt=0
+        ).filter(Q(order_status="rejected") | Q(order_status="completed") | Q(order_status="complete") | Q(order_status="open")).last()
+        print(":::open_buy_order_get:::",open_buy_order_get)
         open_buy_order = Tradeorderhistory.objects.filter(
             client=user,
             Index_Symbol=symbol,
             transaction_type="BUY",
-            strategy=strategy,
+            # strategy=strategy,
+            GroupService=group_service,
             order_id__gt=0
         ).filter(Q(order_status="rejected") | Q(order_status="completed") | Q(order_status="complete") | Q(order_status="open")).last()
 
@@ -191,7 +200,7 @@ def exit_existing_buy_position_Upstox(
 
                 # Place SELL order
                 sell_response = place_upstox_orders(
-                    LivePrice, access_token, trade_symbol, transaction_type, symbol, quantity, strategy, ordertype,
+                    LivePrice, group_service,access_token, trade_symbol, transaction_type, symbol, quantity, strategy, ordertype,
                     product_type, price, user, Lots, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
                     webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice, trade_order_status
                 )
@@ -213,26 +222,35 @@ def exit_existing_buy_position_Upstox(
         else:
             message = f"No open BUY position found for {symbol} for user {user}."
             logger.info(message)
-            return {"data": {"status": "none", "message": message}}
+            return {"data": {"status": "error", "message": message}}
 
     except Exception as e:
         logger.error(f"Error in exit_existing_buy_position_Upstox: {str(e)}")
         return {"data": {"status": "error", "message": "Unexpected error occurred."}}
 
     
-def exit_existing_buy_position_Aliceblue(LivePrice, Type, day, month, year, api_skey, api_uid, trade_symbol, transaction_type, symbol, quantity, strategy, ordertype,
+def exit_existing_buy_position_Aliceblue(LivePrice,group_service, Type, day, month, year, api_skey, api_uid, trade_symbol, transaction_type, symbol, quantity, strategy, ordertype,
     product_type, price, user, Lots, trade_order_status, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty,
     ExitQty, webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice):
 
     try:
         print("symbol...", symbol, "user>>>>", user)
         print("trade_symbol...", trade_symbol, "strategy>>>", strategy)
-
+        open_buy = Tradeorderhistory.objects.filter(
+            client=user, 
+            Index_Symbol=symbol,
+            transaction_type="BUY",
+            # strategy=strategy,
+            GroupService=group_service,
+            order_id__gt=0
+        ).filter(Q(order_status="rejected") | Q(order_status="completed") | Q(order_status="complete") | Q(order_status="open")).last()
+        print("GROUP service open_buy_orderfffff>>>>>",open_buy)
         open_buy_order = Tradeorderhistory.objects.filter(
             client=user, 
             Index_Symbol=symbol,
             transaction_type="BUY",
-            strategy=strategy,
+            # strategy=strategy,
+            GroupService=group_service,
             order_id__gt=0
         ).filter(Q(order_status="rejected") | Q(order_status="completed") | Q(order_status="complete") | Q(order_status="open")).last()
 
@@ -266,7 +284,7 @@ def exit_existing_buy_position_Aliceblue(LivePrice, Type, day, month, year, api_
                 logger.info(f"Previous order {oid}, entry price is: {Entry_price}. Found open BUY order for {symbol}. Exiting position. Order ID: {open_buy_order.order_id}")
 
                 # Place sell order
-                sell_response = place_alice_orders(LivePrice, api_skey, api_uid, trade_symbol, transaction_type, symbol, quantity, strategy, ordertype,
+                sell_response = place_alice_orders(LivePrice,group_service, api_skey, api_uid, trade_symbol, transaction_type, symbol, quantity, strategy, ordertype,
                                                    product_type, price, user, Lots, trade_order_status, Entry_type, Exit_type, Entry_price, Exit_price,
                                                    EntryQty, ExitQty, webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice)
                 
@@ -299,7 +317,7 @@ def exit_existing_buy_position_Aliceblue(LivePrice, Type, day, month, year, api_
 
     
 #DHAN ORDER sell----------------------
-def exit_existing_buy_position_DhanOrder(LivePrice, Type, day, month, fullyear, access_token, client_id, trade_symbol, transaction_type, symbol, quantity,
+def exit_existing_buy_position_DhanOrder(LivePrice, group_service,Type, day, month, fullyear, access_token, client_id, trade_symbol, transaction_type, symbol, quantity,
                                          strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type, Entry_price, Exit_price, 
                                          EntryQty, ExitQty, webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice, trade_order_status):
     try:
@@ -310,7 +328,8 @@ def exit_existing_buy_position_DhanOrder(LivePrice, Type, day, month, fullyear, 
             client=user, 
             Index_Symbol=Index_Symbol,
             transaction_type="BUY",
-            strategy=strategy,
+            # strategy=strategy,
+            GroupService=group_service,
             order_id__gt=0,
         ).filter(Q(order_status="rejected") | Q(order_status="traded") | Q(order_status="TRADED")
                 |Q(order_status="TRANSIT")| Q(order_status="transit")| Q(order_status="completed")  
@@ -357,7 +376,7 @@ def exit_existing_buy_position_DhanOrder(LivePrice, Type, day, month, fullyear, 
 
         # Attempt to place sell order
         try:
-            sell_response = place_dhan_orders(LivePrice, access_token, client_id, trade_symbol, transaction_type, symbol, quantity,
+            sell_response = place_dhan_orders(LivePrice, group_service,access_token, client_id, trade_symbol, transaction_type, symbol, quantity,
                                               strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type, Entry_price, Exit_price, 
                                               EntryQty, ExitQty, webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice, trade_order_status)
         except Exception as e:
@@ -400,7 +419,8 @@ def exit_existing_buy_position_5PaisaOrder(LivePrice,Type,day,month,fullyear,api
         client=user, 
         Index_Symbol=symbol,
         transaction_type="BUY",
-        strategy=strategy,
+        # strategy=strategy,
+        # GroupService=group_service,
         order_id__gt=0
     ).filter(Q(order_status="rejected")|  Q(order_status="completed") |Q(order_status="complete")| Q(order_status="open")).last()
     print("open_buy_order alice blue >>>>>>>",open_buy_order)
@@ -465,7 +485,8 @@ def exit_existing_buy_position_zerodha_order(LivePrice,Type,day,month,year,acces
         client=user, 
         Index_Symbol=symbol,
         transaction_type="BUY",
-        strategy=strategy,
+        # strategy=strategy,
+        # GroupService=group_service,
         order_id__gt=0
     ).filter(Q(order_status="rejected")| Q(order_status="completed") |Q(order_status="complete")| Q(order_status="open")).last()
     print("open_buy_order alice blue >>>>>>>",open_buy_order)
@@ -650,7 +671,9 @@ class BrokerCallbackView(APIView):
                 broker_details.access_token = access_token
                 broker_details.access_token_expiry = expiry_time
                 broker_details.isTokenExpired = False
+                broker_details.tokenCreatedAt = now()
                 broker_details.save()
+         
                 return JsonResponse({"message": "success", "access_token": access_token})
             else:
                 return JsonResponse({"message": "success", "access_token": access_token})
@@ -678,9 +701,14 @@ class BrokerCallbackView(APIView):
         try:
             access_token = fetch_access_token_5paisa(request_token,broker_details)
             if access_token:
+                now_time = now()
+                expiry_date = now_time.date() if now_time.hour < 3 or (now_time.hour == 3 and now_time.minute < 30) else now_time.date() + timedelta(days=1)
+                expiry_time = datetime.combine(expiry_date, datetime.min.time()) + timedelta(hours=3, minutes=30)
                 broker_details.request_token = request_token
                 broker_details.access_token = access_token
-                broker_details.access_token_expiry = now() + timedelta(days=1) 
+                broker_details.access_token_expiry =expiry_time# now() + timedelta(days=1) 
+                broker_details.isTokenExpired = False
+                broker_details.tokenCreatedAt = now()
                 broker_details.save()
                 return JsonResponse({"message": "success", "access_token": access_token})
             else:

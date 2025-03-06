@@ -367,7 +367,9 @@ def place_5paisa_order(LivePrice,api_key,access_token,trade_symbol,transaction_t
                         Entry_type="LE"
                         Entry_price=res_data.get ('AveragePrice', 0.0)
                         EntryQty=res_data.get ('Qty', 0)
+                        trade_order_status="OPEN"
                     elif trasaction_type == "S": 
+                        trade_order_status="CLOSE"
                         Exit_type="LX"
                         Exit_price=res_data.get ('AveragePrice', 0.0)  
                         ExitQty= res_data.get ('Qty', 0)

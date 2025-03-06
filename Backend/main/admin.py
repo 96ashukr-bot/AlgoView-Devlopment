@@ -45,7 +45,7 @@ class KycAdmin(admin.ModelAdmin):
 @admin.register(OTP)
 class OtpAdmin(admin.ModelAdmin):
     list_display = ['id','user','otp_code','is_verified']
-    search_fields = ['user',]
+    search_fields = ['user__email',]
     ordering = ['user',]
 
 admin.site.register(Permission)
@@ -98,7 +98,7 @@ class categoriesAdmin(admin.ModelAdmin):
 
 @admin.register(ClientTradeSetting)    
 class ClientTradeSettingAdmin(admin.ModelAdmin):
-    list_display=("id",'client','broker','symbol','segment','is_tread_status') 
+    list_display=("id",'client','broker','symbol','group_service','segment','is_tread_status') 
 
 @admin.register(TradeLog)    
 class TradeLogAdmin(admin.ModelAdmin):
@@ -114,8 +114,9 @@ class ClientBrokerDetailgAdmin(admin.ModelAdmin):
     
 @admin.register(Tradeorderhistory)    
 class ClientTradeHistoryAdmin(admin.ModelAdmin):
-    list_display=("id",'client','transaction_type','trading_symbol','date','strategy','order_id','broker','order_status',"SignalEntry_time")     
-  
+    list_display = ("id", "client", "transaction_type", "trading_symbol", "date", "strategy", "GroupService", "order_id", "broker", "order_status", "SignalEntry_time")     
+    search_fields = ("id", "client__email")  # Change to a valid related field
+
   
 @admin.register(CompanyProfileDetails)   
 class CompanyProfileDetailsAdmin(admin.ModelAdmin):

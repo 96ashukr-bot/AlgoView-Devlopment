@@ -424,7 +424,7 @@ class ClientTradeSetting(models.Model):
     
     buy_sell = models.CharField(max_length=10, null=True, blank=True)  # "Buy" or "Sell"
     quantity = models.IntegerField(null=True, blank=True)
-    trade_limit = models.DecimalField(max_digits=10, decimal_places=2,null=True, blank=True)
+    trade_limit = models.IntegerField(null=True, blank=True)
     max_loss_for_day = models.DecimalField(max_digits=10, decimal_places=2,null=True, blank=True)
     min_loss_for_day = models.DecimalField(max_digits=10, decimal_places=2,null=True, blank=True)
     max_profit_for_day = models.DecimalField(max_digits=10, decimal_places=2,null=True, blank=True)
@@ -440,7 +440,7 @@ class ClientTradeSetting(models.Model):
     stop_loss=models.IntegerField( null=True, blank=True)
     target=models.IntegerField( null=True, blank=True)
     def __str__(self):
-        return f"Trade Setting {self.segment.name} - {self.sub_segment.name}"
+        return f"Trade Setting {self.segment.name}"
 class ClientBrokerdetails(models.Model):
     client = models.ForeignKey('User', on_delete=models.CASCADE,null=True, blank=True)
     broker_name =models.ForeignKey(Broker, on_delete=models.CASCADE,null=True, blank=True)
@@ -452,7 +452,8 @@ class ClientBrokerdetails(models.Model):
     broker_pass=models.CharField(max_length=50,null=True, blank=True)
     # New fields for token management
     request_token = models.CharField(max_length=500, null=True, blank=True)  # Temporary request token
-    access_token = models.CharField(max_length=500, null=True, blank=True)  # Persistent access token
+    access_token = models.TextField(null=True, blank=True)  # Persistent access token
+    refreshToken = models.TextField(null=True, blank=True)
     access_token_expiry = models.DateTimeField(null=True, blank=True)  # Expiry of the access token (if applicable)
     isTokenExpired=models.BooleanField(default=False,null=True, blank=True)
     tokenCreatedAt=models.DateTimeField(auto_now_add=True,null=True, blank=True)
@@ -494,7 +495,7 @@ class Tradeorderhistory(models.Model):
     trade_order_status = models.CharField(max_length=15, null=True, blank=True)
 
     def __str__(self):
-        return f"Order ID: {self.order_id}, Status: {self.order_status}"
+        return f"Order ID: {self.order_id}"
 class CompanyProfileDetails(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="company_profile",null=True, blank=True)
     company_name = models.CharField(max_length=255, blank=True, null=True)
