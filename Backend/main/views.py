@@ -2604,7 +2604,8 @@ class PlaceOrderWebhookView(APIView):
             "NIFTY BANK": "BANKNIFTY",
             "NIFTY 50": "NIFTY",
             "NIFTY FIN SERVICE": "FINNIFTY",
-            "MID CAP NIFTY": "MIDCPNIFTY"
+            "MID CAP NIFTY": "MIDCPNIFTY",
+            "NIFTY MID SELECT": "MIDCPNIFTY"
         }
         print("raw_symbol")
         symbols = symbol_mapping.get(raw_symbol, raw_symbol)  # Default to raw_symbol if no matc

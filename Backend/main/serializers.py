@@ -1251,7 +1251,7 @@ class TradeorderhistorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Tradeorderhistory
-        fields = ['id', 'client', 'date', 'trading_symbol', 'Index_Symbol', 'order_id', 'order_status','transaction_type'
+        fields = ['id', 'client', 'date', 'trading_symbol','GroupService' ,'Index_Symbol', 'order_id', 'order_status','transaction_type'
                 , 'failure_reason', 'broker', 'order_params', 'strategy', 'Entry_type', 'Entry_Price', 
                 'Exit_Price','Exit_type','EntryQty','ExitQty','trade_order_status', 'SignalEntry_time', 'SignalExit_time', 'Exchange', 'Segment','webhook_signal']
 
@@ -1283,7 +1283,7 @@ class ClientdashboardSerializer(serializers.Serializer):
 class TradeOrderHistoryFilterSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tradeorderhistory
-        fields = ['id', 'client', 'date', 'trading_symbol', 'Index_Symbol', 'order_id','transaction_type',
+        fields = ['id', 'client', 'date', 'trading_symbol', 'GroupService','Index_Symbol', 'order_id','transaction_type',
                 'broker', 'order_status', 'strategy', 'Entry_type', 'Entry_Price', 
                 'Exit_Price','Exit_type','EntryQty','ExitQty','trade_order_status',
                 'SignalEntry_time', 'SignalExit_time', 'Exchange', 'Segment','webhook_signal']
