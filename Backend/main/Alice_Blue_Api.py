@@ -419,7 +419,7 @@ def is_market_open():
     # Check if the market is closed for a holiday
     if now.date() in stock_market_holidays:
         logger.info("Market is closed due to a stock market holiday.")
-        return False
+        return True
 
     # Check if today is a weekday and time is within market hours
     if 0 <= current_day <= 4:  # Monday to Friday

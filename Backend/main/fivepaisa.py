@@ -248,7 +248,7 @@ def convert_int64_to_int(obj):
         return obj  # If not, return the object as is
 
 
-def place_5paisa_order(LivePrice,api_key,access_token,trade_symbol,transaction_type, symbol, quantity,strategy,ordertype,
+def place_5paisa_order(LivePrice,group_service,api_key,access_token,trade_symbol,transaction_type, symbol, quantity,strategy,ordertype,
         product_type, price,user, Lots,trade_order_status,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal
         ,Exchange, Segment,Index_Symbol,triggerPrice,trade):
         
@@ -263,11 +263,13 @@ def place_5paisa_order(LivePrice,api_key,access_token,trade_symbol,transaction_t
         status="Failed"
         message="Failed no reason"
         res_data="unknown response"
+        
+        print("ordertype******************",ordertype)
         order_params= {
                     "Exchange": Exch,  # NSE (National Stock Exchange)
                     "ExchangeType": "D",  # Derivatives
                     "ScripCode": 0,  # Numeric Scrip Code from token
-                    "OrderType": ordertype,  # Order type (Buy or Sell)
+                    "OrderType": transaction_type,  # Order type (Buy or Sell)
                     "price":0,
                     "Qty": quantity,  # Quantity to trade
                     # "DisQty": 0,  # Disclosed Quantity
@@ -288,7 +290,7 @@ def place_5paisa_order(LivePrice,api_key,access_token,trade_symbol,transaction_t
         else:
             message= f"trading symbol is not found for this :{trade.symbol}"
             res_data="trading symbol token not found"
-            save_trade_order_history(LivePrice,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data,
+            save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data,
                                      message, strategy,  Entry_type,Exit_type, Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal , 
                                      Exchange, Segment,Index_Symbol, order_params,broker="5paisa")
                 
@@ -306,7 +308,7 @@ def place_5paisa_order(LivePrice,api_key,access_token,trade_symbol,transaction_t
                     "Exchange": "N",  # NSE (National Stock Exchange)
                     "ExchangeType": "D",  # Derivatives
                     "ScripCode": token,  # Numeric Scrip Code from token
-                    "OrderType": ordertype,  # Order type (Buy or Sell)
+                    "OrderType": transaction_type,  # Order type (Buy or Sell)
                     "price":0,
                     "Qty": quantity,  # Quantity to trade
                     # "DisQty": 0,  # Disclosed Quantity
@@ -315,6 +317,7 @@ def place_5paisa_order(LivePrice,api_key,access_token,trade_symbol,transaction_t
                     "RemoteOrderID": unique_id  # Unique ID for the order
                 }
             }
+            print("order_params>>>>>>>>>>>",order_params)
             # Set the Authorization header with the Bearer token
             headers = {
                 "Authorization": f"Bearer {access_token}",
@@ -339,7 +342,7 @@ def place_5paisa_order(LivePrice,api_key,access_token,trade_symbol,transaction_t
                     response = {"data": {"status": status}}
                     print("message......",message)
                     logger.info(f"Order details for found for {user}. Order ID: : {order_id}")
-                    save_trade_order_history(LivePrice,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type,Entry_price,Exit_price ,EntryQty,ExitQty,webhook_signal , Exchange, Segment,Index_Symbol,order_params, broker="5paisa")
+                    save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type,Entry_price,Exit_price ,EntryQty,ExitQty,webhook_signal , Exchange, Segment,Index_Symbol,order_params, broker="5paisa")
 
                     return response
                     
@@ -352,7 +355,7 @@ def place_5paisa_order(LivePrice,api_key,access_token,trade_symbol,transaction_t
                     response = {"data": {"status": "Failed"}}
                     logger.info(f"Order details for found for {user}. Order ID: : {order_id}")
                     message=f"Order details for found for {user}. Order ID: : {order_id}"
-                    save_trade_order_history(LivePrice,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type,Entry_price,Exit_price ,EntryQty,ExitQty,webhook_signal , Exchange, Segment,Index_Symbol,order_params, broker="5paisa")
+                    save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type,Entry_price,Exit_price ,EntryQty,ExitQty,webhook_signal , Exchange, Segment,Index_Symbol,order_params, broker="5paisa")
 
                     return response
                 # Extract the status
@@ -377,17 +380,26 @@ def place_5paisa_order(LivePrice,api_key,access_token,trade_symbol,transaction_t
                     response = {"data": {"status":status }}
                     logger.info(f"Order placed successfully for user {user}. Order ID: : {order_id}")
                     message=f"Order placed successfully for user {user}. Response: {response}"
-                    save_trade_order_history(LivePrice,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type,Entry_price,Exit_price ,EntryQty,ExitQty,webhook_signal , Exchange, Segment,Index_Symbol,order_params, broker="5paisa")
+                    save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type,Entry_price,Exit_price ,EntryQty,ExitQty,webhook_signal , Exchange, Segment,Index_Symbol,order_params, broker="5paisa")
                     return response
                 elif status == "rejected by 5p":
-                    order_id=res_data.get ('BrokerOrderId', 0) 
+                    order_id=res_data.get ('BrokerOrderId', 0)  
+                    trasaction_type=res_data.get('BuySell','')
+                    if trasaction_type == "B":
+                        Entry_type="LE"
+                        Entry_price=res_data.get ('AveragePrice', 0.0)
+                        EntryQty=res_data.get ('Qty', 0)
+                    elif trasaction_type == "S": 
+                        Exit_type="LX"
+                        Exit_price=res_data.get ('AveragePrice', 0.0)  
+                        ExitQty= res_data.get ('Qty', 0)
                     from_email = default_from_email,
                     message=order_his.get('Reason', 'not any reason get').lower()
                     send_trade_email_async.delay(user.email, from_email,user.firstName,status, message)
                     status="rejected"
                     response = {"data": {"status":status }}
                     logger.info(f"Order is rejected  for user {user}. Order ID: {order_id}")
-                    save_trade_order_history(LivePrice,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol,order_params, broker="5paisa")
+                    save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol,order_params, broker="5paisa")
                 elif status == "rejected by Exch":
                     order_id=res_data.get ('BrokerOrderId', 0) 
                     from_email = default_from_email,
@@ -396,7 +408,7 @@ def place_5paisa_order(LivePrice,api_key,access_token,trade_symbol,transaction_t
                     status="rejected"
                     response = {"data": {"status":status }}
                     logger.info(f"Order is rejected  for user {user}. Order ID: {order_id}")
-                    save_trade_order_history(LivePrice,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol,order_params, broker="5paisa")
+                    save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol,order_params, broker="5paisa")
                 elif status == "pending":
                     order_id=res_data.get ('BrokerOrderId', 0) 
                     from_email = default_from_email,
@@ -405,7 +417,7 @@ def place_5paisa_order(LivePrice,api_key,access_token,trade_symbol,transaction_t
                     status="pending"
                     response = {"data": {"status":status }}
                     logger.info(f"Order is pending  for user {user}. Order ID: {order_id}")
-                    save_trade_order_history(LivePrice,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol,order_params, broker="5paisa")
+                    save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol,order_params, broker="5paisa")
 
                 return response
             elif  response.status_code == 401:
@@ -417,7 +429,7 @@ def place_5paisa_order(LivePrice,api_key,access_token,trade_symbol,transaction_t
                 res_data="invakid token"
                 logger.error(f"Order placement Failed for user {user}. Error: {error_message}")
                 message="invalid token"
-                save_trade_order_history(LivePrice,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type,Entry_price,Exit_price,EntryQty,ExitQty  ,webhook_signal , Exchange, Segment,Index_Symbol, order_params,broker="5paisa")
+                save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type,Entry_price,Exit_price,EntryQty,ExitQty  ,webhook_signal , Exchange, Segment,Index_Symbol, order_params,broker="5paisa")
                 return response       
       
         except Exception as e:

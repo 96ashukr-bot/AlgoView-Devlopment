@@ -409,71 +409,84 @@ def exit_existing_buy_position_DhanOrder(LivePrice, group_service,Type, day, mon
 
 
 
-def exit_existing_buy_position_5PaisaOrder(LivePrice,Type,day,month,fullyear,api_key,access_token,trade_symbol,transaction_type, symbol, quantity,strategy,ordertype,
+def exit_existing_buy_position_5PaisaOrder(LivePrice,group_service,Type,day,month,fullyear,api_key,access_token,trade_symbol,transaction_type, symbol, quantity,strategy,ordertype,
             product_type, price,user, Lots,trade_order_status,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal ,Exchange, 
             Segment,Index_Symbol,triggerPrice,trade):
+    try:
+        print("symbol...",symbol,"user>>>>",user)
+        print("trade_symbol...",trade_symbol,"strategy>>>",strategy)
+        open_buy_order = Tradeorderhistory.objects.filter(
+            client=user, 
+            Index_Symbol=symbol,
+            transaction_type="BUY",
+            # strategy=strategy,
+            GroupService=group_service,
+            order_id__gt=0
+        ).filter(Q(order_status="rejected")|  Q(order_status="completed") |Q(order_status="complete")| Q(order_status="open")).last()
+        print("open_buy_order 5Paisa::::::::--------",open_buy_order)
+        if open_buy_order:
+            # Extract existing order details
+            Entry_price = open_buy_order.Entry_Price
+            Entry_type = open_buy_order.Entry_type
+            EntryQty = open_buy_order.EntryQty
+            oid = open_buy_order.order_id
+            price_of_order=open_buy_order.LivePrice
+            LivePrice=open_buy_order.LivePrice
+            old_trade_symbol=open_buy_order.trading_symbol
+            buy_order_close_status=open_buy_order.trade_order_status
+            if buy_order_close_status=="CLOSE":
+                message=f"Existing BUY order already closed for {Index_Symbol} for user {user}."
+                order_id=0
+                status="Failed"
+                order_params={}
+                res_data=message
+                logger.info(f"{message}")
+                save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, old_trade_symbol, order_id, status, res_data, message,
+                strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
+                webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="5paisa")
+                return {"data": {"status": "error", "message": f"Existing BUY order already closed for {old_trade_symbol} for user {user}"}}
 
-    print("symbol...",symbol,"user>>>>",user)
-    print("trade_symbol...",trade_symbol,"strategy>>>",strategy)
-    open_buy_order = Tradeorderhistory.objects.filter(
-        client=user, 
-        Index_Symbol=symbol,
-        transaction_type="BUY",
-        # strategy=strategy,
-        # GroupService=group_service,
-        order_id__gt=0
-    ).filter(Q(order_status="rejected")|  Q(order_status="completed") |Q(order_status="complete")| Q(order_status="open")).last()
-    print("open_buy_order alice blue >>>>>>>",open_buy_order)
-    if open_buy_order:
-        # Extract existing order details
-        Entry_price = open_buy_order.Entry_Price
-        Entry_type = open_buy_order.Entry_type
-        EntryQty = open_buy_order.EntryQty
-        oid = open_buy_order.order_id
-        price_of_order=open_buy_order.LivePrice
-        LivePrice=open_buy_order.LivePrice
-        old_trade_symbol=open_buy_order.trading_symbol
-        buy_order_close_status=open_buy_order.trade_order_status
-        if buy_order_close_status=="CLOSE":
-            message=f"Existing BUY order already closed for {Index_Symbol} for user {user}."
-            order_id=0
-            status="Failed"
-            order_params={}
-            res_data=message
-            logger.info(f"{message}")
-            save_trade_order_history(LivePrice,transaction_type,trade_order_status, user, old_trade_symbol, order_id, status, res_data, message,
-            strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
-            webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="5paisa")
-            return {"data": {"status": "error", "message": f"Existing BUY order already closed for {old_trade_symbol} for user {user}"}}
+            print("price_of_order>>>",int(price_of_order))
+            symbol=symbol.upper()
+            formated_prc=f"{int(price_of_order):.2f}"
+            trade_symbol = f"{symbol}{day}{month}{fullyear}{Type}{formated_prc}" 
+            print("trade_symbol 5paisa  >>>>",trade_symbol)
+            if trade_symbol != old_trade_symbol:
+                msg=f"sell request not matching with existing order :{old_trade_symbol} new symbol: {trade_symbol} client: {user}"
+                logger.info(f"{msg}")  
+                return {"data": {"status": "error", "message": msg}}
+            logger.info(f"Previous order {oid} entry price: {Entry_price}. Found open BUY order for {symbol}. Exiting position. Order ID: {oid}")
+            try:
+                sell_response =place_5paisa_order(LivePrice,group_service,api_key,access_token,trade_symbol,transaction_type, symbol, quantity,strategy,ordertype,
+                    product_type, price,user, Lots,trade_order_status,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal ,Exchange, 
+                Segment,Index_Symbol,triggerPrice,trade)
+            except Exception as e:
+                logger.error(f"Error placing sell order: {str(e)}")
+                return {"data": {"status": "error", "message": f"Error placing sell order: {str(e)}"}}
+            status_value = sell_response.get("data", {}).get("status")
+            if status_value in ["completed","rejected", "closed","open","Fully Executed","TRANSIT"]:
+                try:
+                    trade_order = Tradeorderhistory.objects.get(order_id=oid)
+                    trade_order.trade_order_status = "CLOSE"
+                    trade_order.save()
+                    logger.info(f"Existing BUY position successfully exited for {symbol}.")
+                    return sell_response
+                except Exception as e:
+                    logger.error(f"Error updating trade order status: {str(e)}")
+                    return {"data": {"status": "error", "message": "Error updating trade order status."}}
 
-        print("price_of_order>>>",int(price_of_order))
-        symbol=symbol.upper()
-        formated_prc=f"{int(price_of_order):.2f}"
-        trade_symbol = f"{symbol}{day}{month}{fullyear}{Type}{formated_prc}" 
-        print("trade_symbol 5paisa  >>>>",trade_symbol)
-
-        logger.info(f"privious order {oid}  enrty price is::::: {Entry_price}Found open BUY order for {symbol}. Exiting position. Order ID: {open_buy_order.order_id}")
-
-        sell_response =place_5paisa_order(LivePrice,api_key,access_token,trade_symbol,transaction_type, symbol, quantity,strategy,ordertype,
-            product_type, price,user, Lots,trade_order_status,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal ,Exchange, 
-            Segment,Index_Symbol,triggerPrice,trade)
-
-        status_value = sell_response.get("data", {}).get("status")
-        if status_value in ["completed","rejected", "closed","open","transit","TRANSIT"]:
-            trade_order = Tradeorderhistory.objects.get(order_id=oid)
-            trade_order.trade_order_status="CLOSE"
-            trade_order.save()
-            logger.info(f"Existing BUY position successfully exited for {symbol}.")
-            return sell_response
+            else:
+                logger.error(f"Failed to exit existing BUY position for {symbol}. Response: {sell_response}")
+                return {"data": {"status": "error", "message": "Failed to exit existing position."}}
         else:
-            logger.error(f"Failed to exit existing BUY position for {symbol}. Response: {sell_response}")
-            return {"data": {"status": "error", "message": "Failed to exit existing position."}}
-    else:
-        logger.info(f"No open BUY position found for {symbol} for user {user}.")
-        message=f"No open BUY position found for {symbol} for user {user}."
-        
-        return {"data": {"status": "error", "message": "No open BUY position found."}}        
-    
+            logger.info(f"No open BUY position found for {symbol} for user {user}.")
+            message=f"No open BUY position found for {symbol} for user {user}."
+            
+            return {"data": {"status": "error", "message": "No open BUY position found."}}        
+    except Exception as e:
+        logger.error(f"Unexpected error in exit_existing_buy_position_DhanOrder: {str(e)}")
+        return {"data": {"status": "error", "message": f"Unexpected error: {str(e)}"}}
+
 #zerodha sell order-----------------
 
 def exit_existing_buy_position_zerodha_order(LivePrice,Type,day,month,year,access_token,Api_key,trade_symbol, transaction_type, symbol, quantity,strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type,Entry_price,Exit_price,
