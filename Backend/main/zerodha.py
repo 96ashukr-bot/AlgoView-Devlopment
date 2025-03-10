@@ -5,7 +5,7 @@ from main.models import ClientBrokerdetails, CompanySmtpDetails
 import logging
 logger = logging.getLogger('main')
 
-def place_zerodha_orders(LivePrice,access_token, Api_key, trade_symbol, transaction_type, symbol, quantity,
+def place_zerodha_orders(LivePrice,group_service,access_token, Api_key, trade_symbol, transaction_type, symbol, quantity,
     strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type, Entry_price, Exit_price, 
     EntryQty, ExitQty, webhook_signal, Exchange, Segment,Index_Symbol, triggerPrice, trade_order_status):
     print("index symbolllllll",Index_Symbol)
@@ -40,7 +40,7 @@ def place_zerodha_orders(LivePrice,access_token, Api_key, trade_symbol, transact
             message = f"API key and access token are Not valid for. {user}"
             res_data = f"{str(e)}"
             response={"data": {"status": status,"message":message}}
-            save_trade_order_history(LivePrice,transaction_type,trade_order_status, user, symbol, order_id, status, res_data, message,  
+            save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, symbol, order_id, status, res_data, message,  
                         strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
                         webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="zerodha")
             return response
@@ -52,7 +52,7 @@ def place_zerodha_orders(LivePrice,access_token, Api_key, trade_symbol, transact
             message = "Instrument details not found"
             res_data = "Trading symbol not found."
             response={"data": {"status": status,"message":message}}
-            save_trade_order_history(LivePrice,transaction_type,trade_order_status, user, symbol, order_id, status, res_data, message,  
+            save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, symbol, order_id, status, res_data, message,  
                     strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
                     webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="zerodha")
             return response
@@ -82,7 +82,7 @@ def place_zerodha_orders(LivePrice,access_token, Api_key, trade_symbol, transact
                 message = "No order ID returned"
                 res_data = "No order ID returned"
                 response={"data": {"status": status,"message":message}}
-                save_trade_order_history(LivePrice,transaction_type,trade_order_status, user, symbol, order_id, status, res_data, message,
+                save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, symbol, order_id, status, res_data, message,
                                          strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
                                          webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="zerodha")
                 return response
@@ -97,7 +97,7 @@ def place_zerodha_orders(LivePrice,access_token, Api_key, trade_symbol, transact
                 message = "order details not found"
                 res_data = order_history_response.get("error")
                 response={"data": {"status": status,"message":message}}
-                save_trade_order_history(LivePrice,transaction_type,trade_order_status, user, symbol, order_id, status, res_data, message,
+                save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, symbol, order_id, status, res_data, message,
                                          strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
                                          webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="zerodha")
                 return response
@@ -118,7 +118,7 @@ def place_zerodha_orders(LivePrice,access_token, Api_key, trade_symbol, transact
                     Exit_price=res_data.get ('average_price', 0.0)  
                     ExitQty= res_data.get ('quantity', 0)
                 response = {"data": {"status": "completed", "message": "Order placed and details saved successfully."}}
-                save_trade_order_history(LivePrice,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message,
+                save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message,
                                         strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
                                         webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="zerodha")
                 
@@ -129,14 +129,14 @@ def place_zerodha_orders(LivePrice,access_token, Api_key, trade_symbol, transact
            
                 message = latest_status.get('status_message', "order rejected")
                 response = {"data": {"status": status, "message": message}}
-                save_trade_order_history(LivePrice,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message,
+                save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message,
                                         strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
                                         webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="zerodha")
                 return response
             else:
                 message = latest_status.get('status_message', "Success")
                 response = {"data": {"status": status, "message": message}}
-                save_trade_order_history(LivePrice,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message,
+                save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message,
                                         strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
                                         webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="zerodha")
                 return response
@@ -146,7 +146,7 @@ def place_zerodha_orders(LivePrice,access_token, Api_key, trade_symbol, transact
             logger.error(error_message)
             order_id = 0
             response={"data": {"status": status,"message": str(e)}}
-            save_trade_order_history(LivePrice,transaction_type,trade_order_status, user, trade_symbol, order_id, "Failed", None, str(e),
+            save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, trade_symbol, order_id, "Failed", None, str(e),
                                      strategy, Entry_type,Exit_type,Entry_price,Exit_price,EntryQty,ExitQty , webhook_signal, Exchange,
                                      Segment, Index_Symbol, order_params, broker="zerodha")
             return response
@@ -157,7 +157,7 @@ def place_zerodha_orders(LivePrice,access_token, Api_key, trade_symbol, transact
         logger.error(error_message)
         order_id = 0
         response={"data": {"status": status,"message": str(e)}}
-        save_trade_order_history(LivePrice,transaction_type,trade_order_status, user, trade_symbol, order_id, "Failed", None, str(e),
+        save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, trade_symbol, order_id, "Failed", None, str(e),
                         strategy, Entry_type,Exit_type,Entry_price,Exit_price,EntryQty,ExitQty , webhook_signal, Exchange,
                                     Segment, Index_Symbol, order_params, broker="zerodha")
         return response

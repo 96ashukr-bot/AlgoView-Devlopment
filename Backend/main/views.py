@@ -1426,10 +1426,10 @@ class ClientCreateView(APIView):
                             else:
                                 print(f"Updated existing trade setting for {client} - {segment_id} - {subsegment_id} with group service {new_group_service_name}")
                     else:
-                        print(">>>>>>>>>>sdjfsjfjsfisfsifiLLLLLLLLLLLLLLLLL")
+                        # print(">>>>>>>>>>sdjfsjfjsfisfsifiLLLLLLLLLLLLLLLLL")
                         # If the group service is the same, update existing trade settings
                         for subsegment_id in subsegments:
-                            
+                            # trade=ClientTradeSetting.objects.filter(client=client).delete()
                             trade_setting, created = ClientTradeSetting.objects.update_or_create(
                                 client=client,
                                 segment_id=segment_id,
@@ -3856,9 +3856,11 @@ class TradeorderhistoryListView(APIView):
                 clients = User.objects.filter(type_of_user='is_client', is_client=True)
                 trade_history = Tradeorderhistory.objects.exclude(order_id=0).filter(client__in=clients).order_by('-id')
             elif user.role and user.role.name.lower() == 'sub-admin':
+                print("inside sub admin is called.....")
                 # Sub-admin can see trade order histories of their assigned clients
-                clients = User.objects.filter(assigned_client=user,created_by=user,type_of_user='is_client', is_client=True)
+                clients = User.objects.filter(assigned_client=user,type_of_user='is_client', is_client=True)
                 trade_history = Tradeorderhistory.objects.exclude(order_id=0).filter(client__in=clients).order_by('-id')
+                print("trade_history>>>>>>>",trade_history)
             else:
                 trade_history = Tradeorderhistory.objects.exclude(order_id=0).filter(client=user).order_by('-id')
 
@@ -3890,7 +3892,7 @@ class TradeorderhistoryListView(APIView):
             # Apply the filters to the query
             trade_history = trade_history.filter(filters)
 
-            
+            print("trade history of subadmin client------",trade_history)
             
             paginator = CustomPageNumberPagination()
             result_page = paginator.paginate_queryset(trade_history, request)
@@ -3923,7 +3925,7 @@ class ClientTradeListView(APIView):
             elif user.role and user.role.name.lower() == 'sub-admin':
                 print("Sub-AdminSub-AdminSub-AdminSub-Admin")
                 # Sub-admin can see trade order histories of their assigned clients
-                clients = User.objects.filter(assigned_client=user,created_by=user)#,type_of_user='is_client', is_client=True)
+                clients = User.objects.filter(assigned_client=user)# created_by=user,type_of_user='is_client', is_client=True)
                 trade_history = Tradeorderhistory.objects.filter(client__in=clients).order_by('-id')
             else:
                 trade_history = Tradeorderhistory.objects.filter(client=user).order_by('-id')
