@@ -2737,110 +2737,110 @@ class PlaceOrderWebhookView(APIView):
                             continue
 
                         logger.info(f"Placing order for user {user}. Trade count: {daily_trade_count}/{trade_limit}")
-                    if is_market_open():
-                        print("started place order market is open: transaction_type is :::::::", transaction_type ) 
-                        logger.info("Market is open. Proceed with the trade.")
-                        if transaction_type=="SELL-C_O":#Will Close the existing order and Open a new PE order
-                            # print("SELL-C_O = (Close CE)SELL-C & BUY PE")
-                            # First transaction: SELL-C
-                            transaction_type = "SELL-C"
-                            buy_sell, Type = manage_order(transaction_type, buy_sell, Type)
-                            transaction_type=buy_sell
-                            # if buy_sell=="BUY" and Type=="CE":
-                            #     Entry_type="LE"
-                            # elif buy_sell=="SELL" and  Type=="PE":
-                            #     Exit_type="LX" 
-                            # elif buy_sell=="SELL" and  Type=="CE":
-                            #     Entry_type="LE"       
-                            logger.info(f"Placing first order: Action={buy_sell}, Type={Type}")
-                            trading_Symbol_sum(trade, symbols, day, month, year, Type, default_price)
-                            order_response = place_order_broker(LivePrice,group_service,
-                                trade, user, transaction_type, symbol, quantity, strategy, ordertype,
-                                product_type, price, Lots, trade_order_status, Entry_type, Exit_type,
-                                Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,
-                                triggerPrice, day, month, year,fullyear, default_price, Type, order_params
-                            )
-                            # if order_response:
-                            print("again one order for SELL-O")
-                            # Second transaction: BUY-PE
-                            transaction_type = "SELL-O"
-                            print("")
-                            buy_sell, Type = manage_order(transaction_type, buy_sell, Type)
-                            logger.info(f"Placing second order: Action={buy_sell}, Type={Type}")
-                            transaction_type=buy_sell
-                            order_response = place_order_broker(LivePrice,group_service,
-                                trade, user, transaction_type, symbol, quantity, strategy, ordertype,
-                                product_type, price, Lots, trade_order_status, Entry_type, Exit_type,
-                                Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,
-                                triggerPrice, day, month, year, fullyear,default_price, Type, order_params
-                            )
-                        elif transaction_type=="BUY-C_O":# - Close PE & Buy CE"  BUY-C=PE CLOSE ,BUY-O = Buy CE
-                            # First transaction: BUY-C
-                            transaction_type = "BUY-C"
-                            buy_sell, Type = manage_order(transaction_type, buy_sell, Type)
-                            transaction_type=buy_sell
-                            logger.info(f"Placing first order: Action={buy_sell}, Type={Type}")
-                            order_response = place_order_broker(LivePrice,group_service,
-                                trade, user, transaction_type, symbol, quantity, strategy, ordertype,
-                                product_type, price, Lots, trade_order_status, Entry_type, Exit_type,
-                                Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,
-                                triggerPrice, day, month, year,fullyear, default_price, Type, order_params
-                            )
-                            # if order_response:
-                            print("again one order for SELL-O")
-                            # Second transaction: BUY-CE
-                            transaction_type = "BUY-O"
-                            print("")
-                            buy_sell, Type = manage_order(transaction_type, buy_sell, Type)
-                            logger.info(f"Placing second order: Action={buy_sell}, Type={Type}")
-                            transaction_type=buy_sell
-                            order_response = place_order_broker(LivePrice,group_service,
-                                trade, user, transaction_type, symbol, quantity, strategy, ordertype,
-                                product_type, price, Lots, trade_order_status, Entry_type, Exit_type,
-                                Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,
-                                triggerPrice, day, month, year,fullyear, default_price, Type, order_params
-                            )
-                        else:
-                            print("signal trasaction type................",transaction_type)
-                            buy_sell, Type = manage_order(transaction_type, buy_sell, Type)
-                            print(f"Action: {buy_sell}, Type: {Type}")
-                            transaction_type=buy_sell
-                            order_response=place_order_broker(LivePrice,group_service,trade,user,transaction_type, symbol, quantity,strategy,ordertype,
-                            product_type, price, Lots,trade_order_status,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,
-                            webhook_signal ,Exchange, Segment,Index_Symbol,triggerPrice,day,month,year,fullyear,default_price,Type,order_params)
-                              
-                        # Check order response and log or handle failures
-                        print("final order repsone :::::::::::::::::::::",order_response)
+                    # if is_market_open():
+                    # print("started place order market is open: transaction_type is :::::::", transaction_type ) 
+                    logger.info("Market is open. Proceed with the trade.")
+                    if transaction_type=="SELL-C_O":#Will Close the existing order and Open a new PE order
+                        # print("SELL-C_O = (Close CE)SELL-C & BUY PE")
+                        # First transaction: SELL-C
+                        transaction_type = "SELL-C"
+                        buy_sell, Type = manage_order(transaction_type, buy_sell, Type)
+                        transaction_type=buy_sell
+                        # if buy_sell=="BUY" and Type=="CE":
+                        #     Entry_type="LE"
+                        # elif buy_sell=="SELL" and  Type=="PE":
+                        #     Exit_type="LX" 
+                        # elif buy_sell=="SELL" and  Type=="CE":
+                        #     Entry_type="LE"       
+                        logger.info(f"Placing first order: Action={buy_sell}, Type={Type}")
+                        trading_Symbol_sum(trade, symbols, day, month, year, Type, default_price)
+                        order_response = place_order_broker(LivePrice,group_service,
+                            trade, user, transaction_type, symbol, quantity, strategy, ordertype,
+                            product_type, price, Lots, trade_order_status, Entry_type, Exit_type,
+                            Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,
+                            triggerPrice, day, month, year,fullyear, default_price, Type, order_params
+                        )
+                        # if order_response:
+                        print("again one order for SELL-O")
+                        # Second transaction: BUY-PE
+                        transaction_type = "SELL-O"
+                        print("")
+                        buy_sell, Type = manage_order(transaction_type, buy_sell, Type)
+                        logger.info(f"Placing second order: Action={buy_sell}, Type={Type}")
+                        transaction_type=buy_sell
+                        order_response = place_order_broker(LivePrice,group_service,
+                            trade, user, transaction_type, symbol, quantity, strategy, ordertype,
+                            product_type, price, Lots, trade_order_status, Entry_type, Exit_type,
+                            Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,
+                            triggerPrice, day, month, year, fullyear,default_price, Type, order_params
+                        )
+                    elif transaction_type=="BUY-C_O":# - Close PE & Buy CE"  BUY-C=PE CLOSE ,BUY-O = Buy CE
+                        # First transaction: BUY-C
+                        transaction_type = "BUY-C"
+                        buy_sell, Type = manage_order(transaction_type, buy_sell, Type)
+                        transaction_type=buy_sell
+                        logger.info(f"Placing first order: Action={buy_sell}, Type={Type}")
+                        order_response = place_order_broker(LivePrice,group_service,
+                            trade, user, transaction_type, symbol, quantity, strategy, ordertype,
+                            product_type, price, Lots, trade_order_status, Entry_type, Exit_type,
+                            Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,
+                            triggerPrice, day, month, year,fullyear, default_price, Type, order_params
+                        )
+                        # if order_response:
+                        print("again one order for SELL-O")
+                        # Second transaction: BUY-CE
+                        transaction_type = "BUY-O"
+                        print("")
+                        buy_sell, Type = manage_order(transaction_type, buy_sell, Type)
+                        logger.info(f"Placing second order: Action={buy_sell}, Type={Type}")
+                        transaction_type=buy_sell
+                        order_response = place_order_broker(LivePrice,group_service,
+                            trade, user, transaction_type, symbol, quantity, strategy, ordertype,
+                            product_type, price, Lots, trade_order_status, Entry_type, Exit_type,
+                            Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,
+                            triggerPrice, day, month, year,fullyear, default_price, Type, order_params
+                        )
+                    else:
+                        print("signal trasaction type................",transaction_type)
+                        buy_sell, Type = manage_order(transaction_type, buy_sell, Type)
+                        print(f"Action: {buy_sell}, Type: {Type}")
+                        transaction_type=buy_sell
+                        order_response=place_order_broker(LivePrice,group_service,trade,user,transaction_type, symbol, quantity,strategy,ordertype,
+                        product_type, price, Lots,trade_order_status,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,
+                        webhook_signal ,Exchange, Segment,Index_Symbol,triggerPrice,day,month,year,fullyear,default_price,Type,order_params)
+                            
+                    # Check order response and log or handle failures
+                    print("final order repsone :::::::::::::::::::::",order_response)
 
+                    if not order_response['data']['status']:
+                        order_status="Failed"
+                        order_status=f"Order response failed for {trade.symbol} with broker {trade.broker}"
+                    elif order_response['data']['status'] == "Unauthorized":
+                        order_status = f"Unauthorized Order placement failed for {trade.symbol} with broker {trade.broker}"
+                        logger.warning(order_status)  # Log the unauthorized order status
+                        continue  # Skip to the next client trade if unauthorized
+                    elif order_response['data']['status'] =="completed" or  order_response['data']['status'] =="complete":
+                        order_status=f"Order placed successfully for {trade.symbol} with broker {trade.broker}"
+                        TradingLog.objects.create(client=user, date=today, symbol=trade.symbol, strategy=strategy,)
+                        logger.info(f"Order placed successfully for {trade.symbol} with broker {trade.broker}")
+                    elif order_response['data']['status']=="open":   
+                        order_status=f"Order is place pending for {trade.symbol} with broker {trade.broker}"
+                        logger.error(f"Order place is pending for {trade.symbol} with broker {trade.broker}") 
+                    elif order_response['data']['status']=="rejected":
+                        order_status=f"Order is rejected for {trade.symbol} with broker {trade.broker}"
+                        logger.error(f"Order is rejected for {trade.symbol} with broker {trade.broker}")
+                    elif order_response['data']['status']=="error":
+                        order_status=f"Error Order placement failed for {trade.symbol} with broker {trade.broker}"
+                    elif order_response['data']['status']=="Failed":
+                        order_status=f"Order placement failed for {trade.symbol} with broker {trade.broker}"
+                    
+                    else:
                         if not order_response['data']['status']:
                             order_status="Failed"
-                            order_status=f"Order response failed for {trade.symbol} with broker {trade.broker}"
-                        elif order_response['data']['status'] == "Unauthorized":
-                            order_status = f"Unauthorized Order placement failed for {trade.symbol} with broker {trade.broker}"
-                            logger.warning(order_status)  # Log the unauthorized order status
-                            continue  # Skip to the next client trade if unauthorized
-                        elif order_response['data']['status'] =="completed" or  order_response['data']['status'] =="complete":
-                            order_status=f"Order placed successfully for {trade.symbol} with broker {trade.broker}"
-                            TradingLog.objects.create(client=user, date=today, symbol=trade.symbol, strategy=strategy,)
-                            logger.info(f"Order placed successfully for {trade.symbol} with broker {trade.broker}")
-                        elif order_response['data']['status']=="open":   
-                            order_status=f"Order is place pending for {trade.symbol} with broker {trade.broker}"
-                            logger.error(f"Order place is pending for {trade.symbol} with broker {trade.broker}") 
-                        elif order_response['data']['status']=="rejected":
-                            order_status=f"Order is rejected for {trade.symbol} with broker {trade.broker}"
-                            logger.error(f"Order is rejected for {trade.symbol} with broker {trade.broker}")
-                        elif order_response['data']['status']=="error":
-                            order_status=f"Error Order placement failed for {trade.symbol} with broker {trade.broker}"
-                        elif order_response['data']['status']=="Failed":
-                            order_status=f"Order placement failed for {trade.symbol} with broker {trade.broker}"
-                     
-                        else:
-                            if not order_response['data']['status']:
-                                order_status="Failed"
-                            order_status=f"Order placement failed for {trade.symbol} with broker {trade.broker}"
-                    else:
-                        logger.info("Market is closed. Do not proceed with the trade.") 
-                        order_status=f" can not Trade Order becouse the Market is closed. Do not proceed with the trade"                  
+                        order_status=f"Order placement failed for {trade.symbol} with broker {trade.broker}"
+                    # else:
+                    #     logger.info("Market is closed. Do not proceed with the trade.") 
+                    #     order_status=f" can not Trade Order becouse the Market is closed. Do not proceed with the trade"                  
                 else:
                     order_status=f"Skipping trade for symbol {trade.symbol} as it doesn't match the specified webhook symbol{symbols} or transaction type."
                     res_data=order_status
