@@ -180,7 +180,25 @@ def place_alice_orders(LivePrice,group_service,api_skey,api_uid,trading_symbol_a
             logger.info(f"history of alice blue order_____________{order_his}")
             logger.info(f"status......{status}")
             print("trade_order_status alice blue>>>>>>",trade_order_status)
-            if status == "completed" or status == "complete":
+            if status == "pending": 
+                transaction_types=res_data.get('Trantype','')
+                if transaction_types == "B":
+                    Entry_type="LE"
+                    Entry_price=res_data.get ('Avgprc', 0.0)
+                    EntryQty=res_data.get ('Qty', 0)
+                elif transaction_types == "S": 
+                    Exit_type="LX"
+                    Exit_price=res_data.get ('Avgprc', 0.0)  
+                    ExitQty= res_data.get ('Qty', 0)
+                order_id=res_data.get ('Nstordno', 0) 
+                from_email = default_from_email,
+                message=order_his.get('RejReason', 'not any reason get').lower()
+                # send_trade_email_async.delay(user.email, from_email,user.firstName,status, message)
+                response = {"data": {"status": "pending"}}
+                logger.info(f"Order is pending  for user {user}. Order ID: {order_id}")
+                save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trading_symbol_aliceblue, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol,order_params, broker="Alice Blue")
+                return response    
+            elif status == "completed" or status == "complete":
                 order_id=res_data.get ('Nstordno', 0)   
                 transaction_types=res_data.get('Trantype','')
                 if transaction_types == "B":
@@ -201,7 +219,7 @@ def place_alice_orders(LivePrice,group_service,api_skey,api_uid,trading_symbol_a
                 return response
             elif status == "rejected": 
                 transaction_types=res_data.get('Trantype','')
-                if transaction_type == "B":
+                if transaction_types == "B":
                     Entry_type="LE"
                     Entry_price=res_data.get ('Avgprc', 0.0)
                     EntryQty=res_data.get ('Qty', 0)
@@ -217,9 +235,10 @@ def place_alice_orders(LivePrice,group_service,api_skey,api_uid,trading_symbol_a
                 logger.info(f"Order is rejected  for user {user}. Order ID: {order_id}")
                 save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trading_symbol_aliceblue, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol,order_params, broker="Alice Blue")
                 return response
+
             elif status == "OPEN":   
                 transaction_types=res_data.get('Trantype','')
-                if transaction_type == "B":
+                if transaction_types == "B":
                     Entry_type="LE"
                     Entry_price=res_data.get ('Avgprc', 0.0)
                     EntryQty=res_data.get ('Qty', 0)
@@ -255,6 +274,7 @@ def place_alice_orders(LivePrice,group_service,api_skey,api_uid,trading_symbol_a
             error_message="error when placing order"
             order_id=0
             status="Failed"
+            message=""
             res_data="Not any reponse Failed"
             logger.error(f"Order placement Failed for user {user}. Error: {error_message}")
             
