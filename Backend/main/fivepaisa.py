@@ -363,7 +363,7 @@ def place_5paisa_order(LivePrice,group_service,api_key,access_token,trade_symbol
                 res_data=order_his
                 # logger.info(f"history of 5paisa order_____________{order_his}")
                 logger.info(f"status. of 5Paisa.....{status}")
-                if status == "Fully Executed":
+                if status == "Fully Executed" or status == "Partially Executed" or status == "fully executed":
                     order_id=res_data.get ('BrokerOrderId', 0)   
                     trasaction_type=res_data.get('BuySell','')
                     if trasaction_type == "B":

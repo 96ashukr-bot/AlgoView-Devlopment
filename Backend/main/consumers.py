@@ -20,6 +20,7 @@ import requests
 from channels.generic.websocket import AsyncWebsocketConsumer
 from SmartApi.smartWebSocketV2 import SmartWebSocketV2
 from SmartApi import SmartConnect
+from main.models import WebsocketDetails
 import pyotp
 from urllib.parse import parse_qs
 
@@ -33,7 +34,8 @@ TOTP_SECRET = "RFFORAS7ASFH7KIZWD7FCSVK2Y"
 #USERNAME = 'A1420760'
 #TOTP_SECRET = "7DFMHZE3BDRCIHMLFT4N3QVCPU"
 #PASSWORD = "1986"
-access_token="eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiI0NkI0VVIiLCJqdGkiOiI2N2I2ZGZmOTIxNGJjZTUwYmI1ZjkxZTciLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaWF0IjoxNzQwMDM4MTM3LCJpc3MiOiJ1ZGFwaS1nYXRld2F5LXNlcnZpY2UiLCJleHAiOjE3NDAwODg4MDB9.XNhdmnZGhYZBpDVf69M5nsMBc53870CLXoCY2uMk4TE"
+#access_token="eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiI0NkI0VVIiLCJqdGkiOiI2N2I2ZGZmOTIxNGJjZTUwYmI1ZjkxZTciLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaWF0IjoxNzQwMDM4MTM3LCJpc3MiOiJ1ZGFwaS1nYXRld2F5LXNlcnZpY2UiLCJleHAiOjE3NDAwODg4MDB9.XNhdmnZGhYZBpDVf69M5nsMBc53870CLXoCY2uMk4TE"
+access_token=WebsocketDetails.Auth_token
 obj = SmartConnect(api_key=API_KEY)
 totp = pyotp.TOTP(TOTP_SECRET).now()
 data = obj.generateSession(USERNAME, PASSWORD, totp)
