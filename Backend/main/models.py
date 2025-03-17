@@ -435,7 +435,7 @@ class ClientTradeSetting(models.Model):
     expiry_date = models.DateTimeField(null=True, blank=True)  # Allows manual input (client-defined)
 
     # Corrected 'is_tread_status' field definition
-    is_tread_status = models.BooleanField(default=False)  # Default to True or False as required
+    is_tread_status = models.BooleanField(default=False)  # Default  False 
     sl_type=models.CharField(max_length=50, null=True, blank=True)
     stop_loss=models.IntegerField( null=True, blank=True)
     target=models.IntegerField( null=True, blank=True)
@@ -512,7 +512,7 @@ class CompanyProfileDetails(models.Model):
 class WebsocketDetails(models.Model):
     Auth_token = models.TextField(blank=True, null=True) 
     token_status= models.CharField(max_length=255, blank=True, null=True)
-    # expiry_time = models.DateTimeField(auto_now_add=True, blank=True, null=True)
+    expiry_time = models.DateTimeField( blank=True, null=True)
     def __str__(self):
         return f"Auth_token: {self.Auth_token}"
 

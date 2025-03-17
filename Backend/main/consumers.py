@@ -19,7 +19,7 @@ import logging
 import requests
 from channels.generic.websocket import AsyncWebsocketConsumer
 from SmartApi.smartWebSocketV2 import SmartWebSocketV2
-from SmartApi import SmartConnect
+# from SmartApi import SmartConnect
 import pyotp
 from urllib.parse import parse_qs
 
@@ -33,13 +33,13 @@ TOTP_SECRET = "RFFORAS7ASFH7KIZWD7FCSVK2Y"
 #USERNAME = 'A1420760'
 #TOTP_SECRET = "7DFMHZE3BDRCIHMLFT4N3QVCPU"
 #PASSWORD = "1986"
-access_token="eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiI0NkI0VVIiLCJqdGkiOiI2N2I2ZGZmOTIxNGJjZTUwYmI1ZjkxZTciLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaWF0IjoxNzQwMDM4MTM3LCJpc3MiOiJ1ZGFwaS1nYXRld2F5LXNlcnZpY2UiLCJleHAiOjE3NDAwODg4MDB9.XNhdmnZGhYZBpDVf69M5nsMBc53870CLXoCY2uMk4TE"
-obj = SmartConnect(api_key=API_KEY)
-totp = pyotp.TOTP(TOTP_SECRET).now()
-data = obj.generateSession(USERNAME, PASSWORD, totp)
-feedToken = obj.getfeedToken()
-FEED_TOKEN = feedToken
-AUTH_TOKEN = data['data']['refreshToken']
+# access_token="eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiI0NkI0VVIiLCJqdGkiOiI2N2Q3ZGMyMmY0MWFkYjFmZDI2ZWQ3YjYiLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaWF0IjoxNzQyMTk5ODQyLCJpc3MiOiJ1ZGFwaS1nYXRld2F5LXNlcnZpY2UiLCJleHAiOjE3NDIyNDg4MDB9.vkQM6agFoNT-CbdxUB-jTSNpSjASh-pg6X57gls3p2M"
+# obj = SmartConnect(api_key=API_KEY)
+# totp = pyotp.TOTP(TOTP_SECRET).now()
+# data = obj.generateSession(USERNAME, PASSWORD, totp)
+# feedToken = obj.getfeedToken()
+# FEED_TOKEN = feedToken
+# AUTH_TOKEN = data['data']['refreshToken']
 correlation_id = "abc123"
 mode = 3  # Subscription mode
 import json
@@ -48,12 +48,15 @@ import upstox_client
 import websockets
 from google.protobuf.json_format import MessageToDict
 from main import MarketDataFeed_pb2 as pb
-
+from asgiref.sync import sync_to_async
 class UpstoxMarketDataConsumer(AsyncWebsocketConsumer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.event_loop = asyncio.get_event_loop()
     async def connect(self):
+        from main.models import WebsocketDetails
+        websocket_details = await sync_to_async(WebsocketDetails.objects.latest)('id')
+        access_token = websocket_details.Auth_token
         """Connect to WebSocket and accept dynamic instruments"""
         query_params = parse_qs(self.scope["query_string"].decode())
         self.tokens = query_params.get("symbol_tokens", [" "])[0].split(",")
@@ -95,8 +98,8 @@ class UpstoxMarketDataConsumer(AsyncWebsocketConsumer):
         """Convert tokens to instrument keys using CSV file"""
         instrument_map = {}
         reverse_map = {} 
-        # csv_path = "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/complete.csv"
-        csv_path = "/home/ubuntu/Backend/AlgoView-Devlopment/Backend/main/complete.csv"
+        csv_path = "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/complete.csv"
+        # csv_path = "/home/ubuntu/Backend/AlgoView-Devlopment/Backend/main/complete.csv"
         try:
             with open(csv_path, "r") as csvfile:
                 reader = csv.DictReader(csvfile)
@@ -209,6 +212,10 @@ class UpstoxChainConsumer(AsyncWebsocketConsumer):
         self.reverse_instrument_map = {}
 
     async def connect(self):
+        from main.models import WebsocketDetails
+        websocket_details = await sync_to_async(WebsocketDetails.objects.latest)('id')
+        access_token = websocket_details.Auth_token
+
         """Connect to WebSocket and accept dynamic instruments"""
         query_params = parse_qs(self.scope["query_string"].decode())
         self.symbol_name = query_params.get('name', [None])[0]
@@ -252,8 +259,8 @@ class UpstoxChainConsumer(AsyncWebsocketConsumer):
         strike_price_map = {}
         tradingsymbol_map = {}
         category_map = {}
-        # csv_path = "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/complete.csv"
-        csv_path = "/home/ubuntu/Backend/AlgoView-Devlopment/Backend/main/complete.csv"
+        csv_path = "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/complete.csv"
+        #csv_path = "/home/ubuntu/Backend/AlgoView-Devlopment/Backend/main/complete.csv"
 
         try:
             try:
