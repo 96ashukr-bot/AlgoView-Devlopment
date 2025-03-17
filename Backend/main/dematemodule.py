@@ -167,7 +167,7 @@ def exit_existing_buy_position_Upstox(
             # strategy=strategy,
             GroupService=group_service,
             order_id__gt=0
-        ).filter(Q(order_status="rejected") | Q(order_status="completed") | Q(order_status="complete") | Q(order_status="open")).last()
+        ).filter(Q(order_status="rejected") | Q(order_status="completed") | Q(order_status="complete") |Q(order_status="put order req received")| Q(order_status="open")).last()
 
         print("open_buy_order>>>>>>>", open_buy_order)
 
@@ -206,7 +206,7 @@ def exit_existing_buy_position_Upstox(
                 )
 
                 status_value = sell_response.get("data", {}).get("status")
-                if status_value in ["completed", "rejected", "closed", "open"]:
+                if status_value in ["completed", "rejected", "closed", "open","put order req received"]:
                     trade_order = Tradeorderhistory.objects.get(order_id=oid)
                     trade_order.trade_order_status = "CLOSE"
                     trade_order.save()
@@ -243,7 +243,8 @@ def exit_existing_buy_position_Aliceblue(LivePrice,group_service, Type, day, mon
             # strategy=strategy,
             GroupService=group_service,
             order_id__gt=0
-        ).filter(Q(order_status="rejected") | Q(order_status="completed") | Q(order_status="complete") | Q(order_status="open")).last()
+        ).filter(Q(order_status="rejected") | Q(order_status="completed") | Q(order_status="complete") |Q(order_status="pending")
+        | Q(order_status="open")).last()
         print("GROUP service open_buy_orderfffff>>>>>",open_buy)
         open_buy_order = Tradeorderhistory.objects.filter(
             client=user, 
@@ -289,7 +290,7 @@ def exit_existing_buy_position_Aliceblue(LivePrice,group_service, Type, day, mon
                                                    EntryQty, ExitQty, webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice)
                 
                 status_value = sell_response.get("data", {}).get("status")
-                if status_value in ["completed", "rejected", "closed", "open"]:
+                if status_value in ["completed", "rejected", "closed", "open","pending"]:
                     try:
                         trade_order = Tradeorderhistory.objects.get(order_id=oid)
                         trade_order.trade_order_status = "CLOSE"
