@@ -21,7 +21,7 @@ class WebsocketTokenView(APIView):
         if token:
             # Check and update the token status
             if token.expiry_time and now() > token.expiry_time:
-                token.token_status = "expired"
+                token.token_status = "inactive"
                 token.save()
 
             return Response(
@@ -85,7 +85,7 @@ class WebsocketTokenViewww(APIView):
         """Retrieve the latest valid token from the database."""
         token = WebsocketDetails.objects.order_by("-id").first()
 
-        if token and token.token_status not in ["expired", "not valid"]:
+        if token and token.token_status not in ["inactive", "not valid"]:
             return Response(
                 {"status": "success", "auth_token": token.Auth_token, "token_status": token.token_status},
                 status=status.HTTP_200_OK

@@ -12,7 +12,7 @@ class Command(BaseCommand):
         if token:
             current_time = now()
             if token.expiry_time and current_time >= token.expiry_time:
-                token.token_status = "expired"
+                token.token_status = "inactive"
                 token.save()
                 self.stdout.write(self.style.WARNING("Token expired! Status updated."))
             else:
