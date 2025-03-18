@@ -2247,8 +2247,18 @@ def place_order_broker(LivePrice,group_service,
     
     if trade.broker.lower() == "dhan":
         symbol=symbol.upper()
-        print("dhan fun   calleddddddddd",symbol)
-        trade_symbol = f"{symbol}{month}{fullyear}{default_price}{Type}" 
+        """
+            Creates a trading symbol in the format: SYMBOL+MONTH+YEAR+STRIKE+TYPE
+            Example: POWERGRIDMAR2025410PE or NIFTYMAR202522600CE
+        """
+        
+        symbol = symbol.upper()
+        print("dhan fun   calleddddddddd", symbol)
+        month_number = datetime.strptime(month, "%b").month
+        expiry_date = f"{fullyear}-{month_number:02d}-{day}"
+        print("expiry_date>>>>>",expiry_date)      
+        trade_symbol = f"{symbol}{month}{fullyear}{default_price}{Type}"     
+        # trade_symbol = f"{symbol}{day}{month}{default_price}{Type}" 
         print(">>>>>>>trade_symbol DHANNNNNNNNNNNN>>>>>>>>>>>",trade_symbol)
         # Fetch client broker details
         client_broker = ClientBrokerdetails.objects.filter(client=trade.client, broker_name__broker_name__iexact=trade.broker).first()
@@ -2271,7 +2281,7 @@ def place_order_broker(LivePrice,group_service,
             return {"data": {"status": "Failed", "message": message}}
         logger.info(f"!!!!Placing order for user: {user} Brocker is: {trade.broker} & trading symbol is: {trade.symbol}")
         if transaction_type=="SELL":
-            response = exit_existing_buy_position_DhanOrder(LivePrice,group_service,Type,day,month,fullyear,access_token, client_id, trade_symbol, transaction_type, symbol, quantity,strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty, webhook_signal, Exchange, Segment,Index_Symbol, triggerPrice, trade_order_status)
+            response = exit_existing_buy_position_DhanOrder(expiry_date,LivePrice,group_service,Type,day,month,fullyear,access_token, client_id, trade_symbol, transaction_type, symbol, quantity,strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty, webhook_signal, Exchange, Segment,Index_Symbol, triggerPrice, trade_order_status)
             # If the exit failed, do not proceed.
             if response.get("data", {}).get("status") == "error":
                 message = response.get("data", {}).get("message", f"Existing BUY position for {symbol} could not be closed.")
@@ -2281,7 +2291,7 @@ def place_order_broker(LivePrice,group_service,
                 logger.error(message)
                 return {"data": {"status": "Failed", "message": message}} 
         if transaction_type == "BUY": 
-            response=place_dhan_orders(LivePrice,group_service,access_token, client_id, trade_symbol, transaction_type, symbol, quantity,
+            response=place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_id, trade_symbol, transaction_type, symbol, quantity,
                 strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type, Entry_price, Exit_price, 
                 EntryQty, ExitQty, webhook_signal, Exchange, Segment,Index_Symbol, triggerPrice, trade_order_status)
         logger.info(f" dhan api. Response: {response}")

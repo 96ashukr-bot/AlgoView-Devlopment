@@ -9,7 +9,7 @@ from main.Alice_Blue_Api import save_trade_order_history
 from main.models import CompanySmtpDetails
 from main.tasks import send_trade_email_async
 logger = logging.getLogger('main')
-def place_dhan_orders(LivePrice,group_service,access_token, client_id, trade_symbol, transaction_type, symbol, quantity,
+def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_id, trade_symbol, transaction_type, symbol, quantity,
     strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type, Entry_price, Exit_price, 
     EntryQty, ExitQty, webhook_signal, Exchange, Segment,Index_Symbol, triggerPrice, trade_order_status):
     print("dhan api  Exchange is::",Exchange," product typweeee",product_type)
@@ -46,7 +46,7 @@ def place_dhan_orders(LivePrice,group_service,access_token, client_id, trade_sym
                         webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan")
             return response
         print("trade_symbol, dhan,Exchange>>>>>",trade_symbol, dhan,Exchange)
-        trading_symbol = get_trading_symbol_security_id(trade_symbol, dhan,Exchange)
+        trading_symbol = get_trading_symbol_security_id(trade_symbol, dhan,Exchange,expiry_date)
         if not trading_symbol:
             logger.error(f"trading_symbol details not found for {trade_symbol}")
             message = "Instrument details not found"
@@ -317,15 +317,24 @@ def fetch_order_details(order_id,dhan):
     except Exception as e:
         print(f"Error while fetching order details: {str(e)}")
         
-def get_trading_symbol_security_id(symbol, segment, Exch):
+def get_trading_symbol_security_id(symbol, segment, Exch,expiry_date):
     try:
+        print("symbollll",symbol)
+        # symbol="NIFTY20MAR26000CALL" 
         csv_file_path = "/home/ubuntu/Backend/AlgoView-Devlopment/Backend/main/dhantoken.csv"
-        #csv_file_path ="/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/dhantoken.csv"
+        # csv_file_path ="/home/digi2/JYOTIWORKSPACE/AlgoView-Devlopment/Backend/main/dhantoken.csv"
         df = pd.read_csv(csv_file_path, low_memory=False)
         
-        df['SEM_TRADING_SYMBOL'] = df['SEM_TRADING_SYMBOL'].str.replace("-", "").str.strip()
-    
-        filtered_df = df[df['SEM_TRADING_SYMBOL'].str.upper() == symbol.upper()]
+        # df['SEM_CUSTOM_SYMBOL'] = df['SEM_TRADING_SYMBOL'].str.replace("-", "").str.strip()
+        df['SEM_TRADING_SYMBOL'] = df['SEM_TRADING_SYMBOL'].astype(str).str.strip().str.replace(r"[^\w]", "", regex=True).str.upper()
+        # print(":::::::::::::::::::::::::",df['SEM_TRADING_SYMBOL'])
+        df['SEM_EXPIRY_DATE'] = pd.to_datetime(df['SEM_EXPIRY_DATE']).dt.strftime('%Y-%m-%d')
+        print("LLLSEM_EXPIRY_DATE===============", df['SEM_EXPIRY_DATE'])
+        # filtered_df = df[df['SEM_TRADING_SYMBOL'] == symbol.upper() ]
+        filtered_df = df[
+            (df['SEM_TRADING_SYMBOL'] == symbol.upper()) & 
+            (df['SEM_EXPIRY_DATE'] == expiry_date)
+        ]
         
         if not filtered_df.empty:
             # Return the first matching record's ScripCode

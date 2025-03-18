@@ -98,7 +98,7 @@ class UpstoxMarketDataConsumer(AsyncWebsocketConsumer):
         """Convert tokens to instrument keys using CSV file"""
         instrument_map = {}
         reverse_map = {} 
-        #csv_path = "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/complete.csv"
+        #csv_path = "/home/digi2/JYOTIWORKSPACE/AlgoView-Devlopment/Backend/main/complete.csv"
         csv_path = "/home/ubuntu/Backend/AlgoView-Devlopment/Backend/main/complete.csv"
         try:
             with open(csv_path, "r") as csvfile:
@@ -259,7 +259,7 @@ class UpstoxChainConsumer(AsyncWebsocketConsumer):
         strike_price_map = {}
         tradingsymbol_map = {}
         category_map = {}
-        #csv_path = "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/complete.csv"
+        #csv_path = "/home/digi2/JYOTIWORKSPACE/AlgoView-Devlopment/Backend/main/complete.csv"
         csv_path = "/home/ubuntu/Backend/AlgoView-Devlopment/Backend/main/complete.csv"
 
         try:

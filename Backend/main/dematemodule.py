@@ -318,7 +318,7 @@ def exit_existing_buy_position_Aliceblue(LivePrice,group_service, Type, day, mon
 
     
 #DHAN ORDER sell----------------------
-def exit_existing_buy_position_DhanOrder(LivePrice, group_service,Type, day, month, fullyear, access_token, client_id, trade_symbol, transaction_type, symbol, quantity,
+def exit_existing_buy_position_DhanOrder(expiry_date,LivePrice, group_service,Type, day, month, fullyear, access_token, client_id, trade_symbol, transaction_type, symbol, quantity,
                                          strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type, Entry_price, Exit_price, 
                                          EntryQty, ExitQty, webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice, trade_order_status):
     try:
@@ -377,7 +377,7 @@ def exit_existing_buy_position_DhanOrder(LivePrice, group_service,Type, day, mon
 
         # Attempt to place sell order
         try:
-            sell_response = place_dhan_orders(LivePrice, group_service,access_token, client_id, trade_symbol, transaction_type, symbol, quantity,
+            sell_response = place_dhan_orders(expiry_date,LivePrice, group_service,access_token, client_id, trade_symbol, transaction_type, symbol, quantity,
                                               strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type, Entry_price, Exit_price, 
                                               EntryQty, ExitQty, webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice, trade_order_status)
         except Exception as e:
