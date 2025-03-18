@@ -13,6 +13,51 @@ from rest_framework import status
 from django.utils.timezone import now, timedelta
 from .models import WebsocketDetails
 
+
+class UpdateWebSocketToken(APIView):
+    def put(self, request, *args, **kwargs):
+        """Update the token or create a new one, and set expiry time."""
+        data = request.data
+        auth_token = data.get("auth_token")
+
+        if not auth_token:
+            return Response(
+                {"status": "failed", "message": "Auth token is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Create or update the latest token
+        token, created = WebsocketDetails.objects.update_or_create(
+            id=WebsocketDetails.objects.order_by("-id").first().id
+            if WebsocketDetails.objects.exists()
+            else None,
+            defaults={"Auth_token": auth_token}
+        )
+
+        # Set expiry for next day's 3:30 AM
+        now_time = now()
+        if now_time.hour < 3 or (now_time.hour == 3 and now_time.minute < 30):
+            expiry_date = now_time.date()
+        else:
+            expiry_date = now_time.date() + timedelta(days=1)
+
+        token.expiry_time = datetime.combine(expiry_date, datetime.min.time()) + timedelta(
+            hours=3, minutes=30
+        )
+
+        # ✅ Forcefully update token status to active
+        token.token_status = 'active'
+        token.save()
+
+        return Response(
+            {
+                "status": "success",
+                "message": "Token updated successfully." if not created else "New token created.",
+                "data": {"auth_token": token.Auth_token, "token_status": token.token_status},
+            },
+            status=status.HTTP_200_OK if not created else status.HTTP_201_CREATED,
+        )
+
 class WebsocketTokenView(APIView):
     def get(self, request, *args, **kwargs):
         """Retrieve the latest valid token or mark expired ones."""
@@ -39,7 +84,7 @@ class WebsocketTokenView(APIView):
         )
 
 
-    def put(self, request, *args, **kwargs):
+    def delete(self, request, *args, **kwargs):
         """Update the token or create a new one, and set expiry time."""
         data = request.data
         auth_token = data.get("auth_token")
