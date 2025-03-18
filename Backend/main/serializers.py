@@ -51,7 +51,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'email', 'firstName', 'lastName', 'phoneNumber', 'profilePicture', 'password']
+        fields = ['id', 'email', 'firstName','userName', 'lastName', 'phoneNumber', 'profilePicture', 'password']
 
     def validate_role(self, value):
         if value.status != Role.ACTIVE:
@@ -85,7 +85,7 @@ class UserRegistrationSerializer_old(serializers.ModelSerializer):
     )
     class Meta:
         model = User
-        fields = ['email', 'firstName', 'lastName', 'phoneNumber', 'profilePicture', 'role']
+        fields = ['email', 'firstName', 'lastName', 'userName','phoneNumber', 'profilePicture', 'role']
 
 
     def create(self, validated_data):
@@ -115,7 +115,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['email', 'firstName', 'lastName', 'phoneNumber', 'profilePicture', 'role']
+        fields = ['email', 'firstName', 'lastName','userName', 'phoneNumber', 'profilePicture', 'role']
     
     def create(self, validated_data):
         password = get_random_string(length=8)
@@ -485,7 +485,7 @@ class UserProfileRetrieveSerializer(serializers.ModelSerializer):
     role = serializers.SerializerMethodField()
     class Meta:
         model = User
-        fields = ['email', 'firstName', 'lastName', 'fullName','middleName', 'phoneNumber', 'profilePicture', 'PANEL_CLIENT_KEY', 
+        fields = ['email', 'firstName', 'lastName', 'fullName','userName','middleName', 'phoneNumber', 'profilePicture', 'PANEL_CLIENT_KEY', 
                   'start_date', 'end_date', 'client_type' ,
             # Permanent Address Fields
             'permanent_add_line_1', 'permanent_add_line_2', 'permanent_city', 
@@ -507,7 +507,7 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['email','firstName', 'lastName', 'fullName', 'middleName','phoneNumber', 'profilePicture', 'PANEL_CLIENT_KEY', 'start_date', 'end_date', 'client_type',
+        fields = ['email','firstName', 'lastName', 'userName','fullName', 'middleName','phoneNumber', 'profilePicture', 'PANEL_CLIENT_KEY', 'start_date', 'end_date', 'client_type',
             # Permanent Address Fields
             'permanent_add_line_1', 'permanent_add_line_2', 'permanent_city', 
             'permanent_state', 'permanent_country', 'permanent_zip_code','is_address_same',
@@ -518,6 +518,7 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         # Handle fullName and split if provided
         full_name = validated_data.get('fullName')
+        userName=validated_data.get('userName')
         if full_name:
             # Split full name into parts
             name_parts = full_name.split()
@@ -547,6 +548,7 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
             instance.fullName = " ".join(full_name_parts)
 
         # Update other fields
+        instance.userName=validated_data.get('userName',instance.userName)
         instance.email = validated_data.get('email', instance.email)
         instance.phoneNumber = validated_data.get('phoneNumber', instance.phoneNumber)
         instance.profilePicture = validated_data.get('profilePicture', instance.profilePicture)
@@ -891,7 +893,7 @@ class ClientCreateSerializer(serializers.ModelSerializer):
     # Broker = GetBrokerSerializer() 
     class Meta:
         model = User
-        fields = ['id','email', 'firstName', 'lastName', 'phoneNumber', 'fullName', 'middleName','client_key',
+        fields = ['id','email', 'firstName', 'lastName', 'userName','phoneNumber', 'fullName', 'middleName','client_key',
                   'Group_service', 'license', 'user_license_month','to_month', 'created_by', 'assigned_client',
                   'Strategy','client_status','givenservices_to_month','start_date_client','end_date_client','client_expiry_status']
     # Phone number validation
@@ -922,6 +924,7 @@ class ClientCreateSerializer(serializers.ModelSerializer):
         full_name = data.get('fullName')
         phone_number = data.get('phoneNumber')
         email = data.get('email')  # Ensure you get email from the data
+        userName=data.get('userName')
 
         if not full_name:
             raise serializers.ValidationError({'fullName': 'Full name is required.'})
@@ -952,7 +955,7 @@ class ClientCreateSerializer(serializers.ModelSerializer):
             # Assign names based on the number of parts
             data['firstName'] = name_parts[0]
             data['fullName'] = full_name  # Save the original full name
-
+            data['userName']=userName
             if len(name_parts) == 1:
                 # If only one name part, save it as firstName and fullName only
                 data['middleName'] = ""
@@ -1004,7 +1007,7 @@ class ClientListSerializer(serializers.ModelSerializer):
     Broker = GetBrokerSerializer() 
     class Meta:
         model = User
-        fields = ['id','email', 'firstName', 'middleName','fullName', 'lastName', 'client_status','phoneNumber',
+        fields = ['id','email', 'firstName', 'userName','middleName','fullName', 'lastName', 'client_status','phoneNumber',
                   'client_key', 'start_date_client','end_date_client','Broker', 'Group_service','license', 'user_license_month','to_month', 'created_by', 'assigned_client',
                   'Strategy','client_status','givenservices_to_month','demate_acc_uid','start_date_client', 'end_date_client','is_enable',
                   'created_at','client_expiry_status']
@@ -1029,7 +1032,7 @@ class ClientupdateListSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'id', 'email', 'firstName', 'middleName','fullName', 'lastName', 'client_status', 'phoneNumber',# 'client_key','Broker','broker_id''demate_acc_uid',
+            'id', 'email', 'firstName', 'middleName','userName','fullName', 'lastName', 'client_status', 'phoneNumber',# 'client_key','Broker','broker_id''demate_acc_uid',
             'start_date_client', 'end_date_client', 'Group_service', 'license', 'user_license_month',
             'to_month', 'created_by', 'assigned_client', 'Strategy', 'client_status', 'givenservices_to_month',
             'is_enable',
@@ -1038,6 +1041,7 @@ class ClientupdateListSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         # Handle fullName and split it if provided
         full_name = validated_data.get('fullName')
+        userName=validated_data.get('firstName')
         if full_name:
             # Split full name into parts
             name_parts = full_name.split()
@@ -1045,6 +1049,7 @@ class ClientupdateListSerializer(serializers.ModelSerializer):
             # Assign names based on the number of parts
             validated_data['firstName'] = name_parts[0]
             validated_data['fullName'] = full_name  # Save the original full name
+            validated_data['userName']=userName
             
             if len(name_parts) == 1:
                 # If only one name part, set firstName and fullName only

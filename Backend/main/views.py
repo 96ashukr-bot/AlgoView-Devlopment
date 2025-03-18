@@ -1397,7 +1397,9 @@ class ClientCreateView(APIView):
             # Get the existing group service name (if any)
             
             # Get the new group service name
-            new_group_service_name = client.Group_service.group_name if hasattr(client, "Group_service") else None
+            new_group_service_name = getattr(client.Group_service, "group_name", None)
+
+            # new_group_service_name = client.Group_service.group_name if hasattr(client, "Group_service") else None
             print("new_group_service_name::::", new_group_service_name, "new group service name>>>>***********", new_group_service_name)
 
             # Get the existing group service name from the last ClientTradeSetting object

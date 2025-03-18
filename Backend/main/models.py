@@ -64,6 +64,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     firstName = models.CharField(max_length=150)
     middleName = models.CharField(max_length=150,null=True,blank=True)
     lastName = models.CharField(max_length=150,blank=True,null=True)
+    userName = models.CharField(max_length=150,blank=True,null=True)
     fullName = models.CharField(max_length=300, blank=True, editable=False,null=True)  # Will be automatically generated
     profilePicture = models.ImageField(upload_to='profile_pictures/', null=True, blank=True)
     role = models.ForeignKey(Role, on_delete=models.SET_NULL,null=True, blank=True)
@@ -156,7 +157,7 @@ class User(AbstractBaseUser, PermissionsMixin):
                 
         license_type = getattr(self.license, 'name', None)  # Modify 'name' to match your actual attribute
 
-        if license_type == "Live":
+        if license_type == "Live" or license_type == "live":
             print("Inside Live license section")
             if self.to_month:
                 print("inside to month......")
@@ -182,7 +183,7 @@ class User(AbstractBaseUser, PermissionsMixin):
                 self.start_date_client = None
                 self.end_date_client = None
 
-        elif license_type == "Demo":
+        elif license_type == "Demo" or license_type == "demo":
             print("Inside Demo license section")
             # Retain the provided start and end dates as is
             # If you don't need to assign dates, just omit these lines
