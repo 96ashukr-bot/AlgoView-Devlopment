@@ -2,8 +2,8 @@ from django.conf import settings
 from django.core.mail import send_mail
 from django.utils.html import strip_tags
 from main.models import *
-company_profile = CompanyProfileDetails.objects.first()
-# company_profile=None
+from main.companysmtpsetails import smtp_details,company_profile
+company_profile=company_profile if company_profile else None
 # Safely access the fields, ensuring company_profile is not None
 support_email = company_profile.company_support_email if company_profile else None
 contact_number = company_profile.company_phone_number if company_profile else None
@@ -14,7 +14,7 @@ login_link = company_profile.login_link if company_profile else None
 help_center_link = company_profile.help_center_link if company_profile else None
 company_website =company_profile.company_website if company_profile else None
 
-smtp_details=CompanySmtpDetails.objects.first()
+smtp_details=smtp_details
 default_from_email=smtp_details.email_host_user if smtp_details else   "no-reply@example.com" 
 class EmailServicesss:
     

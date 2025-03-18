@@ -18,7 +18,10 @@ from main.models import *
 from main.utils import get_smtp_connection
 from django.templatetags.static import static
     # Get company profile for support email and website
-company_profile = CompanyProfileDetails.objects.first()
+# company_profile = CompanyProfileDetails.objects.first()
+from main.companysmtpsetails import smtp_details,company_profile
+company_profile=company_profile if company_profile else None
+
 support_email = company_profile.company_support_email if company_profile else "support@example.com"
 company_website = company_profile.company_website if company_profile else "https://example.com"
 logo_url = company_profile.company_logo if company_profile else "https://example.com/logo.png"
@@ -31,8 +34,8 @@ if company_profile and company_profile.company_logo:
     logo_url = settings.MEDIA_URL + str(company_profile.company_logo)  # Ensure full URL
 else:
     logo_url = static('company_logos/download.png')  # Fallback to a default logo
-
-smtp_details=CompanySmtpDetails.objects.first()
+smtp_details=smtp_details if smtp_details else None
+# smtp_details=CompanySmtpDetails.objects.first()
 default_from_email=smtp_details.email_host_user if smtp_details else   "no-reply@example.com"
 print("default_from_email>>>>>>",default_from_email)
 #client inactive and license expir ations

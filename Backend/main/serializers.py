@@ -14,8 +14,9 @@ from django.db import transaction
 from rest_framework.validators import UniqueValidator
 from main.email import EmailService
 from django.utils import timezone
-
-company_profile = CompanyProfileDetails.objects.first()
+from main.companysmtpsetails import smtp_details,company_profile
+company_profile=company_profile if company_profile else None
+smtp_details=smtp_details if smtp_details else None
 # company_profile=None
 support_email = company_profile.company_support_email if company_profile else "support@example.com"
 company_website = company_profile.company_website if company_profile else "https://example.com"
@@ -1041,7 +1042,7 @@ class ClientupdateListSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         # Handle fullName and split it if provided
         full_name = validated_data.get('fullName')
-        userName=validated_data.get('firstName')
+        userName=validated_data.get('userName')
         if full_name:
             # Split full name into parts
             name_parts = full_name.split()
@@ -1223,7 +1224,7 @@ class ClientListdetailsSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'id', 'email', 'firstName', 'middleName', 'fullName', 'lastName', 'client_status', 'phoneNumber',
+            'id', 'email', 'firstName','userName', 'middleName', 'fullName', 'lastName', 'client_status', 'phoneNumber',
             'client_key', 'start_date_client', 'end_date_client', 'Broker', 'Group_service', 'license',
             'user_license_month', 'to_month', 'created_by', 'assigned_client', 'Strategy', 'client_status',
             'givenservices_to_month', 'demate_acc_uid', 'start_date_client', 'end_date_client', 'is_enable',

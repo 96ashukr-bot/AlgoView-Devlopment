@@ -508,6 +508,7 @@ class CompanyProfileDetails(models.Model):
     help_center_link = models.URLField(blank=True, null=True)  # Assuming this is a URL
     company_website = models.URLField(blank=True, null=True)  # Assuming this is a URL
     company_sender_name = models.CharField(max_length=255, blank=True, null=True)
+    company_favicon=models.ImageField(upload_to='company_favicon/', blank=True, null=True)
     def __str__(self):
         return self.company_name if self.company_name else "Unnamed Company"
 class WebsocketDetails(models.Model):

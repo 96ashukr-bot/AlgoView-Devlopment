@@ -54,14 +54,14 @@ import pyotp
 # from time import sleep
 import numpy as np
 import pytz
-
+from main.companysmtpsetails import smtp_details,company_profile
 USER_ID=config('USER_ID')
 ALICE_API_KEY=config('ALICE_API_KEY')
 import logging
 logger = logging.getLogger('main')
 UserModel = get_user_model()
 
-company_profile = CompanyProfileDetails.objects.first()
+company_profile = company_profile
 # company_profile=None
 support_email = company_profile.company_support_email if company_profile else "support@example.com"
 company_website = company_profile.company_website if company_profile else "https://example.com"
@@ -70,7 +70,7 @@ login_link = company_profile.login_link if company_profile else "https://www.adm
 help_center_link = company_profile.help_center_link if company_profile else "https://www.admin.algoview.in/login"  
 contact_number = company_profile.company_phone_number if company_profile else None
 
-smtp_details=CompanySmtpDetails.objects.first()
+smtp_details=smtp_details
 default_from_email=smtp_details.email_host_user if smtp_details else   "no-reply@example.com" 
 # get Role Views
 class RoleListCreateView(generics.ListCreateAPIView):
