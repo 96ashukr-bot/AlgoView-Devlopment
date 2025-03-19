@@ -277,7 +277,7 @@ def exit_existing_buy_position_Aliceblue(LivePrice,group_service, Type, day, mon
                 print("price_of_order>>>", int(price_of_order))
                 symbol = symbol.upper()
                 trade_symbol = f"{symbol}{day}{month}{year}{Type[0]}{int(price_of_order)}"
-                print("trade_symbol alice blue >>>>", trade_symbol)
+                logger.info("trade_symbol alice blue sell >>>>", trade_symbol)
                 if trade_symbol != old_trade_symbol:
                     msg=f"sell request not matching with existing order :{old_trade_symbol} new symbol: {trade_symbol} client: {user}"
                     logger.info(f"{msg}")  
