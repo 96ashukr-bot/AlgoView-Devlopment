@@ -607,7 +607,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'email', 'firstName', 'lastName', 'fullName','middleName','phoneNumber',   
+        fields = ['id', 'email', 'firstName', 'lastName', 'userName','fullName','middleName','phoneNumber',   
             # Permanent Address Fields
             'permanent_add_line_1', 'permanent_add_line_2', 'permanent_city', 
             'permanent_state', 'permanent_country', 'permanent_zip_code',
@@ -1008,7 +1008,7 @@ class ClientListSerializer(serializers.ModelSerializer):
     Broker = GetBrokerSerializer() 
     class Meta:
         model = User
-        fields = ['id','email', 'firstName', 'userName','middleName','fullName', 'lastName', 'client_status','phoneNumber',
+        fields = ['id','email', 'firstName', 'userName','middleName','fullName','phoneNumber' ,'lastName', 'client_status','phoneNumber',
                   'client_key', 'start_date_client','end_date_client','Broker', 'Group_service','license', 'user_license_month','to_month', 'created_by', 'assigned_client',
                   'Strategy','client_status','givenservices_to_month','demate_acc_uid','start_date_client', 'end_date_client','is_enable',
                   'created_at','client_expiry_status']

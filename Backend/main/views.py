@@ -418,6 +418,14 @@ class UserManagementView(APIView):
             # .annotate(client_count=Count('assigned_users')).prefetch_related(
             #     Prefetch('assigned_users', queryset=User.objects.all(), to_attr='assigned_users_list') ).order_by('-id')
             logger.info("Admin:::{user.role.name}")
+        search_query = request.query_params.get('q', '').strip()
+        if search_query:
+            users = users.filter(
+                Q(firstName__icontains=search_query) |
+                Q(phoneNumber__icontains=search_query) |
+                Q(email__icontains=search_query)
+            )
+    
         paginator = CustomPageNumberPagination()
         result_page = paginator.paginate_queryset(users, request)
         serializer = UserSerializer(result_page, many=True)
@@ -1272,16 +1280,28 @@ class ClientFilterView(APIView):
             | Q(assigned_client=user))).order_by('-id')
             # clients = User.objects.filter(type_of_user='is_client',is_client=True, created_by=user).order_by('-id')
                 # Apply additional filters based on query parameters
+                # Get the search query from request params
+        search_query = request.query_params.get('q', '').strip()
+
+        # If a search query is provided, search across multiple fields
+        if search_query:
+            clients = clients.filter(
+                Q(userName__icontains=search_query) |
+                Q(fullName__icontains=search_query) |
+                Q(email__icontains=search_query) |
+                Q(phoneNumber__icontains=search_query)
+            )
         license_type = request.query_params.get('client_type') 
         trading_status = request.query_params.get('trading_type')  
         # broker_type = request.query_params.get('broker_type') 
-
+        
         if license_type:
             clients = clients.filter(license__name__iexact=license_type)
         
         if trading_status:
             clients = clients.filter(is_enable=(trading_status.lower() == 'on'))
-        
+
+
         # if broker_type:
         #     clients = clients.filter(Broker__name__icontains=broker_type)
         # Apply pagination and serialize the data
@@ -1572,10 +1592,26 @@ class ClientsDataView(APIView):
             print(current_date)
             # Fetch clients whose end_date_client has expired and who are of type 'is_client'
             expiry_client = User.objects.filter(client_expiry_status=True, type_of_user='is_client',is_client=True)
-            # Serialize the data
-            serializer = ClientListSerializer(expiry_client, many=True)
-            return Response({"expiry_client_list": serializer.data}, status=status.HTTP_200_OK)
-        
+
+            # Apply search filter
+            search_query = request.query_params.get('q', '').strip()
+            if search_query:
+                expiry_client = expiry_client.filter(
+                    Q(firstName__icontains=search_query) |
+                    Q(email__icontains=search_query) |
+                    Q(phoneNumber__icontains=search_query)
+                )
+
+            # Apply pagination
+            paginator = CustomPageNumberPagination()
+            result_page = paginator.paginate_queryset(expiry_client, request)
+
+            # Serialize the paginated data
+            serializer = ClientListSerializer(result_page, many=True)
+
+            # Return paginated response
+            return paginator.get_paginated_response({"expiry_client_list": serializer.data})
+
         except User.DoesNotExist:
             return Response({"detail": "Client not found."}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
@@ -1993,7 +2029,13 @@ class ActiveClientsView(APIView):
                 Q(type_of_user='is_client') & Q(is_client=True) & Q(client_status=True) &
                 (Q(created_by=user) | Q(assigned_client=user))
             ).order_by('-id')
-        
+        search_query = request.query_params.get('q', '').strip()    
+        clients = clients.filter(
+            Q(firstName__icontains=search_query) |
+            Q(phoneNumber__icontains=search_query) | 
+            Q(email__icontains=search_query)
+        )
+
         # Apply pagination and serialize the data
         paginator = CustomPageNumberPagination()
         result_page = paginator.paginate_queryset(clients, request)
@@ -2017,7 +2059,13 @@ class InactiveClientsView(APIView):
                 Q(type_of_user='is_client') & Q(is_client=True) & Q(client_status=False) &
                 (Q(created_by=user) | Q(assigned_client=user))
             ).order_by('-id')
-        
+        search_query = request.query_params.get('q', '').strip()    
+        clients = clients.filter(
+            Q(firstName__icontains=search_query) |
+            Q(phoneNumber__icontains=search_query) |  
+            Q(email__icontains=search_query)
+        )
+
         # Apply pagination and serialize the data
         paginator = CustomPageNumberPagination()
         result_page = paginator.paginate_queryset(clients, request)
