@@ -26,6 +26,26 @@ ALICE_API_KEY=config('ALICE_API_KEY')
 import logging
 logger = logging.getLogger('main')
 from pya3 import Aliceblue, TransactionType, OrderType, ProductType
+
+def fetch_instrument_data(alice, exchange="NFO"):
+    file_path = f"{exchange}.csv"
+    now = datetime.now()
+
+    # Check if file exists and is updated today
+    if os.path.exists(file_path):
+        file_mod_time = datetime.fromtimestamp(os.path.getmtime(file_path))
+        if file_mod_time.date() == now.date():
+            logger.info(f"{file_path} is already updated today.............")
+            return
+
+    # Force download the latest instrument file after 8:00 AM
+    if now.hour >= 8:
+        logger.info(f"Downloading fresh {exchange} data...")
+        alice.get_contract_master(exchange)
+        logger.info(f"{exchange}.csv updated successfully...........")
+    else:
+        logger.info("Market data not available yet — try after 8:00 AM..............")
+
 # from pya3.enums import TransactionType  # Adjust import based on your library
 def place_alice_orders(LivePrice,group_service,api_skey,api_uid,trading_symbol_aliceblue,transaction_type, symbol, quantity, strategy, 
     order_type, product_type, price, user,Lots, trade_order_status, Entry_type,Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal, Exchange, Segment,Index_Symbol, trigger_price=None):
@@ -92,7 +112,9 @@ def place_alice_orders(LivePrice,group_service,api_skey,api_uid,trading_symbol_a
         else:
             product_type=None
         # Place the order
+        
         if Exchange=="NFO":
+            fetch_instrument_data(alice, exchange="NFO")
             logger.info(f"exchnage symbole....{trading_symbol_aliceblue}")
             instrument = alice.get_instrument_by_symbol("NFO", trading_symbol_aliceblue)
             logger.info(f"instrument>>>{instrument}")
@@ -467,7 +489,7 @@ class SymbolExpirDateListView(APIView):
 
         try:
             # Define the CSV file path
-            csv_file_path = "NFO.csv"
+            csv_file_path = "NFO_list.csv"
 
             # Check if the file exists and is up-to-date
             if os.path.exists(csv_file_path):
