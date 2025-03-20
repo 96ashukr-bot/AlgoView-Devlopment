@@ -17,6 +17,7 @@ Backend/AlgoView-Devlopment/Backend/main/__pycache__/
 /localenv
 algoview/__pycache__
 # logs/webhooks.log
+
  
  #  Backend/media/company_logos/*.png
 # Ignore all PNG and JPG files in Backend/media folders (recursively)
@@ -24,7 +25,8 @@ Backend/media/strategy/**/*.png
 Backend/media/strategy/**/*.jpg
 Backend/media/strategy/**/*.jpeg
 media/strategy/Strategy_Tester/*.jpg
-
+Backend/media/company_logos/**/*.jpeg
+Backend/media/company_favicon/*.png
 
 Backend/media/kyc_documents/**/*.png
 Backend/media/kyc_documents/**/*.jpg
