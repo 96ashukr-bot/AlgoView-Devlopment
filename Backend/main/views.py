@@ -3927,7 +3927,7 @@ class TradeorderhistoryListView(APIView):
             
             # Dynamically apply filters based on the provided parameters
             filters = Q()
-
+            search_query = request.query_params.get('q', '').strip()
             # Apply date filter (from_date and to_date)
             if from_date:
                 from_date = datetime.strptime(from_date, "%Y-%m-%d")
@@ -3948,7 +3948,20 @@ class TradeorderhistoryListView(APIView):
             # Apply strategy filter
             if broker and broker.lower() != 'all':
                 filters &= Q(broker__iexact=broker)
-# 
+            # 🔍 **Search Filter (Client name, broker, index symbol, trading symbol)**
+            if search_query:
+                filters &= (
+                    Q(client__email__icontains=search_query) |
+                    Q(client__fullName__icontains=search_query) |
+                    Q(broker__icontains=search_query) |
+                    Q(Index_Symbol__icontains=search_query) |
+                    Q(trading_symbol__icontains=search_query)|
+                    Q(GroupService__icontains=search_query)
+                )
+
+            # Apply all filters
+            trade_history = trade_history.filter(filters)
+
             # Apply the filters to the query
             trade_history = trade_history.filter(filters)
 
@@ -3993,7 +4006,7 @@ class ClientTradeListView(APIView):
                 
             # Dynamically apply filters based on the provided parameters
             filters = Q()
-
+            search_query = request.query_params.get('q', '').strip()
             # Apply date filter (from_date and to_date)
             if from_date:
                 try:
@@ -4020,6 +4033,16 @@ class ClientTradeListView(APIView):
             # Apply strategy filter
             if strategy and strategy.lower() != 'all':
                 filters &= Q(strategy__iexact=strategy)
+            # 🔍 **Search Filter (Client name, broker, index symbol, trading symbol)**
+            if search_query:
+                filters &= (
+                    Q(client__email__icontains=search_query) |
+                    Q(client__fullName__icontains=search_query) |
+                    Q(broker__icontains=search_query) |
+                    Q(Index_Symbol__icontains=search_query) |
+                    Q(trading_symbol__icontains=search_query)|
+                    Q(GroupService__icontains=search_query)
+                )
 
             # Apply the filters to the query
             trade_history = trade_history.filter(filters)

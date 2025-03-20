@@ -42,7 +42,7 @@ holidays
 kiteconnect
 py5paisa
 dhanhq== 2.0.2
-
+numpy
 celery
 razorpay== 1.4.2
 user-agents ==2.2.0
