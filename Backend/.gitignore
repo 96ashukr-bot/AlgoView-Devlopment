@@ -42,6 +42,10 @@ Backend/media/company_logos/**/*.jpeg
 Backend/logs/
 NFO.csv
 ANGLE_NFO.csv
+
+Backend/media/**/*.png
+Backend/media/**/*.jpg
+Backend/media/**/*.jpeg
 # Ignore compiled Python files
 __pycache__/
 *.pyc
