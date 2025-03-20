@@ -2446,7 +2446,7 @@ def place_order_broker(LivePrice,group_service,
         print("alice blue is matchedddddddddddddddddd")
         symbol=symbol.upper()
         trading_symbol_aliceblue = f"{symbol}{day}{month}{year}{Type[0]}{default_price}"
-        logger.info("trading_symbol_aliceblue..:::::: %s %s", trading_symbol_aliceblue,symbol)
+        logger.info("trading_symbol_aliceblue..:::::: %s ", trading_symbol_aliceblue)
         trade_symbol=trading_symbol_aliceblue
         # Fetch client broker details
         client_broker = ClientBrokerdetails.objects.filter(client=trade.client, broker_name__broker_name__iexact=trade.broker).first()
