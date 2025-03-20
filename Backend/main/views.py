@@ -1349,6 +1349,16 @@ class ClientCreateView(APIView):
             | Q(assigned_client=user))).order_by('-id')
             # clients = User.objects.filter(type_of_user='is_client',is_client=True, created_by=user).order_by('-id')
                 # Apply additional filters based on query parameters
+        search_query = request.query_params.get('q', '').strip()
+
+        # If a search query is provided, search across multiple fields
+        if search_query:
+            clients = clients.filter(
+                Q(userName__icontains=search_query) |
+                Q(fullName__icontains=search_query) |
+                Q(email__icontains=search_query) |
+                Q(phoneNumber__icontains=search_query)
+            )        
         paginator = CustomPageNumberPagination()
         result_page = paginator.paginate_queryset(clients, request)
         serializer = ClientListSerializer(result_page, many=True)
