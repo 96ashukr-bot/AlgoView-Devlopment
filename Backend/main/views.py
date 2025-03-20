@@ -770,6 +770,12 @@ class SegmentAPIView(APIView):
     #     return Response(serializer.data, status=status.HTTP_200_OK)
     def get(self, request, *args, **kwargs):
         segments = Segment.objects.all().order_by('-id')
+        search_query = request.query_params.get('q', '').strip()
+        if search_query:
+            segments = segments.filter(Q(name__icontains=search_query)|
+                                       Q(status__icontains=search_query)|
+                                       Q(short_name__icontains=search_query))
+            
         paginator = CustomPageNumberPagination()
         result_page = paginator.paginate_queryset(segments, request)
         serializer = SegmentSerializer(result_page, many=True)
@@ -827,6 +833,9 @@ class CategoryAPIView(APIView):
     #     return Response(serializer.data, status=status.HTTP_200_OK)
     def get(self, request, *args, **kwargs):
         category_list = categories.objects.all().order_by('-id')
+        search_query = request.query_params.get('q', '').strip()
+        if search_query:
+            category_list = category_list.filter(Q(name__icontains=search_query))
         paginator = CustomPageNumberPagination()
         result_page = paginator.paginate_queryset(category_list, request)
         serializer = CategorySerializer(result_page, many=True)
@@ -916,6 +925,10 @@ class ServiceAPIView(APIView):
     permission_classes = [IsAuthenticated]
     def get(self, request, *args, **kwargs):
         services = Services.objects.all().order_by('-id')
+        search_query = request.query_params.get('q', '').strip()
+        if search_query:
+            services = services.filter(Q(service_name__icontains=search_query))
+            
         paginator = CustomPageNumberPagination()  
         result_page = paginator.paginate_queryset(services, request)  
         serializer = ServiceSerializer(result_page, many=True)  
@@ -981,6 +994,10 @@ class GroupServiceView(APIView):
             logger.debug("GroupServiceView GET request received")  # DEBUG message
             
             group_ser = GroupService.objects.all().order_by('-id')
+            search_query = request.query_params.get('q', '').strip()
+            group_ser = group_ser.filter(
+                Q(group_name__icontains=search_query) 
+            )
             paginator = CustomPageNumberPagination()
             result_page = paginator.paginate_queryset(group_ser, request)
             
@@ -1164,6 +1181,9 @@ class StrategyAPIView(APIView):
     # permission_classes = [IsAuthenticated]
     def get(self, request, *args, **kwargs):
         strategies = Strategies.objects.all().order_by('-id')
+        search_query = request.query_params.get('q', '').strip()
+        if search_query:
+            strategies = strategies.filter(Q(name__icontains=search_query))
         paginator = CustomPageNumberPagination()
         result_page = paginator.paginate_queryset(strategies, request)
         serializer = GetStrategySerializer(result_page, many=True)
@@ -1220,12 +1240,16 @@ class BrokerView(APIView):
         if broker_id:
             try:
                 broker = Broker.objects.get(pk=broker_id)
+
                 serializer = GetBrokerSerializer(broker)
                 return Response(serializer.data, status=status.HTTP_200_OK)
             except Broker.DoesNotExist:
                 return Response({"detail": "Broker not found."}, status=status.HTTP_404_NOT_FOUND)
         else:
             brokers = Broker.objects.all()
+            search_query = request.query_params.get('q', '').strip()
+            if search_query:
+                brokers = brokers.filter(Q(broker_name__icontains=search_query))
             serializer = GetBrokerSerializer(brokers, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -3002,7 +3026,15 @@ class ClientsTradeStatusView(APIView):
                 Q(type_of_user='is_client') & Q(is_client=True) &
                 (Q(created_by=user) | Q(assigned_client=user))
             ).order_by('-id')
-        
+        # 🔍 **Search Filter (Client name, broker, index symbol, trading symbol)**
+        search_query = request.query_params.get('q', '').strip()
+        clients = clients.filter(
+            Q(firstName__icontains=search_query) |
+            Q(phoneNumber__icontains=search_query) | 
+            Q(email__icontains=search_query)
+        )
+
+
         # Apply pagination and serialize the data
         paginator = CustomPageNumberPagination()
         result_page = paginator.paginate_queryset(clients, request)
