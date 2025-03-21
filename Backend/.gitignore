@@ -18,9 +18,10 @@ Backend/AlgoView-Devlopment/Backend/main/__pycache__/
 algoview/__pycache__
 # logs/webhooks.log
 cron_broker_log.log
+cron_trading_error.log
 cron_trading_log.log
-
- 
+logs/websocket_token_log.log
+/media/
  #  Backend/media/company_logos/*.png
 # Ignore all PNG and JPG files in Backend/media folders (recursively)
 Backend/media/strategy/**/*.png
