@@ -53,6 +53,7 @@ def send_client_acc_email_async(subject,messages,username,useremail):
             'company_website':company_website , 
             "messages":messages,
             "company_name":company_name,
+            "logo_url":logo_url
         }
         html_message = render_to_string('login_account_email.html', context)
         # print("html_message",html_message)
@@ -70,6 +71,7 @@ def send_email_async(user_name, otp_code, email):
     subject=f"Your OTP for {company_name} Login"
     from_email = default_from_email
     # Define the context for the email template
+    print("logo_url**************",logo_url)
     context = {
         'user_name': user_name,
         'otp_code': otp_code,            
@@ -113,7 +115,8 @@ def send_email_pass_async(email, password, user_name, login_link, support_email,
             'help_center': help_center_link,
             'company_website': company_website,
             'contact_number': contact_number,
-            'company_name':company_name
+            'company_name':company_name,
+            'logo_url':logo_url
         }
         html_message = render_to_string('welcome_email.html', context)
         # print("html msg:::::::",html_message)
@@ -150,6 +153,7 @@ def send_kyc_email_async(email, from_email, user_name, action, reason):
         'company_website': company_website,
         'contact_number': contact_number,
         "company_name":company_name,
+        "logo_url":logo_url
     }
     html_message = render_to_string('kyc_email.html', context)
   
@@ -179,6 +183,7 @@ def send_trade_email_async(email, from_email, user_name, status, reason):
         'company_website': company_website,
         'contact_number': contact_number,
         "company_name":company_name,
+        "logo_url":logo_url
     }
     html_message = render_to_string('trade.html', context)
   
@@ -199,7 +204,7 @@ def resend_otp_email_async(user_email, otp_code):
         'valid_for_minutes': 2,  # Adjust as needed
         'support_email': support_email,
         'company_website': company_website,
-        'logo': logo_url,
+        'logo_url': logo_url,
         "company_name":company_name,
     }
 
@@ -239,6 +244,7 @@ def send_login_success_email(username, email, browser, ip_address, login_time):
         'contact_number': contact_number,
         'address': "123 Business Street,indore M.P.",
         'logout_link': "https://sparksadmin.algoview.in/logout",
+        "logo_url":logo_url
     }
 
     # Render HTML email
@@ -270,7 +276,8 @@ def send_password_reset_email(uid, email, username, token):
         'reset_link': reset_link,
         'company_name': company_name, 
         'company_url': company_website,
-        'support_email': support_email
+        'support_email': support_email,
+        'logo_url':logo_url
     }
     
     html_message = render_to_string('password_reset_email.html', context)

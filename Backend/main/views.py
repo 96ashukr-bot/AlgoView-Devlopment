@@ -3039,7 +3039,7 @@ class ClientsTradeStatusView(APIView):
         # 🔍 **Search Filter (Client name, broker, index symbol, trading symbol)**
         search_query = request.query_params.get('q', '').strip()
         clients = clients.filter(
-            Q(firstName__icontains=search_query) |
+            Q(fullName__icontains=search_query) |
             Q(phoneNumber__icontains=search_query) | 
             Q(email__icontains=search_query)
         )

@@ -677,9 +677,9 @@ class KYCSerializer(serializers.ModelSerializer):
             'verified_by', 'created_at', 'updated_at', 'address_proof_id', 'address_prof_front', 'address_prof_back'
         ]
         read_only_fields = ['user', 'created_at', 'updated_at', 'is_verified', 'verified_by']  # Restrict updates on some fields
-    def get_user_name(self, obj):
+    def get_user_namesss(self, obj):
         if obj.user:
-            return f"{obj.user.firstName} {obj.user.lastName}"  # Get the full name of the user
+            return f"{obj.user.fName} {obj.user.lastName}"  # Get the full name of the user
         return "NO name available"
     def get_first_name(self, obj):
         return obj.user.firstName if obj.user else None
@@ -692,6 +692,9 @@ class KYCSerializer(serializers.ModelSerializer):
 
     def get_phone(self, obj):
         return obj.user.phoneNumber if obj.user else None
+        # ✅ New method to fetch userName
+    def get_user_name(self, obj):
+        return obj.user.fullName if obj.user and obj.user.fullName else None
 class PermissionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Permission
