@@ -17,6 +17,8 @@ Backend/AlgoView-Devlopment/Backend/main/__pycache__/
 /localenv
 algoview/__pycache__
 # logs/webhooks.log
+cron_broker_log.log
+cron_trading_log.log
 
  
  #  Backend/media/company_logos/*.png
