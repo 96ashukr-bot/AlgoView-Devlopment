@@ -3730,3 +3730,11 @@ RuntimeError: You called this URL via POST, but the URL doesn't end in a slash a
 2025-03-26 18:30:29 - django.server - INFO - "GET /media/profile_pictures/Screenshot_from_2025-02-05_22-01-12.png HTTP/1.1" 304 0
 2025-03-26 18:30:29 - django.server - INFO - "OPTIONS /active-client-list/ HTTP/1.1" 200 0
 2025-03-26 18:30:29 - django.server - INFO - "GET /active-client-list/ HTTP/1.1" 200 29538
+2025-03-26 18:57:49 - django.utils.autoreload - INFO - /home/yashi/Desktop/AlgoProject/AlgoView-Devlopment/Backend/main/views.py changed, reloading.
+2025-03-26 18:57:51 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2025-03-26 19:06:58 - django.utils.autoreload - INFO - /home/yashi/Desktop/AlgoProject/AlgoView-Devlopment/Backend/main/companysmtpsetails.py changed, reloading.
+2025-03-26 19:06:59 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2025-03-26 19:08:33 - django.utils.autoreload - INFO - /home/yashi/Desktop/AlgoProject/AlgoView-Devlopment/Backend/main/serializers.py changed, reloading.
+2025-03-26 19:08:34 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2025-03-26 19:08:52 - django.utils.autoreload - INFO - /home/yashi/Desktop/AlgoProject/AlgoView-Devlopment/Backend/main/companyprofile.py changed, reloading.
+2025-03-26 19:08:53 - django.utils.autoreload - INFO - Watching for file changes with StatReloader

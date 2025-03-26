@@ -25,8 +25,8 @@ login_link = company_profile.login_link if company_profile else "https://www.adm
 help_center_link = company_profile.help_center_link if company_profile else "https://www.admin.algoview.in/login"  
 contact_number = company_profile.company_phone_number if company_profile else None
 
-smtp_details=None
-# smtp_details=CompanySmtpDetails.objects.first()
+# smtp_details=None
+smtp_details=CompanySmtpDetails.objects.first()
 default_from_email=smtp_details.email_host_user if smtp_details else   "no-reply@example.com" 
 class RoleSerializer(serializers.ModelSerializer):
     class Meta:
