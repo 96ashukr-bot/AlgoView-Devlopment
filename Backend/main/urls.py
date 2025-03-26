@@ -108,6 +108,9 @@ urlpatterns = [
     path('client-trade-settings/update/', UpdateClientTradeSettingAPIView.as_view(), name='update-trade-setting'),
     path('get-client-trade-setting/', GetTradeSettingAPIView.as_view(), name='get-trade-settings'),
     #  path('update-trade-status/', UpdateTradeStatusView.as_view(), name='update_client_setting'),
+    path('clients/trading/status/count/', ClientTradingStatusCountView.as_view(), name='client-trading-status-count'),
+    path('clients/onboarding/stats/', ClientOnboardingStatsView.as_view(), name='client-onboarding-stats'),
+
  
     path('get-client-segments-list/', UpdateTradeSettingStatusView.as_view(), name='get-trade-settings'),
     # path('get-count-client/',SubAdminAllClientView.as_view(),name='active-inactive-client')
@@ -132,8 +135,9 @@ urlpatterns = [
     path('update-client-status/<int:pk>/', ClientCreateView.as_view(), name='update-client-status'),
     path('get-trade-history/', TradeorderhistoryListView.as_view(), name='get-trade-history'),  
     path('get-client-trade-history/', ClientTradeListView.as_view(), name='get-client-trade-history'), 
-    path('clients-filter/', ClientFilterView.as_view(), name='client-list'),
+    path('clients-filter/', ClientFilterView.as_view(), name='client-list'),   
     path('client-dashboard-redirect/',ClientDashBoardView.as_view(),name='client-dashboard-'),
+   
     
     path("broker_auth_login/",BrokerLoginRedirectView.as_view(), name="login_broker"),#AUTH2.0
    

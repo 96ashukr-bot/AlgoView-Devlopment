@@ -78,6 +78,7 @@ class RoleListCreateView(generics.ListCreateAPIView):
     queryset=Role.objects.all().order_by('-id')
     serializer_class = RoleSerializer
     permission_classes = [permissions.IsAuthenticated]
+
 class GetRoleListAPIView(APIView):
     permission_classes = [permissions.IsAuthenticated]
     def get(self, request, *args, **kwargs):
@@ -205,6 +206,7 @@ class OTPVerifyView(generics.GenericAPIView):
         response_data['ekyc_status'] = ekyc_status
 
         return Response(response_data, status=status.HTTP_200_OK)
+
 #resend otp
 class ResendOTPView(APIView):
     pagination_class = None
@@ -243,6 +245,7 @@ class ResendOTPView(APIView):
         message = f'Your OTP code is {otp_code}.'
         from_email = default_from_email
         send_mail(subject, message, from_email, [email]) 
+
 #change password
 class ChangePasswordView(generics.GenericAPIView):
     pagination_class = None
@@ -355,6 +358,7 @@ class PasswordResetConfirmView(generics.GenericAPIView):
         user.save()
         
         return Response({'detail': 'Password has been reset successfully.'}, status=status.HTTP_200_OK)
+
 #user assign role api    
 class UserAssignRoleView(generics.UpdateAPIView):
     pagination_class = None
@@ -370,12 +374,14 @@ class UserAssignRoleView(generics.UpdateAPIView):
             return Response(serializer.data)
         except Exception as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
 #pagination of users list
 class CustomPageNumberPagination(PageNumberPagination):
     page_size = 10  # Default page size
     page_size_query_param = 'page_size'  # Allows the client to set the page size dynamically
     max_page_size = 100  # Max limit for page size to avoid performance issues
     page_query_param = 'page_number'  # Allows the client to set the page number
+
 class GetUser(APIView):
     permission_classes = [permissions.IsAuthenticated,  ]
     def get(self, request, pk, *args, **kwargs): 
@@ -536,6 +542,7 @@ class GetKYCView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         except KYC.DoesNotExist:
             return Response({'message': 'KYC not found for this user.'}, status=status.HTTP_404_NOT_FOUND)  
+
 class GetKYCByIdView(APIView):
     # permission_classes = [IsAuthenticated]
     pagination_class = None
@@ -658,6 +665,7 @@ def log_user_logout(sender, request, user, **kwargs):
         activity_log.mark_logout()
     except UserActivityLog.DoesNotExist:
         pass  
+
 class UserActivityLogListView(ListAPIView):
     pagination_class = None
     queryset = UserActivityLog.objects.all()
@@ -714,6 +722,7 @@ class Get_city_data(APIView):
             "status": "success",
             "data": serializer.data
         }, status=status.HTTP_200_OK)
+
 #search city name
 class CitySearchView(APIView):
     permission_classes = [IsAuthenticated]
@@ -724,6 +733,7 @@ class CitySearchView(APIView):
             serializer = CitesSerializer(city, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response([], status=status.HTTP_200_OK)
+
 #get all states name
 class GetStatesView(APIView):
     permission_classes = [IsAuthenticated]
@@ -736,6 +746,7 @@ class GetStatesView(APIView):
         return Response({
             "status":"sucess",
             "data":ser.data }, status=status.HTTP_200_OK)
+
 class SearchStatesView(APIView):
     permission_classes = [IsAuthenticated]
     def get(self, request):
@@ -745,6 +756,7 @@ class SearchStatesView(APIView):
             serializer = StatesSerializers(city, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response([], status=status.HTTP_200_OK)      
+
 #segment crud apis
 class SegmentlistAPIView(APIView):
     permission_classes = [IsAuthenticated]
@@ -757,6 +769,7 @@ class SegmentlistAPIView(APIView):
             return Response({"error": "Segments not found."}, status=404)
         
         return Response(serializer.data, status=status.HTTP_200_OK)
+
 class SegmentAPIView(APIView):
     permission_classes = [IsAuthenticated]
     
@@ -808,6 +821,7 @@ class SegmentAPIView(APIView):
             return Response({"msg": "Segment deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
         except Segment.DoesNotExist:
             return Response({"detail": "Segment not found."}, status=status.HTTP_404_NOT_FOUND)
+
 class CategorylistAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -921,6 +935,7 @@ class ServicelistAPIView(APIView):
         except Services.DoesNotExist:
             return Response({"error": "serices not found."}, status=404)
         return Response(serializer.data, status=status.HTTP_200_OK) 
+
 class ServiceAPIView(APIView):
     permission_classes = [IsAuthenticated]
     def get(self, request, *args, **kwargs):
@@ -962,6 +977,7 @@ class ServiceAPIView(APIView):
             return Response({"msg": "Services deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
         except Services.DoesNotExist:
             return Response({"detail": "Services not found."}, status=status.HTTP_404_NOT_FOUND)
+
 #group services api
 class GroupServicelistView(APIView):
     permission_classes = [IsAuthenticated]
@@ -1087,6 +1103,7 @@ class GroupServiceView(APIView):
             "msg": f"Entry with S.No '{s_no_to_delete}' deleted successfully.",
             "updated_data": GroupServiceSerializer(group_service).data
         }, status=status.HTTP_200_OK)
+
 #api for update json data inside group service
 class GroupServiceJsonUpdateView(APIView):
     def patch(self, request, *args, **kwargs):
@@ -1232,6 +1249,7 @@ class GetStrategyAPIView(APIView):
             return Response({"detail": "Strategy not found."}, status=status.HTTP_404_NOT_FOUND)
 
         return Response(serializer.data, status=status.HTTP_200_OK)        
+
 class BrokerView(APIView):
     permission_classes = [permissions.IsAuthenticated]
     def get(self, request, *args, **kwargs):
@@ -1287,6 +1305,7 @@ class BrokerView(APIView):
             return Response({"detail": "Broker deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
         except Broker.DoesNotExist:
             return Response({"detail": "Broker not found."}, status=status.HTTP_404_NOT_FOUND)
+
 import time
 
 class ClientFilterView(APIView):
@@ -1333,6 +1352,7 @@ class ClientFilterView(APIView):
         result_page = paginator.paginate_queryset(clients, request)
         serializer = ClientListSerializer(result_page, many=True)
         return paginator.get_paginated_response(serializer.data)
+
 #Client ADD Api
 class ClientCreateView(APIView):
     permission_classes = [IsAuthenticated]
@@ -1528,6 +1548,197 @@ class ClientCreateView(APIView):
             return Response({"detail": "client deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
         except Broker.DoesNotExist:
             return Response({"detail": "client_id not found."}, status=status.HTTP_404_NOT_FOUND)
+
+# class ClientOnboardingStatsView(APIView):
+#     permission_classes = [IsAuthenticated]
+
+#     def get(self, request, *args, **kwargs):
+#         try:
+#             # Get the filter type from the request
+#             filter_type = request.GET.get('filter', None)
+#             today = datetime.now().date()
+#             start_date = None
+#             end_date = None
+
+#             # If no filter type is provided, return a response with null values
+#             if filter_type is None:
+#                 return Response({
+#                     "filter_type": None,
+#                     "client_count": 0,
+#                     "start_date": None,
+#                     "end_date": None,
+#                     "data": []
+#                 }, status=200)
+
+#             # Determine the date range based on the filter type
+#             if filter_type == 'today':
+#                 start_date = today
+#                 end_date = today
+#             elif filter_type == 'yesterday':
+#                 start_date = today - timedelta(days=1)
+#                 end_date = today - timedelta(days=1)
+#             elif filter_type == 'this_week':
+#                 start_date = today - timedelta(days=today.weekday())  # Start of the week
+#                 end_date = today
+#             elif filter_type == 'this_month':
+#                 start_date = today.replace(day=1)  # Start of the month
+#                 end_date = today
+#             elif filter_type == 'date_range':
+#                 # Get custom date range from query parameters
+#                 from_date = request.GET.get('from_date', None)
+#                 to_date = request.GET.get('to_date', None)
+#                 if from_date and to_date:
+#                     start_date = datetime.strptime(from_date, "%Y-%m-%d").date()
+#                     end_date = datetime.strptime(to_date, "%Y-%m-%d").date()
+#                 else:
+#                     return Response({"message": "Both from_date and to_date are required for date range."}, status=400)
+#             else:
+#                 return Response({"error": "Invalid filter type."}, status=400)
+
+#             # Query to count clients created within the specified date range
+#             client_counts = (
+#                 User.objects
+#                 .filter(created_at__date__range=(start_date, end_date))
+#                 .extra({'created_date': 'date(created_at)'})  # Extract the date part
+#                 .values('created_date')  # Group by the created date
+#                 .annotate(clients=Count('id'))  # Count clients for each date
+#                 .order_by('created_date')  # Order by date
+#             )
+
+#             # Prepare the response data
+#             response_data = {
+#                 "filter_type": filter_type,
+#                 "start_date": start_date,
+#                 "end_date": end_date,
+#                 "data": [
+#                     {"date": entry['created_date'], "clients": entry['clients']}
+#                     for entry in client_counts
+#                 ]
+#             }
+
+#             # Calculate total client count
+#             total_client_count = sum(entry['clients'] for entry in client_counts)
+
+#             # Add total client count to the response
+#             response_data["client_count"] = total_client_count
+
+#             return Response(response_data, status=200)
+
+#         except Exception as e:
+#             return Response({"error": str(e)}, status=500)
+
+class ClientOnboardingStatsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        try:
+            # Get the filter type from the request
+            filter_type = request.GET.get('filter', None)
+            today = datetime.now().date()
+            start_date = None
+            end_date = None
+
+            # If no filter type is provided, return a response with null values
+            if filter_type is None:
+                return Response({
+                    "filter_type": None,
+                    "client_count": 0,
+                    "start_date": None,
+                    "end_date": None,
+                    "data": []
+                }, status=200)
+
+            # Determine the date range based on the filter type
+            if filter_type == 'today':
+                start_date = today
+                end_date = today
+            elif filter_type == 'yesterday':
+                start_date = today - timedelta(days=1)
+                end_date = today - timedelta(days=1)
+            elif filter_type == 'this_week':
+                start_date = today - timedelta(days=today.weekday())  # Start of the week
+                end_date = today
+            elif filter_type == 'this_month':
+                start_date = today.replace(day=1)  # Start of the month
+                end_date = today
+            elif filter_type == 'date_range':
+                # Get custom date range from query parameters
+                from_date = request.GET.get('from_date', None)
+                to_date = request.GET.get('to_date', None)
+                if from_date and to_date:
+                    start_date = datetime.strptime(from_date, "%Y-%m-%d").date()
+                    end_date = datetime.strptime(to_date, "%Y-%m-%d").date()
+                else:
+                    return Response({"message": "Both from_date and to_date are required for date range."}, status=400)
+            else:
+                return Response({"error": "Invalid filter type."}, status=400)
+
+            # Query to count clients created within the specified date range
+            client_counts = (
+                User.objects
+                .filter(
+                    created_at__date__range=(start_date, end_date),
+                    type_of_user='is_client'  # Filter to include only clients
+                )
+                .extra({'created_date': 'date(created_at)'})  # Extract the date part
+                .values('created_date')  # Group by the created date
+                .annotate(clients=Count('id'))  # Count clients for each date
+                .order_by('created_date')  # Order by date
+            )
+
+            # Prepare the response data
+            response_data = {
+                "filter_type": filter_type,
+                "start_date": start_date,
+                "end_date": end_date,
+                "data": [
+                    {"date": entry['created_date'], "clients": entry['clients']}
+                    for entry in client_counts
+                ]
+            }
+
+            # Calculate total client count
+            total_client_count = sum(entry['clients'] for entry in client_counts)
+
+            # Add total client count to the response
+            response_data["client_count"] = total_client_count
+
+            return Response(response_data, status=200)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
+
+
+class ClientTradingStatusCountView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        user = request.user
+        
+        # Determine which clients to include based on user role
+        if user.role and user.role.name.lower() == 'super-admin':
+            # Super-admin can see all clients
+            clients = User.objects.filter(type_of_user='is_client', is_client=True)
+        elif user.role and user.role.name.lower() == 'sub-admin':
+            # Sub-admin can see only their assigned clients
+            clients = User.objects.filter(assigned_client=user, type_of_user='is_client', is_client=True)
+        else:
+            # If the user is neither super-admin nor sub-admin, return an empty response or handle accordingly
+            return Response({"detail": "You do not have permission to view this data."}, status=403)
+
+        # Count active and inactive clients based on the is_enable field
+        active_count = clients.filter(is_enable=True).count()
+        inactive_count = clients.filter(is_enable=False).count()
+
+        # Prepare the response data
+        response_data = {
+            "active_clients": active_count,
+            "inactive_clients": inactive_count
+        }
+
+        return Response(response_data, status=200)
+
+
 class AssignClientToStrategyAPIView(APIView):
     permission_classes = [IsAuthenticated]
     def put(self, request, pk):
@@ -1557,6 +1768,7 @@ class AssignClientToStrategyAPIView(APIView):
     #     # Return the updated strategy with its clients
     #     serializer = StrategyAssignSerializer(strategy)
     #     return Response(serializer.data, status=status.HTTP_200_OK)
+
 class GetclientbyidPIView(APIView):
     permission_classes = [IsAuthenticated]
     def get(self,request, pk, *args, **kwargs): 
@@ -1567,6 +1779,7 @@ class GetclientbyidPIView(APIView):
             return Response({"detail": "client id not found."}, status=status.HTTP_404_NOT_FOUND)
 
         return Response(serializer.data, status=status.HTTP_200_OK)        
+
 class GetStrategyClientView(APIView):
     permission_classes = [IsAuthenticated]
     
@@ -3301,6 +3514,7 @@ class TradeorderhistoryListView_old(APIView):
 
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
 #CLIENT trade all history data 
 class ClientTradeListView_old(APIView):
     permission_classes = [IsAuthenticated]
@@ -3938,117 +4152,245 @@ class ClientStrategyListView(APIView):
 
 
 #trading history api demate rejected and success status
+# class TradeorderhistoryListView(APIView):
+#     permission_classes = [IsAuthenticated]
+
+#     def get(self, request,*args, **kwargs):
+#         try:
+#             user = request.user
+            
+#             # Get filters from request data
+#             from_date = request.GET.get('from_date', None)  # Using GET instead of POST
+#             to_date = request.GET.get('to_date', None)
+#             strategy = request.GET.get('strategy', None)
+#             Index_Symbol = request.GET.get('Index_symbol', None)
+#             order_status = request.GET.get('order_status', None)
+#             broker = request.GET.get('broker', None)
+#             print(f"broker:{broker} Index_Symbol:{Index_Symbol}")
+            
+#             # if user.role and user.role.name.lower() == 'super-admin':
+#             #     # Super-admin can see all clients' trade order histories
+#             #     clients = User.objects.filter(type_of_user='is_client', is_client=True)
+#             #     trade_history = Tradeorderhistory.objects.exclude(order_id=0).filter(client__in=clients).order_by('-id')
+#             # elif user.role and user.role.name.lower() == 'sub-admin':
+#             #     print("inside sub admin is called.....")
+#             #     # Sub-admin can see trade order histories of their assigned clients
+#             #     clients = User.objects.filter(assigned_client=user,type_of_user='is_client', is_client=True)
+#             #     trade_history = Tradeorderhistory.objects.exclude(order_id=0).filter(client__in=clients).order_by('-id')
+#             #     print("trade_history>>>>>>>",trade_history)
+#             # else:
+#             #     trade_history = Tradeorderhistory.objects.exclude(order_id=0).filter(client=user).order_by('-id')
+
+#             if user.role and user.role.name.lower() == 'super-admin':
+#                 clients = User.objects.filter(type_of_user='is_client', is_client=True)
+#                 trade_history = Tradeorderhistory.objects.exclude(order_id=0).exclude(order_id__isnull=True).filter(client__in=clients).order_by('-id')
+#             elif user.role and user.role.name.lower() == 'sub-admin':
+#                 print("inside sub admin is called.....")
+#                 clients = User.objects.filter(assigned_client=user, type_of_user='is_client', is_client=True)
+#                 trade_history = Tradeorderhistory.objects.exclude(order_id=0).exclude(order_id__isnull=True).filter(client__in=clients).order_by('-id')
+#                 print("trade_history>>>>>>>", trade_history)
+#             else:
+#                 trade_history = Tradeorderhistory.objects.exclude(order_id=0).exclude(order_id__isnull=True).filter(client=user).order_by('-id')
+
+            
+#             # Dynamically apply filters based on the provided parameters
+#             filters = Q()
+#             search_query = request.query_params.get('q', '').strip()
+#             # Apply date filter (from_date and to_date)
+#             if from_date:
+#                 from_date = datetime.strptime(from_date, "%Y-%m-%d")
+#                 filters &= Q(date__gte=from_date)
+#             if to_date:
+#                 to_date = datetime.strptime(to_date, "%Y-%m-%d")
+#                 filters &= Q(date__lte=to_date)
+
+#             # Apply symbol filter
+#             if strategy and strategy.lower() != 'all':
+#                 filters &= Q(strategy__iexact=strategy)
+     
+#             # Apply index_symbol filter
+#             if Index_Symbol and Index_Symbol.lower() != 'all':
+               
+#                 filters &= Q(Index_Symbol__iexact=Index_Symbol)
+
+#             # Apply order status filter
+#             if order_status and order_status.lower() != 'all':
+#                 filters &= Q(order_status__iexact=order_status)
+
+#             # Apply strategy filter
+#             if broker and broker.lower() != 'all':
+#                 filters &= Q(broker__iexact=broker)
+#             # 🔍 **Search Filter (Client name, broker, index symbol, trading symbol)**
+#             # if search_query:
+#             #     filters &= (
+#             #         Q(client__email__icontains=search_query) |
+#             #         Q(client__fullName__icontains=search_query) |
+#             #         Q(broker__icontains=search_query) |
+#             #         Q(Index_Symbol__icontains=search_query) |
+#             #         Q(trading_symbol__icontains=search_query)|
+#             #         Q(GroupService__icontains=search_query)
+#             #     )
+
+#             # 🔍 **Search Filter (Client name, broker, index symbol, trading symbol)**
+#             if search_query:
+#                 # Normalize the search query by trimming whitespace
+#                 search_query = search_query.strip()
+#                 search_terms = search_query.split()  # Split the search query into individual terms
+
+#                 # Create a Q object for each term to match against the full name
+#                 full_name_filters = Q()
+#                 for term in search_terms:
+#                     full_name_filters |= Q(client__fullName__icontains=term)  # Match any part of the full name
+
+#                 filters &= (
+#                     full_name_filters |
+#                     Q(client__email__icontains=search_query) |
+#                     Q(broker__icontains=search_query) |
+#                     Q(Index_Symbol__icontains=search_query) |
+#                     Q(trading_symbol__icontains=search_query) |
+#                     Q(GroupService__icontains=search_query)
+#                 )
+
+#             # Apply all filters
+#             trade_history = trade_history.filter(filters)
+            
+#             # Apply the filters to the query
+#             # trade_history = trade_history.filter(filters)
+
+#             print("trade history of subadmin client------",trade_history)
+            
+#             paginator = CustomPageNumberPagination()
+#             result_page = paginator.paginate_queryset(trade_history, request)
+
+#             serializer = TradeorderhistorySerializer(result_page, many=True)
+#             return paginator.get_paginated_response(serializer.data)
+
+#         except Exception as e:
+#             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+# class TradeorderhistoryListView(APIView): 
+#     permission_classes = [IsAuthenticated]
+#     def get(self, request,*args, **kwargs):
+#         try:
+#             user = request.user
+            
+#             # Get filters from request data
+#             from_date = request.GET.get('from_date', None)  # Using GET instead of POST
+#             to_date = request.GET.get('to_date', None)
+#             strategy = request.GET.get('strategy', None)
+#             Index_Symbol = request.GET.get('Index_symbol', None)
+#             order_status = request.GET.get('order_status', None)
+#             broker = request.GET.get('broker', None)
+#             print(f"broker:{broker} Index_Symbol:{Index_Symbol}")
+            
+          
+#             if user.role and user.role.name.lower() == 'super-admin':
+#                 clients = User.objects.filter(type_of_user='is_client', is_client=True)
+#                 trade_history = Tradeorderhistory.objects.exclude(order_id=0).exclude(order_id__isnull=True).filter(client__in=clients).order_by('-id')
+#             elif user.role and user.role.name.lower() == 'sub-admin':
+#                 print("inside sub admin is called.....")
+#                 clients = User.objects.filter(assigned_client=user, type_of_user='is_client', is_client=True)
+#                 trade_history = Tradeorderhistory.objects.exclude(order_id=0).exclude(order_id__isnull=True).filter(client__in=clients).order_by('-id')
+#                 print("trade_history>>>>>>>", trade_history)
+#             else:
+#                 trade_history = Tradeorderhistory.objects.exclude(order_id=0).exclude(order_id__isnull=True).filter(client=user).order_by('-id')
+
+            
+#             # Dynamically apply filters based on the provided parameters
+#             filters = Q()
+#             search_query = request.query_params.get('q', '').strip()
+#             # Apply date filter (from_date and to_date)
+#             if from_date:
+#                 from_date = datetime.strptime(from_date, "%Y-%m-%d")
+#                 filters &= Q(date__gte=from_date)
+#             if to_date:
+#                 to_date = datetime.strptime(to_date, "%Y-%m-%d")
+#                 filters &= Q(date__lte=to_date)
+
+#             # Apply symbol filter
+#             if strategy and strategy.lower() != 'all':
+#                 filters &= Q(strategy__iexact=strategy)
+    
+#             # Apply index_symbol filter
+#             if Index_Symbol and Index_Symbol.lower() != 'all':
+            
+#                 filters &= Q(Index_Symbol__iexact=Index_Symbol)
+
+#             # Apply order status filter
+#             if order_status and order_status.lower() != 'all':
+#                 filters &= Q(order_status__iexact=order_status)
+
+#             # Apply strategy filter
+#             if broker and broker.lower() != 'all':
+#                 filters &= Q(broker__iexact=broker)
+          
+#             # 🔍 **Search Filter (Client name, broker, index symbol, trading symbol)**
+#             if search_query:
+#                 # Normalize the search query by trimming whitespace
+#                 search_query = search_query.strip()
+#                 search_terms = search_query.split()  # Split the search query into individual terms
+
+#                 # Create a Q object for each term to match against the full name
+#                 full_name_filters = Q()
+#                 for term in search_terms:
+#                     full_name_filters |= Q(client__fullName__icontains=term)  # Match any part of the full name
+
+#                 filters &= (
+#                     full_name_filters |
+#                     Q(client__email__icontains=search_query) |
+#                     Q(broker__icontains=search_query) |
+#                     Q(Index_Symbol__icontains=search_query) |
+#                     Q(trading_symbol__icontains=search_query) |
+#                     Q(GroupService__icontains=search_query)
+#                 )
+
+#             # Apply all filters
+#             trade_history = trade_history.filter(filters)
+            
+#             # Apply the filters to the query
+#             # trade_history = trade_history.filter(filters)
+
+#             print("trade history of subadmin client------",trade_history)
+            
+#             paginator = CustomPageNumberPagination()
+#             result_page = paginator.paginate_queryset(trade_history, request)
+
+#             serializer = TradeorderhistorySerializer(result_page, many=True)
+#             return paginator.get_paginated_response(serializer.data)
+
+#         except Exception as e:
+#             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)    
+
 class TradeorderhistoryListView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get(self, request,*args, **kwargs):
-        try:
-            user = request.user
-            
-            # Get filters from request data
-            from_date = request.GET.get('from_date', None)  # Using GET instead of POST
-            to_date = request.GET.get('to_date', None)
-            strategy = request.GET.get('strategy', None)
-            Index_Symbol = request.GET.get('Index_symbol', None)
-            broker = request.GET.get('broker', None)
-            print(f"broker:{broker} Index_Symbol:{Index_Symbol}")
-            
-            if user.role and user.role.name.lower() == 'super-admin':
-                # Super-admin can see all clients' trade order histories
-                clients = User.objects.filter(type_of_user='is_client', is_client=True)
-                trade_history = Tradeorderhistory.objects.exclude(order_id=0).filter(client__in=clients).order_by('-id')
-            elif user.role and user.role.name.lower() == 'sub-admin':
-                print("inside sub admin is called.....")
-                # Sub-admin can see trade order histories of their assigned clients
-                clients = User.objects.filter(assigned_client=user,type_of_user='is_client', is_client=True)
-                trade_history = Tradeorderhistory.objects.exclude(order_id=0).filter(client__in=clients).order_by('-id')
-                print("trade_history>>>>>>>",trade_history)
-            else:
-                trade_history = Tradeorderhistory.objects.exclude(order_id=0).filter(client=user).order_by('-id')
-
-            
-            # Dynamically apply filters based on the provided parameters
-            filters = Q()
-            search_query = request.query_params.get('q', '').strip()
-            # Apply date filter (from_date and to_date)
-            if from_date:
-                from_date = datetime.strptime(from_date, "%Y-%m-%d")
-                filters &= Q(date__gte=from_date)
-            if to_date:
-                to_date = datetime.strptime(to_date, "%Y-%m-%d")
-                filters &= Q(date__lte=to_date)
-
-            # Apply symbol filter
-            if strategy and strategy.lower() != 'all':
-                filters &= Q(strategy__iexact=strategy)
-     
-            # Apply index_symbol filter
-            if Index_Symbol and Index_Symbol.lower() != 'all':
-               
-                filters &= Q(Index_Symbol__iexact=Index_Symbol)
-
-            # Apply strategy filter
-            if broker and broker.lower() != 'all':
-                filters &= Q(broker__iexact=broker)
-            # 🔍 **Search Filter (Client name, broker, index symbol, trading symbol)**
-            if search_query:
-                filters &= (
-                    Q(client__email__icontains=search_query) |
-                    Q(client__fullName__icontains=search_query) |
-                    Q(broker__icontains=search_query) |
-                    Q(Index_Symbol__icontains=search_query) |
-                    Q(trading_symbol__icontains=search_query)|
-                    Q(GroupService__icontains=search_query)
-                )
-
-            # Apply all filters
-            trade_history = trade_history.filter(filters)
-
-            # Apply the filters to the query
-            trade_history = trade_history.filter(filters)
-
-            print("trade history of subadmin client------",trade_history)
-            
-            paginator = CustomPageNumberPagination()
-            result_page = paginator.paginate_queryset(trade_history, request)
-
-            serializer = TradeorderhistorySerializer(result_page, many=True)
-            return paginator.get_paginated_response(serializer.data)
-
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
-        
-#CLIENT trade all history data 
-class ClientTradeListView(APIView):
-    permission_classes = [IsAuthenticated]
     def get(self, request, *args, **kwargs):
         try:
             user = request.user
-            # Get filters from request data
-            from_date = request.GET.get('from_date', None)  # Using GET instead of POST
-            to_date = request.GET.get('to_date', None)
-            symbol = request.GET.get('symbol', None)
-            Index_Symbol = request.GET.get('Index_Symbol', None)
-            strategy = request.GET.get('strategy', None)
-            print(f"client strategy:{strategy} symbol:{Index_Symbol}")
             
+            # Get filters from request data
+            from_date = request.GET.get('from_date', None)
+            to_date = request.GET.get('to_date', None)
+            strategy = request.GET.get('strategy', None)
+            Index_Symbol = request.GET.get('Index_symbol', None)
+            order_status = request.GET.get('order_status', None)
+            broker = request.GET.get('broker', None)
+            
+            print(f"broker: {broker} Index_Symbol: {Index_Symbol} order_status: {order_status}")
+            
+            # Determine which clients to include based on user role
             if user.role and user.role.name.lower() == 'super-admin':
-                # Super-admin can see all clients' trade order histories
-                clients = User.objects.all()#filter(type_of_user='is_client', is_client=True)
-                trade_history = Tradeorderhistory.objects.filter(client__in=clients).order_by('-id')
+                clients = User.objects.filter(type_of_user='is_client', is_client=True)
+                trade_history = Tradeorderhistory.objects.exclude(order_id=0).exclude(order_id__isnull=True).filter(client__in=clients).order_by('-id')
             elif user.role and user.role.name.lower() == 'sub-admin':
-                print("Sub-AdminSub-AdminSub-AdminSub-Admin")
-                # Sub-admin can see trade order histories of their assigned clients
-                clients = User.objects.filter(assigned_client=user)# created_by=user,type_of_user='is_client', is_client=True)
-                trade_history = Tradeorderhistory.objects.filter(client__in=clients).order_by('-id')
+                clients = User.objects.filter(assigned_client=user, type_of_user='is_client', is_client=True)
+                trade_history = Tradeorderhistory.objects.exclude(order_id=0).exclude(order_id__isnull=True).filter(client__in=clients).order_by('-id')
             else:
-                trade_history = Tradeorderhistory.objects.filter(client=user).order_by('-id')
-                
-                
+                trade_history = Tradeorderhistory.objects.exclude(order_id=0).exclude(order_id__isnull=True).filter(client=user).order_by('-id')
+
             # Dynamically apply filters based on the provided parameters
             filters = Q()
-            search_query = request.query_params.get('q', '').strip()
+
             # Apply date filter (from_date and to_date)
             if from_date:
                 try:
@@ -4062,33 +4404,48 @@ class ClientTradeListView(APIView):
                     to_date = datetime.strptime(to_date, "%Y-%m-%d")
                     filters &= Q(date__lte=to_date)
                 except ValueError:
-                    return Response({"error": "Invalid from_date format, expected YYYY-MM-DD."}, status=status.HTTP_400_BAD_REQUEST)
+                    return Response({"error": "Invalid to_date format, expected YYYY-MM-DD."}, status=status.HTTP_400_BAD_REQUEST)
 
             # Apply symbol filter
-            if symbol and symbol.lower() != 'all':
-                filters &= Q(symbol__iexact=symbol)
+            if strategy and strategy.lower() != 'all':
+                filters &= Q(strategy__iexact=strategy)
 
             # Apply index_symbol filter
             if Index_Symbol and Index_Symbol.lower() != 'all':
                 filters &= Q(Index_Symbol__iexact=Index_Symbol)
 
-            # Apply strategy filter
-            if strategy and strategy.lower() != 'all':
-                filters &= Q(strategy__iexact=strategy)
+            # Apply broker filter
+            if broker and broker.lower() != 'all':
+                filters &= Q(broker__iexact=broker)
+
+            # Apply order_status filter (Ensure it correctly filters)
+            if order_status and order_status.lower() != 'all':
+                filters &= Q(order_status__iexact=order_status)
+                # trade_history = trade_history.filter(order_status=order_status)
+
             # 🔍 **Search Filter (Client name, broker, index symbol, trading symbol)**
+            search_query = request.query_params.get('q', '').strip()
             if search_query:
+                search_terms = search_query.split()  
+                full_name_filters = Q()
+                for term in search_terms:
+                    full_name_filters |= Q(client__fullName__icontains=term)  
+
                 filters &= (
+                    full_name_filters |
                     Q(client__email__icontains=search_query) |
-                    Q(client__fullName__icontains=search_query) |
                     Q(broker__icontains=search_query) |
                     Q(Index_Symbol__icontains=search_query) |
-                    Q(trading_symbol__icontains=search_query)|
+                    Q(trading_symbol__icontains=search_query) |
                     Q(GroupService__icontains=search_query)
                 )
 
-            # Apply the filters to the query
+            # Apply all filters
             trade_history = trade_history.filter(filters)
 
+            # Check if trade_history is empty before pagination
+            if not trade_history.exists():
+                return Response({"message": "No trade history found for the given filters."}, status=status.HTTP_200_OK)
 
             paginator = CustomPageNumberPagination()
             result_page = paginator.paginate_queryset(trade_history, request)
@@ -4098,4 +4455,317 @@ class ClientTradeListView(APIView):
 
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+             
+#CLIENT trade all history data 
+# class ClientTradeListView(APIView):
+#     permission_classes = [IsAuthenticated]
+#     def get(self, request, *args, **kwargs):
+#         try:
+#             user = request.user
+#             # Get filters from request data
+#             from_date = request.GET.get('from_date', None)  # Using GET instead of POST
+#             to_date = request.GET.get('to_date', None)
+#             symbol = request.GET.get('symbol', None)
+#             Index_Symbol = request.GET.get('Index_Symbol', None)
+#             order_status = request.GET.get('order_status', None)
+#             strategy = request.GET.get('strategy', None)
+#             print(f"client strategy:{strategy} symbol:{Index_Symbol}")
+            
+#             if user.role and user.role.name.lower() == 'super-admin':
+#                 # Super-admin can see all clients' trade order histories
+#                 clients = User.objects.all()#filter(type_of_user='is_client', is_client=True)
+#                 trade_history = Tradeorderhistory.objects.filter(client__in=clients).order_by('-id')
+#             elif user.role and user.role.name.lower() == 'sub-admin':
+#                 print("Sub-AdminSub-AdminSub-AdminSub-Admin")
+#                 # Sub-admin can see trade order histories of their assigned clients
+#                 clients = User.objects.filter(assigned_client=user)# created_by=user,type_of_user='is_client', is_client=True)
+#                 trade_history = Tradeorderhistory.objects.filter(client__in=clients).order_by('-id')
+#             else:
+#                 trade_history = Tradeorderhistory.objects.filter(client=user).order_by('-id')
+
+#             # if user.role and user.role.name.lower() == 'super-admin':
+#             #     clients = User.objects.filter(type_of_user='is_client', is_client=True)
+#             #     trade_history = Tradeorderhistory.objects.exclude(order_id=0).exclude(order_id__isnull=True).filter(client__in=clients).order_by('-id')
+#             # elif user.role and user.role.name.lower() == 'sub-admin':
+#             #     print("inside sub admin is called.....")
+#             #     clients = User.objects.filter(assigned_client=user, type_of_user='is_client', is_client=True)
+#             #     trade_history = Tradeorderhistory.objects.exclude(order_id=0).exclude(order_id__isnull=True).filter(client__in=clients).order_by('-id')
+#             #     print("trade_history>>>>>>>", trade_history)
+#             # else:
+#             #     trade_history = Tradeorderhistory.objects.exclude(order_id=0).exclude(order_id__isnull=True).filter(client=user).order_by('-id')
+                
+                
+#             # Dynamically apply filters based on the provided parameters
+#             filters = Q()
+#             search_query = request.query_params.get('q', '').strip()
+#             # Apply date filter (from_date and to_date)
+#             if from_date:
+#                 try:
+#                     from_date = datetime.strptime(from_date, "%Y-%m-%d")
+#                     filters &= Q(date__gte=from_date)
+#                 except ValueError:
+#                     return Response({"error": "Invalid from_date format, expected YYYY-MM-DD."}, status=status.HTTP_400_BAD_REQUEST)
+            
+#             if to_date:
+#                 try:
+#                     to_date = datetime.strptime(to_date, "%Y-%m-%d")
+#                     filters &= Q(date__lte=to_date)
+#                 except ValueError:
+#                     return Response({"error": "Invalid from_date format, expected YYYY-MM-DD."}, status=status.HTTP_400_BAD_REQUEST)
+
+#             # Apply symbol filter
+#             if symbol and symbol.lower() != 'all':
+#                 filters &= Q(symbol__iexact=symbol)
+
+#             # Apply order status filter
+#             if order_status and order_status.lower() != 'all':
+#                 filters &= Q(order_status__iexact=order_status)
+
+#             # Apply index_symbol filter
+#             if Index_Symbol and Index_Symbol.lower() != 'all':
+#                 filters &= Q(Index_Symbol__iexact=Index_Symbol)
+
+#             # Apply strategy filter
+#             if strategy and strategy.lower() != 'all':
+#                 filters &= Q(strategy__iexact=strategy)
+#             # 🔍 **Search Filter (Client name, broker, index symbol, trading symbol)**
+#             if search_query:
+#                 filters &= (
+#                     Q(client__email__icontains=search_query) |
+#                     Q(client__fullName__icontains=search_query) |
+#                     Q(broker__icontains=search_query) |
+#                     Q(Index_Symbol__icontains=search_query) |
+#                     Q(trading_symbol__icontains=search_query)|
+#                     Q(GroupService__icontains=search_query)
+#                 )
+
+#             # 🔍 **Search Filter (Client name, broker, index symbol, trading symbol)**
+#             # if search_query:
+#             #     # Normalize the search query by trimming whitespace
+#             #     search_query = search_query.strip()
+#             #     search_terms = search_query.split()  # Split the search query into individual terms
+
+#             #     # Create a Q object for each term to match against the full name
+#             #     full_name_filters = Q()
+#             #     for term in search_terms:
+#             #         full_name_filters |= Q(client__fullName__icontains=term)  # Match any part of the full name
+
+#             #     filters &= (
+#             #         full_name_filters |
+#             #         Q(client__email__icontains=search_query) |
+#             #         Q(broker__icontains=search_query) |
+#             #         Q(Index_Symbol__icontains=search_query) |
+#             #         Q(trading_symbol__icontains=search_query) |
+#             #         Q(GroupService__icontains=search_query)
+#             #     )
+
+#             # Apply the filters to the query
+#             trade_history = trade_history.filter(filters)
+
+
+#             paginator = CustomPageNumberPagination()
+#             result_page = paginator.paginate_queryset(trade_history, request)
+
+#             serializer = TradeorderhistorySerializer(result_page, many=True)
+#             return paginator.get_paginated_response(serializer.data)
+
+#         except Exception as e:
+#             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
            
+# class ClientTradeListView(APIView):
+#     permission_classes = [IsAuthenticated]
+
+#     def get(self, request, *args, **kwargs):
+#         try:
+#             user = request.user
+            
+#             # Get filters from request data
+#             from_date = request.GET.get('from_date', None)
+#             to_date = request.GET.get('to_date', None)
+#             symbol = request.GET.get('symbol', None)
+#             Index_Symbol = request.GET.get('Index_Symbol', None)
+#             order_status = request.GET.get('order_status', None)
+#             strategy = request.GET.get('strategy', None)
+#             print(f"client strategy: {strategy} symbol: {Index_Symbol}")
+            
+#             # Determine which clients to include based on user role
+#             if user.role and user.role.name.lower() == 'super-admin':
+#                 clients = User.objects.all()  # Super-admin can see all clients' trade order histories
+#                 trade_history = Tradeorderhistory.objects.filter(client__in=clients).order_by('-id')
+#             elif user.role and user.role.name.lower() == 'sub-admin':
+#                 print("Sub-Admin is called.....")
+#                 clients = User.objects.filter(assigned_client=user)  # Sub-admin can see trade order histories of their assigned clients
+#                 trade_history = Tradeorderhistory.objects.filter(client__in=clients).order_by('-id')
+#             else:
+#                 trade_history = Tradeorderhistory.objects.filter(client=user).order_by('-id')
+
+#             # Dynamically apply filters based on the provided parameters
+#             filters = Q()
+#             search_query = request.query_params.get('q', '').strip()
+
+#             # Apply date filter (from_date and to_date)
+#             if from_date:
+#                 try:
+#                     from_date = datetime.strptime(from_date, "%Y-%m-%d")
+#                     filters &= Q(date__gte=from_date)
+#                 except ValueError:
+#                     return Response({"error": "Invalid from_date format, expected YYYY-MM-DD."}, status=status.HTTP_400_BAD_REQUEST)
+            
+#             if to_date:
+#                 try:
+#                     to_date = datetime.strptime(to_date, "%Y-%m-%d")
+#                     filters &= Q(date__lte=to_date)
+#                 except ValueError:
+#                     return Response({"error": "Invalid to_date format, expected YYYY-MM-DD."}, status=status.HTTP_400_BAD_REQUEST)
+
+#             # Apply symbol filter
+#             if symbol and symbol.lower() != 'all':
+#                 filters &= Q(symbol__iexact=symbol)
+
+#             # Apply order status filter
+#             if order_status and order_status.lower() != 'all':
+#                 filters &= Q(order_status__iexact=order_status)
+
+#             # Apply index_symbol filter
+#             if Index_Symbol and Index_Symbol.lower() != 'all':
+#                 filters &= Q(Index_Symbol__iexact=Index_Symbol)
+
+#             # Apply strategy filter
+#             if strategy and strategy.lower() != 'all':
+#                 filters &= Q(strategy__iexact=strategy)
+
+#             # 🔍 **Search Filter (Client name, broker, index symbol, trading symbol)**
+#             if search_query:
+#                 # Normalize the search query by trimming whitespace
+#                 search_query = search_query.strip()
+#                 search_terms = search_query.split()  # Split the search query into individual terms
+
+#                 # Create a Q object for each term to match against the full name
+#                 full_name_filters = Q()
+#                 for term in search_terms:
+#                     full_name_filters |= Q(client__fullName__icontains=term)  # Match any part of the full name
+
+#                 filters &= (
+#                     full_name_filters |
+#                     Q(client__email__icontains=search_query) |
+#                     Q(broker__icontains=search_query) |
+#                     Q(Index_Symbol__icontains=search_query) |
+#                     Q(trading_symbol__icontains=search_query) |
+#                     Q(GroupService__icontains=search_query)
+#                 )
+
+#             # Apply all filters
+#             trade_history = trade_history.filter(filters)
+
+#             paginator = CustomPageNumberPagination()
+#             result_page = paginator.paginate_queryset(trade_history, request)
+
+#             serializer = TradeorderhistorySerializer(result_page, many=True)
+#             return paginator.get_paginated_response(serializer.data)
+
+#         except Exception as e:
+#             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class ClientTradeListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        try:
+            user = request.user
+            
+            # Get filters from request data
+            from_date = request.GET.get('from_date', None)
+            to_date = request.GET.get('to_date', None)
+            symbol = request.GET.get('symbol', None)
+            Index_Symbol = request.GET.get('Index_Symbol', None)
+            order_status = request.GET.get('order_status', None)
+            strategy = request.GET.get('strategy', None)
+            print(f"client strategy: {strategy} symbol: {Index_Symbol}")
+            
+            # Determine which clients to include based on user role
+            if user.role and user.role.name.lower() == 'super-admin':
+                clients = User.objects.all()  # Super-admin can see all clients' trade order histories
+                trade_history = Tradeorderhistory.objects.filter(client__in=clients).order_by('-id')
+            elif user.role and user.role.name.lower() == 'sub-admin':
+                print("Sub-Admin is called.....")
+                clients = User.objects.filter(assigned_client=user)  # Sub-admin can see trade order histories of their assigned clients
+                trade_history = Tradeorderhistory.objects.filter(client__in=clients).order_by('-id')
+            else:
+                trade_history = Tradeorderhistory.objects.filter(client=user).order_by('-id')
+
+            # Dynamically apply filters based on the provided parameters
+            filters = Q()
+            search_query = request.query_params.get('q', '').strip()
+
+            # Apply date filter (from_date and to_date)
+            if from_date:
+                try:
+                    from_date = datetime.strptime(from_date, "%Y-%m-%d")
+                    filters &= Q(date__gte=from_date)
+                except ValueError:
+                    return Response({"error": "Invalid from_date format, expected YYYY-MM-DD."}, status=status.HTTP_400_BAD_REQUEST)
+            
+            if to_date:
+                try:
+                    to_date = datetime.strptime(to_date, "%Y-%m-%d")
+                    filters &= Q(date__lte=to_date)
+                except ValueError:
+                    return Response({"error": "Invalid to_date format, expected YYYY-MM-DD."}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Apply symbol filter
+            if symbol and symbol.lower() != 'all':
+                filters &= Q(symbol__iexact=symbol)
+
+            # Apply order status filter
+            if order_status and order_status.lower() != 'all':
+                filters &= Q(order_status__iexact=order_status)
+
+            # Apply index_symbol filter
+            if Index_Symbol and Index_Symbol.lower() != 'all':
+                filters &= Q(Index_Symbol__iexact=Index_Symbol)
+
+            # Apply strategy filter
+            if strategy and strategy.lower() != 'all':
+                filters &= Q(strategy__iexact=strategy)
+
+            # 🔍 **Search Filter (Client name, broker, index symbol, trading symbol)**
+            if search_query:
+                # Normalize the search query by trimming whitespace
+                search_query = search_query.strip()
+                search_terms = search_query.split()  # Split the search query into individual terms
+
+                # Create a Q object for each term to match against the full name
+                full_name_filters = Q()
+                for term in search_terms:
+                    full_name_filters |= Q(client__fullName__icontains=term)  # Match any part of the full name
+
+                filters &= (
+                    full_name_filters |
+                    Q(client__email__icontains=search_query) |
+                    Q(broker__icontains=search_query) |
+                    Q(Index_Symbol__icontains=search_query) |
+                    Q(trading_symbol__icontains=search_query) |
+                    Q(GroupService__icontains=search_query)
+                )
+
+            # Apply all filters
+            trade_history = trade_history.filter(filters)
+
+            # Check if trade_history is empty before pagination
+            if not trade_history.exists():
+                return Response({"message": "No trade history found for the given filters."}, status=status.HTTP_200_OK)
+
+            paginator = CustomPageNumberPagination()
+            result_page = paginator.paginate_queryset(trade_history, request)
+
+            serializer = TradeorderhistorySerializer(result_page, many=True)
+            return paginator.get_paginated_response(serializer.data)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL)
+
+
+
+
+

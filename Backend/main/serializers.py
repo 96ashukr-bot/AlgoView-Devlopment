@@ -25,7 +25,8 @@ login_link = company_profile.login_link if company_profile else "https://www.adm
 help_center_link = company_profile.help_center_link if company_profile else "https://www.admin.algoview.in/login"  
 contact_number = company_profile.company_phone_number if company_profile else None
 
-smtp_details=CompanySmtpDetails.objects.first()
+smtp_details=None
+# smtp_details=CompanySmtpDetails.objects.first()
 default_from_email=smtp_details.email_host_user if smtp_details else   "no-reply@example.com" 
 class RoleSerializer(serializers.ModelSerializer):
     class Meta:
@@ -1015,6 +1016,7 @@ class ClientListSerializer(serializers.ModelSerializer):
                   'client_key', 'start_date_client','end_date_client','Broker', 'Group_service','license', 'user_license_month','to_month', 'created_by', 'assigned_client',
                   'Strategy','client_status','givenservices_to_month','demate_acc_uid','start_date_client', 'end_date_client','is_enable',
                   'created_at','client_expiry_status']
+        
 # class ClientListdetailsSerializer(serializers.ModelSerializer):
 #     assigned_client = AssignedClientSerializer(read_only=True)
 #     Strategy = StrategySerializer(many=True, read_only=True) 

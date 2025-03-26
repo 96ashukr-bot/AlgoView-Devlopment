@@ -352,6 +352,7 @@ class Services(models.Model):
 
     def __str__(self):
         return self.service_name
+    
 class Strategies(models.Model):
     name = models.CharField(max_length=150)
     Lots=models.IntegerField(blank=True,null=True)
@@ -388,6 +389,7 @@ class GroupService(models.Model):
     status = models.BooleanField(default=True)
     def __str__(self):
         return self.group_name    
+    
 class Broker(models.Model):
     broker_name = models.CharField(max_length=150)
     is_active = models.BooleanField(default=True)
@@ -407,22 +409,22 @@ class TradeLog(models.Model):
 
     def __str__(self):
         return f"Trade log for {self.client.firstName} - {self.symbol} - {self.trade_date}"
+    
 class TradingLog(models.Model):
     client = models.ForeignKey(User, on_delete=models.CASCADE)
     date = models.DateField(auto_now_add=True,null=True, blank=True)
     symbol = models.CharField(max_length=50,null=True, blank=True)
     strategy = models.CharField(max_length=50,null=True, blank=True)
+
 class ClientTradeSetting(models.Model):
     client = models.ForeignKey('User', on_delete=models.CASCADE, null=True, blank=True)
     segment = models.ForeignKey('Segment', on_delete=models.CASCADE, null=True, blank=True)
     sub_segment = models.ForeignKey('SubSegment',on_delete=models.CASCADE, null=True, blank=True)
-  
     # Specific trade settings for the selected segment/sub-segment
     symbol = models.CharField(max_length=50,null=True, blank=True)
     strategy = models.CharField(max_length=50,null=True, blank=True)
     broker = models.CharField(max_length=50,null=True, blank=True)
     product_type = models.CharField(max_length=20,null=True, blank=True)
-    
     buy_sell = models.CharField(max_length=10, null=True, blank=True)  # "Buy" or "Sell"
     quantity = models.IntegerField(null=True, blank=True)
     trade_limit = models.IntegerField(null=True, blank=True)
@@ -442,6 +444,7 @@ class ClientTradeSetting(models.Model):
     target=models.IntegerField( null=True, blank=True)
     def __str__(self):
         return f"Trade Setting {self.segment.name}"
+    
 class ClientBrokerdetails(models.Model):
     client = models.ForeignKey('User', on_delete=models.CASCADE,null=True, blank=True)
     broker_name =models.ForeignKey(Broker, on_delete=models.CASCADE,null=True, blank=True)
@@ -497,6 +500,7 @@ class Tradeorderhistory(models.Model):
 
     def __str__(self):
         return f"Order ID: {self.order_id}"
+    
 class CompanyProfileDetails(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="company_profile",null=True, blank=True)
     company_name = models.CharField(max_length=255, blank=True, null=True)
@@ -511,6 +515,7 @@ class CompanyProfileDetails(models.Model):
     company_favicon=models.ImageField(upload_to='company_favicon/', blank=True, null=True)
     def __str__(self):
         return self.company_name if self.company_name else "Unnamed Company"
+    
 class WebsocketDetails(models.Model):
     Auth_token = models.TextField(blank=True, null=True) 
     token_status= models.CharField(max_length=255, blank=True, null=True)
