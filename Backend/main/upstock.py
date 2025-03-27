@@ -230,7 +230,7 @@ def handle_successful_order(LivePrice,group_service,transaction_type,
             # order_id = 0
             rejection_message="error while fetching order due to network issue"
             status="success"
-            res_data=str(e)
+            res_data=order_details
             if transaction_type=="BUY":
                 Entry_type="LE"
                 Entry_price=LivePrice
@@ -422,7 +422,7 @@ def get_order_details(order_id, access_token):
         print(f"Making API request to: {url}")
         response = requests.get(url, headers=headers)
 
-        print(f"API Response Status Code: {response.status_code}")
+        logger.info(f"API Response Status Code: {response.status_code}")
 
         try:
             response_dict = response.json()  # Corrected JSON parsing
