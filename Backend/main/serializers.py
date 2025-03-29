@@ -25,6 +25,7 @@ login_link = company_profile.login_link if company_profile else "https://www.adm
 help_center_link = company_profile.help_center_link if company_profile else "https://www.admin.algoview.in/login"  
 contact_number = company_profile.company_phone_number if company_profile else None
 
+# smtp_details=None
 smtp_details=CompanySmtpDetails.objects.first()
 default_from_email=smtp_details.email_host_user if smtp_details else   "no-reply@example.com" 
 class RoleSerializer(serializers.ModelSerializer):
@@ -503,12 +504,14 @@ class UserProfileRetrieveSerializer(serializers.ModelSerializer):
                 'status': obj.role.status
             }
         return None  # Return None if the user has no role assigned
+    
 class UserProfileUpdateSerializer(serializers.ModelSerializer):
     fullName = serializers.CharField()  # FullName is read-only, derived from first_name and last_name.
+    user_id = serializers.IntegerField(source='id', read_only=True) 
 
     class Meta:
         model = User
-        fields = ['email','firstName', 'lastName', 'userName','fullName', 'middleName','phoneNumber', 'profilePicture', 'PANEL_CLIENT_KEY', 'start_date', 'end_date', 'client_type',
+        fields = ['user_id','email','firstName', 'lastName', 'userName','fullName', 'middleName','phoneNumber', 'profilePicture', 'PANEL_CLIENT_KEY', 'start_date', 'end_date', 'client_type',
             # Permanent Address Fields
             'permanent_add_line_1', 'permanent_add_line_2', 'permanent_city', 
             'permanent_state', 'permanent_country', 'permanent_zip_code','is_address_same',
@@ -695,6 +698,7 @@ class KYCSerializer(serializers.ModelSerializer):
         # ✅ New method to fetch userName
     def get_user_name(self, obj):
         return obj.user.fullName if obj.user and obj.user.fullName else None
+    
 class PermissionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Permission
@@ -1015,6 +1019,7 @@ class ClientListSerializer(serializers.ModelSerializer):
                   'client_key', 'start_date_client','end_date_client','Broker', 'Group_service','license', 'user_license_month','to_month', 'created_by', 'assigned_client',
                   'Strategy','client_status','givenservices_to_month','demate_acc_uid','start_date_client', 'end_date_client','is_enable',
                   'created_at','client_expiry_status']
+        
 # class ClientListdetailsSerializer(serializers.ModelSerializer):
 #     assigned_client = AssignedClientSerializer(read_only=True)
 #     Strategy = StrategySerializer(many=True, read_only=True) 

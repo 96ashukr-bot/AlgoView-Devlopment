@@ -277,7 +277,7 @@ class UserActivityLog(models.Model):
 
     user = models.ForeignKey(User, on_delete=models.SET_NULL,null=True, blank=True, related_name='user_activty_log')
     action_type = models.CharField(max_length=10, choices=ACTION_TYPES)
-    last_login_time = models.DateTimeField()
+    last_login_time = models.DateTimeField(null=True, blank=True)
     last_logout_time = models.DateTimeField(null=True, blank=True)
     session_key = models.CharField(max_length=40, null=True, blank=True)  # Store session key for reference
     ip_address = models.GenericIPAddressField(null=True, blank=True)
@@ -287,7 +287,7 @@ class UserActivityLog(models.Model):
 
     def mark_logout(self):
         """ Marks logout time when the user logs out """
-        self.logout_time = get_ist_time()
+        self.last_logout_time = now()
         self.save()        
 
 class State(models.Model):

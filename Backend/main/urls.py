@@ -18,6 +18,8 @@ urlpatterns = [
     path('signup/', UserRegistrationView.as_view(), name='user-registration'),
     path('login/', CustomLoginView.as_view(), name='login'),
     path('logout/', LogoutView.as_view(), name='logout'),
+    path('user-activity-log/', UserActivityLogView.as_view(), name='user-activity-log'),
+    # path('user-login-logout/', UserLastLoginLogoutAPIView.as_view(), name='user-login-logout'),
     path('verify-otp/', OTPVerifyView.as_view(), name='otp_verify'),
     path('resend-otp/', ResendOTPView.as_view(), name='resend_otp'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
@@ -106,8 +108,10 @@ urlpatterns = [
     path('sub-segments-list/', SubSegmentsView.as_view(), name='sub_segments'),
     path('update-trade-status/', UpdateTradeSettingStatusView.as_view(), name='update_client_setting'),
     path('client-trade-settings/update/', UpdateClientTradeSettingAPIView.as_view(), name='update-trade-setting'),
-    path('get-client-trade-setting/', GetTradeSettingAPIView.as_view(), name='get-trade-settings'),
-    #  path('update-trade-status/', UpdateTradeStatusView.as_view(), name='update_client_setting'),
+    path('get-client-trade-setting/', GetTradeSettingAPIView.as_view(), name='get-trade-settings'),   
+    path('clients/trading/status/count/', ClientTradingStatusCountView.as_view(), name='client-trading-status-count'),
+    path('clients/onboarding/stats/', ClientOnboardingStatsView.as_view(), name='client-onboarding-stats'),
+
  
     path('get-client-segments-list/', UpdateTradeSettingStatusView.as_view(), name='get-trade-settings'),
     # path('get-count-client/',SubAdminAllClientView.as_view(),name='active-inactive-client')
@@ -132,9 +136,10 @@ urlpatterns = [
     path('update-client-status/<int:pk>/', ClientCreateView.as_view(), name='update-client-status'),
     path('get-trade-history/', TradeorderhistoryListView.as_view(), name='get-trade-history'),  
     path('get-client-trade-history/', ClientTradeListView.as_view(), name='get-client-trade-history'), 
-    path('clients-filter/', ClientFilterView.as_view(), name='client-list'),
-    path('client-dashboard-redirect/',ClientDashBoardView.as_view(),name='client-dashboard-'),
-    
+    path('clients-filter/', ClientFilterView.as_view(), name='client-list'),   
+    path('client-dashboard-redirect/',ClientDashBoardView.as_view(),name='client-dashboard-'),   
+    path('trade-order-response/<int:trade_id>/', TradeOrderResponseDataView.as_view(), name='trade-order-response'),
+
     path("broker_auth_login/",BrokerLoginRedirectView.as_view(), name="login_broker"),#AUTH2.0
    
     path("auth-callback/", BrokerCallbackView.as_view(), name="broker_callback"),

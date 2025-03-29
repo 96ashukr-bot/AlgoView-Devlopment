@@ -227,6 +227,7 @@ class CompanySmtpDetailView(APIView):
     def get(self, request, *args, **kwargs):
         try:
             user=request.user
+            # smtp_details=None
             smtp_details = CompanySmtpDetails.objects.get(user=user)
             serializer = CompanySmtpDetailsSerializer(smtp_details)
             return Response({
