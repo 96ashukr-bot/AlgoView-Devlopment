@@ -55,11 +55,15 @@ import pyotp
 import numpy as np
 import pytz
 from main.companysmtpsetails import smtp_details,company_profile
+from django.utils import timezone
+from django.contrib.auth import get_user_model
+from datetime import datetime
 USER_ID=config('USER_ID')
 ALICE_API_KEY=config('ALICE_API_KEY')
 import logging
 logger = logging.getLogger('main')
 UserModel = get_user_model()
+
 
 company_profile = company_profile
 # company_profile=None
@@ -140,44 +144,133 @@ class UserRegistrationView(generics.CreateAPIView):
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
     
 #login
+# class CustomLoginView(generics.GenericAPIView):
+#     pagination_class = None
+#     serializer_class = CustomLoginSerializer
+#     def post(self, request, *args, **kwargs):
+#         # start_time=time.time()
+#         serializer = self.get_serializer(data=request.data)
+#         serializer.is_valid(raise_exception=True)
+#         # end_time = time.time()  # Record the end time
+#         # execution_time = end_time - start_time  # Calculate the total time
+#         # print(f"Login API executed in {execution_time:.4f} seconds")  # Log the execution timee
+#         return Response(serializer.validated_data, status=status.HTTP_200_OK)
+
 class CustomLoginView(generics.GenericAPIView):
     pagination_class = None
     serializer_class = CustomLoginSerializer
+
     def post(self, request, *args, **kwargs):
-        # start_time=time.time()
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        # end_time = time.time()  # Record the end time
-        # execution_time = end_time - start_time  # Calculate the total time
-        # print(f"Login API executed in {execution_time:.4f} seconds")  # Log the execution timee
+        user = serializer.validated_data.get('user')
+
+        # Log the login time in UserActivityLog
+        UserActivityLog.objects.create(
+            user=user,
+            last_login_time=now(),
+            session_key=request.session.session_key
+        )
+
         return Response(serializer.validated_data, status=status.HTTP_200_OK)
+    
 #logout api
+# class LogoutView(APIView):
+#     permission_classes = [IsAuthenticated]  # Ensure user is authenticated
+
+#     def post(self, request):
+#         # Get user's refresh token from request data (passed by frontend)
+#         refresh_token = request.data.get('refresh_token')
+        
+#         try:
+#             # Blacklist the refresh token (if using Simple JWT Blacklisting)
+#             token = RefreshToken(refresh_token)
+#             token.blacklist()
+
+#             # Log the user's logout time in the UserActivityLog
+#             session_key = request.session.session_key
+#             try:
+#                 activity_log = UserActivityLog.objects.filter(user=request.user,session_key=session_key).latest('last_login_time')
+#                 activity_log.mark_logout()
+#             except UserActivityLog.DoesNotExist:
+#                 pass  # If no login entry exists, skip silently
+            
+#             return Response({"message": "Logout successful"}, status=status.HTTP_200_OK)
+
+#         except Exception as e:
+#             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]  # Ensure user is authenticated
 
     def post(self, request):
-        # Get user's refresh token from request data (passed by frontend)
         refresh_token = request.data.get('refresh_token')
-        
+
         try:
-            # Blacklist the refresh token (if using Simple JWT Blacklisting)
             token = RefreshToken(refresh_token)
             token.blacklist()
 
             # Log the user's logout time in the UserActivityLog
             session_key = request.session.session_key
             try:
-                activity_log = UserActivityLog.objects.filter(user=request.user,session_key=session_key).latest('last_login_time')
-                activity_log.mark_logout()
+                activity_log = UserActivityLog.objects.filter(user=request.user, session_key=session_key).latest('last_login_time')
+                if not activity_log.last_logout_time:  # Ensure logout is only recorded once
+                    activity_log.last_logout_time = now()
+                    activity_log.save()
             except UserActivityLog.DoesNotExist:
                 pass  # If no login entry exists, skip silently
-            
+
             return Response({"message": "Logout successful"}, status=status.HTTP_200_OK)
 
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-    
+from django.utils.timezone import now
+
+
+class UserActivityLogView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        user_id = request.GET.get('user_id')  # Get user ID from query parameters
+
+        # If user_id is provided, check if the current user is allowed to view it
+        if user_id and not request.user.is_client:
+            return Response({"error": "You are not authorized to view other users' activity."}, status=status.HTTP_403_FORBIDDEN)
+
+        # If no user_id is provided, fetch the logged-in user's data
+        user = UserModel.objects.get(id=user_id) if user_id else request.user
+
+        # Fetch the most recent completed session (login + logout recorded)
+        last_completed_session = (
+            UserActivityLog.objects
+            .filter(user=user, last_login_time__isnull=False, last_logout_time__isnull=False)
+            .order_by('-last_login_time')
+            .first()
+        )
+
+        # Fetch the most recent login entry (latest login without logout)
+        current_login_session = (
+            UserActivityLog.objects
+            .filter(user=user, last_login_time__isnull=False)
+            .order_by('-last_login_time')
+            .first()
+        )
+
+        response_data = {}
+
+        if last_completed_session:
+            response_data["last_login_time"] = last_completed_session.last_login_time.astimezone(pytz.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+            response_data["last_logout_time"] = last_completed_session.last_logout_time.astimezone(pytz.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+        if current_login_session:
+            response_data["current_login_time"] = current_login_session.last_login_time.astimezone(pytz.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+        if response_data:
+            return Response(response_data, status=status.HTTP_200_OK)
+        else:
+            return Response({"message": "No login/logout data found."}, status=status.HTTP_404_NOT_FOUND)
+
 #verify-otp via email
 class OTPVerifyView(generics.GenericAPIView):
     serializer_class = OTPVerifySerializer
@@ -499,28 +592,67 @@ class UserManagementView(APIView):
         return Response({"msg": "User deleted successfully."},status=status.HTTP_204_NO_CONTENT)
         
 #sub-admin user profile api crud oprations        
+# class UserProfileView(APIView):
+#     pagination_class = None
+#     permission_classes = [IsAuthenticated]
+#     def get(self, request, *args, **kwargs):
+
+#         try:
+#             user = request.user
+#             serializer = UserProfileRetrieveSerializer(user)
+#             return Response(serializer.data)
+#         except Exception as e:
+#             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+#     def patch(self, request, *args, **kwargs):
+#         user = request.user
+#         try:
+#             # Start transaction in case of complex updates (optional)
+#             with transaction.atomic():
+#                 print("____________",request.data)
+#                 serializer = UserProfileUpdateSerializer(user, data=request.data, partial=True)
+#                 if serializer.is_valid():
+#                     serializer.save()
+#                     return Response(serializer.data, status=status.HTTP_200_OK)
+#                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+#         except ValidationError as ve:
+#             return Response({"validation_error": ve.detail}, status=status.HTTP_400_BAD_REQUEST)
+#         except ObjectDoesNotExist:
+#             return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+#         except Exception as e:
+#             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 class UserProfileView(APIView):
     pagination_class = None
     permission_classes = [IsAuthenticated]
-    def get(self, request, *args, **kwargs):
 
+    def get(self, request, *args, **kwargs):
         try:
             user = request.user
             serializer = UserProfileRetrieveSerializer(user)
-            return Response(serializer.data)
+            
+            # Add `user_id` explicitly in response
+            response_data = serializer.data
+            response_data["client"] = user.id
+
+            return Response(response_data, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def patch(self, request, *args, **kwargs):
         user = request.user
         try:
-            # Start transaction in case of complex updates (optional)
             with transaction.atomic():
-                print("____________",request.data)
+                print("____________", request.data)
                 serializer = UserProfileUpdateSerializer(user, data=request.data, partial=True)
                 if serializer.is_valid():
                     serializer.save()
-                    return Response(serializer.data, status=status.HTTP_200_OK)
+                    
+                    # Add `user_id` in update response
+                    response_data = serializer.data
+                    response_data["client"] = user.id
+
+                    return Response(response_data, status=status.HTTP_200_OK)
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except ValidationError as ve:
             return Response({"validation_error": ve.detail}, status=status.HTTP_400_BAD_REQUEST)
@@ -528,6 +660,7 @@ class UserProfileView(APIView):
             return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 # get kyc list 
 class GetKYCView(APIView):
@@ -575,21 +708,84 @@ class CreateOrUpdateKYCView(APIView):
             }, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
-#pending kyc list for admin    
-class PendingKYCListView(APIView):# Get all pending KYC requests
-    permission_classes = [permissions.IsAuthenticated, ] 
-    # pagination_class = None
+
+from rest_framework.exceptions import NotFound
+from rest_framework.pagination import LimitOffsetPagination
+
+class PendingKYCListView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
     def get(self, request, *args, **kwargs):
-        pending_kycs = KYC.objects.all().order_by('-id')
-        if pending_kycs.exists():
+        try:           
+
+            # Fetch all pending KYC requests
+            pending_kycs = KYC.objects.all().order_by('-id')
+            search_query = request.GET.get('q', '')
+
+            if search_query:
+                pending_kycs = pending_kycs.filter(
+                    Q(user__fullName__icontains=search_query) |
+                    Q(user__firstName__icontains=search_query) |
+                    Q(user__lastName__icontains=search_query)
+                )
+
+            if not pending_kycs.exists():
+                return Response({"message": "No KYC requests found."}, status=status.HTTP_200_OK)
+
             paginator = CustomPageNumberPagination()
-            result_page = paginator.paginate_queryset(pending_kycs, request)
+            
+            try:
+                result_page = paginator.paginate_queryset(pending_kycs, request)
+                if not result_page:
+                    return Response({"message": "No KYC requests found."}, status=status.HTTP_200_OK)
+            except NotFound:  # Handle invalid page numbers
+                return Response({"message": "No KYC requests found."}, status=status.HTTP_200_OK)
+
             serializer = KYCSerializer(result_page, many=True)
-            # serializer = KYCSerializer(pending_kycs, many=True)
-            # return Response(serializer.data, status=status.HTTP_200_OK)
             return paginator.get_paginated_response(serializer.data)
-        else:
-            return Response({"message": "No any KYC requests"}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# class PendingKYCListView(APIView):
+#     permission_classes = [permissions.IsAuthenticated]
+
+#     def get(self, request, *args, **kwargs):
+#         try:
+#             search_query = request.GET.get('q', '').strip()
+
+#             # ✅ Step 1: Start with all KYC requests
+#             pending_kycs = KYC.objects.all().order_by('-id')
+
+#             # ✅ Step 2: Apply search across ALL pages first!
+#             if search_query:
+#                 pending_kycs = pending_kycs.filter(
+#                     Q(user__fullName__icontains=search_query) |
+#                     Q(user__firstName__icontains=search_query) |
+#                     Q(user__lastName__icontains=search_query)
+#                 )
+
+#             # ✅ Step 3: Check if there are any results after filtering
+#             if not pending_kycs.exists():
+#                 return Response({"message": "No KYC requests found."}, status=status.HTTP_200_OK)
+
+#             # ✅ Step 4: Apply pagination after search filtering
+#             paginator = CustomPageNumberPagination()
+#             result_page = paginator.paginate_queryset(pending_kycs, request)
+
+#             # ✅ Step 5: Handle empty pagination case
+#             if result_page is None:
+#                 return Response({"message": "No KYC requests found."}, status=status.HTTP_200_OK)
+
+#             # ✅ Step 6: Serialize and return paginated results
+#             serializer = KYCSerializer(result_page, many=True)
+#             return paginator.get_paginated_response(serializer.data)
+
+#         except NotFound:
+#             return Response({"message": "No KYC requests found."}, status=status.HTTP_400_BAD_REQUEST)
+#         except Exception as e:
+#             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 #kyc verification by admin
 class KYCVerificationView(APIView):
@@ -640,8 +836,6 @@ class KYCVerificationView(APIView):
 
         else:
             return Response({"detail": "Invalid action. Use 'approve' or 'reject'."}, status=status.HTTP_400_BAD_REQUEST)
-
-
 
 #store sssion logs last login
 @receiver(user_logged_in)
@@ -709,6 +903,7 @@ class LastLoginActivityView(APIView):
             return Response(response_data)
         except UserActivityLog.DoesNotExist:
             return Response({"error": "No login activity found."}, status=404)
+
 #get all city names
 class Get_city_data(APIView):
     permission_classes = [IsAuthenticated]
@@ -1549,83 +1744,6 @@ class ClientCreateView(APIView):
         except Broker.DoesNotExist:
             return Response({"detail": "client_id not found."}, status=status.HTTP_404_NOT_FOUND)
 
-# class ClientOnboardingStatsView(APIView):
-#     permission_classes = [IsAuthenticated]
-
-#     def get(self, request, *args, **kwargs):
-#         try:
-#             # Get the filter type from the request
-#             filter_type = request.GET.get('filter', None)
-#             today = datetime.now().date()
-#             start_date = None
-#             end_date = None
-
-#             # If no filter type is provided, return a response with null values
-#             if filter_type is None:
-#                 return Response({
-#                     "filter_type": None,
-#                     "client_count": 0,
-#                     "start_date": None,
-#                     "end_date": None,
-#                     "data": []
-#                 }, status=200)
-
-#             # Determine the date range based on the filter type
-#             if filter_type == 'today':
-#                 start_date = today
-#                 end_date = today
-#             elif filter_type == 'yesterday':
-#                 start_date = today - timedelta(days=1)
-#                 end_date = today - timedelta(days=1)
-#             elif filter_type == 'this_week':
-#                 start_date = today - timedelta(days=today.weekday())  # Start of the week
-#                 end_date = today
-#             elif filter_type == 'this_month':
-#                 start_date = today.replace(day=1)  # Start of the month
-#                 end_date = today
-#             elif filter_type == 'date_range':
-#                 # Get custom date range from query parameters
-#                 from_date = request.GET.get('from_date', None)
-#                 to_date = request.GET.get('to_date', None)
-#                 if from_date and to_date:
-#                     start_date = datetime.strptime(from_date, "%Y-%m-%d").date()
-#                     end_date = datetime.strptime(to_date, "%Y-%m-%d").date()
-#                 else:
-#                     return Response({"message": "Both from_date and to_date are required for date range."}, status=400)
-#             else:
-#                 return Response({"error": "Invalid filter type."}, status=400)
-
-#             # Query to count clients created within the specified date range
-#             client_counts = (
-#                 User.objects
-#                 .filter(created_at__date__range=(start_date, end_date))
-#                 .extra({'created_date': 'date(created_at)'})  # Extract the date part
-#                 .values('created_date')  # Group by the created date
-#                 .annotate(clients=Count('id'))  # Count clients for each date
-#                 .order_by('created_date')  # Order by date
-#             )
-
-#             # Prepare the response data
-#             response_data = {
-#                 "filter_type": filter_type,
-#                 "start_date": start_date,
-#                 "end_date": end_date,
-#                 "data": [
-#                     {"date": entry['created_date'], "clients": entry['clients']}
-#                     for entry in client_counts
-#                 ]
-#             }
-
-#             # Calculate total client count
-#             total_client_count = sum(entry['clients'] for entry in client_counts)
-
-#             # Add total client count to the response
-#             response_data["client_count"] = total_client_count
-
-#             return Response(response_data, status=200)
-
-#         except Exception as e:
-#             return Response({"error": str(e)}, status=500)
 
 class ClientOnboardingStatsView(APIView):
     permission_classes = [IsAuthenticated]
@@ -3709,13 +3827,6 @@ def get_trading_symbol(exchange, symbol, kite):
 
 
 
-
-
-
-
-
-
-
 def generate_checksum(api_key, api_secret, request_token):
     import hashlib
     return hashlib.sha256(f"{api_key}{request_token}{api_secret}".encode()).hexdigest()
@@ -4343,6 +4454,23 @@ class ClientTradeListView(APIView):
 
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL)
+
+
+
+
+class TradeOrderResponseDataView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, trade_id, *args, **kwargs):
+        try:
+            # Get the trade order by ID
+            trade_order = get_object_or_404(Tradeorderhistory, id=trade_id)
+
+            # Return response data for the specific trade order
+            return Response({"response_data": trade_order.response_data}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 

@@ -504,12 +504,14 @@ class UserProfileRetrieveSerializer(serializers.ModelSerializer):
                 'status': obj.role.status
             }
         return None  # Return None if the user has no role assigned
+    
 class UserProfileUpdateSerializer(serializers.ModelSerializer):
     fullName = serializers.CharField()  # FullName is read-only, derived from first_name and last_name.
+    user_id = serializers.IntegerField(source='id', read_only=True) 
 
     class Meta:
         model = User
-        fields = ['email','firstName', 'lastName', 'userName','fullName', 'middleName','phoneNumber', 'profilePicture', 'PANEL_CLIENT_KEY', 'start_date', 'end_date', 'client_type',
+        fields = ['user_id','email','firstName', 'lastName', 'userName','fullName', 'middleName','phoneNumber', 'profilePicture', 'PANEL_CLIENT_KEY', 'start_date', 'end_date', 'client_type',
             # Permanent Address Fields
             'permanent_add_line_1', 'permanent_add_line_2', 'permanent_city', 
             'permanent_state', 'permanent_country', 'permanent_zip_code','is_address_same',
@@ -696,6 +698,7 @@ class KYCSerializer(serializers.ModelSerializer):
         # ✅ New method to fetch userName
     def get_user_name(self, obj):
         return obj.user.fullName if obj.user and obj.user.fullName else None
+    
 class PermissionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Permission

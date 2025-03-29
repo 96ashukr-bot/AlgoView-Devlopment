@@ -16,6 +16,8 @@ Backend/AlgoView-Devlopment/Backend/main/migrations/__pycache__/
 Backend/AlgoView-Devlopment/Backend/main/__pycache__/
 /localenv
 algoview/__pycache__
+# Ignore migration files
+*/migrations/*
 # logs/webhooks.log
 cron_broker_log.log
 cron_trading_error.log
@@ -60,3 +62,6 @@ __pycache__/
 # Ignore logs
 logs/webhooks.log
 env/
+
+*/migrations/*
+!*/migrations/__init__.py
