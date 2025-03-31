@@ -10,6 +10,7 @@ from rest_framework import generics, status, permissions
 from rest_framework.permissions import IsAdminUser,IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied, ValidationError
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
@@ -712,53 +713,18 @@ class CreateOrUpdateKYCView(APIView):
 from rest_framework.exceptions import NotFound
 from rest_framework.pagination import LimitOffsetPagination
 
-class PendingKYCListView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get(self, request, *args, **kwargs):
-        try:           
-
-            # Fetch all pending KYC requests
-            pending_kycs = KYC.objects.all().order_by('-id')
-            search_query = request.GET.get('q', '')
-
-            if search_query:
-                pending_kycs = pending_kycs.filter(
-                    Q(user__fullName__icontains=search_query) |
-                    Q(user__firstName__icontains=search_query) |
-                    Q(user__lastName__icontains=search_query)
-                )
-
-            if not pending_kycs.exists():
-                return Response({"message": "No KYC requests found."}, status=status.HTTP_200_OK)
-
-            paginator = CustomPageNumberPagination()
-            
-            try:
-                result_page = paginator.paginate_queryset(pending_kycs, request)
-                if not result_page:
-                    return Response({"message": "No KYC requests found."}, status=status.HTTP_200_OK)
-            except NotFound:  # Handle invalid page numbers
-                return Response({"message": "No KYC requests found."}, status=status.HTTP_200_OK)
-
-            serializer = KYCSerializer(result_page, many=True)
-            return paginator.get_paginated_response(serializer.data)
-
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # class PendingKYCListView(APIView):
 #     permission_classes = [permissions.IsAuthenticated]
 
 #     def get(self, request, *args, **kwargs):
-#         try:
-#             search_query = request.GET.get('q', '').strip()
+#         try:           
 
-#             # ✅ Step 1: Start with all KYC requests
+#             # Fetch all pending KYC requests
 #             pending_kycs = KYC.objects.all().order_by('-id')
+#             search_query = request.GET.get('q', '')
 
-#             # ✅ Step 2: Apply search across ALL pages first!
 #             if search_query:
 #                 pending_kycs = pending_kycs.filter(
 #                     Q(user__fullName__icontains=search_query) |
@@ -766,26 +732,96 @@ class PendingKYCListView(APIView):
 #                     Q(user__lastName__icontains=search_query)
 #                 )
 
-#             # ✅ Step 3: Check if there are any results after filtering
 #             if not pending_kycs.exists():
 #                 return Response({"message": "No KYC requests found."}, status=status.HTTP_200_OK)
 
-#             # ✅ Step 4: Apply pagination after search filtering
 #             paginator = CustomPageNumberPagination()
-#             result_page = paginator.paginate_queryset(pending_kycs, request)
-
-#             # ✅ Step 5: Handle empty pagination case
-#             if result_page is None:
+            
+#             try:
+#                 result_page = paginator.paginate_queryset(pending_kycs, request)
+#                 if not result_page:
+#                     return Response({"message": "No KYC requests found."}, status=status.HTTP_200_OK)
+#             except NotFound:  # Handle invalid page numbers
 #                 return Response({"message": "No KYC requests found."}, status=status.HTTP_200_OK)
 
-#             # ✅ Step 6: Serialize and return paginated results
 #             serializer = KYCSerializer(result_page, many=True)
 #             return paginator.get_paginated_response(serializer.data)
 
-#         except NotFound:
-#             return Response({"message": "No KYC requests found."}, status=status.HTTP_400_BAD_REQUEST)
 #         except Exception as e:
 #             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# correct code 
+
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.utils.http import urlencode 
+
+class PendingKYCListView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        try:
+            # Fetch all KYC records (filter for pending ones if needed)
+            pending_kycs = KYC.objects.all().order_by('-id')
+
+            # Get the search query from the request
+            search_query = request.GET.get('q', '').strip()
+
+            # Apply search filter if a search query is provided
+            if search_query:
+                pending_kycs = pending_kycs.filter(
+                    Q(user__firstName__icontains=search_query) | 
+                    Q(user__lastName__icontains=search_query) | 
+                    Q(user__fullName__icontains=search_query)
+                )
+
+            # 🔹 Debug: Print filtered count
+            print(f"Filtered pending KYCs count: {pending_kycs.count()}")
+
+
+            # ✅ Allow dynamic page size (default=10, options: 10, 25, 50)
+            allowed_page_sizes = [10, 25, 50]  # Allowed values
+            try:
+                items_per_page = int(request.GET.get('page_size', 10))  # Get page_size from request
+                if items_per_page not in allowed_page_sizes:  
+                    items_per_page = 10  # If invalid, fallback to default
+            except ValueError:
+                items_per_page = 10  # If conversion fails, fallback to default
+
+            # Pagination parameters
+            page = request.GET.get('page_number', 1)
+            paginator = Paginator(pending_kycs, items_per_page)
+            paginated_kycs = paginator.get_page(page)  # Auto-handles invalid pages
+
+
+            # Serialize the paginated queryset
+            serializer = KYCSerializer(paginated_kycs, many=True)
+
+            # Preserve query parameters
+            query_params = request.GET.copy()
+            base_url = request.build_absolute_uri(request.path)
+
+            next_page = None
+            prev_page = None
+
+            if paginated_kycs.has_next():
+                query_params['page'] = paginated_kycs.next_page_number()
+                next_page = f"{base_url}?{urlencode(query_params)}"
+
+            if paginated_kycs.has_previous():
+                query_params['page'] = paginated_kycs.previous_page_number()
+                prev_page = f"{base_url}?{urlencode(query_params)}"
+
+            return Response({
+                "count": paginator.count,
+                "next": next_page,
+                "previous": prev_page,
+                "results": serializer.data
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 #kyc verification by admin
 class KYCVerificationView(APIView):
