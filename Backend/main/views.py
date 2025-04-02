@@ -915,7 +915,7 @@ class UserActivityLogListView(ListAPIView):
         return UserActivityLog.objects.filter(user=self.request.user).order_by('-last_login_time')
 
 #last login api
-class LastLoginActivityView(APIView):
+class LastLoginoldActivityView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
@@ -939,7 +939,29 @@ class LastLoginActivityView(APIView):
             return Response(response_data)
         except UserActivityLog.DoesNotExist:
             return Response({"error": "No login activity found."}, status=404)
+            
+class LastLoginActivityView(APIView):
+    permission_classes = [IsAuthenticated]
 
+    def get(self, request, *args, **kwargs):
+        last_two_login_activities = UserActivityLog.objects.filter(
+            user=request.user, action_type='login'
+        ).order_by('-last_login_time')[:2]
+
+        if not last_two_login_activities:
+            return Response({"error": "No login activity found."}, status=404)
+
+        # If only one record exists, return that, otherwise return the second most recent login
+        last_login_activity = last_two_login_activities[0] if len(last_two_login_activities) == 1 else last_two_login_activities[1]
+
+        response_data = {
+            'last_login_time': last_login_activity.last_login_time,
+            'last_ip': last_login_activity.ip_address,
+            'session_key': last_login_activity.session_key,
+            # 'is_logged_out': last_login_activity.logout_time is not None,
+        }
+
+        return Response(response_data)
 #get all city names
 class Get_city_data(APIView):
     permission_classes = [IsAuthenticated]
@@ -1703,7 +1725,7 @@ class ClientCreateView(APIView):
             
             # Get the new group service name
             new_group_service_name = getattr(client.Group_service, "group_name", None)
-
+            existing_group_service_name=None
             # new_group_service_name = client.Group_service.group_name if hasattr(client, "Group_service") else None
             print("new_group_service_name::::", new_group_service_name, "new group service name>>>>***********", new_group_service_name)
 
@@ -3091,7 +3113,7 @@ class PlaceOrderWebhookView(APIView):
         logger.info(f"all_enable_users for trading is ::{all_enable_users} no of clients count is {user_count}")
         usernames = all_enable_users.values_list('client__userName', flat=True)
 
-        logger.info(f"username is:::::{usernames}")  # To check the list of usernames
+        logger.info(f"username is:::::{usernames}")  
         default_expiry=None 
         order_status=None        
         try:
