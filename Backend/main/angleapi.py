@@ -163,9 +163,20 @@ def place_Angle_order(broker_details,LivePrice,group_service,api_key,demate_user
             # responsedetails =smartApi.individual_order_details(uniqueorderid)
             responsedetails = get_order_details(uniqueorderid, api_key, access_token)
             # print("responsedetails>>>",responsedetails)
-            if responsedetails is None:
+            if not responsedetails or responsedetails.get('data') is None:
                 logger.error("No details found for the order.")
+                message = "No details found for the order."
+                order_id=uniqueorderid 
+                res_data=responsedetails
+                status="Failed"
+                
+                save_trade_order_history(LivePrice,group_service,transactiontype,
+                    trade_order_status, user, tradingsymbol, order_id, status, res_data, message,
+                    strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
+                    webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="Angle One"
+                )
                 return {"data": {"status": "Failed", "message": "Failed to retrieve order details."}}
+
 
             status = responsedetails['data'].get('status', 'unknown')
             order_id = responsedetails['data'].get('orderid', 'unknown')
