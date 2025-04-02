@@ -3089,6 +3089,9 @@ class PlaceOrderWebhookView(APIView):
         all_enable_users = ClientTradeSetting.objects.filter(is_tread_status=True,client__is_enable=True, broker__isnull=False,symbol=webhook_symbols,group_service=strategy_id)
         user_count = all_enable_users.count()
         logger.info(f"all_enable_users for trading is ::{all_enable_users} no of clients count is {user_count}")
+        usernames = all_enable_users.values_list('client__userName', flat=True)
+
+        logger.info(f"username is:::::{usernames}")  # To check the list of usernames
         default_expiry=None 
         order_status=None        
         try:

@@ -99,6 +99,7 @@ class categoriesAdmin(admin.ModelAdmin):
 @admin.register(ClientTradeSetting)    
 class ClientTradeSettingAdmin(admin.ModelAdmin):
     list_display=("id",'client','broker','symbol','group_service','segment','is_tread_status') 
+    search_fields = ('client__email', 'symbol') 
 
 @admin.register(TradeLog)    
 class TradeLogAdmin(admin.ModelAdmin):
