@@ -94,7 +94,7 @@ def place_Angle_order(broker_details,LivePrice,group_service,api_key,demate_user
         password=angle_pass
         lot_size = get_lot_size(tradingsymbol)  # Implement this function to fetch lot size
         lot = int(lot_size.get("lot_size", 0))  # Convert lot_size to an integer (default to 0 if not found)
-        # Check if the order quantity is a multiple of the lot size
+        logger.info(f"order place started ...........")  # Check if the order quantity is a multiple of the lot size
         order_id=0
         status="Failed"
         res_data="unknown response",
@@ -116,6 +116,7 @@ def place_Angle_order(broker_details,LivePrice,group_service,api_key,demate_user
                 state="AngleOne"
                 access_token = get_access_token(username, password, totp, state, api_key,broker_details)
                 # authToken = get_valid_token(username, password, Totp_Secret, smartApi, broker_details)
+                logger.info(f"auth token get angle api")
                 if not access_token:
                     error_message = "Unable to retrieve access token."
                     logger.error("Failed to log in: %s", error_message)
@@ -139,8 +140,11 @@ def place_Angle_order(broker_details,LivePrice,group_service,api_key,demate_user
                     webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="Angle One"
                 )
                 return {"data": {"status": "Failed", "message": f"Exception: {message}"}}
-            logger.info("Login successful, placing order...")
+            logger.info(f"Login successful, placing order...")
+            logger.info(f"order_placement is for :::::::::::::::::::::::::::::::::::")
+            
             response=place_order(access_token,payload,api_key)
+            logger.info(f"not any response ")
             # response = smartApi.placeOrderFullResponse(order_params)
             logger.info(f"Angle API Response: {response}")
             print("group_service>>>**)))))))))))",group_service)
