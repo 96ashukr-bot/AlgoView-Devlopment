@@ -2847,9 +2847,9 @@ def place_order_broker(LivePrice,group_service,
         #         return {"data": {"status": "Failed", "message": message}} 
         # if transaction_type =="BUY":
         response = place_zerodha_orders(LivePrice,group_service,access_token,Api_key,trade_symbol, transaction_type, symbol, quantity,
-                strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type,Entry_price,Exit_price,
-                EntryQty,ExitQty,webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice,trade_order_status)
-        
+                    strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type,Entry_price,Exit_price,
+                    EntryQty,ExitQty,webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice,trade_order_status)
+            
         logger.info(f" Zerodha Order . Response: {response}")
 
     elif trade.broker.lower() == "upstox":
