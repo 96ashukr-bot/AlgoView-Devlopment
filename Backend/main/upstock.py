@@ -90,6 +90,7 @@ def place_upstox_orders(LivePrice,group_service,
     product_type, price, user, Lots, Entry_type, Exit_type,Entry_price,Exit_price, EntryQty,ExitQty,webhook_signal, Exchange,
     Segment, Index_Symbol, triggerPrice,trade_order_status):
     try:
+        EntryQty=quantity
         smtp_details=CompanySmtpDetails.objects.first()
         default_from_email=smtp_details.email_host_user if smtp_details else   "no-reply@example.com" 
         # Fetch instrument details
@@ -218,6 +219,7 @@ def handle_successful_order(LivePrice,group_service,transaction_type,
     order_id, user, trade_symbol, strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal, Exchange,
     Segment, Index_Symbol, order_params, access_token,trade_order_status):
     try:
+        EntryQty=order_params['quantity']
         order_details = get_order_details(order_id, access_token)
         logger.info(f"after order deatis are fetched resp::{order_details}")
         # Extract order status and ID safely
@@ -247,7 +249,7 @@ def handle_successful_order(LivePrice,group_service,transaction_type,
                 "data": {
                     "status": "error",
                     "message": "Error while fetching order details.but order is placed successfully.",
-                    "error_details": str(e),
+                    # "error_details": str(e),
                 }
             }
 
@@ -259,7 +261,7 @@ def handle_successful_order(LivePrice,group_service,transaction_type,
         logger.info(f"order_status:::{order_status}")
         # order_id = order_details['data'].get('order_id', '')
         # print("order_id>>",order_id)
-        if order_details['data']['status'] =="complete"or  order_details['data']['status'] =="completed":
+        if order_details['data']['status'] =="complete"or  order_details['data']['status'] =="completed" or order_details['data']['status'] =="success" or order_details['data']['status'] =="SUCCESS":
             transaction_type=order_details['data'].get('transaction_type', '')
             if transaction_type == "BUY":
                 trade_order_status="OPEN"

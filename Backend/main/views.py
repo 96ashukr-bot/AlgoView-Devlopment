@@ -2837,16 +2837,20 @@ def place_order_broker(LivePrice,group_service,
 
         # logger.info(f"Fetched API credentials for broker {trade.broker}.")
         logger.info(f"Placing order for user: {user}, Broker: {trade.broker}, Symbol: {trade.symbol}")
-        # if transaction_type == "SELL":
-        #     response = exit_existing_buy_position_zerodha_order(LivePrice,group_service,Type,day,month,year,access_token,Api_key,trade_symbol, transaction_type, symbol, quantity,strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type,Entry_price,Exit_price,
-        #         EntryQty,ExitQty,webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice,trade_order_status)
-        #     if response.get("data", {}).get("status") == "error":
-        #         message = response.get("data", {}).get("message", f"Existing BUY position for {symbol} could not be closed.")
-        #         save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message, strategy,Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty, webhook_signal,Exchange, Segment, Index_Symbol, order_params, broker="zerodha")
-        #         logger.error(message)
-        #         return {"data": {"status": "Failed", "message": message}} 
-        # if transaction_type =="BUY":
-        response = place_zerodha_orders(LivePrice,group_service,access_token,Api_key,trade_symbol, transaction_type, symbol, quantity,
+        if transaction_type == "SELL":
+            response = exit_existing_buy_position_zerodha_order(LivePrice,group_service,Type,day,month,year,access_token,Api_key,trade_symbol, transaction_type, symbol, quantity,strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type,Entry_price,Exit_price,
+                EntryQty,ExitQty,webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice,trade_order_status)
+
+            if response.get("data", {}).get("status") == "error" or response.get("data", {}).get("status") == "Failed":
+                message = response.get("data", {}).get("message", f"Existing BUY position for {symbol} could not be closed.")
+                save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user, trade_symbol, order_id, status, res_data, message, strategy,
+                    Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal, Exchange, Segment, Index_Symbol,
+                    order_params, broker="zerodha"
+                )
+                logger.error(message)
+                return {"data": {"status": "Failed", "message": message}} 
+        if transaction_type =="BUY":
+                response = place_zerodha_orders(LivePrice,group_service,access_token,Api_key,trade_symbol, transaction_type, symbol, quantity,
                     strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type,Entry_price,Exit_price,
                     EntryQty,ExitQty,webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice,trade_order_status)
             

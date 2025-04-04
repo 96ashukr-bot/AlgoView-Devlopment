@@ -32,6 +32,7 @@ def place_Angle_order(broker_details,LivePrice,group_service,api_key,demate_user
         Segment,Index_Symbol ,user=None, strategy=None):
 
     try:
+        EntryQty=quantity
         print("inside place_Angle_order:::::::::::")
         order_id=0
         status="Failed"

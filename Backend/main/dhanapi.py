@@ -14,6 +14,7 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
     EntryQty, ExitQty, webhook_signal, Exchange, Segment,Index_Symbol, triggerPrice, trade_order_status):
     print("dhan api  Exchange is::",Exchange," product typweeee",product_type)
     try:
+        EntryQty=quantity
         Index_Symbol = symbol
         smtp_details=CompanySmtpDetails.objects.first()
         default_from_email=smtp_details.email_host_user if smtp_details else   "no-reply@example.com" 
@@ -113,6 +114,39 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
 
         logger.info(f"Final order_params dhan order:{order_params}")
         try:
+                
+            # Validate quantity against lot size using security_id
+            try:
+                # Load lot size data from CSV
+                # csv_path = "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/dhantoken.csv"
+                csv_path="/home/ubuntu/Backend/AlgoView-Devlopment/Backend/main/dhantoken.csv"
+                lot_data = pd.read_csv(csv_path, dtype={'SEM_SMST_SECURITY_ID': str})
+                
+                # Convert security_id to string for comparison
+                security_id_str = str(int(security_id)) if security_id else None
+                
+                if security_id_str:
+                    # Find the instrument in the CSV by security_id
+                    instrument_data = lot_data[lot_data['SEM_SMST_SECURITY_ID'].astype(str) == security_id_str]
+                    print("instrument_data>>>",instrument_data)
+                    if not instrument_data.empty:
+                        lot_size = float(instrument_data.iloc[0]['SEM_LOT_UNITS'])
+                        if quantity % lot_size != 0:
+                            message = f"Invalid quantity {quantity}. Must be multiple of lot size {lot_size}"
+                            logger.error(message)
+                            response = {"data": {"status": "Failed", "message": message}}
+                            save_trade_order_history(LivePrice, group_service, transaction_type, trade_order_status, 
+                                                user, trade_symbol, order_id, "Failed", None, message,
+                                                strategy, Entry_type, Exit_type, Entry_price, Exit_price, 
+                                                EntryQty, ExitQty, webhook_signal, Exchange, Segment, 
+                                                Index_Symbol, order_params, broker="dhan")
+                            return response
+                    else:
+                        logger.warning(f"No lot size data found for security_id {security_id_str} in CSV")
+                else:
+                    logger.warning("No security_id available for lot size validation")
+            except Exception as e:
+                logger.warning(f"Could not validate lot size: {str(e)}")
             order_response = dhan.place_order(**order_params)
             print("order_response",order_response)
             # Fetch order ID and validate response
@@ -322,7 +356,7 @@ def get_trading_symbol_security_id(symbol, segment, Exch,expiry_date):
         print("symbollll",symbol)
         # symbol="NIFTY20MAR26000CALL" 
         csv_file_path = "/home/ubuntu/Backend/AlgoView-Devlopment/Backend/main/dhantoken.csv"
-        # csv_file_path ="/home/digi2/JYOTIWORKSPACE/AlgoView-Devlopment/Backend/main/dhantoken.csv"
+        # csv_file_path ="/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/dhantoken.csv"
         df = pd.read_csv(csv_file_path, low_memory=False)
         
         # df['SEM_CUSTOM_SYMBOL'] = df['SEM_TRADING_SYMBOL'].str.replace("-", "").str.strip()

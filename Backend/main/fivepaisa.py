@@ -253,7 +253,7 @@ def place_5paisa_order(LivePrice,group_service,api_key,access_token,trade_symbol
         ,Exchange, Segment,Index_Symbol,triggerPrice,trade):
         
         print("transaction_type>>",transaction_type,ordertype)
-        
+        EntryQty=quantity
         smtp_details=CompanySmtpDetails.objects.first()
         default_from_email=smtp_details.email_host_user if smtp_details else   "no-reply@example.com" 
         segment="nse_fo"
