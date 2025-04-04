@@ -32,6 +32,7 @@ def place_Angle_order(broker_details,LivePrice,group_service,api_key,demate_user
         Segment,Index_Symbol ,user=None, strategy=None):
 
     try:
+        EntryQty=quantity
         print("inside place_Angle_order:::::::::::")
         order_id=0
         status="Failed"
@@ -212,15 +213,18 @@ def place_Angle_order(broker_details,LivePrice,group_service,api_key,demate_user
             
             elif responsedetails['data']['status'] == "open":
                 order_id=responsedetails['data']['orderid']
+                status="completed"
                 if not order_id:
                     order_id=uniqueorderid     
                 logger.info(f"Order is pending or open state, Order ID: {order_id}")
                 transaction_type=responsedetails['data'].get('transactiontype', '')
                 if transaction_type == "BUY":
+                    trade_order_status="OPEN"
                     Entry_type="LE"
                     Entry_price=responsedetails['data'].get('averageprice', 0.0)
                     EntryQty=responsedetails['data'].get('quantity', 0)
                 elif transaction_type == "SELL": 
+                    trade_order_status="CLOSE"
                     Exit_type="LX"
                     Exit_price=responsedetails['data'].get('averageprice', 0.0) 
                     ExitQty= responsedetails['data'].get('quantity', 0)#disclosedquantity
