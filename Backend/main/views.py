@@ -3215,11 +3215,18 @@ class PlaceOrderWebhookView(APIView):
                     ordertype = default_ordertype
                     # trade_limit = trade.trade_limit 
                     trade_limit = (trade.trade_limit or 0) * 2
+                    if not trade_limit or trade_limit==0:                           
+                        message= f"Trade limit not set  for user {user}. No  trades allowed for this user symbol:{symbol}"
+                        save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal , Exchange, Segment,Index_Symbol,order_params,broker=trade.broker)
+                        
+                        logger.warning(f"Trade limit not set  for user {user}. No  trades allowed today.{symbol}")
+                        continue
                     if trade_limit:
                         # Count user's trades for the day
                         today = datetime.today()
+                        print("today>>>",today)
                         daily_trade_count = TradingLog.objects.filter(client=user, date=today).count()
-                        if daily_trade_count >= trade_limit and trade_limit != 0:
+                        if daily_trade_count >= trade_limit:
                             message= f"Trade limit reached for user {user}. No more trades allowed today."
                             save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal , Exchange, Segment,Index_Symbol,order_params,broker=trade.broker)
                             
@@ -3300,8 +3307,9 @@ class PlaceOrderWebhookView(APIView):
                         webhook_signal ,Exchange, Segment,Index_Symbol,triggerPrice,day,month,year,fullyear,default_price,Type,order_params)
                             
                     # Check order response and log or handle failures
-                    print("final order repsone :::::::::::::::::::::",order_response)
+                    logger.info(f"final order repsone :::::::::::::::::::::{order_response}")
 
+                    print(" order_response['data']['status']:::::::::::", order_response['data']['status'])
                     if not order_response['data']['status']:
                         order_status="Failed"
                         order_status=f"Order response failed for {trade.symbol} with broker {trade.broker}"
