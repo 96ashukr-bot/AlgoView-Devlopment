@@ -16,6 +16,9 @@ from main.zerodha import place_zerodha_orders
 logger = logging.getLogger('main')
 from datetime import datetime, timedelta  
 from django.conf import settings
+import hashlib
+import json
+
   
 def get_lot_size(trading_symbol):
     # URL to fetch instrument details (for example, for Angel One)
@@ -209,7 +212,7 @@ def exit_existing_buy_position_Upstox(
                 )
 
                 status_value = sell_response.get("data", {}).get("status")
-                if status_value in ["completed", "rejected", "closed", "open","put order req received"]:
+                if status_value in ["completed","complete", "rejected", "closed", "open","put order req received"]:
                     trade_order = Tradeorderhistory.objects.get(order_id=oid)
                     trade_order.trade_order_status = "CLOSE"
                     trade_order.save()
@@ -296,7 +299,7 @@ def exit_existing_buy_position_Aliceblue(LivePrice,group_service, Type, day, mon
                                                    EntryQty, ExitQty, webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice)
                 
                 status_value = sell_response.get("data", {}).get("status")
-                if status_value in ["completed", "rejected", "closed", "open","pending"]:
+                if status_value in ["completed","complete", "rejected", "closed", "open","pending"]:
                     try:
                         trade_order = Tradeorderhistory.objects.get(order_id=oid)
                         trade_order.trade_order_status = "CLOSE"
@@ -392,7 +395,7 @@ def exit_existing_buy_position_DhanOrder(expiry_date,LivePrice, group_service,Ty
 
         status_value = sell_response.get("data", {}).get("status")
 
-        if status_value in ["completed", "rejected", "closed", "open", "transit", "TRANSIT","TRADED","traded"]:
+        if status_value in ["completed","complete", "rejected", "closed", "open", "transit", "TRANSIT","TRADED","traded"]:
             try:
                 trade_order = Tradeorderhistory.objects.get(order_id=oid)
                 trade_order.trade_order_status = "CLOSE"
@@ -475,7 +478,7 @@ def exit_existing_buy_position_5PaisaOrder(LivePrice,group_service,Type,day,mont
                 logger.error(f"Error placing sell order: {str(e)}")
                 return {"data": {"status": "error", "message": f"Error placing sell order: {str(e)}"}}
             status_value = sell_response.get("data", {}).get("status")
-            if status_value in ["completed","rejected", "closed","open","Fully Executed","TRANSIT"]:
+            if status_value in ["completed","complete","rejected", "closed","open","Fully Executed","TRANSIT"]:
                 try:
                     trade_order = Tradeorderhistory.objects.get(order_id=oid)
                     trade_order.trade_order_status = "CLOSE"
@@ -561,7 +564,7 @@ def exit_existing_buy_position_zerodha_order(LivePrice,group_service,Type,day,mo
                 return {"data": {"status": "error", "message": f"Error placing sell order: {str(e)}"}}
 
             status_value = sell_response.get("data", {}).get("status")
-            if status_value in ["completed","rejected", ]:
+            if status_value in ["completed","complete","rejected", ]:
                 try:
                     trade_order = Tradeorderhistory.objects.get(order_id=oid)
                     trade_order.trade_order_status = "CLOSE"
@@ -621,6 +624,9 @@ class BrokerLoginRedirectView(APIView):
 
             elif broker_name == "upstox":
                 return self.redirect_to_upstox(broker_details)
+            
+            elif broker_name == "fyers":
+                return self.redirect_to_fyers(broker_details)
 
             else:
                 return Response({"error": "Unsupported broker"}, status=400)
@@ -651,7 +657,25 @@ class BrokerLoginRedirectView(APIView):
 
     def redirect_to_alice_blue(self, broker_details):
         return redirect("login-aliceblue")  
+    
+    def redirect_to_fyers(self, broker_details):
+        CLIENT_ID = broker_details.broker_API_KEY
+        CLIENT_SECRET = broker_details.broker_API_SKEY
+        RESPONSE_TYPE = "code"
+        STATE = "fyers"
 
+        # Fyers Authorization URL
+        login_url = (
+            f"https://api-t1.fyers.in/api/v3/generate-authcode?"
+            f"client_id={CLIENT_ID}&redirect_uri={REDIRECT_URI}"
+            f"&response_type={RESPONSE_TYPE}&state={STATE}"
+        )
+
+        print("CLIENT_ID >>>", CLIENT_ID)
+        print("Redirect URL >>>", login_url)
+
+        return Response({"redirect_url": login_url})
+    
     def redirect_to_upstox(self, broker_details):
         CLIENT_KEY = broker_details.broker_API_KEY
         print("CLIENT_KEY>>>",CLIENT_KEY)
@@ -679,9 +703,10 @@ class BrokerCallbackView(APIView):
             broker_details = ClientBrokerdetails.objects.get(client=user)
             print("broker_details:::::::::::",broker_details)
             broker  = broker_details.broker_name.broker_name
-            print("broker_name>>>>",broker)
             broker_name=request.GET.get('state',"") 
-            # Handle different brokers
+
+            broker_name = broker_name.lower()
+            print(" Broker from State Param:", broker_name)
             if broker_name == "zerodha":
                 request_token = request.GET.get('code')
                 return self.handle_zerodha(request_token, broker_details)
@@ -696,6 +721,10 @@ class BrokerCallbackView(APIView):
             elif broker_name == "upstox":
                 request_token = request.GET.get('code')
                 return self.handle_upstox(request_token, broker_details)
+            
+            elif broker_name == "fyers":
+                request_token = request.GET.get('code')
+                return self.handle_fyers(request_token, broker_details)
 
             else:
                 raise ValidationError("Unsupported broker")
@@ -705,6 +734,57 @@ class BrokerCallbackView(APIView):
         except Exception as e:
             raise ValidationError(str(e))
 
+    def handle_fyers(self, request_token, broker_details):
+        try:
+            CLIENT_ID = broker_details.broker_API_KEY
+            SECRET_KEY = broker_details.broker_API_SKEY
+            GRANT_TYPE = "authorization_code"
+
+            #  Correct hash: SHA256("client_id:secret_key")
+            raw_string = f"{CLIENT_ID}:{SECRET_KEY}"
+            app_id_hash = hashlib.sha256(raw_string.encode()).hexdigest()
+
+            # Token exchange endpoint
+            token_url = "https://api-t1.fyers.in/api/v3/validate-authcode"
+            payload = {
+                "grant_type": GRANT_TYPE,
+                "appIdHash": app_id_hash,
+                "code": request_token
+            }
+
+            headers = {"Content-Type": "application/json"}
+            response = requests.post(token_url, data=json.dumps(payload), headers=headers)
+            token_data = response.json()
+
+            # print("Access Token Response:", json.dumps(token_data, indent=4))
+
+            access_token = token_data.get("access_token")
+            print("access_token>>>",access_token)
+            if access_token:
+                now_time = now()
+
+                #  Set expiry to next 3:30 AM
+                if now_time.hour < 3 or (now_time.hour == 3 and now_time.minute < 30):
+                    expiry_date = now_time.date()
+                else:
+                    expiry_date = now_time.date() + timedelta(days=1)
+                expiry_time = datetime.combine(expiry_date, datetime.min.time()) + timedelta(hours=3, minutes=30)
+
+                # Save token data
+                broker_details.request_token = request_token
+                broker_details.access_token = access_token
+                broker_details.access_token_expiry = expiry_time
+                broker_details.isTokenExpired = False
+                broker_details.tokenCreatedAt = now()
+                broker_details.save()
+
+                return JsonResponse({"message": "success", "access_token": access_token})
+            else:
+                return JsonResponse({"message": "Failed to get access token", "response": token_data}, status=400)
+
+        except Exception as e:
+            return JsonResponse({"message": "Failed", "error": str(e)}, status=500)
+  
     def handle_zerodha(self, request_token, broker_details):
         try:
             kite = KiteConnect(api_key=broker_details.broker_API_KEY)

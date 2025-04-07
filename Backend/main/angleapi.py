@@ -920,7 +920,7 @@ def exit_existing_buy_position_angleone(
 
             status_value = sell_response.get("data", {}).get("status", "")
 
-            if status_value in ["completed", "rejected", "closed","open"]:
+            if status_value in ["completed","complete", "rejected", "closed","open"]:
                 trade_order = Tradeorderhistory.objects.get(order_id=oid)
                 print("trade_order>>>",trade_order)
                 trade_order.trade_order_status="CLOSE"

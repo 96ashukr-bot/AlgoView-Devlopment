@@ -1,10 +1,11 @@
 from django.http import JsonResponse
 import requests
-
+import os
 from main.Alice_Blue_Api import save_trade_order_history
 from main.models import ClientBrokerdetails, CompanySmtpDetails
 import logging
 logger = logging.getLogger('main')
+import csv 
 
 def place_fyers_orders(LivePrice,group_service,access_token, Api_key, trade_symbol, transaction_type, symbol, quantity,
     strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type, Entry_price, Exit_price, 
@@ -18,8 +19,9 @@ def place_fyers_orders(LivePrice,group_service,access_token, Api_key, trade_symb
         """1
         2 => Market Order
         3 => Stop Order (SL-M)
-        4 => Stoplimit Order (SL-L)
+        4 => Stoplimit Order (SL-L
         """
+        
         # Prepare order parameters
         order_url = "https://api-t1.fyers.in/api/v3/orders/sync"
         if ordertype.lower()=="limit":
@@ -30,12 +32,14 @@ def place_fyers_orders(LivePrice,group_service,access_token, Api_key, trade_symb
             side=1
         elif transaction_type.lower()=="sell":
             side=-1
-
-        order_payload = {
+        if product_type.upper()=="MIS":
+                product_type="MTF"
+        ordertype=ordertype.upper()
+        order_params = {
             "symbol": trade_symbol,
             "qty": quantity,
-            "type": order,        
-            "side": side,               # 1 = Buy, 2 = Sell
+            "type": ordertype ,        
+            "side": transaction_type,               # 1 = Buy, 2 = Sell
             "productType": product_type,  # Use INTRADAY for options/F&O
             "limitPrice": price if ordertype.upper() == "LIMIT" else 0,
             # "stopPrice": 0,
@@ -44,12 +48,13 @@ def place_fyers_orders(LivePrice,group_service,access_token, Api_key, trade_symb
             # "offlineOrder": False,
             # "orderTag": "0"
         }
+
         headers = {
             "Authorization": f"{Api_key}:{access_token}",
             "Content-Type": "application/json"
         }    
 
-        trading_symbol = get_trading_symbol(Exchange, trade_symbol, access_token)
+        trading_symbol = get_instruments_symbol_from_csv(trade_symbol)
 
         if not trading_symbol:
             logger.error(f"trading_symbol details not found for {trade_symbol}")
@@ -62,22 +67,22 @@ def place_fyers_orders(LivePrice,group_service,access_token, Api_key, trade_symb
             return response
 
         logger.info(f"Fetched fyers trading_symbol: {trading_symbol}")
-
-        # Prepare order parameters
         order_params = {
-            "tradingsymbol": trading_symbol,
-            "exchange": Exchange,
-            "transaction_type": transaction_type,
-            "quantity": quantity,
-            "order_type": ordertype,
-            "product": product_type,
-            "price": price if ordertype.upper() == "LIMIT" else 0,
-            "trigger_price": triggerPrice if ordertype.upper() == "SL" else None
+            "symbol": trading_symbol,
+            "qty": quantity,
+            "type": 2 if ordertype.upper() == "MARKET" else 1,  # ✅ Fix is here
+            "side": 1 if transaction_type.upper() == "BUY" else -1,
+            "productType": product_type.upper(),  # e.g., "INTRADAY"
+            "validity": "DAY",
+            "orderTag": "tag1"
         }
-
+        print("ordertype>>>",ordertype)
+        if ordertype == "LIMIT":
+            order_params["limitPrice"] = float(price)
+        logger.info(f"paylod of order>>>>{order_params}")
         try:
             
-            response = requests.post(order_url, headers=headers, json=order_payload)
+            response = requests.post(order_url, headers=headers, json=order_params)
             order_response = response.json()
 
             if order_response.get("s") == "ok":
@@ -234,21 +239,47 @@ def place_fyers_orders(LivePrice,group_service,access_token, Api_key, trade_symb
         return response
 
     
-def get_trading_symbol(exchange, symbol, kite):
+
+def get_instruments_symbol_from_csv(compact_symbol_details):
     try:
-        # Fetch the list of instruments for the specified exchange
-        instruments = kite.instruments(exchange)
-        # csv_file = "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/zerodhaNFO.csv"
-        for instrument in instruments:
-            if instrument['tradingsymbol'] == symbol:
-                print("Trading Symbol Found:", instrument['tradingsymbol'])
-                return instrument['tradingsymbol']
-        
-        return None  # Return None if the symbol is not found
+        csv_path="main/fyers_instrument_symbol.csv"
+        if not os.path.exists(csv_path):
+            print(f" CSV file not found at: {csv_path}")
+            return None
+
+        with open(csv_path, mode='r', encoding='utf-8') as f:
+            reader = csv.reader(f)
+            rows = list(reader)
+
+        if not rows:
+            print(" CSV file is empty")
+            return None
+
+        headers = rows[0]
+        data_rows = rows[1:]
+
+        # Get column indexes
+        try:
+            symbol_details_index = headers.index("Symbol Details")
+            symbol_ticker_index = headers.index("Symbol Ticker")
+        except ValueError:
+            print(" Required columns not found in CSV")
+            return None
+
+        # Match the compacted "Symbol Details"
+        for row in data_rows:
+            raw_symbol_details = row[symbol_details_index]
+            normalized_symbol_details = raw_symbol_details.replace(" ", "")
+            if normalized_symbol_details.upper() == compact_symbol_details:
+                return row[symbol_ticker_index]
+
+        print(f" Symbol Details '{compact_symbol_details}' not found in CSV")
+        return None
 
     except Exception as e:
-        print(f"Error: {str(e)}")
+        print(f"Error reading CSV: {e}")
         return None
+
 
 def get_order_details(order_id, kite):
     try:
