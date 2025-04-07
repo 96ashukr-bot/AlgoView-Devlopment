@@ -32,6 +32,7 @@ def place_Angle_order(broker_details,LivePrice,group_service,api_key,demate_user
         Segment,Index_Symbol ,user=None, strategy=None):
 
     try:
+        print("Entry_pric+++++++++++++++++++++++",Entry_price,Exit_price)
         EntryQty=quantity
         print("inside place_Angle_order:::::::::::")
         order_id=0
@@ -213,7 +214,7 @@ def place_Angle_order(broker_details,LivePrice,group_service,api_key,demate_user
             
             elif responsedetails['data']['status'] == "open":
                 order_id=responsedetails['data']['orderid']
-                status="completed"
+                
                 if not order_id:
                     order_id=uniqueorderid     
                 logger.info(f"Order is pending or open state, Order ID: {order_id}")
@@ -235,6 +236,7 @@ def place_Angle_order(broker_details,LivePrice,group_service,api_key,demate_user
                 message = responsedetails['data'].get('text', 'Unknown  reason')
                 status=responsedetails['data'].get('status', 'pending')
                 # print("user.firstName>>>>>",user.firstName)
+                status="complete"
                 # send_trade_email_async.delay(user.email, from_email,user.firstName,status, message)
                 logger.info(f"Order is pending or in process reason is !!!::{message}")
                 save_trade_order_history(LivePrice,group_service,transactiontype,trade_order_status,user,tradingsymbol, order_id, status, res_data, message,  strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol ,order_params, broker="Angle One")

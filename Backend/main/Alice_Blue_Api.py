@@ -273,7 +273,7 @@ def place_alice_orders(LivePrice,group_service,api_skey,api_uid,trading_symbol_a
                 from_email = default_from_email,
                 message=order_his.get('RejReason', 'not any reason get').lower()
                 send_trade_email_async.delay(user.email, from_email,user.firstName,status, message)
-                response = {"data": {"status": "OPEN"}}
+                response = {"data": {"status": "complete","message":"message"}}
                 logger.info(f"Order  order is active and open in the market  for user {user}. Order ID:  :{order_id}")
                 save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trading_symbol_aliceblue, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol,order_params, broker="Alice Blue")
                 return response
@@ -333,8 +333,8 @@ def save_trade_order_history(LivePrice,group_service,transaction_type,trade_orde
         SignalExit_time = current_time if Exit_type else None
 
         # Handle null prices by falling back to LivePrice
-        final_entry_price = Entry_price if Entry_price is not None else LivePrice
-        final_exit_price = Exit_price if Exit_price is not None else LivePrice
+        # final_entry_price = Entry_price if Entry_price is not 0
+        # final_exit_price = Exit_price if Exit_price is not 0
 
         # Create the trade history record
         trade_history = Tradeorderhistory.objects.create(
@@ -352,8 +352,8 @@ def save_trade_order_history(LivePrice,group_service,transaction_type,trade_orde
             GroupService=group_service,
             Entry_type=Entry_type,
             Exit_type=Exit_type,
-            Entry_Price=final_entry_price,
-            Exit_Price=final_exit_price,
+            Entry_Price=Entry_price,
+            Exit_Price=Exit_price,
             SignalEntry_time=SignalEntry_time,
             SignalExit_time=SignalExit_time,
             Exchange=Exchange,
