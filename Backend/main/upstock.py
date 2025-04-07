@@ -332,7 +332,7 @@ def handle_successful_order(LivePrice,group_service,transaction_type,
                 Exit_type="LX"
                 Exit_price=order_details['data'].get('average_price', 0.0) 
                 ExitQty= order_details['data'].get('quantity', 0)#disclosedquantity
-
+            status="complete"
             save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, rejection_message, 
             strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, 
             Segment,Index_Symbol ,order_params , broker="Upstox")
