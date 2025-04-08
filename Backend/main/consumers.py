@@ -98,8 +98,8 @@ class UpstoxMarketDataConsumer(AsyncWebsocketConsumer):
         """Convert tokens to instrument keys using CSV file"""
         instrument_map = {}
         reverse_map = {} 
-        #csv_path = "/home/digi2/JYOTIWORKSPACE/AlgoView-Devlopment/Backend/main/complete.csv"
-        csv_path = "/home/ubuntu/Backend/AlgoView-Devlopment/Backend/main/complete.csv"
+        csv_path = "main/complete.csv"
+       
         try:
             with open(csv_path, "r") as csvfile:
                 reader = csv.DictReader(csvfile)
@@ -260,7 +260,7 @@ class UpstoxChainConsumer(AsyncWebsocketConsumer):
         tradingsymbol_map = {}
         category_map = {}
         #csv_path = "/home/digi2/JYOTIWORKSPACE/AlgoView-Devlopment/Backend/main/complete.csv"
-        csv_path = "/home/ubuntu/Backend/AlgoView-Devlopment/Backend/main/complete.csv"
+        csv_path = "main/complete.csv"
 
         try:
             try:
@@ -979,7 +979,6 @@ class StockChainConsumerold(AsyncWebsocketConsumer):
             data = response.json()
             # logger.info(f"{data}...dataaaaa--------")
             #         # Save the data to the specified directory
-            # target_directory = "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend"
             # self.save_data_to_file(data, "symbol_data.json", target_directory)
 
             token_to_symbol = {}

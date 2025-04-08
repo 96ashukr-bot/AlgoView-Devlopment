@@ -723,7 +723,9 @@ class BrokerCallbackView(APIView):
                 return self.handle_upstox(request_token, broker_details)
             
             elif broker_name == "fyers":
-                request_token = request.GET.get('code')
+                request_token ="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcHBfaWQiOiJNTldCS0xVQkM2IiwidXVpZCI6ImQ3Y2QxNzY0YWVlNzQyOTM4MDlhZTU3MjczNGZlOWY5IiwiaXBBZGRyIjoiIiwibm9uY2UiOiIiLCJzY29wZSI6IiIsImRpc3BsYXlfbmFtZSI6IkRBMDM3NzUiLCJvbXMiOiJLMSIsImhzbV9rZXkiOiJhM2ZkNmI2ZDFjOTE3YTVkNTM3YmNkYjIzOGViNGUyZTBlYWU4ZmY0NGI4NzE3MDIzMTQ1YTQ3MiIsImlzRGRwaUVuYWJsZWQiOiJOIiwiaXNNdGZFbmFibGVkIjoiTiIsImF1ZCI6IltcIng6MFwiLFwieDoxXCIsXCJ4OjJcIl0iLCJleHAiOjE3NDQxMTk4OTYsImlhdCI6MTc0NDA4OTg5NiwiaXNzIjoiYXBpLmxvZ2luLmZ5ZXJzLmluIiwibmJmIjoxNzQ0MDg5ODk2LCJzdWIiOiJhdXRoX2NvZGUifQ.bQkFmMjHMuLXBvOVCNM3Bt-lRcGy5G1KjRCZno0xKDM"
+                # request.GET.get('code')
+                
                 return self.handle_fyers(request_token, broker_details)
 
             else:

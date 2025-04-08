@@ -518,7 +518,7 @@ class UserManagementView(APIView):
             users = User.objects.filter(role__name='Sub-Admin', id=user.id)
             # .annotate(client_count=Count('assigned_users')).prefetch_related(
             #     Prefetch('assigned_users', queryset=User.objects.all(), to_attr='assigned_users_list') ).order_by('-id')
-            logger.info("Admin:::{user.role.name}")
+            logger.info(f"Admin:::{user.role.name}")
         search_query = request.query_params.get('q', '').strip()
         if search_query:
             users = users.filter(
@@ -3909,7 +3909,6 @@ def get_trading_symbol(exchange, symbol, kite):
     try:
         # Fetch the list of instruments for the specified exchange
         instruments = kite.instruments(exchange)
-        # csv_file = "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/zerodhaNFO.csv"
 
         # # Write data to a CSV file
         # with open(csv_file, mode='w', newline='') as file:

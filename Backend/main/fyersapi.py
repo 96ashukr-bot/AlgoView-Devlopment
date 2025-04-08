@@ -83,8 +83,22 @@ def place_fyers_orders(LivePrice,group_service,access_token, Api_key, trade_symb
         try:
             
             response = requests.post(order_url, headers=headers, json=order_params)
+           
+            logger.info(f"order_response of fyers::::::::::::{response}")
             order_response = response.json()
-
+            if response.status_code == 401:
+                logger.error("Unauthorized - Access token might have expired.")
+                status = "Unauthorized"
+                message = f" Authentication failed. Please refresh your access token."
+                res_data = f"{str(e)}"
+                response={"data": {"status": status,"message":message}}
+                save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, symbol, order_id, status, res_data, message,  
+                            strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
+                            webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="fyers")
+                
+                return response
+               
+            print("777777777777777777777777777777")
             if order_response.get("s") == "ok":
                 print(" Order submitted successfully.")
                 print(" Order ID:", order_response.get("id"))
