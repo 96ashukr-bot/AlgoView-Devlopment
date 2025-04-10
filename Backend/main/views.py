@@ -2720,6 +2720,7 @@ def place_order_broker(LivePrice,group_service,
     message=""
     if trade.broker.lower() == "fyers":
         symbol=symbol.upper()
+        print("day>>>>>>>>>>>",day)
         trade_symbol = f"{symbol}{year}{month}{day}{default_price}{Type}"
         logger.info("trading_symbol OF Fyers..:::::: %s ", trade_symbol)
         client_broker = ClientBrokerdetails.objects.filter(client=trade.client, broker_name__broker_name__iexact=trade.broker).first()
