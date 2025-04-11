@@ -34,7 +34,7 @@ def place_fyers_orders(LivePrice,group_service,access_token, Api_key, trade_symb
         elif transaction_type.lower()=="sell":
             side=-1
         if product_type.upper()=="MIS":
-                product_type="MTF"
+                product_type="INTRADAY"
         ordertype=ordertype.upper()
         order_params = {
             "symbol": trade_symbol,

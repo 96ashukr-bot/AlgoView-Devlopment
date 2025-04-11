@@ -49,63 +49,70 @@ import websockets
 from google.protobuf.json_format import MessageToDict
 from main import MarketDataFeed_pb2 as pb
 from asgiref.sync import sync_to_async
-
-
-#live data for trade histoty
+import os
 
 class UpstoxChainLiveSymbolConsumer(AsyncWebsocketConsumer):
-
     async def connect(self):
         from main.models import WebsocketDetails
 
         # Auth token from DB
         websocket_details = await sync_to_async(WebsocketDetails.objects.latest)('id')
         access_token = websocket_details.Auth_token
-
-        # Parse query parameters
+        # Parse query parameters and split by comma.
         query_params = parse_qs(self.scope["query_string"].decode())
         self.symbol_names = query_params.get("name", [None])[0].split(",")
-
         logger.info(f"Received symbol names: {self.symbol_names}")
 
         if not self.symbol_names:
             await self.close()
             return
 
-        # Per-connection instance variables
+        # Instance variables per connection.
         self.token_to_symbol = {}
         self.token_to_strike_price = {}
         self.token_to_category = {}
         self.reverse_instrument_map = {}
         self.last_prices = {}
 
-        # Load CSV and get instrument keys
-        self.instrument_keys = self.get_instrument_keys_from_csv(self.symbol_names)
+        # Load CSV instrument keys using a background thread.
+        self.instrument_keys = await asyncio.to_thread(
+            
+            self.get_instrument_keys_from_csv, self.symbol_names
+        )
         if not self.instrument_keys:
             await self.close()
             return
 
-        # Accept WebSocket connection
+        # Accept the WebSocket connection.
         await self.accept()
 
-        # Upstox config
+        # Upstox configuration.
         self.api_version = '2.0'
         self.configuration = upstox_client.Configuration()
         self.configuration.access_token = access_token
 
-        # Start market data loop
+        # Start the market data feed in an asynchronous task.
         asyncio.create_task(self.fetch_market_data())
 
     async def disconnect(self, close_code):
         logger.info("WebSocket disconnected")
 
     def get_instrument_keys_from_csv(self, names):
+        """
+        Reads the CSV file and collects instrument keys that match any of the provided names.
+        Adjust the matching logic if you prefer substring matching.
+        """
         instrument_keys = []
+        # Build an absolute path to ensure robustness.
         csv_path = "main/complete.csv"
         try:
             with open(csv_path, "r") as f:
                 reader = csv.DictReader(f)
                 for row in reader:
+                    # For more flexible matching, you could do:
+                    # for name in names:
+                    #     if name.upper() in row["name"].upper():
+                    #         ... (process and break)
                     if row["name"] in names:
                         token = row["exchange_token"]
                         instrument_key = row["instrument_key"]
@@ -114,16 +121,25 @@ class UpstoxChainLiveSymbolConsumer(AsyncWebsocketConsumer):
                         self.token_to_category[token] = row["option_type"]
                         self.reverse_instrument_map[instrument_key] = token
                         instrument_keys.append(instrument_key)
+            logger.info(f"Found {len(instrument_keys)} instrument keys: {instrument_keys}")
             return instrument_keys
         except Exception as e:
             logger.error(f"CSV read error: {e}")
             return []
 
-    def get_market_data_feed_authorize(self):
-        api_instance = upstox_client.WebsocketApi(upstox_client.ApiClient(self.configuration))
+    def get_market_data_feed_authorize_sync(self):
+        """
+        Blocking call to authorize and retrieve the feed URI.
+        """
+        api_instance = upstox_client.WebsocketApi(
+            upstox_client.ApiClient(self.configuration)
+        )
         return api_instance.get_market_data_feed_authorize(self.api_version)
 
     def decode_protobuf(self, buffer):
+        """
+        Decodes the binary feed using protobuf.
+        """
         try:
             feed_response = pb.FeedResponse()
             feed_response.ParseFromString(buffer)
@@ -132,30 +148,41 @@ class UpstoxChainLiveSymbolConsumer(AsyncWebsocketConsumer):
             logger.error(f"Protobuf decode error: {e}")
             return None
 
+    async def subscribe_chunks(self, websocket):
+        """
+        Schedules all subscription messages concurrently.
+        """
+        tasks = []
+        # Loop through instrument_keys in chunks of 100.
+        for i in range(0, len(self.instrument_keys), 100):
+            chunk = self.instrument_keys[i:i + 100]
+            data = {
+                "guid": f"guid-{i}",
+                "method": "sub",
+                "data": {"mode": "full", "instrumentKeys": chunk}
+            }
+            # Log subscription data for debugging.
+            logger.info(f"Subscribing chunk with keys: {chunk}")
+            tasks.append(websocket.send(json.dumps(data).encode("utf-8")))
+        await asyncio.gather(*tasks)
+
     async def fetch_market_data(self):
+        # Setup SSL context (adjust as needed).
         ssl_context = ssl.create_default_context()
         ssl_context.check_hostname = False
         ssl_context.verify_mode = ssl.CERT_NONE
 
-        response = self.get_market_data_feed_authorize()
+        # Authorize and get the Upstox feed URI by running blocking code in the thread.
+        response = await sync_to_async(self.get_market_data_feed_authorize_sync)()
         uri = response.data.authorized_redirect_uri
+        logger.info(f"Upstox feed URI: {uri}")
 
         async with websockets.connect(uri, ssl=ssl_context, max_size=4 * 1024 * 1024) as websocket:
-
             await asyncio.sleep(1)
+            # Subscribe to all instrument keys concurrently.
+            await self.subscribe_chunks(websocket)
 
-            # Chunk and subscribe
-            for i in range(0, len(self.instrument_keys), 100):
-                chunk = self.instrument_keys[i:i + 100]
-                data = {
-                    "guid": f"guid-{i}",
-                    "method": "sub",
-                    "data": {"mode": "full", "instrumentKeys": chunk}
-                }
-                await websocket.send(json.dumps(data).encode("utf-8"))
-                await asyncio.sleep(0.2)
-
-            # Receive messages
+            # Process incoming messages indefinitely.
             while True:
                 try:
                     message = await websocket.recv()
@@ -168,24 +195,27 @@ class UpstoxChainLiveSymbolConsumer(AsyncWebsocketConsumer):
                     break
                 except Exception as e:
                     logger.error(f"Error in receiving: {e}")
+                    await asyncio.sleep(0.05)  # yield control if error occurs
 
     async def process_market_data(self, tick_data):
         feeds = tick_data.get("feeds", {})
         for token_key, data in feeds.items():
             try:
+                # Find the token based on instrument key mapping.
                 token = self.reverse_instrument_map.get(token_key, token_key)
                 ff = data.get("ff", {})
                 market_ff = ff.get("marketFF", {})
                 index_ff = ff.get("indexFF", {})
                 vol_ff = ff.get("marketOHLC", {})
 
+                # Try to determine last traded price (ltp) and close price.
                 ltpc = market_ff.get("ltpc", {}) or index_ff.get("ltpc", {})
                 efeed = market_ff.get("eFeedDetails", {}) or index_ff.get("ltpc", {})
-
                 ltp = ltpc.get("ltp") or ltpc.get("cp")
                 close = efeed.get("cp")
                 volume = vol_ff.get("volume", 0)
 
+                # Skip if data is incomplete.
                 if ltp is None or close is None:
                     continue
 
@@ -198,20 +228,23 @@ class UpstoxChainLiveSymbolConsumer(AsyncWebsocketConsumer):
                 strike = self.token_to_strike_price.get(token, "")
                 cat = self.token_to_category.get(token, "Unknown")
 
-                await self.send(text_data=json.dumps({
-                    "symbol": symbol,
-                    "strike_price": strike,
-                    "ltp": f"{ltp:,.2f}",
-                    "volume": volume,
-                    "category": cat,
-                    "formatted_difference": f"{'+' if diff > 0 else '-'}{abs(diff):,.2f}",
-                    "formatted_percentage": f"({'+' if diff > 0 else '-'}{abs(percent):.2f}%)",
-                    "close_price": close
-                }))
+                # Send data to the connected client.
+                await self.send(
+                    text_data=json.dumps({
+                        "symbol": symbol,
+                        "strike_price": strike,
+                        "ltp": f"{ltp:,.2f}",
+                        "volume": volume,
+                        "category": cat,
+                        "formatted_difference": f"{'+' if diff > 0 else '-'}{abs(diff):,.2f}",
+                        "formatted_percentage": f"({'+' if diff > 0 else '-'}{abs(percent):.2f}%)",
+                        "close_price": close
+                    })
+                )
             except Exception as e:
                 logger.error(f"Error processing token {token_key}: {e}")
 
-
+#live data for trade histoty
 class UpstoxMarketDataConsumer(AsyncWebsocketConsumer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
