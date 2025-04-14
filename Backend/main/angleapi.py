@@ -156,15 +156,19 @@ def place_Angle_order(broker_details,LivePrice,group_service,api_key,demate_user
                 res_data="None response from API"
                 save_trade_order_history(LivePrice,group_service,transactiontype,trade_order_status,user,tradingsymbol, order_id, status, res_data, message,  strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol , order_params,broker="Angle One")
                 return {"data": {"status": "Failed", "message": message}}
+            data = response.get('data')
+            if not data or not isinstance(data, dict):
+                logger.error(f"Invalid response structure from Angle One: {response}")
+                res_data="None response from API"
+                save_trade_order_history(LivePrice,group_service,transactiontype,trade_order_status,user,tradingsymbol, order_id, status, res_data, message,  strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol , order_params,broker="Angle One")
+                return {"data": {"status": "Failed", "message": "Invalid response structure from API"}}
+                
 
-            uniqueorderid = response.get('data', {}).get('uniqueorderid', None)
-            if not uniqueorderid:
-                logger.error(f"Order response does not contain valid uniqueorderid: {response}")
-                return {"data": {"status": "Failed", "message": "Failed to retrieve order ID."}}
+            uniqueorderid = data.get('uniqueorderid') 
 
             # responsedetails =smartApi.individual_order_details(uniqueorderid)
             responsedetails = get_order_details(uniqueorderid, api_key, access_token)
-            # print("responsedetails>>>",responsedetails)
+            logger.info(f"responsedetails>>>{responsedetails}")
             if not responsedetails or responsedetails.get('data') is None:
                 logger.error("No details found for the order.")
                 message = "No details found for the order."
@@ -497,7 +501,7 @@ def get_order_details(unique_order_id, api_key, auth_token):
         endpoint = f"/rest/secure/angelbroking/order/v1/details/{unique_order_id}"
         conn.request("GET", endpoint, "", headers)
         res = conn.getresponse()
-        logger.info(f"res>>{res}")
+        logger.info(f"res details of angle one>>{res}")
         data = res.read()
         response_data = json.loads(data.decode("utf-8"))
 

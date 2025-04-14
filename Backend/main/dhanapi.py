@@ -353,7 +353,9 @@ def get_trading_symbol_security_id(symbol, segment, Exch,expiry_date):
     try:
         print("symbollll",symbol)
         # symbol="NIFTY20MAR26000CALL" 
+
         csv_file_path = "main/dhantoken.csv"
+
         df = pd.read_csv(csv_file_path, low_memory=False)
         
         # df['SEM_CUSTOM_SYMBOL'] = df['SEM_TRADING_SYMBOL'].str.replace("-", "").str.strip()
