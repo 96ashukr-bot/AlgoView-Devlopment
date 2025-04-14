@@ -56,7 +56,11 @@ import pyotp
 # from time import sleep
 import numpy as np
 import pytz
-from main.companysmtpsetails import smtp_details,company_profile
+from main.companysmtpsetails import get_company_profile,get_smtp_details
+company_profile = get_company_profile()
+smtp_details = get_smtp_details()
+
+# from main.companysmtpsetails import smtp_details,company_profile
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 from datetime import datetime

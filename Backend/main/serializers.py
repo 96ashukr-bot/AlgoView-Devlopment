@@ -14,7 +14,9 @@ from django.db import transaction
 from rest_framework.validators import UniqueValidator
 from main.email import EmailService
 from django.utils import timezone
-from main.companysmtpsetails import smtp_details,company_profile
+from main.companysmtpsetails import get_company_profile,get_smtp_details
+company_profile = get_company_profile()
+smtp_details=get_smtp_details()
 company_profile=company_profile if company_profile else None
 smtp_details=smtp_details if smtp_details else None
 # company_profile=None
@@ -26,7 +28,7 @@ help_center_link = company_profile.help_center_link if company_profile else "htt
 contact_number = company_profile.company_phone_number if company_profile else None
 
 # smtp_details=None
-smtp_details=CompanySmtpDetails.objects.first()
+# smtp_details=CompanySmtpDetails.objects.first()
 default_from_email=smtp_details.email_host_user if smtp_details else   "no-reply@example.com" 
 class RoleSerializer(serializers.ModelSerializer):
     class Meta:
