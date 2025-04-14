@@ -36,7 +36,7 @@ def place_zerodha_orders(LivePrice,group_service,access_token, Api_key, trade_sy
             print("API key and access token are valid.")
         except Exception as e:
             logger.error(f"Error validating API key or access token: {str(e)}")
-            status = "Failed"
+            status = "Unauthorized"
             message = f"API key and access token are Not valid for. {user}"
             res_data = f"{str(e)}"
             response={"data": {"status": status,"message":message}}
@@ -252,7 +252,6 @@ def get_trading_symbol(exchange, symbol, kite):
     try:
         # Fetch the list of instruments for the specified exchange
         instruments = kite.instruments(exchange)
-        # csv_file = "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/zerodhaNFO.csv"
         for instrument in instruments:
             if instrument['tradingsymbol'] == symbol:
                 print("Trading Symbol Found:", instrument['tradingsymbol'])

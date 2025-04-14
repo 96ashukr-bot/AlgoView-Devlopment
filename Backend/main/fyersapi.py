@@ -6,6 +6,7 @@ from main.models import ClientBrokerdetails, CompanySmtpDetails
 import logging
 logger = logging.getLogger('main')
 import csv 
+from fyers_apiv3 import fyersModel
 
 def place_fyers_orders(LivePrice,group_service,access_token, Api_key, trade_symbol, transaction_type, symbol, quantity,
     strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type, Entry_price, Exit_price, 
@@ -33,7 +34,7 @@ def place_fyers_orders(LivePrice,group_service,access_token, Api_key, trade_symb
         elif transaction_type.lower()=="sell":
             side=-1
         if product_type.upper()=="MIS":
-                product_type="MTF"
+                product_type="INTRADAY"
         ordertype=ordertype.upper()
         order_params = {
             "symbol": trade_symbol,
@@ -83,9 +84,33 @@ def place_fyers_orders(LivePrice,group_service,access_token, Api_key, trade_symb
         try:
             
             response = requests.post(order_url, headers=headers, json=order_params)
+           
+            logger.info(f"order_response of fyers::::::::::::{response}")
             order_response = response.json()
-
-            if order_response.get("s") == "ok":
+            if response.status_code == 401:
+                logger.error("Unauthorized - Access token might have expired.")
+                status = "Unauthorized"
+                message = f" Authentication failed. Please refresh your access token."
+                res_data = f"message"
+                response={"data": {"status": status,"message":message}}
+                save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, symbol, order_id, status, res_data, message,  
+                            strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
+                            webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="fyers")
+                
+                return response
+            if response.status_code == 400 :#or order_response.get("s") == "error":
+                logger.error("error  400 status code get ")
+                status = "Failed"
+                message = order_response.get("message", "Unknown error")
+                res_data = f"message"
+                response={"data": {"status": status,"message":message}}
+                save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, symbol, order_id, status, res_data, message,  
+                            strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
+                            webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="fyers")
+                
+                return response   
+            print("777777777777777777777777777777")
+            if response.status_code == 200 and order_response.get("s") == "error":
                 print(" Order submitted successfully.")
                 print(" Order ID:", order_response.get("id"))
                 order_id=order_response.get("id")
@@ -106,11 +131,11 @@ def place_fyers_orders(LivePrice,group_service,access_token, Api_key, trade_symb
                 return response
 
             # Ensure that get_order_details is defined or handled properly
-            order_history_response = get_order_details(order_id, access_token)
+            order_history_response = get_order_details(order_id,Api_key, access_token)
             
             logger.info(f"Order history response: {order_history_response}")
             if isinstance(order_history_response, dict):
-                if order_history_response.get("error") == "Failed":
+                if order_history_response.get("s") == "Failed" or order_history_response.get("s") =="error":
                     logger.error("Order details not found")
                     status = "Failed"
                     message = "Order details not found"
@@ -128,14 +153,14 @@ def place_fyers_orders(LivePrice,group_service,access_token, Api_key, trade_symb
 
             elif isinstance(order_history_response, list) and order_history_response:
                 
-                status = order_history_response.get("status", "").upper()  # Convert to uppercase for consistent comparison
+                status = order_history_response.get("orderBook", "").upper()  # Convert to uppercase for consistent comparison
                 res_data = order_history_response
                 print("status>>>>>>>>>>>>>>>", status)
                 print("Entry_price, Exit_price, >>",Entry_price, Exit_price, )
                
                 print("::::::::::::::::")
                 # Handle terminal statuses
-                if status ==  2:  #status == 'COMPLETE' or status =='complete' OR :
+                if status  == 'Traded' or status =='Filled' :
                     message = order_history_response.get('status_message', "Order completed successfully")
                     logger.info(f"Order completed successfully. Order ID: {order_id}")
                     status='complete'
@@ -154,7 +179,7 @@ def place_fyers_orders(LivePrice,group_service,access_token, Api_key, trade_symb
                         
                     response = {"data": {"status": "completed", "message": message}}
                     
-                elif status == 5:# status == 'REJECTED' or status=='rejected':
+                elif  status == 'Rejected' or status=='rejected':
                     status='rejected'
                     message = order_history_response.get('status_message', "Order rejected")
                     logger.error(f"Order rejected. Reason: {message}")
@@ -169,8 +194,8 @@ def place_fyers_orders(LivePrice,group_service,access_token, Api_key, trade_symb
                         ExitQty = res_data.get('filled_quantity', 0)
                     response = {"data": {"status": "rejected", "message": message}}
                     
-                elif status ==1:#status == 'CANCELLED' or status =='cancelled':
-                    status='cancelled'
+                elif status == 'Transit' or status =='Transit':
+                    status='Transit'
                     trasaction_type = res_data.get('transaction_type','')
                     if trasaction_type == "BUY":
                         Entry_type = "LE"
@@ -181,10 +206,10 @@ def place_fyers_orders(LivePrice,group_service,access_token, Api_key, trade_symb
                         Exit_price = res_data.get('average_price', 0.0)  
                         ExitQty = res_data.get('filled_quantity', 0)
                     message = order_history_response.get('status_message', "Order cancelled")
-                    logger.warning(f"Order cancelled. Reason: {message}")
-                    response = {"data": {"status": "cancelled", "message": message}}
+                    logger.warning(f"Order Transit. Reason: {message}")
+                    response = {"data": {"status": "Transit", "message": message}}
         
-                elif status == 6:#status=='PENDING' or status =="pending":
+                elif status=='Pending' or status =="pending":
                     status ="pending"
                     # Handle pending statuses - you might want to poll again later
                     message = f"Order is in pending state: {status}"
@@ -281,12 +306,12 @@ def get_instruments_symbol_from_csv(compact_symbol_details):
         return None
 
 
-def get_order_details(order_id, kite):
+def get_order_details(order_id, client_id,access_token):
     try:
-        # Fetch order history
-        # kite = KiteConnect(api_key=api_key)
-        # kite.set_access_token(access_token)
-        order_history = kite.order_history(order_id)
+        # Initialize the FyersModel instance with your client_id, access_token, and enable async mode
+        fyers = fyersModel.FyersModel(client_id=client_id, token=access_token,is_async=False, log_path="")
+        order_history = fyers.gtt_orderbook()
+        print(order_history)
         # print("order_history>>>",order_history)
         if order_history:
             return order_history

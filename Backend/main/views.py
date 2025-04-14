@@ -56,7 +56,11 @@ import pyotp
 # from time import sleep
 import numpy as np
 import pytz
-from main.companysmtpsetails import smtp_details,company_profile
+from main.companysmtpsetails import get_company_profile,get_smtp_details
+company_profile = get_company_profile()
+smtp_details = get_smtp_details()
+
+# from main.companysmtpsetails import smtp_details,company_profile
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 from datetime import datetime
@@ -518,7 +522,7 @@ class UserManagementView(APIView):
             users = User.objects.filter(role__name='Sub-Admin', id=user.id)
             # .annotate(client_count=Count('assigned_users')).prefetch_related(
             #     Prefetch('assigned_users', queryset=User.objects.all(), to_attr='assigned_users_list') ).order_by('-id')
-            logger.info("Admin:::{user.role.name}")
+            logger.info(f"Admin:::{user.role.name}")
         search_query = request.query_params.get('q', '').strip()
         if search_query:
             users = users.filter(
@@ -2720,6 +2724,7 @@ def place_order_broker(LivePrice,group_service,
     message=""
     if trade.broker.lower() == "fyers":
         symbol=symbol.upper()
+        print("day>>>>>>>>>>>",day)
         trade_symbol = f"{symbol}{year}{month}{day}{default_price}{Type}"
         logger.info("trading_symbol OF Fyers..:::::: %s ", trade_symbol)
         client_broker = ClientBrokerdetails.objects.filter(client=trade.client, broker_name__broker_name__iexact=trade.broker).first()
@@ -3909,7 +3914,6 @@ def get_trading_symbol(exchange, symbol, kite):
     try:
         # Fetch the list of instruments for the specified exchange
         instruments = kite.instruments(exchange)
-        # csv_file = "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/zerodhaNFO.csv"
 
         # # Write data to a CSV file
         # with open(csv_file, mode='w', newline='') as file:

@@ -19,7 +19,10 @@ from main.utils import get_smtp_connection
 from django.templatetags.static import static
     # Get company profile for support email and website
 # company_profile = CompanyProfileDetails.objects.first()
-from main.companysmtpsetails import smtp_details,company_profile
+from main.companysmtpsetails import get_company_profile,get_smtp_details
+company_profile = get_company_profile()
+smtp_details = get_smtp_details()
+
 company_profile=company_profile if company_profile else None
 
 support_email = company_profile.company_support_email if company_profile else "support@example.com"

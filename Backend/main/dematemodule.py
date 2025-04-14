@@ -723,7 +723,8 @@ class BrokerCallbackView(APIView):
                 return self.handle_upstox(request_token, broker_details)
             
             elif broker_name == "fyers":
-                request_token = request.GET.get('code')
+                request_token =request.GET.get('code')
+                
                 return self.handle_fyers(request_token, broker_details)
 
             else:

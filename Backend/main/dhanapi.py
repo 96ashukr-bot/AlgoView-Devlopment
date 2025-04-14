@@ -118,8 +118,7 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
             # Validate quantity against lot size using security_id
             try:
                 # Load lot size data from CSV
-              #  csv_path = "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/dhantoken.csv"
-                csv_path="/home/ubuntu/Backend/AlgoView-Devlopment/Backend/main/dhantoken.csv"
+                csv_path = "main/dhantoken.csv"
                 lot_data = pd.read_csv(csv_path, dtype={'SEM_SMST_SECURITY_ID': str})
                 
                 # Convert security_id to string for comparison
@@ -355,8 +354,9 @@ def get_trading_symbol_security_id(symbol, segment, Exch,expiry_date):
     try:
         print("symbollll",symbol)
         # symbol="NIFTY20MAR26000CALL" 
-        csv_file_path = "/home/ubuntu/Backend/AlgoView-Devlopment/Backend/main/dhantoken.csv"
-        #csv_file_path ="/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/dhantoken.csv"
+
+        csv_file_path = "main/dhantoken.csv"
+
         df = pd.read_csv(csv_file_path, low_memory=False)
         
         # df['SEM_CUSTOM_SYMBOL'] = df['SEM_TRADING_SYMBOL'].str.replace("-", "").str.strip()
