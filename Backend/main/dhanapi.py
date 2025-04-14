@@ -111,7 +111,6 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
             "price": float(price) if ordertype == dhan.LIMIT else 0,
             "trigger_price": float(triggerPrice) if ordertype == dhan.SL else 0,
         }
-
         logger.info(f"Final order_params dhan order:{order_params}")
         try:
                 

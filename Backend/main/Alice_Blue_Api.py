@@ -237,6 +237,7 @@ def place_alice_orders(LivePrice,group_service,api_skey,api_uid,trading_symbol_a
                 response = {"data": {"status": "completed"}}
                 logger.info(f"Order placed successfully for user {user}. Order ID: : {order_id}")
                 print("Entry_type>>>",Entry_type)
+                status == "completed"
                 message=f"Order placed successfully for user {user}. Response: {response}"
                 save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trading_symbol_aliceblue, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type,Entry_price,Exit_price ,EntryQty,ExitQty,webhook_signal , Exchange, Segment,Index_Symbol,order_params, broker="Alice Blue")
                 return response
@@ -273,6 +274,7 @@ def place_alice_orders(LivePrice,group_service,api_skey,api_uid,trading_symbol_a
                 from_email = default_from_email,
                 message=order_his.get('RejReason', 'not any reason get').lower()
                 send_trade_email_async.delay(user.email, from_email,user.firstName,status, message)
+                status="complete"
                 response = {"data": {"status": "complete","message":"message"}}
                 logger.info(f"Order  order is active and open in the market  for user {user}. Order ID:  :{order_id}")
                 save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trading_symbol_aliceblue, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol,order_params, broker="Alice Blue")
