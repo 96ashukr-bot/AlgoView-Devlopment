@@ -61,7 +61,7 @@ class UpstoxChainLiveSymbolConsumer(AsyncWebsocketConsumer):
         # Parse query parameters and split by comma.
         query_params = parse_qs(self.scope["query_string"].decode())
         self.symbol_names = query_params.get("name", [None])[0].split(",")
-        logger.info(f"Received symbol names: {self.symbol_names}")
+        #logger.info(f"Received symbol names: {self.symbol_names}")
 
         if not self.symbol_names:
             await self.close()
@@ -162,7 +162,7 @@ class UpstoxChainLiveSymbolConsumer(AsyncWebsocketConsumer):
                 "data": {"mode": "full", "instrumentKeys": chunk}
             }
             # Log subscription data for debugging.
-            logger.info(f"Subscribing chunk with keys: {chunk}")
+            # logger.info(f"Subscribing chunk with keys: {chunk}")
             tasks.append(websocket.send(json.dumps(data).encode("utf-8")))
         await asyncio.gather(*tasks)
 
@@ -242,7 +242,8 @@ class UpstoxChainLiveSymbolConsumer(AsyncWebsocketConsumer):
                     })
                 )
             except Exception as e:
-                logger.error(f"Error processing token {token_key}: {e}")
+                pass
+                #logger.error(f"Error processing token {token_key}: {e}")
 
 #live data for trade histoty
 class UpstoxMarketDataConsumer(AsyncWebsocketConsumer):
