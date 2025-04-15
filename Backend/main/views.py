@@ -2715,54 +2715,13 @@ def place_order_broker(LivePrice,group_service,
     webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice, day, month, year, fullyear,default_price, Type, order_params):
     order_id = 0
     print(" rgdaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaae", Entry_price, Exit_price,)
+    # Initialize response with a default failure value
+    response = {"data": {"status": "Failed", "message": "Unsupported broker or no broker matched"}}
     status = "Failed"
     res_data = "Unknown response"
     message=""
-    if trade.broker.lower() == "fyers":
-        symbol=symbol.upper()
-        trade_symbol = f"{symbol}{year}{month}{day}{default_price}{Type}"
-        logger.info("trading_symbol OF Fyers..:::::: %s ", trade_symbol)
-        client_broker = ClientBrokerdetails.objects.filter(client=trade.client, broker_name__broker_name__iexact=trade.broker).first()
-        if not client_broker:
-            message = f"No broker details found for client {trade.client} and broker {trade.broker}"
-            save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user, trade_symbol, order_id, status, res_data, message, strategy,Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,order_params, broker="fyers"
-            )
-            logger.error(message)
-            return {"data": {"status": "Failed", "message": message}}
-        access_token=client_broker.access_token
-        Api_key=client_broker.broker_API_KEY
-        print("fyers access token",access_token,"Api_key.....",Api_key)
-        if not access_token or not Api_key:
-            message = f"API credentials  token not found for client {trade.client} and broker {trade.broker}."
-            save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user, trade_symbol, order_id, status, res_data, message, strategy,
-                Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal, Exchange, Segment, Index_Symbol,
-                order_params, broker="fyers"
-            )
-            logger.error(message)
-            return {"data": {"status": "Failed", "message": message}}
-
-        # logger.info(f"Fetched API credentials for broker {trade.broker}.")
-        logger.info(f"Placing order for user: {user}, Broker: {trade.broker}, Symbol: {trade.symbol}")
-        if transaction_type == "SELL":
-            response = exit_existing_buy_position_zerodha_order(LivePrice,group_service,Type,day,month,year,access_token,Api_key,trade_symbol, transaction_type, symbol, quantity,strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type,Entry_price,Exit_price,
-                EntryQty,ExitQty,webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice,trade_order_status)
-
-            if response.get("data", {}).get("status") == "error" or response.get("data", {}).get("status") == "Failed":
-                message = response.get("data", {}).get("message", f"Existing BUY position for {symbol} could not be closed.")
-                save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user, trade_symbol, order_id, status, res_data, message, strategy,
-                    Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal, Exchange, Segment, Index_Symbol,
-                    order_params, broker="fyers"
-                )
-                logger.error(message)
-                return {"data": {"status": "Failed", "message": message}} 
-        if transaction_type =="BUY":
-                response = place_fyers_orders(LivePrice,group_service,access_token,Api_key,trade_symbol, transaction_type, symbol, quantity,
-                    strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type,Entry_price,Exit_price,
-                    EntryQty,ExitQty,webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice,trade_order_status)
-            
-        logger.info(f" fyers Order . Response: {response}")
-        
-    elif trade.broker.lower() == "dhan":
+    logger.info(f"place order broker is::{trade.broker}")
+    if trade.broker.lower() == "dhan":
         symbol=symbol.upper()
         """
             Creates a trading symbol in the format: SYMBOL+MONTH+YEAR+STRIKE+TYPE
@@ -3093,6 +3052,7 @@ SESSION_EXPIRATION = None
 class PlaceOrderWebhookView(APIView):
     def post(self, request):
         alert_data = request.data
+       
         # Check if alert_data is None or an empty dictionary
         if not alert_data:
             logger.warning("No alert data received or empty payload.")
@@ -3159,14 +3119,18 @@ class PlaceOrderWebhookView(APIView):
         # producttype=None
         save_webhook_signals_logs(buy_sell, symbols, default_price, strategy, json=alert_data)
         buy_sell_type=transaction_type
-        all_enable_users = ClientTradeSetting.objects.filter(is_tread_status=True,client__is_enable=True, broker__isnull=False,symbol=webhook_symbols,group_service=strategy_id)
+        #all_enable_users = ClientTradeSetting.objects.filter(is_tread_status=True,client__is_enable=True, broker__gt='',      			#broker__isnull=False,symbol=webhook_symbols,group_service=strategy_id)
+        all_enable_users = ClientTradeSetting.objects.filter(is_tread_status=True,client__is_enable=True,
+    		broker__isnull=False,broker__gt='',symbol=webhook_symbols,
+    		group_service=strategy_id).exclude(broker__regex=r'^\s*$')  # Exclude whitespace-only strings
         user_count = all_enable_users.count()
         logger.info(f"all_enable_users for trading is ::{all_enable_users} no of clients count is {user_count}")
         usernames = all_enable_users.values_list('client__userName', flat=True)
-
-        logger.info(f"username is:::::{usernames}")  
+        brokers_of_users = all_enable_users.values_list('broker', flat=True)
+        logger.info(f"username is:::::{usernames}:{brokers_of_users}")  
         default_expiry=None 
-        order_status=None        
+        order_status=None  
+     
         try:
             for trade in all_enable_users:
                 transaction_type=buy_sell_type
