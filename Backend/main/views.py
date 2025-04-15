@@ -2718,6 +2718,8 @@ def place_order_broker(LivePrice,group_service,
     trade_order_status, Entry_type, Exit_type, Entry_price,Exit_price,EntryQty,ExitQty,
     webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice, day, month, year, fullyear,default_price, Type, order_params):
     order_id = 0
+    response = {"data": {"status": "Failed", "message": "Unsupported broker or no broker matched"}}
+   
     print(" rgdaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaae", Entry_price, Exit_price,)
     status = "Failed"
     res_data = "Unknown response"
@@ -2764,7 +2766,7 @@ def place_order_broker(LivePrice,group_service,
                 response = place_fyers_orders(LivePrice,group_service,access_token,Api_key,trade_symbol, transaction_type, symbol, quantity,
                     strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type,Entry_price,Exit_price,
                     EntryQty,ExitQty,webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice,trade_order_status)
-            
+                
         logger.info(f" fyers Order . Response: {response}")
         
     elif trade.broker.lower() == "dhan":
@@ -3056,7 +3058,7 @@ def place_order_broker(LivePrice,group_service,
                 webhook_signal=webhook_signal,Exchange=Exchange,Segment=Segment,trade_order_status=trade_order_status,
                 Index_Symbol=Index_Symbol , user=user, strategy=strategy)                                               
             # If the exit failed, do not proceed.
-            print("response>>>>>>",response)
+            # print("response>>>>>>",response)
             if response.get("data", {}).get("status") == "error":
                 message = response.get("data", {}).get("message", f"Existing BUY position for {symbol} could not be closed.")
 
