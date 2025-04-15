@@ -2,7 +2,11 @@ from django.conf import settings
 from django.core.mail import send_mail
 from django.utils.html import strip_tags
 from main.models import *
-from main.companysmtpsetails import smtp_details,company_profile
+from main.companysmtpsetails import get_company_profile,get_smtp_details
+company_profile = get_company_profile()
+smtp_details = get_smtp_details()
+
+# from main.companysmtpsetails import smtp_details,company_profile
 company_profile=company_profile if company_profile else None
 # Safely access the fields, ensuring company_profile is not None
 support_email = company_profile.company_support_email if company_profile else None

@@ -286,7 +286,7 @@ def exit_existing_buy_position_Aliceblue(LivePrice,group_service, Type, day, mon
                 print("price_of_order>>>", int(price_of_order))
                 symbol = symbol.upper()
                 trade_symbol = f"{symbol}{day}{month}{year}{Type[0]}{int(price_of_order)}"
-                logger.info("trade_symbol alice blue sell >>>>", trade_symbol)
+                logger.info(f"trade_symbol alice blue sell >>>>:{trade_symbol}" )
                 if trade_symbol != old_trade_symbol:
                     msg=f"sell request not matching with existing order :{old_trade_symbol} new symbol: {trade_symbol} client: {user}"
                     logger.info(f"{msg}")  
@@ -723,7 +723,8 @@ class BrokerCallbackView(APIView):
                 return self.handle_upstox(request_token, broker_details)
             
             elif broker_name == "fyers":
-                request_token = request.GET.get('code')
+                request_token =request.GET.get('code')
+                
                 return self.handle_fyers(request_token, broker_details)
 
             else:

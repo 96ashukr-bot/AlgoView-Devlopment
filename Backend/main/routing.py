@@ -1,6 +1,6 @@
 from django.urls import re_path
 
-from main.consumers import UpstoxChainConsumer, StockTradingConsumer,UpstoxMarketDataConsumer,UpstoxChainLiveSymbolConsumer#,OptionChainConsumer # type: ignore
+from main.consumers import UpstoxChainConsumer, UpstoxChainLiveSymbolConsumer,UpstoxMarketDataConsumer#,OptionChainConsumer # type: ignore
 
 
 # websocket_urlpatterns = [

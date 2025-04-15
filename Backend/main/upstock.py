@@ -163,7 +163,7 @@ def place_upstox_orders(LivePrice,group_service,
             logger.error(f"Unauthorized access for user {user}. Reason: {response_data.get('message', 'Unknown')}")
             status= "Unauthorized"
             message="Unauthorized access"
-            res_data=response
+            res_data=response_data
             save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, message,  
             strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,
             webhook_signal , Exchange, Segment,Index_Symbol ,order_params,broker="upstox")

@@ -56,7 +56,11 @@ import pyotp
 # from time import sleep
 import numpy as np
 import pytz
-from main.companysmtpsetails import smtp_details,company_profile
+from main.companysmtpsetails import get_company_profile,get_smtp_details
+company_profile = get_company_profile()
+smtp_details = get_smtp_details()
+
+# from main.companysmtpsetails import smtp_details,company_profile
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 from datetime import datetime
@@ -518,7 +522,7 @@ class UserManagementView(APIView):
             users = User.objects.filter(role__name='Sub-Admin', id=user.id)
             # .annotate(client_count=Count('assigned_users')).prefetch_related(
             #     Prefetch('assigned_users', queryset=User.objects.all(), to_attr='assigned_users_list') ).order_by('-id')
-            logger.info("Admin:::{user.role.name}")
+            logger.info(f"Admin:::{user.role.name}")
         search_query = request.query_params.get('q', '').strip()
         if search_query:
             users = users.filter(
@@ -2714,14 +2718,61 @@ def place_order_broker(LivePrice,group_service,
     trade_order_status, Entry_type, Exit_type, Entry_price,Exit_price,EntryQty,ExitQty,
     webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice, day, month, year, fullyear,default_price, Type, order_params):
     order_id = 0
+    response = {"data": {"status": "Failed", "message": "Unsupported broker or no broker matched"}}
+   
     print(" rgdaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaae", Entry_price, Exit_price,)
     # Initialize response with a default failure value
     response = {"data": {"status": "Failed", "message": "Unsupported broker or no broker matched"}}
     status = "Failed"
     res_data = "Unknown response"
     message=""
-    logger.info(f"place order broker is::{trade.broker}")
-    if trade.broker.lower() == "dhan":
+
+    if trade.broker.lower() == "fyers":
+        symbol=symbol.upper()
+        print("day>>>>>>>>>>>",day)
+        trade_symbol = f"{symbol}{year}{month}{day}{default_price}{Type}"
+        logger.info("trading_symbol OF Fyers..:::::: %s ", trade_symbol)
+        client_broker = ClientBrokerdetails.objects.filter(client=trade.client, broker_name__broker_name__iexact=trade.broker).first()
+        if not client_broker:
+            message = f"No broker details found for client {trade.client} and broker {trade.broker}"
+            save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user, trade_symbol, order_id, status, res_data, message, strategy,Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,order_params, broker="fyers"
+            )
+            logger.error(message)
+            return {"data": {"status": "Failed", "message": message}}
+        access_token=client_broker.access_token
+        Api_key=client_broker.broker_API_KEY
+        print("fyers access token",access_token,"Api_key.....",Api_key)
+        if not access_token or not Api_key:
+            message = f"API credentials  token not found for client {trade.client} and broker {trade.broker}."
+            save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user, trade_symbol, order_id, status, res_data, message, strategy,
+                Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal, Exchange, Segment, Index_Symbol,
+                order_params, broker="fyers"
+            )
+            logger.error(message)
+            return {"data": {"status": "Failed", "message": message}}
+
+        # logger.info(f"Fetched API credentials for broker {trade.broker}.")
+        logger.info(f"Placing order for user: {user}, Broker: {trade.broker}, Symbol: {trade.symbol}")
+        if transaction_type == "SELL":
+            response = exit_existing_buy_position_zerodha_order(LivePrice,group_service,Type,day,month,year,access_token,Api_key,trade_symbol, transaction_type, symbol, quantity,strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type,Entry_price,Exit_price,
+                EntryQty,ExitQty,webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice,trade_order_status)
+
+            if response.get("data", {}).get("status") == "error" or response.get("data", {}).get("status") == "Failed":
+                message = response.get("data", {}).get("message", f"Existing BUY position for {symbol} could not be closed.")
+                save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user, trade_symbol, order_id, status, res_data, message, strategy,
+                    Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal, Exchange, Segment, Index_Symbol,
+                    order_params, broker="fyers"
+                )
+                logger.error(message)
+                return {"data": {"status": "Failed", "message": message}} 
+        if transaction_type =="BUY":
+                response = place_fyers_orders(LivePrice,group_service,access_token,Api_key,trade_symbol, transaction_type, symbol, quantity,
+                    strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type,Entry_price,Exit_price,
+                    EntryQty,ExitQty,webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice,trade_order_status)
+                
+        logger.info(f" fyers Order . Response: {response}")
+        
+    elif trade.broker.lower() == "dhan":
         symbol=symbol.upper()
         """
             Creates a trading symbol in the format: SYMBOL+MONTH+YEAR+STRIKE+TYPE
@@ -3010,7 +3061,7 @@ def place_order_broker(LivePrice,group_service,
                 webhook_signal=webhook_signal,Exchange=Exchange,Segment=Segment,trade_order_status=trade_order_status,
                 Index_Symbol=Index_Symbol , user=user, strategy=strategy)                                               
             # If the exit failed, do not proceed.
-            print("response>>>>>>",response)
+            # print("response>>>>>>",response)
             if response.get("data", {}).get("status") == "error":
                 message = response.get("data", {}).get("message", f"Existing BUY position for {symbol} could not be closed.")
 
@@ -3873,7 +3924,6 @@ def get_trading_symbol(exchange, symbol, kite):
     try:
         # Fetch the list of instruments for the specified exchange
         instruments = kite.instruments(exchange)
-        # csv_file = "/home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/zerodhaNFO.csv"
 
         # # Write data to a CSV file
         # with open(csv_file, mode='w', newline='') as file:
