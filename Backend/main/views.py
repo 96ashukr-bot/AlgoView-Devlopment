@@ -56,7 +56,8 @@ import pyotp
 # from time import sleep
 import numpy as np
 import pytz
-from main.companysmtpsetails import get_company_profile,get_smtp_details
+from main.companysmtpsetails import get_company_profile,get_smtp_details 
+from rest_framework import permissions
 company_profile = get_company_profile()
 smtp_details = get_smtp_details()
 
@@ -4606,6 +4607,65 @@ class TradeOrderResponseDataView(APIView):
 
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        
+       
+
+class IsSuperAdminOrSubAdmin(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return request.user.is_superuser or getattr(request.user, 'is_sub_admin', False)
+    
+class BrokerLogActivityView(APIView):
+    permission_classes = [IsSuperAdminOrSubAdmin]  # Only superadmin or subadmin can access
+
+    def get(self, request, id, *args, **kwargs):
+        broker_details = ClientBrokerdetails.objects.filter(client_id=id)
+
+        if not broker_details.exists():
+            return Response(
+                {"detail": "No broker details found for this client."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        serializer = BrokerLogSerializer(broker_details, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    
+class UserBrokerLogActivityView(APIView):
+    permission_classes = [IsAuthenticated]  
+
+    def get(self, request, user_id, *args, **kwargs):
+        try:
+            # Check if the requesting user is trying to access their own data
+            if request.user.id != user_id:
+                # Optionally, you can add a permission check here
+                # For example, allow only super admins or sub admins to access other users' data
+                if not (request.user.is_superuser or getattr(request.user, 'is_sub_admin', False)):
+                    return Response(
+                        {"detail": "You do not have permission to access this user's data."},
+                        status=status.HTTP_403_FORBIDDEN
+                    )
+
+            # Filter broker details by the specified user ID
+            broker_details = ClientBrokerdetails.objects.filter(client_id=user_id)
+
+            if not broker_details.exists():
+                return Response(
+                    {"detail": "No broker details found for this client."},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            # Serialize the broker details
+            serializer = BrokerLogSerializer(broker_details, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        except Exception as e:            
+            print(f"An error occurred: {str(e)}")  
+
+            return Response(
+                {"detail": "An error occurred while retrieving broker details."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 

@@ -177,6 +177,9 @@ urlpatterns = [
     path('get-broker-token-expiry/',CheckTokenValidityView.as_view(),name="client-broker-istokenexpiry"),
     path('get-client-broker-status-by-id/<int:pk>/', AdminGetClientBrokerStatusView.as_view(), name='client-status'),
     path("get-client-broker-details-by-id/<int:pk>/", AdminClientBrokerDetailsView.as_view(), name='get-client-broker'),
+    path('broker-log-activity/<int:id>/', BrokerLogActivityView.as_view(), name='broker-log-activity'),
+    path('user-broker-log/<int:user_id>/', UserBrokerLogActivityView.as_view(), name='user-broker-log'),
+    
 ]
 
 

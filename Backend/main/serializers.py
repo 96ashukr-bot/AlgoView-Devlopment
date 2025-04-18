@@ -1378,3 +1378,13 @@ class WebsocketDetailsSerializer(serializers.ModelSerializer):
     class Meta:
         model = WebsocketDetails
         fields = ["id", "Auth_token", "token_status"]
+        
+class BrokerLogSerializer(serializers.ModelSerializer):
+    last_login = serializers.DateTimeField(source='tokenCreatedAt', format="%Y-%m-%d %H:%M:%S", read_only=True)
+    logout_time = serializers.DateTimeField(source='access_token_expiry', format="%Y-%m-%d %H:%M:%S", read_only=True)
+    # client_id = serializers.CharField(source='client.id', read_only=True)  # adjust field name if needed
+    broker = serializers.StringRelatedField(source='broker_name')
+
+    class Meta:
+        model = ClientBrokerdetails
+        fields = ['id', 'broker', 'last_login', 'logout_time', 'isTokenExpired']
