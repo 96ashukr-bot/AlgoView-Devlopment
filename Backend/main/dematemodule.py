@@ -1018,7 +1018,7 @@ class CheckTokenValidityView(APIView):
                 broker_details.isTokenExpired = True
                 broker_details.save()
                 
-                return Response({"message": "Token has expired", "isTokenExpired": broker_details.isTokenExpired}, status=status.HTTP_401_UNAUTHORIZED)
+                return Response({"message": "Token has expired", "isTokenExpired": broker_details.isTokenExpired}, status=status.HTTP_200_OK)
             
             return Response({"message": "Token is valid", "isTokenExpired": broker_details.isTokenExpired}, status=status.HTTP_200_OK)
 
