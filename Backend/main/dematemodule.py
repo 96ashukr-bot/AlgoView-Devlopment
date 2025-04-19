@@ -663,11 +663,11 @@ class BrokerLoginRedirectView(APIView):
         CLIENT_SECRET = broker_details.broker_API_SKEY
         RESPONSE_TYPE = "code"
         STATE = "fyers"
-
+        encoded_redirect_uri = quote(REDIRECT_URI, safe='')
         # Fyers Authorization URL
         login_url = (
             f"https://api-t1.fyers.in/api/v3/generate-authcode?"
-            f"client_id={CLIENT_ID}&redirect_uri={REDIRECT_URI}"
+            f"client_id={CLIENT_ID}&redirect_uri={encoded_redirect_uri}"
             f"&response_type={RESPONSE_TYPE}&state={STATE}"
         )
 
@@ -970,7 +970,7 @@ class GetClientBrokerDetailsSettingView(APIView):
             "angle one": ["broker_API_KEY", "broker_Demate_User_Name", "broker_Totp_Authcode", "broker_pass"],
             "dhan": ["broker_API_KEY", "access_token"],
             "fyers": ["broker_API_KEY", "broker_API_SKEY"],
-            "5paisa": ["broker_API_KEY", "broker_API_SKEY"],
+            "5paisa": ["broker_API_KEY", "broker_API_SKEY","broker_API_UID"],
         }
 
         if broker_name in broker_requirements:
