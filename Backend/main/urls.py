@@ -13,7 +13,7 @@ from main.fivepaisa import *
 from .views import *
 from django.conf.urls.static import static
 from main import views
-from main.dematemodule import BrokerCallbackView, CheckTokenValidityView, LoginDematAPIView,BrokerLoginRedirectView
+from main.dematemodule import BrokerCallbackView, CheckTokenValidityView, GetClientBrokerDetailsSettingView, LoginDematAPIView,BrokerLoginRedirectView
 urlpatterns = [
     path('signup/', UserRegistrationView.as_view(), name='user-registration'),
     path('login/', CustomLoginView.as_view(), name='login'),
@@ -179,6 +179,9 @@ urlpatterns = [
     path("get-client-broker-details-by-id/<int:pk>/", AdminClientBrokerDetailsView.as_view(), name='get-client-broker'),
     path('broker-log-activity/<int:id>/', BrokerLogActivityView.as_view(), name='broker-log-activity'),
     path('user-broker-log/<int:user_id>/', UserBrokerLogActivityView.as_view(), name='user-broker-log'),
+    
+    path('client-broker-details-setting-aleart/', GetClientBrokerDetailsSettingView.as_view(), name='client-broker-details'),
+
     
 ]
 

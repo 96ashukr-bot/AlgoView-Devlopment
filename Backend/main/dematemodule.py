@@ -18,7 +18,7 @@ from datetime import datetime, timedelta
 from django.conf import settings
 import hashlib
 import json
-
+from rest_framework import permissions, status
   
 def get_lot_size(trading_symbol):
     # URL to fetch instrument details (for example, for Angel One)
@@ -918,7 +918,13 @@ class CheckTokenValidityView(APIView):
         try:
             user = request.user  
             broker_details = ClientBrokerdetails.objects.get(client=user)
-
+            if not broker_details.access_token_expiry:
+                broker_details.isTokenExpired = True
+                broker_details.save()
+                return Response({
+                    "message": "Please login. You are not logged in yet.",
+                    "isTokenExpired": broker_details.isTokenExpired
+                }, status=status.HTTP_200_OK)
             if broker_details.access_token_expiry and now() > broker_details.access_token_expiry:
                 broker_details.isTokenExpired = True
                 broker_details.save()
@@ -931,4 +937,57 @@ class CheckTokenValidityView(APIView):
             return Response({"error": "Broker details not found"}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)    
+    
+
+
+
+class GetClientBrokerDetailsSettingView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        try:
+            id=request.user
+            broker_details = ClientBrokerdetails.objects.get(client=id)
+        except ClientBrokerdetails.DoesNotExist:
+            return Response(
+                {"status": False, "message": "Client has not selected any broker yet. Please select a broker."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        broker_name = broker_details.broker_name.broker_name.lower() if broker_details.broker_name else ""
+
+        missing_fields = []
+
+        def check_fields(required_fields):
+            for field in required_fields:
+                if not getattr(broker_details, field):
+                    missing_fields.append(field)
+
+        broker_requirements = {
+            "upstox": ["broker_API_KEY", "broker_API_SKEY"],
+            "zerodha": ["broker_API_KEY", "broker_API_SKEY"],
+            "alice blue": ["broker_API_KEY", "broker_API_UID"],
+            "angle one": ["broker_API_KEY", "broker_Demate_User_Name", "broker_Totp_Authcode", "broker_pass"],
+            "dhan": ["broker_API_KEY", "access_token"],
+            "fyers": ["broker_API_KEY", "broker_API_SKEY"],
+            "5paisa": ["broker_API_KEY", "broker_API_SKEY"],
+        }
+
+        if broker_name in broker_requirements:
+            check_fields(broker_requirements[broker_name])
+            if missing_fields:
+                return Response(
+                    {
+                        "status": False,
+                        "message": f"Missing fields for broker '{broker_name}': {', '.join(missing_fields)}"
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            else:
+                return Response({"status": True, "message": f"All required fields are set for {broker_name}."})
+        else:
+            return Response(
+                {"status": False, "message": f"Broker '{broker_name}' is not recognized."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
     
