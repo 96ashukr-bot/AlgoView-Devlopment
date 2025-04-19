@@ -13,6 +13,7 @@ def place_fyers_orders(LivePrice,group_service,access_token, Api_key, trade_symb
     EntryQty, ExitQty, webhook_signal, Exchange, Segment,Index_Symbol, triggerPrice, trade_order_status):
     print("index symbolllllll",Index_Symbol)
     try:
+        response={"data":{"status": "error", "message": "not return any response"}}
         EntryQty=quantity
         order_id = 0
         status = "Failed"
@@ -133,10 +134,11 @@ def place_fyers_orders(LivePrice,group_service,access_token, Api_key, trade_symb
             # Ensure that get_order_details is defined or handled properly
             order_history_response = get_order_details(order_id,Api_key, access_token)
             
-            logger.info(f"Order history response: {order_history_response}")
+            logger.info(f"get_order_details ????????????: {order_history_response}")
+
             if isinstance(order_history_response, dict):
                 if order_history_response.get("s") == "Failed" or order_history_response.get("s") =="error":
-                    logger.error("Order details not found")
+                    logger.error(f"Order details not found")
                     status = "Failed"
                     message = "Order details not found"
                     res_data = order_history_response.get("error")
@@ -144,72 +146,67 @@ def place_fyers_orders(LivePrice,group_service,access_token, Api_key, trade_symb
                     save_trade_order_history(LivePrice, group_service, transaction_type, trade_order_status, user, symbol, order_id, status, res_data, message,
                                             strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
                                             webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="fyers")
-                    return response
+                    return {"data": {"status": "Failed", "message": "Failed to retrieve order details."}}
+            
 
-            # order_history_response = order_history_response[-1]  # Assuming the last item is the most recent
-            # status = order_history_response.get("status", "").lower()
-            # res_data=order_history_response
-            # Inside your place_zerodha_orders function, modify the status handling part:
-
-            elif isinstance(order_history_response, list) and order_history_response:
-                
-                status = order_history_response.get("orderBook", "").upper()  # Convert to uppercase for consistent comparison
+                status = order_history_response.get("status")  # Fyers uses integers
                 res_data = order_history_response
-                print("status>>>>>>>>>>>>>>>", status)
-                print("Entry_price, Exit_price, >>",Entry_price, Exit_price, )
-               
-                print("::::::::::::::::")
-                # Handle terminal statuses
-                if status  == 'Traded' or status =='Filled' :
-                    message = order_history_response.get('status_message', "Order completed successfully")
+                logger.info(f"status code of fyers:::{status}")
+                 # Handle terminal statuses
+                if transaction_type.lower()=="buy":
+                    transactions=1
+                elif transaction_type.lower()=="sell":
+                    transactions=-1
+                if status == 2:#status  == 'Traded' or status =='Filled' :
+                    message = order_history_response.get('message', "Order completed successfully")
                     logger.info(f"Order completed successfully. Order ID: {order_id}")
                     status='complete'
                     # Update transaction details
-                    trasaction_type = res_data.get('transaction_type','')
-                    if trasaction_type == "BUY":
+                    trasaction_type = res_data.get('side','')
+                    if trasaction_type == 1:
                         trade_order_status="OPEN"
                         Entry_type = "LE"
-                        Entry_price = res_data.get('average_price', 0.0)
-                        EntryQty = res_data.get('filled_quantity', 0)
-                    elif trasaction_type == "SELL": 
+                        Entry_price = res_data.get('tradedPrice', 0.0)
+                        EntryQty = res_data.get('qty', 0)
+                    elif trasaction_type == -1: 
                         trade_order_status="CLOSE"
                         Exit_type = "LX"
-                        Exit_price = res_data.get('average_price', 0.0)  
-                        ExitQty = res_data.get('filled_quantity', 0)
+                        Exit_price = res_data.get('tradedPrice', 0.0)  
+                        ExitQty = res_data.get('qty', 0)
                         
                     response = {"data": {"status": "completed", "message": message}}
                     
-                elif  status == 'Rejected' or status=='rejected':
-                    status='rejected'
-                    message = order_history_response.get('status_message', "Order rejected")
-                    logger.error(f"Order rejected. Reason: {message}")
-                    trasaction_type = res_data.get('transaction_type','')
-                    if trasaction_type == "BUY":
-                        Entry_type = "LE"
-                        Entry_price = res_data.get('average_price', 0.0)
-                        EntryQty = res_data.get('filled_quantity', 0)
-                    elif trasaction_type == "SELL": 
-                        Exit_type = "LX"
-                        Exit_price = res_data.get('average_price', 0.0)  
-                        ExitQty = res_data.get('filled_quantity', 0)
-                    response = {"data": {"status": "rejected", "message": message}}
-                    
-                elif status == 'Transit' or status =='Transit':
+                elif status == 4:# status == 'Transit' or status =='Transit':
                     status='Transit'
-                    trasaction_type = res_data.get('transaction_type','')
-                    if trasaction_type == "BUY":
+                    trasaction_type = res_data.get('side','')
+                    if trasaction_type == 1:
                         Entry_type = "LE"
-                        Entry_price = res_data.get('average_price', 0.0)
-                        EntryQty = res_data.get('filled_quantity', 0)
-                    elif trasaction_type == "SELL": 
+                        Entry_price = res_data.get('tradedPrice', 0.0)
+                        EntryQty = res_data.get('qty', 0)
+                    elif trasaction_type == -1: 
                         Exit_type = "LX"
-                        Exit_price = res_data.get('average_price', 0.0)  
-                        ExitQty = res_data.get('filled_quantity', 0)
-                    message = order_history_response.get('status_message', "Order cancelled")
+                        Exit_price = res_data.get('tradedPrice', 0.0)  
+                        ExitQty = res_data.get('qty', 0)
+                    message = order_history_response.get('message', "Order cancelled")
                     logger.warning(f"Order Transit. Reason: {message}")
                     response = {"data": {"status": "Transit", "message": message}}
-        
-                elif status=='Pending' or status =="pending":
+                    
+                elif status == 5: #status == 'Rejected' or status=='rejected':
+                    status='rejected'
+                    message = order_history_response.get('message', "Order rejected")
+                    logger.error(f"Order rejected. Reason: {message}")
+                    trasaction_type = res_data.get('side','')
+                    if trasaction_type == 1:
+                        Entry_type = "LE"
+                        Entry_price = res_data.get('tradedPrice', 0.0)
+                        EntryQty = res_data.get('qty', 0)
+                    elif trasaction_type == -1: 
+                        Exit_type = "LX"
+                        Exit_price = res_data.get('tradedPrice', 0.0)  
+                        ExitQty = res_data.get('qty', 0)
+                    response = {"data": {"status": "rejected", "message": message}}
+                    
+                elif status == 6:# status=='Pending' or status =="pending":
                     status ="pending"
                     # Handle pending statuses - you might want to poll again later
                     message = f"Order is in pending state: {status}"
@@ -227,13 +224,16 @@ def place_fyers_orders(LivePrice,group_service,access_token, Api_key, trade_symb
         
 
                 else:
-                    message = order_history_response.get('status_message', "Success")
+                    logger.info("order status is not found")
+                    message = order_history_response.get('message', "Success")
                     response = {"data": {"status": status, "message": message}}
+                    res_data=order_history_response
                     save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message,
                                             strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
                                             webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="fyers")
                     return response
             else:
+            
                 logger.error("Unknown order response format")
                 status = "Failed"
                 message = "Unknown response format from get_order_details"
@@ -310,13 +310,17 @@ def get_order_details(order_id, client_id,access_token):
     try:
         # Initialize the FyersModel instance with your client_id, access_token, and enable async mode
         fyers = fyersModel.FyersModel(client_id=client_id, token=access_token,is_async=False, log_path="")
-        order_history = fyers.gtt_orderbook()
-        print(order_history)
-        # print("order_history>>>",order_history)
-        if order_history:
-            return order_history
+        order_history = fyers.orderbook()
+
+        if order_history and "orderBook" in order_history:
+            # Try to find the specific order by ID
+            for order in order_history["orderBook"]:
+                if order["id"] == str(order_id):
+                    return order  # return the actual order dict
+            # If not found
+            return {"status": "Failed", "error": f"No order found with ID {order_id}"}
         else:
-            return {"status": "Failed", "error": "No order history found for the given order ID."}
+            return {"status": "Failed", "error": "No order history data received."}
     except Exception as e:
         return {"status": "Failed", "error": f"Failed to fetch order history: {str(e)}"}
 

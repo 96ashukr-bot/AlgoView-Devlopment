@@ -20,7 +20,7 @@ from django.conf import settings
 import time
 from rest_framework.generics import ListAPIView,UpdateAPIView
 from main.angleapi import exit_existing_buy_position_angleone, get_token_details, place_Angle_order
-from main.dematemodule import  exit_existing_buy_position_5PaisaOrder, exit_existing_buy_position_Aliceblue, exit_existing_buy_position_DhanOrder, exit_existing_buy_position_Upstox, exit_existing_buy_position_zerodha_order, trading_Symbol_sum
+from main.dematemodule import  exit_existing_buy_position_5PaisaOrder, exit_existing_buy_position_Aliceblue, exit_existing_buy_position_DhanOrder, exit_existing_buy_position_Upstox, exit_existing_buy_position_fyers_order, exit_existing_buy_position_zerodha_order, trading_Symbol_sum
 from main.dhanapi import place_dhan_orders
 from main.fivepaisa import fetch_access_token_5paisa, place_5paisa_order
 from main.fyersapi import place_fyers_orders
@@ -2742,7 +2742,7 @@ def place_order_broker(LivePrice,group_service,
             return {"data": {"status": "Failed", "message": message}}
         access_token=client_broker.access_token
         Api_key=client_broker.broker_API_KEY
-        print("fyers access token",access_token,"Api_key.....",Api_key)
+        print("fyers access token","Api_key.....",Api_key)
         if not access_token or not Api_key:
             message = f"API credentials  token not found for client {trade.client} and broker {trade.broker}."
             save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user, trade_symbol, order_id, status, res_data, message, strategy,
@@ -2755,7 +2755,7 @@ def place_order_broker(LivePrice,group_service,
         # logger.info(f"Fetched API credentials for broker {trade.broker}.")
         logger.info(f"Placing order for user: {user}, Broker: {trade.broker}, Symbol: {trade.symbol}")
         if transaction_type == "SELL":
-            response = exit_existing_buy_position_zerodha_order(LivePrice,group_service,Type,day,month,year,access_token,Api_key,trade_symbol, transaction_type, symbol, quantity,strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type,Entry_price,Exit_price,
+            response = exit_existing_buy_position_fyers_order(default_price,LivePrice,group_service,Type,day,month,year,access_token,Api_key,trade_symbol, transaction_type, symbol, quantity,strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type,Entry_price,Exit_price,
                 EntryQty,ExitQty,webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice,trade_order_status)
 
             if response.get("data", {}).get("status") == "error" or response.get("data", {}).get("status") == "Failed":
@@ -2771,7 +2771,7 @@ def place_order_broker(LivePrice,group_service,
                     strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type,Entry_price,Exit_price,
                     EntryQty,ExitQty,webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice,trade_order_status)
                 
-        logger.info(f" fyers Order . Response: {response}")
+        logger.info(f" fyers Order Response: {response}")
         
     elif trade.broker.lower() == "dhan":
         symbol=symbol.upper()
