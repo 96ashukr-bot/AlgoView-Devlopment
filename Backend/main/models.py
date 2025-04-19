@@ -453,7 +453,7 @@ class ClientBrokerdetails(models.Model):
     broker_pass=models.CharField(max_length=50,null=True, blank=True)
     # New fields for token management
     request_token = models.TextField(null=True, blank=True)  # Temporary request token
-    access_token = models.TextField(null=True, blank=True)  # Persistent access token
+    access_token = models.TextField(null=True, blank=True)
     refreshToken = models.TextField(null=True, blank=True)
     access_token_expiry = models.DateTimeField(null=True, blank=True)  # Expiry of the access token (if applicable)
     isTokenExpired=models.BooleanField(default=False,null=True, blank=True)
