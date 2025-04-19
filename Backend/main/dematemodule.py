@@ -19,7 +19,7 @@ from django.conf import settings
 import hashlib
 import json
 from rest_framework import permissions, status
-  
+from urllib.parse import urlencode
 def get_lot_size(trading_symbol):
     # URL to fetch instrument details (for example, for Angel One)
     url = "https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json"
@@ -641,6 +641,7 @@ class BrokerLoginRedirectView(APIView):
         # redirect_url ="https://www.admin.algoview.in/callback"  # Replace with your callback URL
         
         state = "zerodha"  # Include user-specific state
+        
         zerodha_url = (
             f"https://kite.zerodha.com/connect/login?api_key={api_key}&v=3"
             f"&redirect_uri={REDIRECT_URI}&state={state}"
@@ -660,16 +661,18 @@ class BrokerLoginRedirectView(APIView):
     
     def redirect_to_fyers(self, broker_details):
         CLIENT_ID = broker_details.broker_API_KEY
-        CLIENT_SECRET = broker_details.broker_API_SKEY
+        
         RESPONSE_TYPE = "code"
         STATE = "fyers"
+        print(f"REDIRECT_URI:::{REDIRECT_URI}")
+        params = {
+            "client_id": CLIENT_ID,
+            "redirect_uri": REDIRECT_URI,
+            "response_type": RESPONSE_TYPE,
+            "state": STATE
+        }
 
-        # Fyers Authorization URL
-        login_url = (
-            f"https://api-t1.fyers.in/api/v3/generate-authcode?"
-            f"client_id={CLIENT_ID}&redirect_uri={REDIRECT_URI}"
-            f"&response_type={RESPONSE_TYPE}&state={STATE}"
-        )
+        login_url = f"https://api-t1.fyers.in/api/v3/generate-authcode?{urlencode(params)}"
 
         print("CLIENT_ID >>>", CLIENT_ID)
         print("Redirect URL >>>", login_url)
@@ -951,7 +954,7 @@ class GetClientBrokerDetailsSettingView(APIView):
         except ClientBrokerdetails.DoesNotExist:
             return Response(
                 {"status": False, "message": "Client has not selected any broker yet. Please select a broker."},
-                status=status.HTTP_404_NOT_FOUND
+                status=status.HTTP_200_OK
             )
 
         broker_name = broker_details.broker_name.broker_name.lower() if broker_details.broker_name else ""
@@ -981,13 +984,13 @@ class GetClientBrokerDetailsSettingView(APIView):
                         "status": False,
                         "message": f"Missing fields for broker '{broker_name}': {', '.join(missing_fields)}"
                     },
-                    status=status.HTTP_400_BAD_REQUEST
+                    status=status.HTTP_200_OK
                 )
             else:
                 return Response({"status": True, "message": f"All required fields are set for {broker_name}."})
         else:
             return Response(
                 {"status": False, "message": f"Broker '{broker_name}' is not recognized."},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_200_OK
             )
     
