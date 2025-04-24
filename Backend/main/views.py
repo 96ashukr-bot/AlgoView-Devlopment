@@ -3174,7 +3174,7 @@ class PlaceOrderWebhookView(APIView):
         #all_enable_users = ClientTradeSetting.objects.filter(is_tread_status=True,client__is_enable=True, broker__gt='',      			#broker__isnull=False,symbol=webhook_symbols,group_service=strategy_id)
         all_enable_users = ClientTradeSetting.objects.filter(is_tread_status=True,client__is_enable=True,
     		broker__isnull=False,broker__gt='',symbol=webhook_symbols,
-    		group_service=strategy_id).exclude(broker__regex=r'^\s*$')  # Exclude whitespace-only strings
+    		group_service=strategy_id) # Exclude whitespace-only strings
         user_count = all_enable_users.count()
         logger.info(f"all_enable_users for trading is ::{all_enable_users} no of clients count is {user_count}")
         usernames = all_enable_users.values_list('client__userName', flat=True)
