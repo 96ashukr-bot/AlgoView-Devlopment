@@ -3182,9 +3182,9 @@ class PlaceOrderWebhookView(APIView):
         target_user = all_enable_users.filter(client__email='96ashukr@gmail.com').first()
 
         if target_user:
-            print(f"Client Name: {target_user.client.email}")
+            logger.info(f"Client Name: {target_user.client.email}")
         else:
-            print("????? Client with email '96ashukr@gmail.com' not found in the filtered queryset.")
+            logger.info("????? Client with email '96ashukr@gmail.com' not found in the filtered queryset.")
 
         brokers_of_users = all_enable_users.values_list('broker', flat=True)
         logger.info(f"username is:::::{usernames}:{brokers_of_users}")  
