@@ -4550,13 +4550,38 @@ class TradeCompleteListView(APIView):
                     Exit_Price__isnull=True,
                 ).order_by('-id')
 
-                # trade_history = Tradeorderhistory.objects.exclude(order_id=0).exclude(order_id__isnull=True).filter(client__in=clients).order_by('-id')
+               
             elif user.role and user.role.name.lower() == 'sub-admin':
                 clients = User.objects.filter(assigned_client=user, type_of_user='is_client', is_client=True)
-                trade_history = Tradeorderhistory.objects.exclude(order_id=0).exclude(order_id__isnull=True).filter(client__in=clients).order_by('-id')
+                trade_history = Tradeorderhistory.objects.filter(
+                    client__in=clients,
+                    order_status__in=['completed', 'complete'],
+                    trade_order_status__iexact='CLOSE',
+                ).exclude(
+                    order_id=0,
+                    order_id__isnull=True,
+                    Entry_type__isnull=True,
+                    Exit_type__isnull=True,
+                    EntryQty__isnull=True,
+                    ExitQty__isnull=True,
+                    Entry_Price__isnull=True,
+                    Exit_Price__isnull=True,
+                ).order_by('-id')
             else:
-                trade_history = Tradeorderhistory.objects.exclude(order_id=0).exclude(order_id__isnull=True).filter(client=user).order_by('-id')
-
+                trade_history = Tradeorderhistory.objects.filter(
+                    client=user,
+                    order_status__in=['completed', 'complete'],
+                    trade_order_status__iexact='CLOSE',
+                ).exclude(
+                    order_id=0,
+                    order_id__isnull=True,
+                    Entry_type__isnull=True,
+                    Exit_type__isnull=True,
+                    EntryQty__isnull=True,
+                    ExitQty__isnull=True,
+                    Entry_Price__isnull=True,
+                    Exit_Price__isnull=True,
+                ).order_by('-id')
             # Dynamically apply filters based on the provided parameters
             filters = Q()
 
