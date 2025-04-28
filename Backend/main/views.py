@@ -4513,6 +4513,117 @@ class TradeorderhistoryListView(APIView):
 
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class TradecompleteListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        try:
+            user = request.user
+            
+            # Get filters from request data
+            from_date = request.GET.get('from_date', None)
+            to_date = request.GET.get('to_date', None)
+            strategy = request.GET.get('strategy', None)
+            Index_Symbol = request.GET.get('Index_symbol', None)
+            order_status = request.GET.get('order_status', None)
+            broker = request.GET.get('broker', None)
+            
+            print(f"broker: {broker} Index_Symbol: {Index_Symbol} order_status: {order_status}")
+            
+            # Determine which clients to include based on user role
+            if user.role and user.role.name.lower() == 'super-admin':
+                clients = User.objects.filter(type_of_user='is_client', is_client=True)
+                trade_history_queryset = Tradeorderhistory.objects.filter(
+                    client__in=clients,
+                    order_status__in=['completed', 'complete'],
+                    trade_order_status__iexact='CLOSE',
+                ).exclude(
+                    order_id=0,
+                    order_id__isnull=True,
+                    Entry_type__isnull=True,
+                    Exit_type__isnull=True,
+                    EntryQty__isnull=True,
+                    ExitQty__isnull=True,
+                    Entry_Price__isnull=True,
+                    Exit_Price__isnull=True,
+                ).order_by('-id')
+
+                # trade_history = Tradeorderhistory.objects.exclude(order_id=0).exclude(order_id__isnull=True).filter(client__in=clients).order_by('-id')
+            elif user.role and user.role.name.lower() == 'sub-admin':
+                clients = User.objects.filter(assigned_client=user, type_of_user='is_client', is_client=True)
+                trade_history = Tradeorderhistory.objects.exclude(order_id=0).exclude(order_id__isnull=True).filter(client__in=clients).order_by('-id')
+            else:
+                trade_history = Tradeorderhistory.objects.exclude(order_id=0).exclude(order_id__isnull=True).filter(client=user).order_by('-id')
+
+            # Dynamically apply filters based on the provided parameters
+            filters = Q()
+
+            # Apply date filter (from_date and to_date)
+            if from_date:
+                try:
+                    from_date = datetime.strptime(from_date, "%Y-%m-%d")
+                    filters &= Q(date__gte=from_date)
+                except ValueError:
+                    return Response({"error": "Invalid from_date format, expected YYYY-MM-DD."}, status=status.HTTP_400_BAD_REQUEST)
+            
+            if to_date:
+                try:
+                    to_date = datetime.strptime(to_date, "%Y-%m-%d")
+                    filters &= Q(date__lte=to_date)
+                except ValueError:
+                    return Response({"error": "Invalid to_date format, expected YYYY-MM-DD."}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Apply symbol filter
+            if strategy and strategy.lower() != 'all':
+                filters &= Q(strategy__iexact=strategy)
+
+            # Apply index_symbol filter
+            if Index_Symbol and Index_Symbol.lower() != 'all':
+                filters &= Q(Index_Symbol__iexact=Index_Symbol)
+
+            # Apply broker filter
+            if broker and broker.lower() != 'all':
+                filters &= Q(broker__iexact=broker)
+
+            # Apply order_status filter (Ensure it correctly filters)
+            if order_status and order_status.lower() != 'all':
+                filters &= Q(order_status__iexact=order_status)
+                # trade_history = trade_history.filter(order_status=order_status)
+
+            # 🔍 **Search Filter (Client name, broker, index symbol, trading symbol)**
+            search_query = request.query_params.get('q', '').strip()
+            if search_query:
+                search_terms = search_query.split()  
+                full_name_filters = Q()
+                for term in search_terms:
+                    full_name_filters |= Q(client__fullName__icontains=term)  
+
+                filters &= (
+                    full_name_filters |
+                    Q(client__email__icontains=search_query) |
+                    Q(broker__icontains=search_query) |
+                    Q(Index_Symbol__icontains=search_query) |
+                    Q(trading_symbol__icontains=search_query) |
+                    Q(GroupService__icontains=search_query)
+                )
+
+            # Apply all filters
+            trade_history = trade_history.filter(filters)
+
+            # Check if trade_history is empty before pagination
+            if not trade_history.exists():
+                return Response({"message": "No trade history found for the given filters."}, status=status.HTTP_200_OK)
+
+            paginator = CustomPageNumberPagination()
+            result_page = paginator.paginate_queryset(trade_history, request)
+
+            serializer = TradeorderhistorySerializer(result_page, many=True)
+            return paginator.get_paginated_response(serializer.data)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
  
 class ClientTradeListView(APIView):
     permission_classes = [IsAuthenticated]
