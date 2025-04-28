@@ -3179,18 +3179,26 @@ class PlaceOrderWebhookView(APIView):
         logger.info(f"all_enable_users for trading is ::{all_enable_users} no of clients count is {user_count}")
         usernames = all_enable_users.values_list('client__userName', flat=True)
         # Filter and print name if client's email is '96ashukr@gmail.com'
-        target_user = all_enable_users.filter(client__email='96ashukr@gmail.com').first()
+        target_user1 = all_enable_users.filter(client__email='ashutoshkumar.cv@gmail.com').first()
+
+        if target_user1:
+            logger.info(f"Client Name: {target_user1.client.email}")
+        else:
+            logger.info("????? Client with email 'ashutoshkumar.cv@gmail.com' not found in the filtered queryset.")
+
+        target_user = all_enable_users.filter(client__email='ganeshkmohite88@gmail.com').first()
 
         if target_user:
             logger.info(f"Client Name: {target_user.client.email}")
         else:
-            logger.info("????? Client with email '96ashukr@gmail.com' not found in the filtered queryset.")
+            logger.info("????? Client with email 'ganeshkmohite88@gmail.com' not found in the filtered queryset.")
 
         brokers_of_users = all_enable_users.values_list('broker', flat=True)
         logger.info(f"username is:::::{usernames}:{brokers_of_users}")  
         default_expiry=None 
-        order_status=None  
-     
+        order_status=None 
+        for trade in all_enable_users:
+             logger.info(f"all users name is::{trade.client}")
         try:
             for trade in all_enable_users:
                 transaction_type=buy_sell_type
