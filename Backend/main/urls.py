@@ -181,7 +181,7 @@ urlpatterns = [
     path('user-broker-log/<int:user_id>/', UserBrokerLogActivityView.as_view(), name='user-broker-log'),
     
     path('client-broker-details-setting-aleart/', GetClientBrokerDetailsSettingView.as_view(), name='client-broker-details'),
-
+    path('client-complete-trade-history/',TradeCompleteListView.as_view(), name='client-completed-trade-details'),
     
 ]
 

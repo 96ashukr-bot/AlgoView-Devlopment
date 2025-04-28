@@ -4515,7 +4515,7 @@ class TradeorderhistoryListView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-class TradecompleteListView(APIView):
+class TradeCompleteListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
@@ -4535,7 +4535,7 @@ class TradecompleteListView(APIView):
             # Determine which clients to include based on user role
             if user.role and user.role.name.lower() == 'super-admin':
                 clients = User.objects.filter(type_of_user='is_client', is_client=True)
-                trade_history_queryset = Tradeorderhistory.objects.filter(
+                trade_history = Tradeorderhistory.objects.filter(
                     client__in=clients,
                     order_status__in=['completed', 'complete'],
                     trade_order_status__iexact='CLOSE',
