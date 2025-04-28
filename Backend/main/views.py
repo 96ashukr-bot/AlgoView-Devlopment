@@ -4769,8 +4769,17 @@ class TradeOrderResponseDataView(APIView):
        
 
 class IsSuperAdminOrSubAdmin(permissions.BasePermission):
+    """
+    Allows access only to Super Admins or Sub Admins based on role name.
+    """
+
     def has_permission(self, request, view):
-        return request.user.is_superuser or getattr(request.user, 'is_sub_admin', False)
+        # Allow if superuser
+        if request.user.is_superuser:
+            return True
+
+        # Allow if role name is 'Sub-Admin'
+        return hasattr(request.user, 'role') and getattr(request.user.role, 'name', '').lower() == 'sub-admin'
     
 class BrokerLogActivityView(APIView):
     permission_classes = [IsSuperAdminOrSubAdmin]  # Only superadmin or subadmin can access
@@ -4787,23 +4796,22 @@ class BrokerLogActivityView(APIView):
         serializer = BrokerLogSerializer(broker_details, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
-    
 class UserBrokerLogActivityView(APIView):
-    permission_classes = [IsAuthenticated]  
+    permission_classes = [IsAuthenticated]  # User must be logged in
 
     def get(self, request, user_id, *args, **kwargs):
         try:
-            # Check if the requesting user is trying to access their own data
+            # Check if requesting user is accessing their own data
             if request.user.id != user_id:
-                # Optionally, you can add a permission check here
-                # For example, allow only super admins or sub admins to access other users' data
-                if not (request.user.is_superuser or getattr(request.user, 'is_sub_admin', False)):
+                # Allow only superadmin or subadmin to access other users' logs
+                if not (request.user.is_superuser or (
+                    hasattr(request.user, 'role') and getattr(request.user.role, 'name', '').lower() == 'sub-admin'
+                )):
                     return Response(
                         {"detail": "You do not have permission to access this user's data."},
                         status=status.HTTP_403_FORBIDDEN
                     )
 
-            # Filter broker details by the specified user ID
             broker_details = ClientBrokerdetails.objects.filter(client_id=user_id)
 
             if not broker_details.exists():
@@ -4812,18 +4820,15 @@ class UserBrokerLogActivityView(APIView):
                     status=status.HTTP_404_NOT_FOUND
                 )
 
-            # Serialize the broker details
             serializer = BrokerLogSerializer(broker_details, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
-        except Exception as e:            
-            print(f"An error occurred: {str(e)}")  
-
+        except Exception as e:
+            print(f"An error occurred: {str(e)}")
             return Response(
                 {"detail": "An error occurred while retrieving broker details."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-
 
 
 
