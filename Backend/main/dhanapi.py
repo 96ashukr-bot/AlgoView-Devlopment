@@ -35,7 +35,7 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
         }
         try:
             dhan = dhanhq(client_id, access_token)
-            print("API key and access token are valid.")
+            logger.info("API key and access token are valid.")
         except Exception as e:
             logger.error(f"Error validating API key or access token: {str(e)}")
             status = "Failed"
@@ -58,7 +58,7 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
                     webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan")
             return response
 
-        logger.info(f"Fetched dhan trading_symbol: {trading_symbol}")
+        logger.info(f"webhooks Fetched dhan trading_symbol: {trading_symbol}")
         security_id = trading_symbol.get('SECURITY_ID', 0) 
         quantity = int(quantity) 
         if Exchange=="NFO":

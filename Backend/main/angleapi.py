@@ -32,7 +32,7 @@ def place_Angle_order(broker_details,LivePrice,group_service,api_key,demate_user
         Segment,Index_Symbol ,user=None, strategy=None):
 
     try:
-        print("Entry_pric+++++++++++++++++++++++",Entry_price,Exit_price)
+        logger.info(f"order for user:{user}")
         EntryQty=quantity
         print("inside place_Angle_order:::::::::::")
         order_id=0
@@ -143,7 +143,7 @@ def place_Angle_order(broker_details,LivePrice,group_service,api_key,demate_user
                 )
                 return {"data": {"status": "Failed", "message": f"Exception: {message}"}}
             logger.info(f"Login successful, placing order...")
-            logger.info(f"order_placement is for :::::::::::::::::::::::::::::::::::")
+            logger.info(f"order_placement is for :::::::::::::::::::::::::::::::::::{user}")
             
             response=place_order(access_token,payload,api_key)
             logger.info(f"not any response ")

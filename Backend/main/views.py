@@ -2807,7 +2807,7 @@ def place_order_broker(LivePrice,group_service,
             )
             logger.error(message)
             return {"data": {"status": "Failed", "message": message}}
-        logger.info(f"!!!!Placing order for user: {user} Brocker is: {trade.broker} & trading symbol is: {trade.symbol}")
+        logger.info(f"!!!!Placing order for user: {user} Brocker is: {trade.broker} & trading symbol is: {trade.symbol} and transaction_type is 99  {transaction_type}")
         if transaction_type=="SELL":
             response = exit_existing_buy_position_DhanOrder(expiry_date,LivePrice,group_service,Type,day,month,fullyear,access_token, client_id, trade_symbol, transaction_type, symbol, quantity,strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty, webhook_signal, Exchange, Segment,Index_Symbol, triggerPrice, trade_order_status)
             # If the exit failed, do not proceed.
@@ -2818,11 +2818,13 @@ def place_order_broker(LivePrice,group_service,
                 save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message, strategy,Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty, webhook_signal,Exchange, Segment, Index_Symbol, order_params, broker="dhan")
                 logger.error(message)
                 return {"data": {"status": "Failed", "message": message}} 
-        if transaction_type == "BUY": 
+        logger.info(f" transaction_type ::{transaction_type} use is :{{user}}")
+        if transaction_type == "BUY":
+            logger.info(f"dhan buy order for user:{user}") 
             response=place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_id, trade_symbol, transaction_type, symbol, quantity,
                 strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type, Entry_price, Exit_price, 
                 EntryQty, ExitQty, webhook_signal, Exchange, Segment,Index_Symbol, triggerPrice, trade_order_status)
-        logger.info(f" dhan api. Response: {response}")
+        logger.info(f" dhan api. Response: {response} for user :{user}")
         
     elif trade.broker.lower() == "5paisa":
         symbol=symbol.upper()
@@ -3001,9 +3003,9 @@ def place_order_broker(LivePrice,group_service,
             return {"data": {"status": "Failed", "message": message}}
         logger.info(f"Fetched API credentials for {trade.broker}: SKEY={api_skey}, UID={api_uid}")
 
-        logger.info(f"!!!!Placing order for user: {user} Brocker is: {trade.broker} & trading symbol is: {trade.symbol}")
+        logger.info(f"!!!!Placing order for user: {user} Brocker is: {trade.broker} & trading symbol is: {trade.symbol} and transaction_type is 99  {transaction_type}")
         if transaction_type.upper() == "SELL":
-            print("ALICE BLUE SELLL ORDER:::")
+            logger.info("ALICE BLUE SELLL ORDER:::")
             response = exit_existing_buy_position_Aliceblue(LivePrice,group_service,Type,day,month,year,api_skey,api_uid,trade_symbol,transaction_type, symbol, quantity,strategy,ordertype,
                 product_type, price,user, Lots,trade_order_status,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,
                 ExitQty,webhook_signal ,Exchange, Segment,Index_Symbol,triggerPrice)
@@ -3016,9 +3018,10 @@ def place_order_broker(LivePrice,group_service,
                 logger.error(message)
                 return {"data": {"status": "Failed", "message": message}} 
         if transaction_type.upper() == "BUY":
+            logger.info(f"alice blue buy order for user:{user}") 
             response=place_alice_orders(LivePrice,group_service,api_skey,api_uid,trade_symbol,transaction_type, symbol, quantity,strategy,ordertype,
             product_type, price,user, Lots,trade_order_status,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal ,Exchange, Segment,Index_Symbol,triggerPrice)
-        logger.info(f" Alice blue. Response: {response}")
+        logger.info(f" Alice blue. Response: {response} for user :::{user}")
     elif trade.broker.lower() == "angle one":
         broker="Angle One"
         trade_symbol = f"{symbol}{day}{month}{year}{default_price}{Type}" 
@@ -3037,6 +3040,7 @@ def place_order_broker(LivePrice,group_service,
         demate_user_name = client_broker.broker_Demate_User_Name
         totp = client_broker.broker_Totp_Authcode
         angle_pass = client_broker.broker_pass
+        logger.info(f"user of angle one is {user}")
         if not api_key or not demate_user_name or not totp or not angle_pass:
             message = f"API credentials not found for client {trade.client} and broker {trade.broker}."
             save_trade_order_history(LivePrice,group_service,transaction_type,
@@ -3048,7 +3052,7 @@ def place_order_broker(LivePrice,group_service,
             return {"data": {"status": "Failed", "message": message}}
         logger.info(f"Fetched API credentials for {trade.broker}: SKEY={api_key}, USER={demate_user_name}")
 
-        logger.info(f"!!!!Placing order for user: {user} Brocker is: {trade.broker} & trading symbol is: {trade.symbol}")
+        logger.info(f"!!!!Placing order for user: {user} Brocker is: {trade.broker} & trading symbol is: {trade.symbol} trtransaction_type: {transaction_type}")
         logger.info(f"trade_symbol of angle order is: {trade_symbol}")
         # continue  # Skip to next user if token data is not found
         # Place order for Angle One
@@ -3073,6 +3077,7 @@ def place_order_broker(LivePrice,group_service,
                 logger.error(message)
                 return {"data": {"status": "Failed", "message": message}} 
         if transaction_type.upper() == "BUY":
+            logger.info(f"angle one buy order for user: {user}")
             response =place_Angle_order(client_broker,LivePrice,group_service,api_key=api_key,demate_user_name=demate_user_name,totp=totp,
                 angle_pass=angle_pass,usertrade=trade,tradingsymbol=trade_symbol,quantity=quantity,product_type=product_type, 
                 transactiontype=transaction_type,price=price,ordertype=ordertype,lot_size=Lots,
@@ -3080,7 +3085,7 @@ def place_order_broker(LivePrice,group_service,
                 webhook_signal=webhook_signal,Exchange=Exchange,Segment=Segment,trade_order_status=trade_order_status,
                 Index_Symbol=Index_Symbol , user=user, strategy=strategy)#exch_seg=exch_seg expiry=expiry
 
-        logger.info(f"Angle one. Response: {response}")    
+        logger.info(f"Angle one. Response: {response} for user: {user}")    
     return response    
 
 def serialize_to_json(data):
