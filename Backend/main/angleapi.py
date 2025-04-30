@@ -94,18 +94,27 @@ def place_Angle_order(broker_details,LivePrice,group_service,api_key,demate_user
         username = demate_user_name
         Totp_Secret     = totp
         password=angle_pass
-        lot_size = get_lot_size(tradingsymbol)  # Implement this function to fetch lot size
-        lot = int(lot_size.get("lot_size", 0))  # Convert lot_size to an integer (default to 0 if not found)
-        logger.info(f"order place started ...........")  # Check if the order quantity is a multiple of the lot size
-        order_id=0
-        status="Failed"
-        res_data="unknown response",
-        if order_params['quantity'] % lot != 0:
-            logger.error(f"Invalid quantity {tradingsymbol}, it should be in multiples of lot size: {lot}")
-            message=f"Invalid quantity {tradingsymbol}, it should be in multiples of lot size: {lot}"
-            save_trade_order_history(LivePrice,group_service,transactiontype,trade_order_status,user,tradingsymbol, order_id, status, res_data, message,  strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol , order_params,broker="Angle One")
+        
+        # try :
+        #     start_time=time.time()
+        #     lot_size = get_lot_size(tradingsymbol)  # Implement this function to fetch lot size
+        #     end_time=time.time()
+        # except Exception as e:
+        #     logger.error(f"error lot size not get for {tradingsymbol}")    
+        # # lot_size = get_lot_size(tradingsymbol) 
+        # # logger.info(f"total time lote size angle one{end_time-start_time}")
+        # lot = int(lot_size.get("lot_size", 0))  # Convert lot_size to an integer (default to 0 if not found)
+        # logger.info(f"order place started ...........")  # Check if the order quantity is a multiple of the lot size
+        # order_id=0
+        # status="Failed"
+        # res_data="unknown response",
+        # logger.info("order parmas angle one ****************")
+        # if order_params['quantity'] % lot != 0:
+        #     logger.error(f"Invalid quantity {tradingsymbol}, it should be in multiples of lot size: {lot}")
+        #     message=f"Invalid quantity {tradingsymbol}, it should be in multiples of lot size: {lot}"
+        #     save_trade_order_history(LivePrice,group_service,transactiontype,trade_order_status,user,tradingsymbol, order_id, status, res_data, message,  strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol , order_params,broker="Angle One")
 
-            return {"data": {"status": "Failed", "message": f"Quantity must be a multiple of lot size: {lot}"}}
+        #     return {"data": {"status": "Failed", "message": f"Quantity must be a multiple of lot size: {lot}"}}
 
         try:
             # smartApi = SmartConnect(api_key=api_key)
@@ -116,6 +125,7 @@ def place_Angle_order(broker_details,LivePrice,group_service,api_key,demate_user
                 print("username", username, "password", password, "totp", Totp_Secret,"api_key",api_key)
                 # Get a valid token
                 state="AngleOne"
+                logger.info("angle access token stared .....")
                 access_token = get_access_token(username, password, totp, state, api_key,broker_details)
                 # authToken = get_valid_token(username, password, Totp_Secret, smartApi, broker_details)
                 logger.info(f"auth token get angle api")
@@ -145,8 +155,19 @@ def place_Angle_order(broker_details,LivePrice,group_service,api_key,demate_user
             logger.info(f"Login successful, placing order...")
             logger.info(f"order_placement is for :::::::::::::::::::::::::::::::::::{user}")
             
-            response=place_order(access_token,payload,api_key)
-            logger.info(f"not any response ")
+            # response=place_order(access_token,payload,api_key)
+            # logger.info(f"not any response ")
+            try:
+                logger.info(f"Attempting to place order for {user}")
+                response = place_order(access_token, payload, api_key)
+                logger.info(f"API Response:")
+            except Exception as e:
+                logger.error(f"Order placement failed for {user}: {str(e)}")
+                message = f"somthing wrong or token is invalid"
+                res_data="None response from API"
+                save_trade_order_history(LivePrice,group_service,transactiontype,trade_order_status,user,tradingsymbol, order_id, status, res_data, message,  strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol , order_params,broker="Angle One")
+        
+                return {"data": {"status": "Failed", "message": message}}
             # response = smartApi.placeOrderFullResponse(order_params)
             logger.info(f"Angle API Response: {response}")
             print("group_service>>>**)))))))))))",group_service)
@@ -269,7 +290,7 @@ def place_Angle_order(broker_details,LivePrice,group_service,api_key,demate_user
                 from_email = default_from_email,
                 # Send rejection email
                 print("user.firstName>>>>>",user.firstName)
-                send_trade_email_async.delay(user.email, from_email,user.firstName,status, rejection_message)
+                # send_trade_email_async.delay(user.email, from_email,user.firstName,status, rejection_message)
                 save_trade_order_history(LivePrice,group_service,transactiontype,trade_order_status,user,tradingsymbol, order_id, status, res_data, rejection_message,  strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol ,order_params ,broker="Angle One")
                 # save_webhook_signals_logs(order_params['transactiontype'], symbol, price, strategy, user, status=responsedetails['data'].get('status'),
                 response = {"data": {"status": status,"message":message}}
@@ -293,6 +314,7 @@ def place_Angle_order(broker_details,LivePrice,group_service,api_key,demate_user
     except Exception as e:
         logging.error(f"An unexpected error occurred: {e}")
         msg=f"An unexpected error occurred: {str(e)}"
+        
         response = {"data": {"status": "Failed","message":msg}}
         return response
  
@@ -654,7 +676,7 @@ class SymbolExpiryDateListView(APIView):
 
         # Check last update timestamp from cache
         last_update = cache.get("csv_last_update")
-        logger.info(f"Last CSV update timestamp: {last_update}")
+        logger.info(f" {last_update}")
 
         today_date = datetime.now().date()
         last_update_date = datetime.strptime(last_update, "%Y-%m-%d").date() if last_update else None
