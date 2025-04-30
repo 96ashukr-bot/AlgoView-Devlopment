@@ -4539,7 +4539,7 @@ class TradeCompleteListView(APIView):
                     client__in=clients,
                     order_status__in=['completed', 'complete'],
                     trade_order_status__iexact='CLOSE',
-                ).exclude(
+                ).filter(Q(Entry_Price__gt=0.0) | Q(Exit_Price__gt=0.0)).exclude(
                     order_id=0,
                     order_id__isnull=True,
                     Entry_type__isnull=True,
@@ -4557,7 +4557,7 @@ class TradeCompleteListView(APIView):
                     client__in=clients,
                     order_status__in=['completed', 'complete'],
                     trade_order_status__iexact='CLOSE',
-                ).exclude(
+                ).filter(Q(Entry_Price__gt=0.0) | Q(Exit_Price__gt=0.0)).exclude(
                     order_id=0,
                     order_id__isnull=True,
                     Entry_type__isnull=True,
@@ -4572,7 +4572,7 @@ class TradeCompleteListView(APIView):
                     client=user,
                     order_status__in=['completed', 'complete'],
                     trade_order_status__iexact='CLOSE',
-                ).exclude(
+                ).filter(Q(Entry_Price__gt=0.0) | Q(Exit_Price__gt=0.0)).exclude(
                     order_id=0,
                     order_id__isnull=True,
                     Entry_type__isnull=True,

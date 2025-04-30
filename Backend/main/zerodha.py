@@ -45,7 +45,7 @@ def place_zerodha_orders(LivePrice,group_service,access_token, Api_key, trade_sy
                         webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="zerodha")
             
             return response
-
+        logger.info(f"trade_symbol zerodha:{trade_symbol}")
         trading_symbol = get_trading_symbol(Exchange, trade_symbol, kite)
 
         if not trading_symbol:
