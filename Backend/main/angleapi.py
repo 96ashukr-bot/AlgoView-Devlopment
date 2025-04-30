@@ -101,14 +101,14 @@ def place_Angle_order(broker_details,LivePrice,group_service,api_key,demate_user
         #     end_time=time.time()
         # except Exception as e:
         #     logger.error(f"error lot size not get for {tradingsymbol}")    
-        # # lot_size = get_lot_size(tradingsymbol) 
-        # # logger.info(f"total time lote size angle one{end_time-start_time}")
+        # logger.info(f"total time lote size angle one{end_time-start_time}")
+        # lot_size = get_lot_size(tradingsymbol) 
         # lot = int(lot_size.get("lot_size", 0))  # Convert lot_size to an integer (default to 0 if not found)
-        # logger.info(f"order place started ...........")  # Check if the order quantity is a multiple of the lot size
-        # order_id=0
-        # status="Failed"
-        # res_data="unknown response",
-        # logger.info("order parmas angle one ****************")
+        logger.info(f"order place started ...........")  # Check if the order quantity is a multiple of the lot size
+        order_id=0
+        status="Failed"
+        res_data="unknown response",
+        logger.info("order parmas angle one ****************")
         # if order_params['quantity'] % lot != 0:
         #     logger.error(f"Invalid quantity {tradingsymbol}, it should be in multiples of lot size: {lot}")
         #     message=f"Invalid quantity {tradingsymbol}, it should be in multiples of lot size: {lot}"
