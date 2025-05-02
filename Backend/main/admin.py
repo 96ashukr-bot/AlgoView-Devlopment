@@ -107,7 +107,7 @@ class TradeLogAdmin(admin.ModelAdmin):
 
 @admin.register(TradingLog)    
 class TradeLogAdmin(admin.ModelAdmin):
-    list_display=("id",'date','client')     
+    list_display=("id",'date','client','symbol')     
 
 @admin.register(ClientBrokerdetails)    
 class ClientBrokerDetailgAdmin(admin.ModelAdmin):

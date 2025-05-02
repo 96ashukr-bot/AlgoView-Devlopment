@@ -3310,7 +3310,7 @@ class PlaceOrderWebhookView(APIView):
                         # Count user's trades for the day
                         today = datetime.today()
                         print("today>>>",today)
-                        daily_trade_count = TradingLog.objects.filter(client=user, date=today).count()
+                        daily_trade_count = TradingLog.objects.filter(client=user, date=today ,symbol=symbol).count()
                         if daily_trade_count >= trade_limit:
                             message= f"Trade limit reached for user {user}. No more trades allowed today."
                             save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal , Exchange, Segment,Index_Symbol,order_params,broker=trade.broker)
