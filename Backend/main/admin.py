@@ -112,7 +112,7 @@ class TradeLogAdmin(admin.ModelAdmin):
 @admin.register(ClientBrokerdetails)    
 class ClientBrokerDetailgAdmin(admin.ModelAdmin):
     list_display=("id",'client','broker_name','tokenCreatedAt','access_token_expiry')   
-    
+    search_fields = ("id", "client__email", "broker_name__broker_name")    
 @admin.register(Tradeorderhistory)    
 class ClientTradeHistoryAdmin(admin.ModelAdmin):
     list_display = ("id", "client", "transaction_type", "trading_symbol", "date", "strategy", "GroupService", "order_id", "broker", "order_status", "SignalEntry_time")     
