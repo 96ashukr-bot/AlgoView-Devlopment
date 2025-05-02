@@ -230,7 +230,7 @@ def place_Angle_order(broker_details,LivePrice,group_service,api_key,demate_user
                 # log_order(order_data, "orders_placed.csv")  
                 message = responsedetails['data'].get('text', 'completed successfully ')
                 status=responsedetails['data'].get('status', 'completed')
-                sttaus="completed"
+                status="completed"
                 save_trade_order_history(LivePrice,group_service,transactiontype,trade_order_status,user,tradingsymbol, order_id, status, res_data, message,   strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol ,order_params,broker="Angle One")
                 # from_email = default_from_email,
                 # send_trade_email_async.delay(user.email, from_email,user.firstName,status, message)
