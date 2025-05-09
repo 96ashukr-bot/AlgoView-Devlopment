@@ -3308,7 +3308,7 @@ class PlaceOrderWebhookView(APIView):
                 order_params = {
                     "symbol": trade['symbol'] if trade['symbol'] else trade_symbol,
                     "Exchange": exch_seg,
-                    "quantity": trade['quantity'] or default_quantity,
+                    "quantity": int(trade['quantity']) or default_quantity,
                     "product_type": trade['product_type'],
                     "transaction_type": buy_sell,
                     "price": limitPrice or 0,
@@ -3399,7 +3399,7 @@ class PlaceOrderWebhookView(APIView):
                         )
                         continue
                     default_expiry=localtime(default_expiry)
-                    order_params = {"symbol": trade['symbol'],"Exchange": exch_seg, "quantity": trade['quantity'] or default_quantity,"product_type": trade['product_type'],
+                    order_params = {"symbol": trade['symbol'],"Exchange": exch_seg, "quantity": int(trade['quantity']) or default_quantity,"product_type": trade['product_type'],
                     "transaction_type":buy_sell,"price": limitPrice or 0 ,"ordertype": default_ordertype, "expiry": default_expiry,"strategy": trade['strategy']}
                     order_params = serialize_to_json(order_params)
 
@@ -3423,7 +3423,7 @@ class PlaceOrderWebhookView(APIView):
                     # user = int(trade['client'])
                     user = User.objects.get(id = int(trade['client']))
                     strategy = trade['strategy']
-                    quantity = trade['quantity'] or default_quantity
+                    quantity = int(trade['quantity']) or default_quantity
                     logger.info(f"quantity of trade>>>{quantity}")
                     product_type = trade['product_type']
                     price = limitPrice
