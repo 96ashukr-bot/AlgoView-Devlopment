@@ -4690,13 +4690,13 @@ class TradeCompleteListView(APIView):
                 clients = User.objects.filter(type_of_user='is_client', is_client=True)
                 trade_history = Tradeorderhistory.objects.filter(
                     client__in=clients,
+                    Entry_type__isnull=False,
+                    Exit_type__isnull=False,
                     order_status__in=['completed', 'complete'],
                     trade_order_status__iexact='CLOSE',
                 ).filter(Q(Entry_Price__gt=0.0) | Q(Exit_Price__gt=0.0)).exclude(
                     order_id=0,
                     order_id__isnull=True,
-                    Entry_type__isnull=True,
-                    Exit_type__isnull=True,
                     EntryQty__isnull=True,
                     ExitQty__isnull=True,
                     Entry_Price__isnull=True,
@@ -4708,13 +4708,13 @@ class TradeCompleteListView(APIView):
                 clients = User.objects.filter(assigned_client=user, type_of_user='is_client', is_client=True)
                 trade_history = Tradeorderhistory.objects.filter(
                     client__in=clients,
+                    Entry_type__isnull=False,
+                    Exit_type__isnull=False,
                     order_status__in=['completed', 'complete'],
                     trade_order_status__iexact='CLOSE',
                 ).filter(Q(Entry_Price__gt=0.0) | Q(Exit_Price__gt=0.0)).exclude(
                     order_id=0,
                     order_id__isnull=True,
-                    Entry_type__isnull=True,
-                    Exit_type__isnull=True,
                     EntryQty__isnull=True,
                     ExitQty__isnull=True,
                     Entry_Price__isnull=True,
@@ -4723,13 +4723,13 @@ class TradeCompleteListView(APIView):
             else:
                 trade_history = Tradeorderhistory.objects.filter(
                     client=user,
+                    Entry_type__isnull=False,
+                    Exit_type__isnull=False,
                     order_status__in=['completed', 'complete'],
                     trade_order_status__iexact='CLOSE',
                 ).filter(Q(Entry_Price__gt=0.0) | Q(Exit_Price__gt=0.0)).exclude(
                     order_id=0,
                     order_id__isnull=True,
-                    Entry_type__isnull=True,
-                    Exit_type__isnull=True,
                     EntryQty__isnull=True,
                     ExitQty__isnull=True,
                     Entry_Price__isnull=True,
@@ -4802,7 +4802,7 @@ class TradeCompleteListView(APIView):
 
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
- 
+
 class ClientTradeListView(APIView):
     permission_classes = [IsAuthenticated]
 
