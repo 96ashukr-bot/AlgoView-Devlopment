@@ -434,6 +434,7 @@ class ClientTradeSetting(models.Model):
     group_service =  models.CharField(max_length=255, null=True, blank=True)
     # Allow manual input for expiry_date, not auto field
     expiry_date = models.DateTimeField(null=True, blank=True)  # Allows manual input (client-defined)
+    updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)
 
     # Corrected 'is_tread_status' field definition
     is_tread_status = models.BooleanField(default=False)  # Default  False 

@@ -98,8 +98,9 @@ class categoriesAdmin(admin.ModelAdmin):
 
 @admin.register(ClientTradeSetting)    
 class ClientTradeSettingAdmin(admin.ModelAdmin):
-    list_display=("id",'client','broker','symbol','group_service','segment','is_tread_status') 
+    list_display=("id",'client','broker','symbol', 'updated_at', 'group_service','segment','is_tread_status') 
     search_fields = ('client__email', 'symbol','group_service') 
+    readonly_fields = ("updated_at",)
 
 @admin.register(TradeLog)    
 class TradeLogAdmin(admin.ModelAdmin):
