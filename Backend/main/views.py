@@ -3290,7 +3290,7 @@ class PlaceOrderWebhookView(APIView):
                 ExitQty = None
                 Type = None
                 trade_symbol = symbols
-                user = trade['client']
+                user = User.objects.get(id = int(trade['client']))
                 logger.info('-------------------------------------------------------------------------------------------------------------------------------------')
                 logger.info(f"--------------------{trade['client']} --------------- {trade['symbol']}--------------------")
                 logger.info('-------------------------------------------------------------------------------------------------------------------------------------')
@@ -3327,7 +3327,7 @@ class PlaceOrderWebhookView(APIView):
                         group_service=group_service,
                         transaction_type=transaction_type,
                         trade_order_status=trade_order_status,
-                        user=trade['client'],
+                        user=user,
                         symbol=trade['symbol'],
                         quantity=0,
                         status=status,
@@ -3421,7 +3421,6 @@ class PlaceOrderWebhookView(APIView):
                         symbol = symbol.upper()
                     
                     # user = int(trade['client'])
-                    user = User.objects.get(id = int(trade['client']))
                     strategy = trade['strategy']
                     quantity = int(trade['quantity']) or default_quantity
                     logger.info(f"quantity of trade>>>{quantity}")
