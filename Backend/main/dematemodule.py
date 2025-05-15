@@ -47,16 +47,17 @@ def trading_Symbol_sum(trade, symbols, day, month, year, Type, default_price):
     month = str(month).zfill(2)
     year = str(year)
     trade_symbol = ""
-    if trade.broker.lower() == 'alice blue':
+    broker=trade['broker']
+    if broker.lower() == 'alice blue':
         trade_symbol = f"{symbols}{day}{month}{year}{Type[0]}{default_price}"
         logger.info("Trading Symbol (Alice Blue): %s", trade_symbol)
-    elif trade.broker.lower() == 'angle one':
+    elif broker.lower() == 'angle one':
         trade_symbol = f"{symbols}{day}{month}{year}{default_price}{Type}"
         logger.info("Trading Symbol (Angle One): %s", trade_symbol)
-    elif trade.broker.lower() == "upstox":
+    elif broker.lower() == "upstox":
         trade_symbol = f"{symbols}{default_price}{Type}{day}{month}{year}"
         logger.info("Trading Symbol (Upstox): %s", trade_symbol)
-    elif trade.broker.lower() == "zerodha":
+    elif broker.lower() == "zerodha":
         trade_symbol = f"{symbols}{year}{month}{default_price}{Type}"
         logger.info("Trading Symbol (Zerodha): %s", trade_symbol)
     
