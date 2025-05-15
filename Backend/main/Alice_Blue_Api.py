@@ -333,6 +333,12 @@ def save_trade_order_history(LivePrice,group_service,transaction_type,trade_orde
         current_time = datetime.now()  # Use the properly imported datetime
         SignalEntry_time = current_time if Entry_type else None
         SignalExit_time = current_time if Exit_type else None
+        if not isinstance(client, User):
+            try:
+                client = User.objects.get(id=client)
+            except (User.DoesNotExist, ValueError) as e:
+                logger.error(f"Invalid client: {client}. Error: {str(e)}")
+                return None
 
         # Handle null prices by falling back to LivePrice
         # final_entry_price = Entry_price if Entry_price is not 0
@@ -367,11 +373,11 @@ def save_trade_order_history(LivePrice,group_service,transaction_type,trade_orde
             ExitQty=ExitQty if ExitQty is not None else 0
         )
 
-        logger.info(f"Order history saved successfully for Order ID: {order_id}")
+        logger.info(f"{client} : Order history saved successfully for Order ID: {order_id}")
         return trade_history
 
     except Exception as e:
-        logger.error(f"Error saving order history for Order ID: {order_id}. Error: {str(e)}", exc_info=True)
+        logger.error(f"{client} : Error saving order history for Order ID: {order_id}. Error: {str(e)}", exc_info=True)
         logger.debug(
             f"Field values - client: {client}, "
             f"trading_symbol: {trading_symbol}, "

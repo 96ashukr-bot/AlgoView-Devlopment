@@ -435,7 +435,6 @@ def get_token_details(trading_symbol):
         logger.info(f"trading_symbol of Angle is ::::::::::::::{trading_symbol}")
         for item in data:
             if item.get("symbol") == trading_symbol:
-                logger.info(f"trading symbol found  angle one ::::::::::::{trading_symbol}")
                 print("csv token from master data api>>>",item)
                 # Return the token and any other details
                 return {
