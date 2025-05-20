@@ -3616,6 +3616,29 @@ class ClientBrokerDetailsView(APIView):
                     trade_setting.broker = broker_detail.broker_name.broker_name  # Assuming 'broker_name' is the field that links to the broker model
                     trade_setting.save()
 
+                # ⬇️ Add logging block here
+                try:
+                    log_file_path = os.path.join('logs', 'broker_update_log.csv')  # make sure 'logs/' exists
+                    os.makedirs(os.path.dirname(log_file_path), exist_ok=True)  # ensure the folder exists
+
+                    log_data = {
+                        'user_id': user.id,
+                        'username': user.email if user.email else "unknown",
+                        'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                        'action': 'update_broker_details',
+                        'broker': broker_detail.broker_name.broker_name
+                    }
+
+                    file_exists = os.path.isfile(log_file_path)
+                    with open(log_file_path, mode='a', newline='') as file:
+                        writer = csv.DictWriter(file, fieldnames=log_data.keys())
+                        if not file_exists:
+                            writer.writeheader()
+                        writer.writerow(log_data)
+                except Exception as log_error:
+                    # You can optionally log this to Django logs
+                    pass  # Don't disturb the main flow
+
                 message = "Broker details created successfully!" if created else "Broker details updated successfully!"
                 return Response({"message": message, "data": serializer.data}, status=status.HTTP_200_OK)
 

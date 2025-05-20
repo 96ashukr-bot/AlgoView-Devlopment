@@ -16,6 +16,7 @@ from main.upstock import place_upstox_orders
 from main.zerodha import place_zerodha_orders
 logger = logging.getLogger('main')
 from datetime import datetime, timedelta  
+import os
 from django.conf import settings
 import hashlib
 import json
@@ -132,8 +133,27 @@ class LoginDematAPIView(APIView):
                     {"error": f"Unsupported broker: {broker_details.broker_name}"}, 
                     status=400
                 )
-            
-            # Return the login URL in the response
+            try:
+                log_file_path = os.path.join('logs', 'login_demat_log.csv')
+                os.makedirs(os.path.dirname(log_file_path), exist_ok=True)
+
+                log_data = {
+                    'user_id': user.id,
+                    'username': user.email if user.email else "unknown",
+                    'broker': str(broker),
+                    'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    'action': 'generate_login_url'
+                }
+
+                file_exists = os.path.isfile(log_file_path)
+                with open(log_file_path, mode='a', newline='') as file:
+                    writer = csv.DictWriter(file, fieldnames=log_data.keys())
+                    if not file_exists:
+                        writer.writeheader()
+                    writer.writerow(log_data)
+            except Exception as log_error:
+                pass  # Fail silently to avoid disrupting the API
+
             return JsonResponse({"login_url": login_url}, status=200)
 
         except NotFound as e:
