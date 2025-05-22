@@ -13,6 +13,7 @@ from django.conf import settings
 from django.db import transaction
 from rest_framework.validators import UniqueValidator
 from main.email import EmailService
+from datetime import date
 from django.utils import timezone
 from main.companysmtpsetails import get_company_profile,get_smtp_details
 company_profile = get_company_profile()
@@ -1015,12 +1016,18 @@ class ClientListSerializer(serializers.ModelSerializer):
     Group_service = GroupServiceSerializer()  # Make sure to match field names
     license = LicenseSerializer()
     Broker = GetBrokerSerializer() 
+    client_expiry_status = serializers.SerializerMethodField()
     class Meta:
         model = User
-        fields = ['id','email', 'firstName', 'userName','middleName','fullName','phoneNumber' ,'lastName', 'client_status','phoneNumber',
+        fields = ['id','client_type', 'email', 'firstName', 'userName','middleName','fullName','phoneNumber' ,'lastName', 'client_status','phoneNumber',
                   'client_key', 'start_date_client','end_date_client','Broker', 'Group_service','license', 'user_license_month','to_month', 'created_by', 'assigned_client',
                   'Strategy','client_status','givenservices_to_month','demate_acc_uid','start_date_client', 'end_date_client','is_enable',
                   'created_at','client_expiry_status']
+
+    def get_client_expiry_status(self, obj):
+        if obj.end_date_client and obj.end_date_client < date.today():
+            return False
+        return True
         
 # class ClientListdetailsSerializer(serializers.ModelSerializer):
 #     assigned_client = AssignedClientSerializer(read_only=True)
