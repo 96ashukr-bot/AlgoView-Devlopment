@@ -3,7 +3,7 @@ import { Container, Row, Col, Card, CardBody } from 'reactstrap';
 import { Breadcrumbs } from '../../../AbstractElements';
 import HeaderCard from '../../Common/Component/HeaderCard';
 // import DataTableComponent from './DataTableComponent';
-import UserList from './UserList';
+import UserList from '../../Application/Users/UsersProfile/SubAdmin/UserList';
 
 const DataTables = () => {
 

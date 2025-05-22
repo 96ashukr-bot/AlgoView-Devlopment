@@ -1,0 +1,118 @@
+.dark-only tr:hover {
+  background-color: #3a3a3a;
+}
+
+.dark-only label {
+  color: #ffffff !important;
+}
+
+.dark-only input::placeholder,
+.dark-only select,
+.dark-only textarea::placeholder {
+  color: #ffffff !important;
+  opacity: 1; 
+}
+
+.dark-only input,
+.dark-only select,
+.dark-only textarea {
+  color: #ffffff !important;
+  background-color: #2c2c2c; 
+  border-color: #555 !important;
+}
+
+.dark-only table,
+.dark-only tr,
+.dark-only td {
+  background-color: #2a2a2a; 
+  color: #ffffff;
+  border: 1px solid #444;
+}
+
+.dark-only th {
+  background-color: #333;
+  color: #ffffff;
+}
+
+/* Optional: Hover effect for better UX */
+.dark-only tr:hover {
+  background-color: #3a3a3a;
+}
+
+.arrow-icon {
+    color: gray;
+    transition: color 0.3s;
+  }
+  
+  .arrow-icon:hover {
+    color: white;
+  }
+  
+  th.sortable:hover .arrow-icon {
+    color: white;
+  }
+  
+  .preview-container {
+    position: relative;
+    display: inline-block;
+  }
+  
+  .preview-image {
+    max-width: 100%;
+    max-height: 200px;
+    object-fit: cover;
+  }
+  
+  .remove-image {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+  }
+  
+  .status-pill {
+    padding: 8px;
+    border: 1px solid;
+    background-color: transparent;
+    text-align: center;
+  }
+
+  .custom-pagi-style{
+    padding: 8px !important;
+  }
+  
+  .custom-input-style{
+    /* line-height: 2.2 !important; */
+    padding: 0.475rem 1.15rem !important;
+  }
+
+  .custom-col-design{
+    background-color:#283F7B !important;
+    color: white !important;
+    cursor: pointer;
+  }
+  
+  .custom-table-design{
+    width: 100% !important;
+    min-width: 800px !important;
+    text-wrap: nowrap !important;
+  }
+
+  @media only screen and (max-width: 810px) {
+    .custom-responsive-style{
+      display: block !important;
+    }
+
+    .custom-responsive-style-btn{
+      margin-right: 0px !important;
+      margin-bottom: 10px;
+      margin-top: 5px;
+    }
+  
+    .custom-responsive-style-search{
+      margin-top: 10px !important;
+    }
+
+  }

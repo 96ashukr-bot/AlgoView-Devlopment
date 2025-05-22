@@ -1,0 +1,104 @@
+/* General Styles */
+.text-center {
+  text-align: center;
+}
+
+.tab-button {
+  background-color: #f8f9fa;
+  border: 1px solid #ddd;
+  padding: 5px 10px;
+  font-size: 14px;
+}
+
+.disclaimer {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #666;
+}
+
+.header-section .icon {
+  color: #007bff;
+  margin-bottom: 8px;
+}
+
+.header-section h6 {
+  font-size: 14px;
+  font-weight: bold;
+  margin: 0;
+}
+
+.header-section p {
+  font-size: 16px;
+  margin: 0;
+}
+
+.nav-tabs .nav-item .nav-link {
+  color: #000;
+  font-size: 14px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.nav-tabs .nav-item .nav-link.active {
+  font-weight: bold;
+  border-bottom: 2px solid #007bff;
+}
+
+.dropdown .form-control {
+  width: 120px;
+  background: #f8f9fa;
+  border: 1px solid #ddd;
+  color: #000;
+}
+
+.dropdown .dropdown-toggle {
+  background-color: rgba(244, 244, 247, 0.575) !important;
+  border-radius: 5px;
+  border-color: gray !important;
+  padding: 8px 10px;
+  text-align: left;
+  border: none !important;
+}
+
+.dropdown-all, .dropdown-category-all {
+  width: 120px !important; 
+}
+
+.btn-sm {
+  padding: 5px 10px; 
+  font-size: 12px;
+}
+
+.btn-column {
+  padding-left: 5px; 
+  padding-right: 5px;
+}
+
+.btn {
+  margin: 0;
+}
+
+.table-responsive {
+  overflow-x: auto;
+}
+
+.table-responsive table {
+  min-width: 600px;
+}
+
+.custom-col-design{
+  background-color:#283F7B !important;
+  color: white !important;
+}
+
+@media only screen and (max-width: 810px) {
+.custom-style{
+  width: 400px !important;
+  max-width: 450px !important;
+}
+
+.custom-responsive{
+  width: 50% !important;
+}
+
+}

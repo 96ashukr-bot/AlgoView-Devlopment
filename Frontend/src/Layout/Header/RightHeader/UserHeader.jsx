@@ -1,89 +1,131 @@
 import React, { useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FileText, LogIn, Mail, User } from "react-feather";
-import man from "../../../assets/images/dashboard/Algologo.png";
-
+import { LogIn, User } from "react-feather";
+import man from "../../../assets/images/dashboard/defaultpicture.jpg";
 import { LI, UL, Image, P } from "../../../AbstractElements";
 import CustomizerContext from "../../../_helper/Customizer";
-import { Account, Admin, KycUpdate, LogOut, } from "../../../Constant";
+import { baseUrl } from "../../../ConfigUrl/config";
+import { Account, KycUpdate } from "../../../Constant";
+import { fetchUserProfile, logoutUser } from "../../../Services/Authentication";
+import './RightHeader.css'
 
 const UserHeader = () => {
   const history = useNavigate();
-  const [profile, setProfile] = useState("");
-  const [name, setName] = useState("Emay Walter");
+  const [profile, setProfile] = useState(man);
+  const [name, setName] = useState("Loading...");
+  const [role, setRole] = useState("");
   const { layoutURL } = useContext(CustomizerContext);
   const authenticated = JSON.parse(localStorage.getItem("authenticated"));
-  const auth0_profile = JSON.parse(localStorage.getItem("auth0_profile"));
-
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  
   useEffect(() => {
-    setProfile(localStorage.getItem("profileURL") || man);
-    setName(localStorage.getItem("Name") ? localStorage.getItem("Name") : name);
+    loadUserProfile();
   }, []);
 
-  const Logout = () => {
-    localStorage.removeItem("profileURL");
-    localStorage.removeItem("token");
-    localStorage.removeItem("auth0_profile");
-    localStorage.removeItem("Name");
-    localStorage.setItem("authenticated", false);
-    history(`/login`);
+  const loadUserProfile = async () => {
+    try {
+      const data = await fetchUserProfile();
+      if (data) {
+        const firstName = data.firstName || "No";
+        const lastName = data.lastName || "Name";
+        setName(`${firstName} ${lastName}`);
+
+        if (data.profilePicture) {
+          const profilePictureUrl = `${baseUrl}${data.profilePicture}`;
+          setProfile(profilePictureUrl);
+        }
+        
+        if (data.role && data.role.name) {
+          setRole(data.role.name); 
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+    }
+  };
+
+  const Logout = async () => {
+    try {
+      await logoutUser();
+      localStorage.removeItem('hasShownInitialAlert');
+      history(`/login`);
+    } catch (error) {
+      console.error("Logout failed:", error.message);
+    }
   };
 
   const UserMenuRedirect = (redirect) => {
     history(redirect);
   };
 
+  const toggleDropdown = () => {
+    setDropdownOpen(!dropdownOpen); 
+  };
+
+  const closeDropdown = () => {
+    setDropdownOpen(false);
+  };
+
   return (
-    <li className="profile-nav onhover-dropdown pe-0 py-0">
-      <div className="media profile-media">
+    <li className="profile-nav pe-0 py-0">
+      <div className="media profile-media" onClick={toggleDropdown}>
         <Image
           attrImage={{
             className: "b-r-10 m-0",
-            src: `${authenticated ? auth0_profile.picture : profile}`,
+            src: profile || man,
             alt: "",
+            style: { width: "35px", height: "35px" },
           }}
         />
         <div className="media-body">
-          <span>{authenticated ? auth0_profile.name : name}</span>
+          <span>{name}</span>
           <P attrPara={{ className: "mb-0 font-roboto" }}>
-            {Admin} <i className="middle fa fa-angle-down"></i>
+            {role} <i className={`middle fa fa-angle-${dropdownOpen ? "up" : "down"}`}></i>
           </P>
         </div>
       </div>
-      <UL attrUL={{ className: "simple-list profile-dropdown onhover-show-div" }}>
-        <LI
-          attrLI={{
-            onClick: () => UserMenuRedirect(`/app/users/profile/${layoutURL}`),
-          }}>
-          <User />
-          <span>{Account} </span>
-        </LI>
-        <LI
-          attrLI={{
-            onClick: () => UserMenuRedirect(`/app/kyc-update/${layoutURL}`),
-          }}>
-          <User />
-          <span>{KycUpdate} </span>
-        </LI>
-        {/* <LI
-          attrLI={{
-            onClick: () => UserMenuRedirect(`/app/email-app/${layoutURL}`),
-          }}>
-          <Mail />
-          <span>{Inbox}</span>
-        </LI> */}
-        {/* <LI
-          attrLI={{
-            onClick: () => UserMenuRedirect(`/app/todo-app/todo/${layoutURL}`),
-          }}>
-          <FileText />
-          <span>{Taskboard}</span>
-        </LI> */}
-        <LI attrLI={{ onClick: Logout }}>
-          <LogIn />
-          <span>{LogOut}</span>
-        </LI>
-      </UL>
+
+      {dropdownOpen && (
+        <UL attrUL={{ className: "simple-list profile-dropdown" }}>
+          <LI
+            attrLI={{
+              onClick: () => {
+                UserMenuRedirect(`/algoview/users/profile`);
+                closeDropdown(); 
+              },
+            }}
+          >
+            <User />
+            <span>{Account}</span>
+          </LI>
+
+          {role.toLowerCase() === "client" && (
+            <LI
+              attrLI={{
+                onClick: () => {
+                  UserMenuRedirect(`/algoview/kyc-update`);
+                  closeDropdown();
+                },
+              }}
+            >
+              <User />
+              <span>{KycUpdate}</span>
+            </LI>
+          )}
+
+          <LI
+            attrLI={{
+              onClick: () => {
+                Logout();
+                closeDropdown();
+              },
+            }}
+          >
+            <LogIn />
+            <span>Log Out</span>
+          </LI>
+        </UL>
+      )}
     </li>
   );
 };

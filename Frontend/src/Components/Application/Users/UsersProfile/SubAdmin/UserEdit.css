@@ -1,0 +1,20 @@
+.form-control.is-invalid {
+  border-color: #dc3545;
+}
+
+.error-message {
+  color: #dc3545;
+  font-size: 0.9rem;
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+.custom-input-style{
+  line-height: 2.2 !important;
+  padding: 0.475rem 1.15rem !important;
+}

@@ -6,7 +6,7 @@ import { H4 } from '../../../AbstractElements';
 const Widgets2 = ({ data, chartClass, mainClass }) => {
   return (
     <>
-      <Card className={`widget-1 widget-with-chart ${mainClass ? mainClass : ''}`}>
+      {/* <Card className={`widget-1 widget-with-chart ${mainClass ? mainClass : ''}`}>
         <CardBody>
           <div>
             <H4 attrH4={{ className: 'mb-1' }}>{data.total}</H4>
@@ -16,7 +16,7 @@ const Widgets2 = ({ data, chartClass, mainClass }) => {
             <ReactApexChart type={data.chart.options.chart.type} height={data.chart.options.chart.height} options={data.chart.options} series={data.chart.series} />
           </div>
         </CardBody>
-      </Card>
+      </Card> */}
     </>
   );
 };

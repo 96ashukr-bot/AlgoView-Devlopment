@@ -1,0 +1,271 @@
+.dark-only table,
+.dark-only tr,
+.dark-only td {
+  background-color: #2a2a2a;
+  color           : #ffffff;
+  border          : 1px solid #444;
+}
+
+.dark-only th {
+  background-color: #333;
+  color           : #ffffff;
+}
+
+/* Optional: Hover effect for better UX */
+.dark-only tr:hover {
+  background-color: #3a3a3a;
+}
+
+.dark-only .login-card .login-main-new {
+  color           : white !important;
+  background-color: #262932 !important;
+  border-color    : #555 !important;
+}
+
+.table-responsive {
+  height    : calc(100% - 60px);
+  overflow-y: auto;
+}
+
+.table {
+  height: 100%;
+}
+
+.sortable {
+  cursor  : pointer;
+  position: relative;
+}
+
+.sort-icon {
+  opacity   : 0;
+  transition: opacity 0.2s ease;
+  position  : absolute;
+  right     : 5px;
+}
+
+.sortable:hover .sort-icon {
+  opacity: 1;
+}
+
+.status-pill {
+  background-color: transparent !important;
+  border-radius   : 50px;
+}
+
+
+.file-upload-wrapper {
+  border       : 1px dashed #ddd;
+  padding      : 20px;
+  text-align   : center;
+  position     : relative;
+  margin-bottom: 20px;
+}
+
+.government-id-section {
+  margin-top: 30px;
+}
+
+.image-preview {
+  position     : relative;
+  display      : inline-block;
+  margin-bottom: 20px;
+}
+
+.section-divider {
+  border    : 0;
+  border-top: 3px solid #7e7d7d8f;
+  margin    : 20px 0;
+  width     : 100%;
+}
+
+
+.gov-id-head {
+  font-size: 20px !important;
+}
+
+.govt-upload-head {
+  font-size: 20px !important;
+}
+
+.kyc-main-head {
+  margin-bottom: 20px;
+}
+
+.submit-button-group {
+  display        : flex;
+  justify-content: center;
+}
+
+.update-btn {
+  width    : 180px;
+  font-size: 18px;
+}
+
+.image-preview img {
+  width           : 100%;
+  height          : auto;
+  border          : 1px solid #ddd;
+  border-radius   : 4px;
+  padding         : 10px;
+  background-color: #f9f9f9;
+}
+
+.remove-image {
+  position        : absolute;
+  top             : 10px;
+  right           : 10px;
+  background-color: rgba(255, 255, 255, 0.185);
+  border          : none;
+  color           : #ff0000;
+  font-size       : 20px;
+  cursor          : pointer;
+  padding         : 5px;
+  border-radius   : 50%;
+  width           : 30px;
+  height          : 30px;
+  display         : flex;
+  justify-content : center;
+  align-items     : center;
+}
+
+.remove-image:hover {
+  background-color: rgba(255, 0, 0, 0.8);
+  color           : #fff;
+}
+
+
+.kyc-upload-container {
+  max-width       : 600px;
+  margin          : 20px auto;
+  padding         : 20px;
+  background-color: #fff;
+  border-radius   : 10px;
+  box-shadow      : 0px 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+h4 {
+  font-size    : 18px;
+  margin-bottom: 10px;
+}
+
+p {
+  margin-bottom: 15px;
+}
+
+.drag-text {
+  margin-top   : 10px !important;
+  margin-bottom: 0px !important;
+
+}
+
+.instruction-text {
+  margin-bottom: 10px;
+  font-size    : 14px;
+}
+
+.doc-type-select .doc-type-btn {
+  width        : 100%;
+  margin-bottom: 10px;
+}
+
+.doc-type-btn.active {
+  background-color: #007bff;
+  color           : white;
+}
+
+.upload-instructions {
+  margin-bottom: 15px;
+}
+
+.upload-instructions ul {
+  list-style: none;
+  padding   : 0;
+}
+
+.upload-instructions li {
+  font-size: 12px;
+  color    : #555;
+}
+
+.file-label {
+  font-size    : 14px;
+  margin-bottom: 5px;
+}
+
+.file-upload {
+  border    : 1px dashed #ccc;
+  padding   : 10px;
+  text-align: center;
+  cursor    : pointer;
+}
+
+.file-upload p {
+  font-size: 12px;
+  color    : #333;
+}
+
+.verify-btn {
+  width           : 100%;
+  margin-top      : 20px;
+  background-color: #007bff;
+  border          : none;
+}
+
+.verify-btn:hover {
+  background-color: #0056b3;
+}
+
+.image-custom-style {
+  cursor: pointer;
+}
+
+.custom-btn-style {
+  align-items : center;
+  margin-right: 10px;
+  display     : inline-flex;
+}
+
+.custom-btn-styles {
+  align-items: center;
+  display    : inline-flex;
+}
+
+.image-custom-responsive {
+  margin-right : 1rem !important;
+  margin-bottom: 1rem !important;
+}
+
+.custom-btn-responsive {
+  align-items  : center;
+  margin-right : 10px;
+  display      : inline-flex;
+  margin-bottom: 10px;
+}
+
+.custom-col-design {
+  background-color: #283F7B !important;
+  color           : white !important;
+  cursor          : pointer;
+}
+
+@media only screen and (max-width: 810px) {
+  .custom-responsive-style {
+    display: block !important;
+  }
+
+  .custom-responsive-style-search {
+    margin-top: 10px !important;
+  }
+
+  .image-custom-responsive {
+    margin-right : 1rem !important;
+    margin-bottom: 1rem !important;
+  }
+
+  .custom-btn-responsive {
+    align-items  : center;
+    margin-right : 10px;
+    display      : inline-flex;
+    margin-bottom: 10px;
+  }
+}

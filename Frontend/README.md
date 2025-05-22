@@ -9,5 +9,5 @@ You need to install first npm, you can run:
 
 To run the project on local you need to run the below command:
 
-### `npm run start-developer`
+### `npm start`
 

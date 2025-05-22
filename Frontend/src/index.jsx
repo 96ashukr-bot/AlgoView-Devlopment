@@ -1,15 +1,40 @@
 import React from "react";
+import { useEffect } from "react";
 import ReactDOM from "react-dom/client";
 import "./index.scss";
 import App from "./App";
 import "./i18n";
 import reportWebVitals from "./reportWebVitals";
+import { LogoProvider } from "./Components/UiKits/Logo/LogoContext";
 
 const Root = () => {
+
+  useEffect(() => {
+    const storedFavicon = localStorage.getItem('companyFavicon');
+    if (storedFavicon) {
+      updateFavicon(storedFavicon);
+    }
+  }, []);
+
+  const updateFavicon = (faviconUrl) => {
+    const existingFavicons = document.querySelectorAll("link[rel~='icon']");
+    existingFavicons.forEach(link => link.parentNode.removeChild(link));
+  
+    if (faviconUrl) {
+      const newLink = document.createElement('link');
+      newLink.rel = 'icon';
+      newLink.href = faviconUrl;
+      document.head.appendChild(newLink);
+    }
+  };
+
   return (
-    <div className="App">
-      <App />
-    </div>
+    <LogoProvider>
+      <div className="App">
+        <App />
+      </div>
+    </LogoProvider>
+
   );
 };
 

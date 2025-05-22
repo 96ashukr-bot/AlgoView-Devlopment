@@ -6,10 +6,11 @@
 }
 .dropdown {
   .dropdown-toggle {
-    background-color: rgba(115, 102, 255, 0.08) !important;
-    color: $primary-color;
-    border-radius: 10px;
-    padding: 5px 10px;
+    background-color: rgba(244, 244, 247, 0.575) !important;
+    // color: $primary-color;
+    border-radius: 5px;
+    border-color: gray !important;
+    padding: 15px 10px;
     width: 100px;
     text-align: left;
     border: none !important;

@@ -1,12 +1,16 @@
-import React, { Fragment, useState } from 'react';
+import React, { Fragment, useState, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { Col, Container, Form, FormGroup, Input, Label, Row } from 'reactstrap';
 import { Btn, H4, P, Image } from '../../../AbstractElements';
-import logoWhite from '../../../assets/images/logo/Algotradelogo.png';
+import logoWhite from '../../../assets/images/logo/logo (1).png';
+import logoDark from '../../../assets/images/logo/logo (1).png';
+import { LogoContext } from '../../UiKits/Logo/LogoContext';
 import { toast, ToastContainer } from 'react-toastify';
 import { requestPasswordReset } from '../../../Services/Authentication';
+import './Auths.css';
 
 const ForgetPwd = ({ logoClassMain }) => {
+  const { logo } = useContext(LogoContext);
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [emailError, setEmailError] = useState('');
@@ -19,7 +23,7 @@ const ForgetPwd = ({ logoClassMain }) => {
   const validateEmail = (email) => {
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!email) return 'Email is required.';
-    if (!emailPattern.test(email)) return 'Email is not formatted correctly.';
+    if (!emailPattern.test(email)) return 'Format of email is incorrect';
     return '';
   };
 
@@ -36,11 +40,11 @@ const ForgetPwd = ({ logoClassMain }) => {
     try {
       await requestPasswordReset(email);
       toast.success('Reset password link sent successfully.');
-      setEmail(''); 
+      setEmail('');
     } catch (error) {
       toast.error(error.message || 'An error occurred. Please try again later.');
     } finally {
-      setLoading(false); 
+      setLoading(false);
     }
   };
 
@@ -54,7 +58,8 @@ const ForgetPwd = ({ logoClassMain }) => {
                 <div>
                   <div>
                     <Link className={`logo ${logoClassMain ? logoClassMain : ''}`} to={process.env.PUBLIC_URL}>
-                      <Image attrImage={{ className: 'img-fluids for-light', src: logoWhite, alt: 'loginpage' }} />
+                      <Image attrImage={{ className: 'img-fluids for-light', src: logo || logoWhite, alt: 'Company Logo'}} />
+                      <Image attrImage={{ className: 'img-fluids for-dark', src: logo || logoDark, alt: 'Company Logo'}} />
                     </Link>
                   </div>
                   <div className='login-main'>
@@ -64,7 +69,6 @@ const ForgetPwd = ({ logoClassMain }) => {
                         <Label className='m-0 col-form-label'>Enter Your Email</Label>
                         <Input
                           className={`form-control ${emailError ? '' : ''}`}
-                          type='email'
                           value={email}
                           onChange={handleEmailChange}
                           placeholder='Enter Email'
@@ -73,7 +77,7 @@ const ForgetPwd = ({ logoClassMain }) => {
                             borderColor: emailError ? 'red' : '',
                           }}
                         />
-                        {emailError && <div style={{ color: 'red' }}>{emailError}</div>}
+                        {emailError && <div className="error-message">{emailError}</div>}
                       </FormGroup>
                       <FormGroup className='text-end'>
                         <Btn attrBtn={{ className: 'btn-block btn-clr', type: 'submit', disabled: loading }}>

@@ -4,45 +4,49 @@ import { AlignCenter } from "react-feather";
 import { Link } from "react-router-dom";
 import { Image } from "../../../AbstractElements";
 import CustomizerContext from "../../../_helper/Customizer";
-import NotificationSlider from "./NotificationSlider";
+// import NotificationSlider from "./NotificationSlider";
 
 const Leftbar = () => {
   const { layoutURL, setToggleIcon, toggleSidebar } = useContext(CustomizerContext);
   const [sidebartoggle, setSidebartoggle] = useState(true);
-  const width = useWindowSize();
+  const [width, setWidth] = useState(window.innerWidth);
 
-  function useWindowSize() {
-    const [size, setSize] = useState([0, 0]);
-    useLayoutEffect(() => {
-      function updateSize() {
-        setSize([window.innerWidth, window.innerHeight]);
-        if (window.innerWidth <= 991) {
-          setToggleIcon(true);
-        } else {
-          setToggleIcon(false);
-        }
-      }
-      window.addEventListener("resize", updateSize);
-      updateSize();
-      return () => window.removeEventListener("resize", updateSize);
-    }, []);
-    return size;
-  }
+  useLayoutEffect(() => {
+    const updateSize = () => {
+      setWidth(window.innerWidth);
+      setToggleIcon(window.innerWidth <= 991);
+    };
+
+    window.addEventListener("resize", updateSize);
+    updateSize();
+
+    return () => window.removeEventListener("resize", updateSize);
+  }, [setToggleIcon]);
 
   const responsive_openCloseSidebar = (toggle) => {
+    const sidebarWrapper = document.querySelector(".sidebar-wrapper");
+    const overlay = document.querySelector(".bg-overlay1");
+
     if (width <= 991) {
+      if (toggle) {
+        sidebarWrapper?.classList.add("close_icon");
+        overlay?.classList.remove("active");
+      } else {
+        sidebarWrapper?.classList.remove("close_icon");
+        overlay?.classList.add("active");
+      }
+
       toggleSidebar(!toggle);
-      document.querySelector(".sidebar-wrapper").className = "sidebar-wrapper ";
-      document.querySelector(".bg-overlay1").classList.add("active");
+      setSidebartoggle(!toggle);
     } else {
       if (toggle) {
-        toggleSidebar(!toggle);
-        document.querySelector(".sidebar-wrapper").className = "sidebar-wrapper close_icon ";
+        sidebarWrapper?.classList.add("close_icon");
       } else {
-        console.log("991 54 else", toggle);
-        toggleSidebar(!toggle);
-        document.querySelector(".sidebar-wrapper").className = "sidebar-wrapper ";
+        sidebarWrapper?.classList.remove("close_icon");
       }
+
+      toggleSidebar(!toggle);
+      setSidebartoggle(!toggle);
     }
   };
 
@@ -50,7 +54,7 @@ const Leftbar = () => {
     <Fragment>
       <Col className="header-logo-wrapper col-auto p-0" id="out_side_click">
         <div className="logo-wrapper">
-          <Link to={`/dashboard/default/${layoutURL}`}>
+          <Link to={`/dashboard/algoviewtech/admin`}>
             <Image
               attrImage={{
                 className: "img-fluid for-light",
@@ -67,7 +71,9 @@ const Leftbar = () => {
             />
           </Link>
         </div>
-        <div className="toggle-sidebar" onClick={() => responsive_openCloseSidebar(sidebartoggle)} style={window.innerWidth <= 991 ? { display: "block" } : { display: "none" }}>
+        <div className="toggle-sidebar" onClick={() => responsive_openCloseSidebar(sidebartoggle)}
+          style={{ display: width > 0 && width <= 991 ? "block" : "none" }}
+        >
           <AlignCenter className="status_toggle middle sidebar-toggle" id="sidebar-toggle" />
         </div>
       </Col>

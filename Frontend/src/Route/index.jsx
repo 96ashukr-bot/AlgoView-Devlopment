@@ -33,8 +33,8 @@ const Routers = () => {
           <Route path={"/"} element={<PrivateRoute />}>
             {login || authenticated ? (
               <>
-                <Route exact path={`${process.env.PUBLIC_URL}`} element={<Navigate to={`/dashboard/default/${layout}`} />} />
-                <Route exact path={`/`} element={<Navigate to={`/dashboard/default/${layout}`} />} />
+                <Route exact path={`${process.env.PUBLIC_URL}`} element={<Navigate to={`/login`} />} />
+                <Route exact path={`/`} element={<Navigate to={`/login`} />} />
               </>
             ) : (
               ""

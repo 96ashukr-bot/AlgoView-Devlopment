@@ -1,0 +1,30 @@
+.table-responsive {
+    height: calc(100% - 60px);
+    overflow-y: auto; 
+  }
+  
+  .table {
+    height: 100%; 
+  }
+
+  .sortable {
+    cursor: pointer; 
+    position: relative; 
+  }
+  
+  .sort-icon {
+    opacity: 0; 
+    transition: opacity 0.2s ease; 
+    position: absolute; 
+    right: 5px;
+  }
+  
+  .sortable:hover .sort-icon {
+    opacity: 1; 
+  }
+  
+  .status-pill {
+    background-color: transparent !important;
+    border-radius: 50px;
+  }
+  

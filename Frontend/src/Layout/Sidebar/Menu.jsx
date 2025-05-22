@@ -3,60 +3,134 @@ export const MENUITEMS = [
     menutitle: "General",
     menucontent: "Dashboards,Widgets",
     Items: [
+      { path: `/dashboard/algoviewtech/admin`, icon: "home", title: "Dashboard", type: "link" },
+ 
       {
-        title: "Dashboard",
-        icon: "home",
-        type: "sub",
-        badge: "badge badge-light-primary",
-        badgetxt: "",
-        active: false,
-        children: [
-          { path: `/dashboard/default`, title: "Default", type: "link" },
-          // { path: `/dashboard/userlist`, title: "User List", type: "link" },
-          // { path: `/dashboard/e-commerce`, title: "E-commerce", type: "link" },
-          // { path: `/dashboard/online-course`, title: "Online Course", type: "link" },
-          // { path: `/dashboard/crypto`, title: "Crypto", type: "link" },
-          // { path: `/dashboard/social`, title: "Social", type: "link" },
-        ],
-      },
-      {
-        title: "Users",
+        title: "Sub Admin",
         icon: "user",
-        path: `/app/users/profile`,
+        // path: `/app/users/profile`,
         type: "sub",
         bookmark: true,
         active: false,
         children: [
-          { path: `/dashboard/userlist`, title: "User List", type: "link" },
+          { path: `/subadmin/userlist`, title: "All Sub Admin", type: "link" },
+          { path: `/subadmin/inactive-list`, title: "In Active Clients", type: "link" },
+          { path: `/subadmin/active-list`, title: "Active Clients", type: "link" },
         ],
       },
 
+      // {
+      //   title: "Roles & Permissions",
+      //   icon: "blog",
+      //   // path: `/app/users/profile`,
+      //   type: "sub",
+      //   bookmark: true,
+      //   active: false,
+      //   children: [
+      //     { path: `/dashboard/rolepermmision`, title: "Role List", type: "link" },
+      //     { path: `/dashboard/rolepermmisionupdate`, title: "Role User Manager", type: "link" },
+      //   ],
+      // },
+      
       {
-        title: "Roles & Permissions",
-        icon: "blog",
-        path: `/app/users/profile`,
-        type: "sub",
-        bookmark: true,
-        active: false,
-        children: [
-          { path: `/dashboard/rolepermmision`, title: "Role List", type: "link" },
-          { path: `/dashboard/rolepermmisionupdate`, title: "Update Role", type: "link" },
-          // { path: `/dashboard/rolepermmision`, title: "Role & Permission", type: "link" },
-        ],
-      },
-
-      {
-        title: "Signals",
+        title: "Kyc",
         icon: "charts",
-        path: `/app/users/profile`,
+        // path: `/app/users/profile`,
         type: "sub",
         bookmark: true,
         active: false,
         children: [
-          { path: `/dashboard/signals`, title: "Signals", type: "link" },
+          { path: `/kyc/kyclist`, title: "Kyc List", type: "link" },
+        ],
+      },
+      {
+        title: "Client",
+        icon: "user",
+        // path: `/table/datatable/addclient`,
+        type: "sub",
+        bookmark: true,
+        active: false,
+        children: [
+          { path: `/client/addclient`, title: "Add Client", type: "link" },
+          { path: `/client/all-clients-list`, title: "Client List", type: "link" },
+          { path: `/client/expiredclients`, title: "Expired Client", type: "link" },
+        ],
+      },
+
+      {
+        title: "Trade Details",
+        icon: "project",
+        // path: `/table/datatable/signals`,
+        type: "sub",
+        bookmark: true,
+        active: false,
+        children: [
+          { path: `/tradedetails/signals`, title: "Signals", type: "link" },
+          { path: `/tradedetails/trade-history`, title: "Trade History", type: "link" },
+          { path: `/tradedetails/complete-trade-history`, title: "Complete Trade", type: "link" },
+          { path: `/tradedetails/trade-view`, title: "Client Trade", type: "link" },
+          { path: `/tradedetails/trading-status`, title: "Trading Status", type: "link" },
         ],
       },
      
+      {
+        title: "Service Management",
+        icon: "others",
+        // path: `/table/datatable/signals`,
+        type: "sub",
+        bookmark: true,
+        active: false,
+        children: [
+          { path: `/service-manage/all-service-list`, title: "All Service", type: "link" },
+          { path: `/service-manage/group-services-list`, title: "Group Service", type: "link" },
+          { path: `/service-manage/strategies`, title: "Strategies", type: "link" },          
+        ],
+      },
+
+      {
+        title: "License",
+        icon: "chat",
+        // path: `/table/datatable/signals`,
+        type: "sub",
+        bookmark: true,
+        active: false,
+        children: [
+          { path: `/license/transactionlicense`, title: "Transaction License", type: "link" },
+          { path: `/license/expiredlicense`, title: "Expired License", type: "link" },
+        ],
+      },
+
+      {
+        title: "API Info",
+        icon: "editors",
+        // path: `/table/datatable/signals`,
+        type: "sub",
+        bookmark: true,
+        active: false,
+        children: [
+          { path: `/apiinfo/apikeys`, title: "API Keys", type: "link" },
+        ],
+      },
+
+      {
+        title: "Settings",
+        icon: "learning",
+        // path: `/table/datatable/signals`,
+        type: "sub",
+        bookmark: true,
+        active: false,
+        children: [
+          { path: `/settings/category`, title: "Category", type: "link" },
+          { path: `/settings/segment`, title: "Segment", type: "link" },
+          { path: `/settings/services`, title: "Services", type: "link" },
+          // { path: `/settings/license`, title: "License", type: "link" },
+          { path: `/settings/brokers`, title: "Brokers", type: "link" },
+          { path: `/settings/companydetails`, title: "Company Details", type: "link" },
+          { path: `/settings/emailaccount`, title: "Email Account", type: "link" },
+          { path: `/settings/websocket`, title: "Web Socket", type: "link" },                                
+        ],
+      },
+
     ],
   },
 

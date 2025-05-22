@@ -1,9 +1,12 @@
-import React, { Fragment, useContext } from "react";
+import React, { Fragment, useContext, useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import SvgIcon from "../../Components/Common/Component/SvgIcon";
 import CustomizerContext from "../../_helper/Customizer";
-import { MENUITEMS } from "./Menu";
+import { MENUITEMS} from "./Menu";
+import { MENUITEMSNEW } from "./Menunewclients";
+import { MENUITEMSNEWNEW} from "./Menunewnew";
+import { fetchUserProfile, updateUserProfile, changePassword } from './../../Services/Authentication';
 
 const SidebarMenuItems = ({ setMainMenu, sidebartoogle, setNavActive, activeClass }) => {
   const { layout } = useContext(CustomizerContext);
@@ -12,6 +15,54 @@ const SidebarMenuItems = ({ setMainMenu, sidebartoogle, setNavActive, activeClas
   const id = window.location.pathname.split("/").pop();
   const layoutId = id;
   const CurrentPath = window.location.pathname;
+
+  useEffect(() => {
+    const getUserProfile = async () => {
+      try {
+        const data = await fetchUserProfile();
+        setUserProfile(data);
+      } catch (error) {
+        console.error("Error fetching user profile:", error);
+      }
+    };
+    getUserProfile();
+
+
+  }, []);
+
+
+  const [userProfile, setUserProfile] = useState({
+    email: '',
+    firstName: '',
+    lastName: '',
+    fullName: '',
+    phoneNumber: '',
+    PANEL_CLIENT_KEY: '',
+    start_date: null,
+    end_date: null,
+    client_type: '',
+    role: null
+  });
+
+
+  // const MENUITEMSSELECTION =  (userProfile.email == 'admin@yopmail.com') ? MENUITEMS : MENUITEMSNEW;
+  const isSuperAdmin = userProfile.role && userProfile.role.name === "Super-Admin";
+  const isAdmin = userProfile.role && userProfile.role.name === "Admin";
+  const issubAdmin = userProfile.role && userProfile.role.name === "Sub-Admin";
+
+  let menuItems;
+
+  if (isAdmin || isSuperAdmin ) {
+      menuItems = MENUITEMS;
+  } else if (issubAdmin) {
+      menuItems = MENUITEMSNEWNEW; 
+  } else {
+      menuItems = MENUITEMSNEW;
+  }
+
+
+
+  // const MENUITEMSSELECTION = isAdmin ? MENUITEMS : MENUITEMSNEW ? issubAdmin : MENUITEMSNEWNEW ;
 
   const { t } = useTranslation();
   const toggletNavActive = (item) => {
@@ -25,7 +76,7 @@ const SidebarMenuItems = ({ setMainMenu, sidebartoogle, setNavActive, activeClas
       }
     }
     if (!item.active) {
-      MENUITEMS.map((a) => {
+      menuItems.map((a) => {
         a.Items.filter((Items) => {
           if (a.Items.includes(item)) Items.active = false;
           if (!Items.children) return false;
@@ -46,12 +97,12 @@ const SidebarMenuItems = ({ setMainMenu, sidebartoogle, setNavActive, activeClas
       });
     }
     item.active = !item.active;
-    setMainMenu({ mainmenu: MENUITEMS });
+    setMainMenu({ mainmenu: menuItems });
   };
 
   return (
     <>
-      {MENUITEMS.map((Item, i) => (
+      {menuItems.map((Item, i) => (
         <Fragment key={i}>
           <li className="sidebar-main-title">
             <div>
@@ -80,7 +131,7 @@ const SidebarMenuItems = ({ setMainMenu, sidebartoogle, setNavActive, activeClas
               )}
 
               {menuItem.type === "link" ? (
-                <Link to={menuItem.path + "/" + layoutId} className={`sidebar-link sidebar-title link-nav  ${CurrentPath.includes(menuItem.title.toLowerCase()) ? "active" : ""}`} onClick={() => toggletNavActive(menuItem)}>
+                <Link to={menuItem.path} className={`sidebar-link sidebar-title link-nav  ${CurrentPath.includes(menuItem.title.toLowerCase()) ? "active" : ""}`} onClick={() => toggletNavActive(menuItem)}>
                   <SvgIcon className="stroke-icon" iconId={`stroke-${menuItem.icon}`} />
                   <SvgIcon className="fill-icon" iconId={`fill-${menuItem.icon}`} />
                   <span>{t(menuItem.title)}</span>
@@ -116,7 +167,7 @@ const SidebarMenuItems = ({ setMainMenu, sidebartoogle, setNavActive, activeClas
 
                         {childrenItem.type === "link" ? (
                           <Link
-                            to={childrenItem.path + "/" + layoutId}
+                            to={childrenItem.path}
                             className={`${CurrentPath.includes(childrenItem?.title?.toLowerCase()) ? "active" : ""}`}
                             // className={`${childrenItem.active ? 'active' : ''}`} bonusui
                             onClick={() => toggletNavActive(childrenItem)}>
@@ -132,7 +183,7 @@ const SidebarMenuItems = ({ setMainMenu, sidebartoogle, setNavActive, activeClas
                               <li key={key}>
                                 {childrenSubItem.type === "link" ? (
                                   <Link
-                                    to={childrenSubItem.path + "/" + layoutId}
+                                    to={childrenSubItem.path}
                                     className={`${CurrentPath.includes(childrenSubItem?.title?.toLowerCase()) ? "active" : ""}`}
                                     // className={`${childrenSubItem.active ? 'active' : ''}`}
                                     onClick={() => toggletNavActive(childrenSubItem)}>

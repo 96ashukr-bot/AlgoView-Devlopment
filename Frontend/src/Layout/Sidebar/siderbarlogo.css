@@ -1,0 +1,26 @@
+.custom-logo-style{
+    width: 160px !important;
+    height: 100px !important;
+    padding-top: 40px !important;
+    margin-bottom: 0px !important;
+}
+
+@media only screen and (max-width: 810px) {
+
+    .custom-logo-style{
+        padding-top: 0px !important;
+    }
+
+    .img-fluid-responsive{
+        max-width: 100% !important;
+        height: auto !important;
+        /* width: 0px !important; */
+        margin-bottom: 0px !important;
+        width: 100px !important;
+    }
+    
+    .responsive-logo-wrapper{
+        padding-top: 45px !important;
+    }
+
+  }

@@ -1,0 +1,22 @@
+@media only screen and (max-width: 810px) {
+    .login-card-responsive .img-fluids-responsive {
+        width        : 150px !important;
+        height       : 75px !important;
+        margin-top   : 0px !important;
+        margin-bottom: 20px !important;
+    }
+
+}
+
+.dark-mode-h4 {
+    color: black !important;
+}
+
+.dark-only .login-card .login-main {
+    width: 450px;
+    padding: 40px;
+    border-radius: 10px;
+    box-shadow: 0 0 37px rgba(8, 21, 66, 0.05);
+    margin: 0 auto;
+    background-color: #262932 !important; 
+}

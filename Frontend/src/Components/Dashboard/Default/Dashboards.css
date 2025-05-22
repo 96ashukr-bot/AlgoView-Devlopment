@@ -1,0 +1,39 @@
+.search-prd-placeholder {
+    /* width: 100%; */
+    border       : 1px solid #ccc;
+    padding      : 8px;
+    border-radius: 5px;
+    color        : black;
+}
+
+.arrows {
+    margin-left: 5px;
+}
+
+/* .hover-stripe{
+    background: #f8f9fa !important;
+    padding: 10px;
+    padding-bottom: 5px;
+    padding-top: 5px;
+    border: 1px solid #ccc !important;
+    border-radius: 8px;
+    top: 50%;
+    right: -40px;
+    transform: translateY(-50%);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+} */
+
+/* .hover-stripe-icons{
+    padding: 0 18px !important;
+    font-size: 20px;
+} */
+
+.dark-only .bg-white{
+    color           : white !important;
+    background-color: #262932 !important;
+    border-color    : #555 !important;
+}
+
+.dark-only p{
+    color: white !important;
+}

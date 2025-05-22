@@ -1,0 +1,31 @@
+@media only screen and (max-width: 810px) {
+    .login-card-responsive .img-fluids-responsive {
+        width        : 180px !important;
+        height       : 180px !important;
+        margin-top   : -85px !important;
+        margin-bottom: -70px !important;
+    }
+
+}
+
+.dark-only .login-card .login-main {
+    width           : 450px;
+    padding         : 40px;
+    border-radius   : 10px;
+    box-shadow      : 0 0 37px rgba(8, 21, 66, 0.05);
+    margin          : 0 auto;
+    background-color: #262932 !important;
+}
+
+.dark-only h1,
+.dark-only h2,
+.dark-only h3,
+.dark-only h4,
+.dark-only h5,
+.dark-only h6 {
+  color: #ffffff !important;
+}
+
+.dark-only p {
+    color: white !important;
+}

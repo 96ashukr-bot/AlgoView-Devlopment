@@ -7,7 +7,7 @@ const SidebarIcon = () => {
   const { layoutURL } = useContext(CustomizerContext);
   return (
     <div className="logo-icon-wrapper">
-      <Link to={`/dashboard/default/${layoutURL}`}>
+      <Link to={`/dashboard/algoviewtech/admin`}>
         <img
           className="img-fluid"
           src={cubaimg}

@@ -1,0 +1,131 @@
+.dark-only table,
+.dark-only tr,
+.dark-only td {
+  background-color: #2a2a2a; 
+  color: #ffffff;
+  border: 1px solid #444;
+}
+
+.dark-only th {
+  background-color: #333;
+  color: #ffffff;
+}
+
+.dark-only tr:hover {
+  background-color: #3a3a3a;
+}
+
+.dark-only label {
+  color: #ffffff !important;
+}
+
+.dark-only input::placeholder,
+.dark-only select,
+.dark-only textarea::placeholder {
+  color: #ffffff !important;
+  opacity: 1; 
+}
+
+.dark-only input,
+.dark-only select,
+.dark-only textarea {
+  color: #ffffff !important;
+  background-color: #2c2c2c; 
+  border-color: #555 !important;
+}
+
+
+.table-responsive {
+  height: calc(100% - 60px);
+  overflow-y: auto;
+}
+
+.table {
+  height: 100%;
+}
+
+.sortable {
+  cursor: pointer;
+  position: relative;
+}
+
+.sort-icon {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  position: absolute;
+  right: 5px;
+}
+
+.sortable:hover .sort-icon {
+  opacity: 1;
+}
+
+.status-pill {
+  background-color: transparent !important;
+  border-radius: 50px;
+}
+
+.sort-arrow-left {
+  margin-left: 5px; /* Space between column name and left arrow */
+  color: gray; /* Default color */
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.sort-arrow-left:hover {
+  color: white; /* Change to white on hover */
+}
+
+.sort-arrow-right {
+  margin-left: 2px; /* Space between left and right arrows */
+  color: gray; /* Default color */
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.sort-arrow-right:hover {
+  color: white; /* Change to white on hover */
+}
+
+.custom-col-design {
+  background-color: #283F7B !important;
+  color: white !important;
+  cursor: pointer;
+  white-space: nowrap; /* Prevent line breaks */
+  text-align: left; /* Align text to the left */
+  position: relative;
+  padding-right: 15px; /* Ensure space between text and arrows */
+}
+
+.custom-pagi-style {
+  padding: 8px;
+}
+
+.custom-input-style {
+  line-height: 2.2 !important;
+  padding: 0.475rem 1.15rem !important;
+}
+
+@media only screen and (max-width: 810px) {
+  .custom-responsive-style {
+    display: block !important;
+  }
+
+  .custom-responsive-style-btn {
+    padding: 8px;
+    width: 46% !important;
+    margin-bottom: 12px !important;
+    margin-top: 5px !important;
+  }
+
+  .custom-responsive-style-search {
+    margin-top: 10px !important;
+    width: 200px !important;
+    margin-right: 15px !important;
+  }
+
+  .custom-search-btn{
+    width: 25% !important;
+  }
+
+}

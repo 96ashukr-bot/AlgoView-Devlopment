@@ -1,14 +1,16 @@
-import React, { Fragment, useState, useEffect } from 'react';
+import React, { Fragment, useState, useEffect, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Col, Container, Form, FormGroup, Input, Label, Row } from 'reactstrap';
 import { Btn, H4, P, Image } from '../../../AbstractElements';
-import logoWhite from '../../../assets/images/logo/Algologo.png';
-import logoDark from '../../../assets/images/logo/logo_dark.png';
+import logoWhite from '../../../assets/images/logo/logo (1).png';
+import logoDark from '../../../assets/images/logo/logo (1).png';
+import { LogoContext } from '../../UiKits/Logo/LogoContext';
 import { verifyOtp, resendOtp } from '../../../Services/Authentication';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 const VerifyOTP = ({ email }) => {
+  const { logo } = useContext(LogoContext);
   const [otp, setOtp] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -30,7 +32,31 @@ const VerifyOTP = ({ email }) => {
     return () => clearInterval(countdown);
   }, [timer]);
 
-  // OTP Submission Handler
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      console.log("Key pressed:", e.key);
+      if (e.key === "Enter") {
+        console.log("Enter key detected.");
+
+        if (otp.length === 6) {
+          e.preventDefault();
+          console.log("OTP is valid. Triggering handleSubmit...");
+          handleSubmit(e);
+        } else {
+          console.log("Invalid OTP length:", otp.length);
+        }
+      }
+    };
+
+    console.log("Adding keydown event listener.");
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      console.log("Removing keydown event listener.");
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [otp, email]);
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     setLoading(true);
@@ -48,8 +74,14 @@ const VerifyOTP = ({ email }) => {
         toast.success('Account verified! Please change your password.');
         navigate('/pages/authentication/create-pwd/:layout');
       } else if (response.message === "login successfully") {
-        toast.success('Login successful! Redirecting to dashboard.');
-        navigate('/dashboard/default/Admin');
+        if (response.ekyc_status === true) {
+          toast.success('Login successful! Redirecting to dashboard.');
+          navigate('/dashboard/algoviewtech/user');
+        }
+        else {
+          navigate('/algoview/kyc-update');
+        }
+
       } else {
         setError('Unexpected response from server.');
       }
@@ -61,10 +93,10 @@ const VerifyOTP = ({ email }) => {
     }
   };
 
-  // OTP Input Change Handler
   const handleOtpChange = (e) => {
     const value = e.target.value;
     setOtp(value);
+
     if (value.length === 6) {
       setError('');
     } else if (value.length > 6) {
@@ -74,13 +106,12 @@ const VerifyOTP = ({ email }) => {
     }
   };
 
-  // Resend OTP Handler
   const handleResendOtp = async () => {
     setLoading(true);
     try {
       const response = await resendOtp(email);
       if (response.success) {
-        toast.success('OTP has been resent to your email.');
+        toast.success('A new OTP has been resent to your registered email.');
         setTimer(120);
         setIsResendDisabled(true);
       } else {
@@ -109,8 +140,8 @@ const VerifyOTP = ({ email }) => {
                 <div>
                   <div>
                     <Link className={`logo`} to={process.env.PUBLIC_URL}>
-                      <Image attrImage={{ className: 'img-fluids for-light', src: logoWhite, alt: 'Logo' }} />
-                      <Image attrImage={{ className: 'img-fluid for-dark', src: logoDark, alt: 'Logo' }} />
+                      <Image attrImage={{ className: 'img-fluids for-light', src: logo || logoWhite, alt: 'Company Logo' }} />
+                      <Image attrImage={{ className: 'img-fluids for-dark', src: logo || logoDark, alt: 'Company Logo' }} />
                     </Link>
                   </div>
                   <div className='login-main'>
@@ -128,23 +159,29 @@ const VerifyOTP = ({ email }) => {
                               maxLength='6'
                               value={otp}
                               onChange={handleOtpChange}
-                              required
                               style={{
                                 borderColor: error ? 'red' : '',
                               }}
                             />
-                            {error && <P className="error-clr">{error}</P>}
+                            {error && (
+                              <P attrPara={{ className: "error-clr", style: { color: "red" } }}>
+                                {error}
+                              </P>
+                            )}
                           </Col>
                         </Row>
                       </FormGroup>
                       <FormGroup className='text-end'>
-                        <Btn attrBtn={{ className: 'd-block  btn-clr', type: 'submit', disabled: loading }}>
+                        <Btn attrBtn={{
+                          className: 'd-block  btn-clr', type: 'submit', disabled: loading,
+                          onClick: (e) => handleSubmit(e),
+                        }}>
                           {loading ? (
                             <div className="spinner-border spinner-border-sm" role="status">
                               <span className="visually-hidden">Loading...</span>
                             </div>
                           ) : (
-                            'Verify'  
+                            'Verify'
                           )}
                         </Btn>
                       </FormGroup>

@@ -1,0 +1,96 @@
+.table-responsive {
+    height: calc(100% - 60px);
+    overflow-y: auto;
+  }
+  
+  .table {
+    height: 100%;
+  }
+  
+  .sortable {
+    cursor: pointer;
+    position: relative;
+  }
+  
+  .sort-icon {
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    position: absolute;
+    right: 5px;
+  }
+  
+  .sortable:hover .sort-icon {
+    opacity: 1;
+  }
+  
+  .status-pill {
+    background-color: transparent !important;
+    border-radius: 50px;
+  }
+  
+  .sort-arrow-left {
+    margin-left: 5px;
+    color: gray;
+    cursor: pointer;
+    transition: color 0.3s ease;
+  }
+  
+  .sort-arrow-left:hover {
+    color: white;
+  }
+  
+  .sort-arrow-right {
+    margin-left: 2px;
+    color: gray;
+    cursor: pointer;
+    transition: color 0.3s ease;
+  }
+  
+  .sort-arrow-right:hover {
+    color: white;
+  }
+  
+  .custom-col-design {
+    background-color: #283F7B !important;
+    color: white !important;
+    cursor: pointer;
+    white-space: nowrap;
+    text-align: left;
+    position: relative;
+    padding-right: 15px;
+  }
+  
+  .custom-pagi-style {
+    padding: 8px;
+  }
+  
+  .custom-input-style {
+    line-height: 2.2 !important;
+    padding: 0.475rem 1.15rem !important;
+  }
+  
+  @media only screen and (max-width: 810px) {
+    .custom-responsive-style {
+      display: block !important;
+    }
+  
+    .custom-responsive-style-btn {
+      padding: 8px;
+      width: 46% !important;
+      margin-bottom: 12px !important;
+      margin-top: 5px !important;
+    }
+  
+    .custom-responsive-style-search {
+      margin-top: 10px !important;
+      width: 100% !important;
+      margin-right: 15px !important;
+      display: flex !important;
+      justify-content: space-between !important;
+    }
+  
+    .custom-search-btn{
+      width: 30% !important;
+    }
+  
+  }

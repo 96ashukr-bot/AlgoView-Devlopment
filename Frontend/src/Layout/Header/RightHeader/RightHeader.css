@@ -1,0 +1,29 @@
+.profile-nav {
+    position: relative;
+    cursor: pointer;
+}
+
+.profile-dropdown {
+    cursor: pointer;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background-color: white;
+    border: 1px solid #ccc;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    display: block;
+}
+
+@media only screen and (max-width: 810px) {
+    .page-wrapper .page-header .header-wrapper .nav-right > ul > li .profile-media .media-body {
+        display: block !important;
+    }
+
+    .page-wrapper .page-header .header-wrapper .nav-right .profile-dropdown {
+        width: 150px;
+        left: -10px;
+        padding: 0 10px;
+    }
+}
+  

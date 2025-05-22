@@ -1,0 +1,31 @@
+.name-column {
+    border-right: 0.5px solid #dbd3d3;
+    padding-right: 5px;
+}
+
+.edit-icon {
+    color: #007bff;
+}
+
+.delete-icon {
+    color: #dc3545;
+}
+
+.cross-icon {
+    font-size: 18px;
+    color: red;
+    margin-left: 8px;
+}
+
+input[type='checkbox'] {
+    cursor: pointer;
+}
+
+.color{
+    background-color: orangered;
+}
+
+.input-design{
+    padding: 0px !important;
+    padding-bottom: 18px !important;
+}

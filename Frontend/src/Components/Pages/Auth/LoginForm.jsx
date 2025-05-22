@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 // import { Facebook, Linkedin, Twitter } from 'react-feather';
 
 import logoWhite from '../../../assets/images/logo/Algotradelogo.png';
-import logoDark from '../../../assets/images/logo/logo_dark.png';
+import logoDark from '../../../assets/images/logo/Algotradelogo.png';
 
 const LoginForm = ({ logoClassMain }) => {
   console.log(logoClassMain,'logoClassMain')
@@ -17,7 +17,7 @@ const LoginForm = ({ logoClassMain }) => {
           <div>
             <Link className={`logo ${logoClassMain ? logoClassMain : ''}`} to={process.env.PUBLIC_URL}>
               <Image attrImage={{ className: 'img-fluids for-light', src: logoWhite, alt: 'looginpage' }} />
-              <Image attrImage={{ className: 'img-fluid for-dark', src: logoDark, alt: 'looginpage' }} />
+              <Image attrImage={{ className: 'img-fluids for-dark', src: logoDark, alt: 'looginpage' }} />
             </Link>
           </div>
 
@@ -52,26 +52,6 @@ const LoginForm = ({ logoClassMain }) => {
               <FormGroup>
                 <Btn attrBtn={{ className: 'd-block w-100 mt-2 btn-clr', type: 'submit' }}>Sign in</Btn>
               </FormGroup>
-              {/* <div className='login-social-title'>
-                <H6 attrH6={{ className: 'text-muted mt-4 or' }}>Or Sign in with</H6>
-              </div> */}
-
-              {/* <div className='social my-4 '>
-                <div className='btn-showcase'>
-                  <a className='btn btn-light' href='https://www.linkedin.com/login' rel='noreferrer' target='_blank'>
-                    <Linkedin className='txt-linkedin' /> LinkedIn
-                  </a>
-                  <a className='btn btn-light' href='https://twitter.com/login?lang=en' rel='noreferrer' target='_blank'>
-                    <Twitter className='txt-twitter' />
-                    twitter
-                  </a>
-                  <a className='btn btn-light' href='https://www.facebook.com/' rel='noreferrer' target='_blank'>
-                    <Facebook className='txt-fb' />
-                    facebook
-                  </a>
-                </div>
-              </div> */}
-
               <P attrPara={{ className: 'text-center mb-0 ' }}>
                 Don't have account?
                 <Link className='ms-2' to={`/pages/authentication/register-simple/:layout`}>
