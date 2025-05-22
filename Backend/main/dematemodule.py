@@ -133,26 +133,6 @@ class LoginDematAPIView(APIView):
                     {"error": f"Unsupported broker: {broker_details.broker_name}"}, 
                     status=400
                 )
-            try:
-                log_file_path = os.path.join('logs', 'login_demat_log.csv')
-                os.makedirs(os.path.dirname(log_file_path), exist_ok=True)
-
-                log_data = {
-                    'user_id': user.id,
-                    'username': user.email if user.email else "unknown",
-                    'broker': str(broker),
-                    'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                    'action': 'generate_login_url'
-                }
-
-                file_exists = os.path.isfile(log_file_path)
-                with open(log_file_path, mode='a', newline='') as file:
-                    writer = csv.DictWriter(file, fieldnames=log_data.keys())
-                    if not file_exists:
-                        writer.writeheader()
-                    writer.writerow(log_data)
-            except Exception as log_error:
-                pass  # Fail silently to avoid disrupting the API
 
             return JsonResponse({"login_url": login_url}, status=200)
 
@@ -707,7 +687,7 @@ class BrokerLoginRedirectView(APIView):
     permission_classes = [IsAuthenticated]  
 
     def get(self, request, *args, **kwargs):
-        print("broker login api is called...................")
+        print("broker login api is called...................>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
         user = request.user  
         if not user.is_authenticated:
             return Response({"error": "User not authenticated"}, status=403)
@@ -719,23 +699,47 @@ class BrokerLoginRedirectView(APIView):
             print("broker_name>>>",broker_name)
             # broker_name=request.GET.get('state')
             if broker_name == "zerodha":
-                # request.GET.get('request_token')
-                return self.redirect_to_zerodha(broker_details)
+                Response = self.redirect_to_zerodha(broker_details)
 
             elif broker_name == "5paisa":
-                return self.redirect_to_5paisa(broker_details)
+                Response = self.redirect_to_5paisa(broker_details)
 
             elif broker_name == "alice blue":
-                return self.redirect_to_alice_blue(broker_details)
+                Response = self.redirect_to_alice_blue(broker_details)
 
             elif broker_name == "upstox":
-                return self.redirect_to_upstox(broker_details)
-            
+                Response = self.redirect_to_upstox(broker_details)
+
             elif broker_name == "fyers":
-                return self.redirect_to_fyers(broker_details)
+                Response = self.redirect_to_fyers(broker_details)
 
             else:
-                return Response({"error": "Unsupported broker"}, status=400)
+                Response = Response({"error": "Unsupported broker"}, status=400)
+            
+            try:
+                log_file_path = os.path.join('logs', 'login_demat_log.csv')
+                os.makedirs(os.path.dirname(log_file_path), exist_ok=True)
+
+                log_data = {
+                    'user_id': user.id,
+                    'username': user.email if user.email else "unknown",
+                    'broker': str(broker_name),
+                    'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    'action': Response
+                }
+
+                file_exists = os.path.isfile(log_file_path)
+                with open(log_file_path, mode='a', newline='') as file:
+                    writer = csv.DictWriter(file, fieldnames=log_data.keys())
+                    if not file_exists:
+                        writer.writeheader()
+                    writer.writerow(log_data)
+                logger.info(f"# CSV # Update Broker Login staus in log CSV")
+            except Exception as log_error:
+                logger.error(f"# CSV # Fail silently to avoid disrupting the API")
+                pass
+
+            return Response
 
         except ClientBrokerdetails.DoesNotExist:
             return Response({"error": "Broker details not found for the user"}, status=404)
