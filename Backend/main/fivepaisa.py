@@ -264,7 +264,6 @@ def place_5paisa_order(LivePrice,group_service,api_key,access_token,trade_symbol
         message="Failed no reason"
         res_data="unknown response"
         
-        print("ordertype******************",ordertype)
         order_params= {
                     "Exchange": Exch,  # NSE (National Stock Exchange)
                     "ExchangeType": "D",  # Derivatives

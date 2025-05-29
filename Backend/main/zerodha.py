@@ -74,8 +74,6 @@ def place_zerodha_orders(LivePrice,group_service,access_token, Api_key, trade_sy
 
         try:
             order_response = kite.place_order(variety=kite.VARIETY_REGULAR, **order_params)
-            print("order_response-------------",order_response)
-            print("order_params*******************",order_params)
             order_id =order_response#order_response.get('order_id')
             if not order_id:
                 logger.error("Order ID is not returned")

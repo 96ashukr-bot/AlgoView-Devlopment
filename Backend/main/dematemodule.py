@@ -687,7 +687,6 @@ class BrokerLoginRedirectView(APIView):
     permission_classes = [IsAuthenticated]  
 
     def get(self, request, *args, **kwargs):
-        print("broker login api is called...................>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
         user = request.user  
         if not user.is_authenticated:
             return Response({"error": "User not authenticated"}, status=403)
