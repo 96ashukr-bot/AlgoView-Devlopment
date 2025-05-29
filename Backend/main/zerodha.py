@@ -253,12 +253,14 @@ def get_trading_symbol(exchange, symbol, kite):
         for instrument in instruments:
             if instrument['tradingsymbol'] == symbol:
                 print("Trading Symbol Found:", instrument['tradingsymbol'])
+                logger.info("Trading Symbol Found:", instrument['tradingsymbol'])
                 return instrument['tradingsymbol']
-        
+        logger.info(f"order is none and return in get_trading_symbol" )
         return None  # Return None if the symbol is not found
 
     except Exception as e:
         print(f"Error: {str(e)}")
+        logger.info(f"order is none and return in get_trading_symbol" )
         return None
 
 def get_order_details(order_id, kite):

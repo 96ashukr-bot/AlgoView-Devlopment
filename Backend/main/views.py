@@ -3,6 +3,7 @@ from decimal import Decimal
 import json
 import threading
 import os
+import hashlib
 from amqp import NotFound
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
@@ -3441,6 +3442,55 @@ class PlaceOrderWebhookView(APIView):
 
 
 class MyPlaceOrderWebhookView(APIView):
+    def log_trade_start_to_csv(self, unique_trade_id, user_id, user_name, symbol, start_time):
+        log_file_path = os.path.join('logs', 'missed_client_log.csv')
+        os.makedirs(os.path.dirname(log_file_path), exist_ok=True)  # Ensure 'logs/' exists
+        file_exists = os.path.isfile(log_file_path)
+
+        with open(log_file_path, mode='a', newline='') as file:
+            writer = csv.writer(file)
+
+            # Write header if file does not exist
+            if not file_exists:
+                writer.writerow(['unique_trade_id', 'user_id', 'user_name', 'symbol', 'start_time', 'status'])
+
+            # Write trade start entry
+            writer.writerow([unique_trade_id, user_id, user_name, symbol, start_time, None])
+
+
+    def update_trade_status_in_csv(self, unique_trade_id, new_status='Finish'):
+        log_file_path = os.path.join('logs', 'missed_client_log.csv')
+
+        if not os.path.isfile(log_file_path):
+            raise FileNotFoundError(f"CSV file not found: {log_file_path}")
+
+        updated_rows = []
+        found = False
+
+        # Read all rows
+        with open(log_file_path, mode='r', newline='') as file:
+            reader = csv.reader(file)
+            headers = next(reader)
+            for row in reader:
+                if row[0] == unique_trade_id:
+                    row[-1] = new_status
+                    found = True
+                updated_rows.append(row)
+
+        if not found:
+            raise ValueError(f"Trade ID {unique_trade_id} not found in CSV.")
+
+        # Write all rows back
+        with open(log_file_path, mode='w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(headers)
+            writer.writerows(updated_rows)
+
+
+    def generate_unique_trade_id(self, user_id, symbol, strategy_id, exchange, date_str):
+        raw = f"{user_id}-{symbol}-{strategy_id}-{exchange}-{date_str}"
+        unique_id = hashlib.sha256(raw.encode()).hexdigest()
+        return unique_id
 
     def handle_single_trade(self, trade, index, symbols, exch_seg, default_price, strategy_id,
                         alert_data, buy_sell_type, buy_sell, default_ordertype, limitPrice,
@@ -3470,6 +3520,25 @@ class MyPlaceOrderWebhookView(APIView):
             webhook_signal=alert_data
             order_id=0
             status="Failed"
+
+            date_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
+            unique_trade_id = self.generate_unique_trade_id(
+                user_id=trade.client.id,
+                symbol=symbols,
+                strategy_id=strategy_id,
+                exchange=exch_seg,
+                date_str=date_str
+                )
+
+            logger.info(f"Generated Trade ID: {unique_trade_id}")
+            self.log_trade_start_to_csv(
+                unique_trade_id=unique_trade_id,
+                user_id=trade.client.id,
+                user_name=str(trade.client),
+                symbol=symbols,
+                start_time=date_str
+            )
+
             print(" Entry_price, Exit_price,>>>>>>>>>>>>>>", Entry_price, Exit_price,)
             Index_Symbol=trade.symbol if trade.symbol else None
             res_data="unknown response"
@@ -3612,6 +3681,7 @@ class MyPlaceOrderWebhookView(APIView):
                         
                 # Check order response and log or handle failures
                 logger.info(f"{user} : final order repsone :::::::::::::::::::::{order_response}\n")
+                self.update_trade_status_in_csv(unique_trade_id)
 
                 print(" order_response['data']['status']:::::::::::", order_response['data']['status'])
                 if not order_response['data']['status']:
