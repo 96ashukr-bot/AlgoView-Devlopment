@@ -12,7 +12,10 @@ logger = logging.getLogger('main')
 def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_id, trade_symbol, transaction_type, symbol, quantity,
     strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type, Entry_price, Exit_price, 
     EntryQty, ExitQty, webhook_signal, Exchange, Segment,Index_Symbol, triggerPrice, trade_order_status):
+    logger.info(f'{user} : place_dhan_orders function is called in the api....!!!')
     print("dhan api  Exchange is::",Exchange," product typweeee",product_type)
+    logger.info(f'{user} : dhan api  Exchange is:: {Exchange} product typweeee {product_type}')
+    
     try:
         EntryQty=quantity
         Index_Symbol = symbol
@@ -42,6 +45,7 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
             message = f"API key and access token are Not valid for. {user}"
             res_data = f"{str(e)}"
             response={"data": {"status": status,"message":message}}
+            logger.info(f'{user} : This is exception error in Dhan api {response}')
             save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message,  
                         strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
                         webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan")

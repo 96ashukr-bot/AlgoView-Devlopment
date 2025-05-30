@@ -2808,6 +2808,7 @@ def place_order_broker(LivePrice,group_service,
                 logger.error(message)
                 return {"data": {"status": "Failed", "message": message}}
             logger.info(f"{user} : !!!!Placing order for user: {user} Brocker is: {trade.broker} & trading symbol is: {trade.symbol} and transaction_type is 99  {transaction_type}")
+            logger.info(f'{user} : transaction type is : {transaction_type}')
             if transaction_type=="SELL":
                 response = exit_existing_buy_position_DhanOrder(expiry_date,LivePrice,group_service,Type,day,month,fullyear,access_token, client_id, trade_symbol, transaction_type, symbol, quantity,strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty, webhook_signal, Exchange, Segment,Index_Symbol, triggerPrice, trade_order_status)
                 # If the exit failed, do not proceed.
@@ -2824,6 +2825,7 @@ def place_order_broker(LivePrice,group_service,
                 response=place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_id, trade_symbol, transaction_type, symbol, quantity,
                     strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type, Entry_price, Exit_price, 
                     EntryQty, ExitQty, webhook_signal, Exchange, Segment,Index_Symbol, triggerPrice, trade_order_status)
+                logger.info(f"{user} : buy response is this ++++++++++", response)
             logger.info(f"{user} : dhan api. Response: {response} for user :{user}")
             
         elif trade.broker.lower() == "5paisa":
@@ -2896,6 +2898,7 @@ def place_order_broker(LivePrice,group_service,
 
             # logger.info(f"Fetched API credentials for broker {trade.broker}.")
             logger.info(f"{user} : Placing order for user: {user}, Broker: {trade.broker}, Symbol: {trade.symbol}")
+            logger.info(f'{user} : transaction type is :', transaction_type)
             if transaction_type == "SELL":
                 logger.info(f"Transanction type Sell and called place_zerodha_orders function")
                 response = exit_existing_buy_position_zerodha_order(LivePrice,group_service,Type,day,month,year,access_token,Api_key,trade_symbol, transaction_type, symbol, quantity,strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type,Entry_price,Exit_price,
@@ -2910,10 +2913,11 @@ def place_order_broker(LivePrice,group_service,
                     logger.error(message)
                     return {"data": {"status": "Failed", "message": message}} 
             if transaction_type =="BUY":
-                    logger.info(f"Transanction type Buy and called place_zerodha_orders function")
+                    logger.info(f"{user} : Transanction type Buy and called place_zerodha_orders function")
                     response = place_zerodha_orders(LivePrice,group_service,access_token,Api_key,trade_symbol, transaction_type, symbol, quantity,
                         strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type,Entry_price,Exit_price,
                         EntryQty,ExitQty,webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice,trade_order_status)
+                    logger.info(f"{user} : buy response is this ++++++++++", response)
                 
             logger.info(f"{user} : Zerodha Order . Response: {response}")
 
