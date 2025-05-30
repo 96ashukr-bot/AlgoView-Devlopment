@@ -45,11 +45,10 @@ def place_zerodha_orders(LivePrice,group_service,access_token, Api_key, trade_sy
                         webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="zerodha")
             
             return response
-        logger.info(f"trade_symbol zerodha:{trade_symbol}")
-        trading_symbol = get_trading_symbol(Exchange, trade_symbol, kite)
-
+        logger.info(f"{user} : trade_symbol zerodha:{trade_symbol}")
+        trading_symbol = get_trading_symbol(Exchange, trade_symbol, kite, user)
         if not trading_symbol:
-            logger.error(f"trading_symbol details not found for {trade_symbol}")
+            logger.error(f"{user} : trading_symbol details not found for {trade_symbol}")
             message = "Instrument details not found"
             res_data = "Trading symbol not found."
             response={"data": {"status": status,"message":message}}
@@ -58,7 +57,7 @@ def place_zerodha_orders(LivePrice,group_service,access_token, Api_key, trade_sy
                     webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="zerodha")
             return response
 
-        logger.info(f"Fetched Zerodha trading_symbol: {trading_symbol}")
+        logger.info(f"{user} : Fetched Zerodha trading_symbol: {trading_symbol}")
 
         # Prepare order parameters
         order_params = {
@@ -246,21 +245,19 @@ def place_zerodha_orders(LivePrice,group_service,access_token, Api_key, trade_sy
         return response
 
     
-def get_trading_symbol(exchange, symbol, kite):
+def get_trading_symbol(exchange, symbol, kite, user=None):
     try:
-        # Fetch the list of instruments for the specified exchange
         instruments = kite.instruments(exchange)
         for instrument in instruments:
             if instrument['tradingsymbol'] == symbol:
                 print("Trading Symbol Found:", instrument['tradingsymbol'])
-                logger.info("Trading Symbol Found:", instrument['tradingsymbol'])
+                logger.info(f"{user} : Trading Symbol Found:", instrument['tradingsymbol'])
                 return instrument['tradingsymbol']
-        logger.info(f"order is none and return in get_trading_symbol" )
+        logger.info(f"{user} : order is none and return in get_trading_symbol" )
         return None  # Return None if the symbol is not found
 
     except Exception as e:
-        print(f"Error: {str(e)}")
-        logger.info(f"order is none and return in get_trading_symbol" )
+        logger.info(f"{user} : order is none and return in get_trading_symbol", e)
         return None
 
 def get_order_details(order_id, kite):

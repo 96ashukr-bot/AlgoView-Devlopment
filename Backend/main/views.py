@@ -2897,6 +2897,7 @@ def place_order_broker(LivePrice,group_service,
             # logger.info(f"Fetched API credentials for broker {trade.broker}.")
             logger.info(f"{user} : Placing order for user: {user}, Broker: {trade.broker}, Symbol: {trade.symbol}")
             if transaction_type == "SELL":
+                logger.info(f"Transanction type Sell and called place_zerodha_orders function")
                 response = exit_existing_buy_position_zerodha_order(LivePrice,group_service,Type,day,month,year,access_token,Api_key,trade_symbol, transaction_type, symbol, quantity,strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type,Entry_price,Exit_price,
                     EntryQty,ExitQty,webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice,trade_order_status)
 
@@ -2909,6 +2910,7 @@ def place_order_broker(LivePrice,group_service,
                     logger.error(message)
                     return {"data": {"status": "Failed", "message": message}} 
             if transaction_type =="BUY":
+                    logger.info(f"Transanction type Buy and called place_zerodha_orders function")
                     response = place_zerodha_orders(LivePrice,group_service,access_token,Api_key,trade_symbol, transaction_type, symbol, quantity,
                         strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type,Entry_price,Exit_price,
                         EntryQty,ExitQty,webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice,trade_order_status)
@@ -3675,6 +3677,7 @@ class MyPlaceOrderWebhookView(APIView):
                     buy_sell, Type = manage_order(transaction_type, buy_sell, Type)
                     print(f"Action: {buy_sell}, Type: {Type}")
                     transaction_type=buy_sell
+                    logger.info(f"{user} : Now inter in : place_order_broker api function.")
                     order_response=place_order_broker(LivePrice,group_service,trade,user,transaction_type, symbol, quantity,strategy,ordertype,
                     product_type, price, Lots,trade_order_status,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,
                     webhook_signal ,Exchange, Segment,Index_Symbol,triggerPrice,day,month,year,fullyear,default_price,Type,order_params)
@@ -4352,31 +4355,7 @@ def get_order_details(order_id, access_token):
 
 def get_trading_symbol(exchange, symbol, kite):
     try:
-        # Fetch the list of instruments for the specified exchange
         instruments = kite.instruments(exchange)
-
-        # # Write data to a CSV file
-        # with open(csv_file, mode='w', newline='') as file:
-        #     print("))))))))")
-        #     writer = csv.writer(file)
-        #     writer.writerow(['Token', 'Trading Symbol', 'Name', 'Exchange Segment', 'Expiry', 'Instrument Type'])
-        #     print("LLLLLLLLLLLLLLLLLL")
-        #     for entry in instruments:
-        #         print("entry>>>>>>",entry)
-        #         if entry.get('exchange') == 'NFO':  # Check if the segment is NFO
-        #             print("nfooooooooo")
-        #             writer.writerow([
-        #                 entry.get('instrument_token', ''),
-        #                 entry.get('tradingsymbol', ''),
-        #                 entry.get('name', ''),
-        #                 entry.get('segment', ''),
-        #                 entry.get('expiry', ''),
-        #                 entry.get('instrument_type', ''),
-        #             ])
-        #         else:
-        #             pass
-                    # print("elseeeeeeeee")
-        # Find the instrument by the symbol
         for instrument in instruments:
             if instrument['tradingsymbol'] == symbol:
                 print("Trading Symbol Found:", instrument['tradingsymbol'])
@@ -4387,10 +4366,6 @@ def get_trading_symbol(exchange, symbol, kite):
     except Exception as e:
         print(f"Error: {str(e)}")
         return None
-
-#
-
-
 
 def generate_checksum(api_key, api_secret, request_token):
     import hashlib
