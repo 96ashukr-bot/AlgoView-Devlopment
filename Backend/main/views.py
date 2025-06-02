@@ -1696,7 +1696,6 @@ class ClientCreateView(APIView):
                     company_website,
                     contact_number
                 )
-            # EmailService.send_password_email(client.email, password,client.firstName,login_link,support_email,help_center_link,company_website,contact_number)
             end_time = time.time()  # Record the end time
             execution_time = end_time - start_time  # Calculate the total time
             print(f"client mail password API executed in {execution_time:.4f} seconds") 
@@ -1714,23 +1713,7 @@ class ClientCreateView(APIView):
 
             # Handle segment and subsegment update
             segment_id = request.data.get("segment")
-            subsegments = request.data.get("subsegment", [])
-            # new_group_service_id = request.data.get("Group_service")  # New group service ID from request
-            # print("new_group_service>>>>", new_group_service_id)
-
-            # # Get the new group service name using the ID
-            # if new_group_service_id:
-            #     try:
-            #         new_group_service = GroupService.objects.get(id=new_group_service_id)
-            #         new_group_service_name = new_group_service.group_name
-            #         print("New Group Service Name:", new_group_service_name)
-            #     except GroupService.DoesNotExist:
-            #         return Response({"error": "Group Service not found"}, status=status.HTTP_404_NOT_FOUND)
-            # else:
-            #     new_group_service_name = None
-
-            # Get the existing group service name (if any)
-            
+            subsegments = request.data.get("subsegment", [])            
             # Get the new group service name
             new_group_service_name = getattr(client.Group_service, "group_name", None)
             existing_group_service_name=None
@@ -1934,24 +1917,6 @@ class AssignClientToStrategyAPIView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    # def put(self, request, pk):
-    #     strategy = get_object_or_404(Strategies, pk=pk)
-        
-    #     # Extract the list of client IDs from the request data
-    #     client_ids = request.data.get('clients', [])
-        
-    #     if not isinstance(client_ids, list):
-    #         return Response(
-    #             {"error": "Invalid format. 'clients' should be a list of client IDs."},
-    #             status=status.HTTP_400_BAD_REQUEST
-    #         )
-        
-    #     # Add new clients to the strategy without removing existing ones
-    #     strategy.clients.add(*client_ids)
-
-    #     # Return the updated strategy with its clients
-    #     serializer = StrategyAssignSerializer(strategy)
-    #     return Response(serializer.data, status=status.HTTP_200_OK)
 
 class GetclientbyidPIView(APIView):
     permission_classes = [IsAuthenticated]
@@ -2052,7 +2017,6 @@ class ClientsDataView(APIView):
 
 class SubSegmentsView(APIView):
     def post(self, request):
-        
         """
         Create a new SubSegment.
         """
@@ -2061,32 +2025,7 @@ class SubSegmentsView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    # def post(self, request, *args, **kwargs):
-    #     data = request.data
 
-    #     print("Data saved to nse_stock_list.csv")
-
-    #     segment = Segment.objects.get(id=data.get("segment_id"))
-
-    #     sub_segment = SubSegment.objects.create(
-    #         segment=segment,
-    #         name=data["name"],
-    #         short_name=data.get("short_name"),
-    #         status=data.get("status", True),
-    #         token=data.get("token"),
-    #         Exchange=data.get("Exchange"),
-    #     )
-        
-    #     return Response({
-    #         "id": sub_segment.id,
-    #         "name": sub_segment.name,
-    #         "segment": sub_segment.segment.name,
-    #         "short_name": sub_segment.short_name,
-    #         "status": sub_segment.status,
-    #         "symbol": get_symbol(sub_segment.name),  # Add symbol here
-    #         "token": sub_segment.token,
-    #         "exchange": sub_segment.Exchange,
-    #     })
     def put(self, request, pk):
         """
         Update an existing SubSegment by ID.
@@ -2106,21 +2045,11 @@ class SubSegmentsView(APIView):
         sub_segment.delete()
         return Response({"message": "SubSegment deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
     def get(self, request):
-        # segment_name = request.query_params.get('segment', None)
-        
-        # if not segment_name:
-        #     return Response({"error": "Segment name is required"}, status=status.HTTP_400_BAD_REQUEST)
-        
-        # Filter the segment based on the provided name
         try:
             segment = SubSegment.objects.all()
         except SubSegment.DoesNotExist:
             return Response({"error": "Segment not found"}, status=status.HTTP_404_NOT_FOUND)
-        
-        # # Get all sub-segments associated with the segment
-        # sub_segments = segment.sub_segments.all()  # Assuming `sub_segments` is the related name
-        
-        # Serialize the sub-segments
+
         serializer = SubSegmentSerializer(segment, many=True)
         
         return Response({"sub_segments": serializer.data}, status=status.HTTP_200_OK)
@@ -2166,14 +2095,6 @@ class UpdateClientTradeSettingAPIView(UpdateAPIView):
 
             # Save the updated trade setting
             serializer.save()
-            # Log the update in TradeLog
-            # TradeLog.objects.create(
-            #     client=client,
-            #     trade_setting=trade_setting,
-            #     symbol=trade_setting.symbol,
-            #     is_trade_status =trade_setting.is_tread_status,
-            #     trade_date=timezone.now()
-            # )
             return Response(serializer.data, status=status.HTTP_200_OK)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -2786,9 +2707,7 @@ def place_order_broker(LivePrice,group_service,
             symbol = symbol.upper()
             month_number = datetime.strptime(month, "%b").month
             expiry_date = f"{fullyear}-{month_number:02d}-{day}"
-            trade_symbol = f"{symbol}{month}{fullyear}{default_price}{Type}"     
-            # trade_symbol = f"{symbol}{day}{month}{default_price}{Type}" 
-            # Fetch client broker details
+            trade_symbol = f"{symbol}{month}{fullyear}{default_price}{Type}"
             client_broker = ClientBrokerdetails.objects.filter(client=trade.client, broker_name__broker_name__iexact=trade.broker).first()
             if not client_broker:
                 message= f"No broker details found for client {trade.client} and broker {trade.broker}"
@@ -2844,8 +2763,7 @@ def place_order_broker(LivePrice,group_service,
                 return response # continue
 
             api_key = client_broker.broker_API_KEY
-            # encreption_key = client_broker.broker_API_SKEY
-            # user_id = client_broker.broker_API_UID
+
             access_token = client_broker.access_token
             if not access_token or not api_key:
                 message = f"API credentials not found for client {trade.client} and broker {trade.broker}."
@@ -2853,8 +2771,7 @@ def place_order_broker(LivePrice,group_service,
                 )
                 logger.error(message)
                 return {"data": {"status": "Failed", "message": message}}
-            # logger.info(f"Fetched API credentials for {trade.broker}: SKEY={api_key}, USER={demate_user_name}")
-                # continue  # Skip to next user if token data is not found
+
             logger.info(f"{user} : !!!!Placing order for user: {user} Brocker is: {trade.broker} & trading symbol is: {trade.symbol}")
             if transaction_type == "SELL": 
                 response = exit_existing_buy_position_5PaisaOrder(LivePrice,group_service,Type,day,month,fullyear,api_key,access_token,trade_symbol,transaction_type, symbol, quantity,strategy,ordertype,
@@ -2896,9 +2813,9 @@ def place_order_broker(LivePrice,group_service,
                 logger.error(message)
                 return {"data": {"status": "Failed", "message": message}}
 
-            # logger.info(f"Fetched API credentials for broker {trade.broker}.")
             logger.info(f"{user} : Placing order for user: {user}, Broker: {trade.broker}, Symbol: {trade.symbol}")
-            logger.info(f'{user} : transaction type is :', transaction_type)
+            logger.info(f'{user} : transaction type is : {transaction_type}')
+
             if transaction_type == "SELL":
                 logger.info(f"Transanction type Sell and called place_zerodha_orders function")
                 response = exit_existing_buy_position_zerodha_order(LivePrice,group_service,Type,day,month,year,access_token,Api_key,trade_symbol, transaction_type, symbol, quantity,strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type,Entry_price,Exit_price,
@@ -2912,12 +2829,25 @@ def place_order_broker(LivePrice,group_service,
                     )
                     logger.error(message)
                     return {"data": {"status": "Failed", "message": message}} 
-            if transaction_type =="BUY":
-                    logger.info(f"{user} : Transanction type Buy and called place_zerodha_orders function")
-                    response = place_zerodha_orders(LivePrice,group_service,access_token,Api_key,trade_symbol, transaction_type, symbol, quantity,
-                        strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type,Entry_price,Exit_price,
-                        EntryQty,ExitQty,webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice,trade_order_status)
-                    logger.info(f"{user} : buy response is this ++++++++++", response)
+            if transaction_type == "BUY":
+                logger.info(f"{user} : Transaction type BUY and called place_zerodha_orders function")
+                
+                response = place_zerodha_orders(
+                    LivePrice, group_service, access_token, Api_key, trade_symbol, transaction_type, symbol, quantity,
+                    strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type, Entry_price, Exit_price,
+                    EntryQty, ExitQty, webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice, trade_order_status
+                )
+                logger.info(f"{user} : BUY response is: {response}")
+
+                if response.get("data", {}).get("status") == "error" or response.get("data", {}).get("status") == "Failed":
+                    message = response.get("data", {}).get("message", f"BUY order for {symbol} failed.")
+                    save_trade_order_history(
+                        LivePrice, group_service, transaction_type, trade_order_status, user, trade_symbol, order_id, status,
+                        res_data, message, strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
+                        webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="zerodha"
+                    )
+                    logger.error(message)
+                    return {"data": {"status": "Failed", "message": message}}
                 
             logger.info(f"{user} : Zerodha Order . Response: {response}")
 
@@ -2934,8 +2864,6 @@ def place_order_broker(LivePrice,group_service,
                 logger.error(message)
                 return {"data": {"status": "Failed", "message": message}}
 
-            # api_skey = client_broker.broker_API_SKEY
-            # api_uid = client_broker.broker_API_KEY
             access_token = client_broker.access_token
     
             if not access_token: #or not api_skey or not api_uid:
@@ -2945,8 +2873,6 @@ def place_order_broker(LivePrice,group_service,
                 logger.error(message)
                 return {"data": {"status": "Failed", "message": message}}
 
-            # Placing the order
-            # try:
             logger.info(f"{user} : Placing order for user: {user}, Broker: {trade.broker}, Symbol: {symbol}.transaction_type--{transaction_type}")
 
 
@@ -2957,7 +2883,6 @@ def place_order_broker(LivePrice,group_service,
                 if response.get("data", {}).get("status") == "error":
                     message = response.get("data", {}).get("message", f"Existing BUY position for {symbol} could not be closed.")
 
-                    # message = f"before place new BUY order please close existing BUY position  {symbol} could not be closed."
                     save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message, strategy,Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty, webhook_signal,Exchange, Segment, Index_Symbol, order_params, broker="Upstox")
                     logger.error(message)
                     return {"data": {"status": "Failed", "message": message}} 
@@ -2969,18 +2894,6 @@ def place_order_broker(LivePrice,group_service,
                 )
             
             logger.info(f"{user} : Upstox  Order. Response: {response}")
-
-            #     return response
-            # except Exception as e:
-            #     # Handle unexpected errors during order placement
-            #     message = f"An error occurred while placing the order: {str(e)}"
-            #     save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,
-            #         user, trade_symbol, order_id, status, res_data, message, strategy,
-            #         Entry_type, Exit_type, webhook_signal, Exchange, Segment, Index_Symbol,
-            #         order_params, broker="Upstox"
-            #     )
-            #     logger.error(message)
-            #     return {"data": {"status": "Failed", "message": message}}
     
         elif trade.broker.lower() == "alice blue":
             symbol=symbol.upper()
@@ -3070,15 +2983,9 @@ def place_order_broker(LivePrice,group_service,
                     Entry_type=Entry_type, Exit_type=Exit_type,Entry_price=Entry_price,Exit_price=Exit_price,EntryQty=EntryQty,ExitQty=ExitQty,
                     webhook_signal=webhook_signal,Exchange=Exchange,Segment=Segment,trade_order_status=trade_order_status,
                     Index_Symbol=Index_Symbol , user=user, strategy=strategy)                                               
-                # If the exit failed, do not proceed.
-                # print("response>>>>>>",response)
+
                 if response.get("data", {}).get("status") == "error":
                     message = response.get("data", {}).get("message", f"Existing BUY position for {symbol} could not be closed.")
-
-                    # message = f"before place new BUY order close existing BUY position {symbol} could not be closed."
-                    # save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message, strategy,
-                    #                         Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty, webhook_signal,
-                    #                         Exchange, Segment, Index_Symbol, order_params, broker="Angle One")
                     logger.error(message)
                     return {"data": {"status": "Failed", "message": message}} 
             if transaction_type.upper() == "BUY":

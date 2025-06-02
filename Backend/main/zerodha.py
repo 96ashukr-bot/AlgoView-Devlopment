@@ -5,18 +5,22 @@ from main.models import ClientBrokerdetails, CompanySmtpDetails
 import logging
 logger = logging.getLogger('main')
 
-def place_zerodha_orders(LivePrice,group_service,access_token, Api_key, trade_symbol, transaction_type, symbol, quantity,
-    strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type, Entry_price, Exit_price, 
-    EntryQty, ExitQty, webhook_signal, Exchange, Segment,Index_Symbol, triggerPrice, trade_order_status):
-    print("index symbolllllll",Index_Symbol)
+def place_zerodha_orders(
+    LivePrice, group_service, access_token, Api_key, trade_symbol, transaction_type,
+    symbol, quantity, strategy, ordertype, product_type, price, user, Lots, Entry_type,
+    Exit_type, Entry_price, Exit_price, EntryQty, ExitQty, webhook_signal, Exchange,
+    Segment, Index_Symbol, triggerPrice, trade_order_status):
+    logger.info(f"[{user}] Starting Zerodha order for symbol: {symbol}, Index: {Index_Symbol}")
+
     try:
-        EntryQty=quantity
-        smtp_details=CompanySmtpDetails.objects.first()
-        default_from_email=smtp_details.email_host_user if smtp_details else   "no-reply@example.com"
+        EntryQty = quantity
+        smtp_details = CompanySmtpDetails.objects.first()
+        default_from_email = smtp_details.email_host_user if smtp_details else "no-reply@example.com"
+
         order_id = 0
         status = "Failed"
         res_data = "Unknown response"
-        # Prepare order parameters
+
         order_params = {
             "tradingsymbol": trade_symbol,
             "exchange": Exchange,
@@ -27,237 +31,165 @@ def place_zerodha_orders(LivePrice,group_service,access_token, Api_key, trade_sy
             "price": price if ordertype.upper() == "LIMIT" else 0,
             "trigger_price": triggerPrice if ordertype.upper() == "SL" else None
         }
+
         try:
-            # This part of the code is attempting to authenticate with the Zerodha Kite API using the provided
-            # API key and access token. Here's a breakdown of what each step does:
             kite = KiteConnect(api_key=Api_key)
             kite.set_access_token(access_token)
             profile = kite.profile()
-            print("API key and access token are valid.")
+            logger.info(f"[{user}] API key and access token validated successfully.")
         except Exception as e:
-            logger.error(f"Error validating API key or access token: {str(e)}")
+            logger.exception(f"[{user}] Error validating API key or access token.")
             status = "Unauthorized"
-            message = f"API key and access token are Not valid for. {user}"
-            res_data = f"{str(e)}"
-            response={"data": {"status": status,"message":message}}
-            save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, symbol, order_id, status, res_data, message,  
-                        strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
-                        webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="zerodha")
-            
+            message = f"Invalid API credentials for {user}"
+            res_data = str(e)
+            response = {"data": {"status": status, "message": message}}
+            save_trade_order_history(LivePrice, group_service, transaction_type, trade_order_status, user, symbol, order_id, status, res_data, message,
+                                     strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
+                                     webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="zerodha")
             return response
-        logger.info(f"{user} : trade_symbol zerodha:{trade_symbol}")
+
+        logger.info(f"[{user}] Looking up trading symbol: {trade_symbol}")
         trading_symbol = get_trading_symbol(Exchange, trade_symbol, kite, user)
+
         if not trading_symbol:
-            logger.error(f"{user} : trading_symbol details not found for {trade_symbol}")
+            logger.error(f"[{user}] Trading symbol not found for {trade_symbol}")
             message = "Instrument details not found"
-            res_data = "Trading symbol not found."
-            response={"data": {"status": status,"message":message}}
-            save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, symbol, order_id, status, res_data, message,  
-                    strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
-                    webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="zerodha")
+            response = {"data": {"status": status, "message": message}}
+            save_trade_order_history(LivePrice, group_service, transaction_type, trade_order_status, user, symbol, order_id, status, message, message,
+                                     strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
+                                     webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="zerodha")
             return response
 
-        logger.info(f"{user} : Fetched Zerodha trading_symbol: {trading_symbol}")
-
-        # Prepare order parameters
-        order_params = {
-            "tradingsymbol": trading_symbol,
-            "exchange": Exchange,
-            "transaction_type": transaction_type,
-            "quantity": quantity,
-            "order_type": ordertype,
-            "product": product_type,
-            "price": price if ordertype.upper() == "LIMIT" else 0,
-            "trigger_price": triggerPrice if ordertype.upper() == "SL" else None
-        }
+        order_params["tradingsymbol"] = trading_symbol
+        logger.info(f"[{user}] Placing order with params: {order_params}")
 
         try:
             order_response = kite.place_order(variety=kite.VARIETY_REGULAR, **order_params)
-            order_id =order_response#order_response.get('order_id')
+            order_id = order_response  # Assuming it returns an order_id
+            logger.info(f"[{user}] Order placed. Order ID: {order_id}")
+
             if not order_id:
-                logger.error("Order ID is not returned")
-                status = "Failed"
-                message = "No order ID returned"
-                res_data = "No order ID returned"
-                response={"data": {"status": status,"message":message}}
-                save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, symbol, order_id, status, res_data, message,
+                logger.error(f"[{user}] No order ID returned.")
+                response = {"data": {"status": "Failed", "message": "No order ID returned"}}
+                save_trade_order_history(LivePrice, group_service, transaction_type, trade_order_status, user, symbol, order_id, "Failed", None, "No order ID returned",
                                          strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
                                          webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="zerodha")
                 return response
 
-            # Ensure that get_order_details is defined or handled properly
             order_history_response = get_order_details(order_id, kite)
-            
-            logger.info(f"Order history response: {order_history_response}")
-            if isinstance(order_history_response, dict):
-                if order_history_response.get("error") == "Failed":
-                    logger.error("Order details not found")
-                    status = "Failed"
-                    message = "Order details not found"
-                    res_data = order_history_response.get("error")
-                    response = {"data": {"status": status, "message": message}}
-                    save_trade_order_history(LivePrice, group_service, transaction_type, trade_order_status, user, symbol, order_id, status, res_data, message,
-                                            strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
-                                            webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="zerodha")
-                    return response
+            logger.info(f"[{user}] Fetched order history: {order_history_response}")
 
-            # latest_status = order_history_response[-1]  # Assuming the last item is the most recent
-            # status = latest_status.get("status", "").lower()
-            # res_data=latest_status
-            # Inside your place_zerodha_orders function, modify the status handling part:
+            if isinstance(order_history_response, dict) and order_history_response.get("error") == "Failed":
+                logger.error(f"[{user}] Order history error: {order_history_response}")
+                message = "Order details not found"
+                response = {"data": {"status": "Failed", "message": message}}
+                save_trade_order_history(LivePrice, group_service, transaction_type, trade_order_status, user, symbol, order_id, "Failed", order_history_response.get("error"), message,
+                                         strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
+                                         webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="zerodha")
+                return response
 
-            elif isinstance(order_history_response, list) and order_history_response:
+            if isinstance(order_history_response, list) and order_history_response:
                 latest_status = order_history_response[-1]
-                status = latest_status.get("status", "").upper()  # Convert to uppercase for consistent comparison
+                status = latest_status.get("status", "").upper()
                 res_data = latest_status
-                print("status>>>>>>>>>>>>>>>", status)
-                print("Entry_price, Exit_price, >>",Entry_price, Exit_price, )
-                # Define terminal statuses (final states that won't change)
-                TERMINAL_STATUSES = ['COMPLETE', 'REJECTED', 'CANCELLED','complete','rejected','cancelled']
-                
-                # Define pending statuses (temporary states that will eventually change)
+
+                logger.info(f"[{user}] Order status: {status}")
+
+                TERMINAL_STATUSES = ['COMPLETE', 'REJECTED', 'CANCELLED']
                 PENDING_STATUSES = [
-                    'PUT ORDER REQ RECEIVED',
-                    'VALIDATION PENDING',
-                    'OPEN PENDING',
-                    'MODIFY VALIDATION PENDING',
-                    'MODIFY PENDING',
-                    'TRIGGER PENDING',
-                    'CANCEL PENDING',
-                    'AMO REQ RECEIVED'
+                    'PUT ORDER REQ RECEIVED', 'VALIDATION PENDING', 'OPEN PENDING',
+                    'MODIFY VALIDATION PENDING', 'MODIFY PENDING', 'TRIGGER PENDING',
+                    'CANCEL PENDING', 'AMO REQ RECEIVED'
                 ]
-                print("status>>>>",status)
+
+                transaction_type = res_data.get('transaction_type', '')
+
                 if status in TERMINAL_STATUSES:
-                    print("::::::::::::::::")
-                    # Handle terminal statuses
-                    if status == 'COMPLETE' or status =='complete':
+                    if status == 'COMPLETE':
                         message = latest_status.get('status_message', "Order completed successfully")
-                        logger.info(f"Order completed successfully. Order ID: {order_id}")
-                        status='complete'
-                        # Update transaction details
-                        trasaction_type = res_data.get('transaction_type','')
-                        if trasaction_type == "BUY":
-                            trade_order_status="OPEN"
-                            Entry_type = "LE"
-                            Entry_price = res_data.get('average_price', 0.0)
-                            EntryQty = res_data.get('filled_quantity', 0)
-                        elif trasaction_type == "SELL": 
-                            trade_order_status="CLOSE"
-                            Exit_type = "LX"
-                            Exit_price = res_data.get('average_price', 0.0)  
-                            ExitQty = res_data.get('filled_quantity', 0)
-                            
-                        response = {"data": {"status": "completed", "message": message}}
-                        
-                    elif status == 'REJECTED' or status=='rejected':
-                        status='rejected'
+                        trade_order_status = "OPEN" if transaction_type == "BUY" else "CLOSE"
+                        if transaction_type == "BUY":
+                            Entry_type, Entry_price, EntryQty = "LE", res_data.get('average_price', 0.0), res_data.get('filled_quantity', 0)
+                        else:
+                            Exit_type, Exit_price, ExitQty = "LX", res_data.get('average_price', 0.0), res_data.get('filled_quantity', 0)
+
+                    elif status == 'REJECTED':
                         message = latest_status.get('status_message', "Order rejected")
-                        logger.error(f"Order rejected. Reason: {message}")
-                        trasaction_type = res_data.get('transaction_type','')
-                        if trasaction_type == "BUY":
-                            Entry_type = "LE"
-                            Entry_price = res_data.get('average_price', 0.0)
-                            EntryQty = res_data.get('filled_quantity', 0)
-                        elif trasaction_type == "SELL": 
-                            Exit_type = "LX"
-                            Exit_price = res_data.get('average_price', 0.0)  
-                            ExitQty = res_data.get('filled_quantity', 0)
-                        response = {"data": {"status": "rejected", "message": message}}
-                        
-                    elif status == 'CANCELLED' or status =='cancelled':
-                        status='cancelled'
-                        trasaction_type = res_data.get('transaction_type','')
-                        if trasaction_type == "BUY":
-                            Entry_type = "LE"
-                            Entry_price = res_data.get('average_price', 0.0)
-                            EntryQty = res_data.get('filled_quantity', 0)
-                        elif trasaction_type == "SELL": 
-                            Exit_type = "LX"
-                            Exit_price = res_data.get('average_price', 0.0)  
-                            ExitQty = res_data.get('filled_quantity', 0)
+                        if transaction_type == "BUY":
+                            Entry_type, Entry_price, EntryQty = "LE", res_data.get('average_price', 0.0), res_data.get('filled_quantity', 0)
+                        else:
+                            Exit_type, Exit_price, ExitQty = "LX", res_data.get('average_price', 0.0), res_data.get('filled_quantity', 0)
+
+                    elif status == 'CANCELLED':
                         message = latest_status.get('status_message', "Order cancelled")
-                        logger.warning(f"Order cancelled. Reason: {message}")
-                        response = {"data": {"status": "cancelled", "message": message}}
-                        
-                    # Save trade history for terminal statuses
-                    print("order_params>>>>",order_params)
+                        if transaction_type == "BUY":
+                            Entry_type, Entry_price, EntryQty = "LE", res_data.get('average_price', 0.0), res_data.get('filled_quantity', 0)
+                        else:
+                            Exit_type, Exit_price, ExitQty = "LX", res_data.get('average_price', 0.0), res_data.get('filled_quantity', 0)
+
+                    logger.info(f"[{user}] Final order status: {status}, Message: {message}")
                     if res_data is not None:
                         res_data = make_serializable(res_data)
-                    save_trade_order_history(LivePrice, group_service, transaction_type, trade_order_status, 
-                                        user, trade_symbol, order_id, status, res_data, message,
-                                        strategy, Entry_type, Exit_type, Entry_price, Exit_price, 
-                                        EntryQty, ExitQty, webhook_signal, Exchange, Segment, 
-                                        Index_Symbol, order_params, broker="zerodha")
-                    return response
-                    
+
+                    save_trade_order_history(LivePrice, group_service, transaction_type, trade_order_status, user, trade_symbol, order_id, status, res_data, message,
+                                             strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
+                                             webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="zerodha")
+                    return {"data": {"status": status.lower(), "message": message}}
+
                 elif status in PENDING_STATUSES:
-                    status='pending'
-                    # Handle pending statuses - you might want to poll again later
                     message = f"Order is in pending state: {status}"
-                    logger.info(message)
-                    response = {"data": {"status": "pending", "message": message}}
+                    logger.info(f"[{user}] ----------+----------  {message}")
                     if res_data is not None:
                         res_data = make_serializable(res_data)
-                    # You might want to save this as a pending status or wait for terminal status
-                    save_trade_order_history(LivePrice, group_service, transaction_type, trade_order_status, 
-                                        user, trade_symbol, order_id, status, res_data, message,
-                                        strategy, Entry_type, Exit_type, Entry_price, Exit_price, 
-                                        EntryQty, ExitQty, webhook_signal, Exchange, Segment, 
-                                        Index_Symbol, order_params, broker="zerodha")
-                    return response
-        
+
+                    save_trade_order_history(LivePrice, group_service, transaction_type, trade_order_status, user, trade_symbol, order_id, "pending", res_data, message,
+                                             strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
+                                             webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="zerodha")
+                    return {"data": {"status": "pending", "message": message}}
 
                 else:
-                    message = latest_status.get('status_message', "Success")
-                    response = {"data": {"status": status, "message": message}}
-                    save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message,
-                                            strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
-                                            webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="zerodha")
-                    return response
+                    message = latest_status.get("status_message", "Success")
+                    logger.info(f"[{user}] Non-terminal status: {status}")
+                    save_trade_order_history(LivePrice, group_service, transaction_type, trade_order_status, user, trade_symbol, order_id, status, res_data, message,
+                                             strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
+                                             webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="zerodha")
+                    return {"data": {"status": status, "message": message}}
+
             else:
-                logger.error("Unknown order response format")
-                status = "Failed"
+                logger.error(f"[{user}] Unknown order response format.")
                 message = "Unknown response format from get_order_details"
-                response = {"data": {"status": status, "message": message}}
-                save_trade_order_history(LivePrice, group_service, transaction_type, trade_order_status, user, trade_symbol, order_id, status, None, message,
-                                        strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
-                                        webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="zerodha")
-                return response
+                save_trade_order_history(LivePrice, group_service, transaction_type, trade_order_status, user, trade_symbol, order_id, "Failed", None, message,
+                                         strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
+                                         webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="zerodha")
+                return {"data": {"status": "Failed", "message": message}}
+
         except Exception as e:
-            error_message = f"Failed to place order: {str(e)}"
-            logger.error(error_message)
-            order_id = 0
-            response={"data": {"status": status,"message": str(e)}}
-            save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, trade_symbol, order_id, "Failed", None, str(e),
-                                     strategy, Entry_type,Exit_type,Entry_price,Exit_price,EntryQty,ExitQty , webhook_signal, Exchange,
-                                     Segment, Index_Symbol, order_params, broker="zerodha")
+            logger.exception(f"[{user}] Exception during order placement")
+            response = {"data": {"status": "Failed", "message": str(e)}}
+            save_trade_order_history(LivePrice, group_service, transaction_type, trade_order_status, user, trade_symbol, order_id, "Failed", None, str(e),
+                                     strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
+                                     webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="zerodha")
             return response
 
     except Exception as e:
-        logger.error(f"Exception in Zerodha order placement: {str(e)}")
-        error_message = f"Failed to place order: {str(e)}"
-        logger.error(error_message)
-        order_id = 0
-        response={"data": {"status": status,"message": str(e)}}
-        save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, trade_symbol, order_id, "Failed", None, str(e),
-                        strategy, Entry_type,Exit_type,Entry_price,Exit_price,EntryQty,ExitQty , webhook_signal, Exchange,
-                                    Segment, Index_Symbol, order_params, broker="zerodha")
+        logger.exception(f"[{user}] Exception in outer block of place_zerodha_orders")
+        response = {"data": {"status": "Failed", "message": str(e)}}
+        save_trade_order_history(LivePrice, group_service, transaction_type, trade_order_status, user, trade_symbol, 0, "Failed", None, str(e),
+                                 strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
+                                 webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="zerodha")
         return response
 
-    
 def get_trading_symbol(exchange, symbol, kite, user=None):
     try:
         instruments = kite.instruments(exchange)
         for instrument in instruments:
             if instrument['tradingsymbol'] == symbol:
-                print("Trading Symbol Found:", instrument['tradingsymbol'])
-                logger.info(f"{user} : Trading Symbol Found:", instrument['tradingsymbol'])
+                logger.info(f"[{user}] Trading Symbol Found: {instrument['tradingsymbol']}")
                 return instrument['tradingsymbol']
-        logger.info(f"{user} : order is none and return in get_trading_symbol" )
-        return None  # Return None if the symbol is not found
-
+        logger.warning(f"[{user}] Trading symbol '{symbol}' not found in exchange '{exchange}'")
+        return None
     except Exception as e:
-        logger.info(f"{user} : order is none and return in get_trading_symbol", e)
+        logger.exception(f"[{user}] Exception occurred while fetching trading symbol '{symbol}' from exchange '{exchange}'")
         return None
 
 def get_order_details(order_id, kite):
