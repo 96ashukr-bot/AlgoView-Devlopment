@@ -181,13 +181,18 @@ def place_zerodha_orders(
 
 def get_trading_symbol(exchange, symbol, kite, user=None):
     try:
+        logger.info(f"[{user}] Fetching instruments from exchange: {exchange}")
         instruments = kite.instruments(exchange)
+        logger.info(f"[{user}] Instruments fetched. Searching for {symbol}")
+
         for instrument in instruments:
             if instrument['tradingsymbol'] == symbol:
                 logger.info(f"[{user}] Trading Symbol Found: {instrument['tradingsymbol']}")
                 return instrument['tradingsymbol']
+
         logger.warning(f"[{user}] Trading symbol '{symbol}' not found in exchange '{exchange}'")
         return None
+
     except Exception as e:
         logger.exception(f"[{user}] Exception occurred while fetching trading symbol '{symbol}' from exchange '{exchange}'")
         return None
