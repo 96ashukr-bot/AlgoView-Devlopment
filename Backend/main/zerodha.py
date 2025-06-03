@@ -5,6 +5,54 @@ from main.models import ClientBrokerdetails, CompanySmtpDetails
 import logging
 logger = logging.getLogger('main')
 
+def get_trading_symbol(exchange, symbol, kite, user=None):
+    try:
+        logger.info(f"[{user}] Fetching instruments from exchange: {exchange}")
+        instruments = kite.instruments(exchange)
+        logger.info(f"[{user}] Instruments fetched. Searching for {symbol}")
+
+        for instrument in instruments:
+            if instrument['tradingsymbol'] == symbol:
+                logger.info(f"[{user}] Trading Symbol Found: {instrument['tradingsymbol']}")
+                return instrument['tradingsymbol']
+
+        logger.warning(f"[{user}] Trading symbol '{symbol}' not found in exchange '{exchange}'")
+        return None
+
+    except Exception as e:
+        logger.exception(f"[{user}] Exception occurred while fetching trading symbol '{symbol}' from exchange '{exchange}'")
+        return None
+    
+def get_order_details(order_id, kite):
+    try:
+        # Fetch order history
+        # kite = KiteConnect(api_key=api_key)
+        # kite.set_access_token(access_token)
+        order_history = kite.order_history(order_id)
+        # print("order_history>>>",order_history)
+        if order_history:
+            return order_history
+        else:
+            return {"status": "Failed", "error": "No order history found for the given order ID."}
+    except Exception as e:
+        return {"status": "Failed", "error": f"Failed to fetch order history: {str(e)}"}
+    
+
+def make_serializable(data):
+    """Convert non-serializable objects in a data structure to serializable formats"""
+    from datetime import datetime  # Import here to ensure it's available
+    
+    if isinstance(data, dict):
+        return {k: make_serializable(v) for k, v in data.items()}
+    elif isinstance(data, list):
+        return [make_serializable(v) for v in data]
+    elif isinstance(data, datetime):  # Use the directly imported datetime
+        return data.isoformat()
+    elif isinstance(data, (str, int, float, bool)) or data is None:
+        return data
+    else:
+        return str(data)
+
 def place_zerodha_orders(
     LivePrice, group_service, access_token, Api_key, trade_symbol, transaction_type,
     symbol, quantity, strategy, ordertype, product_type, price, user, Lots, Entry_type,
@@ -178,52 +226,3 @@ def place_zerodha_orders(
                                  strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
                                  webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="zerodha")
         return response
-
-def get_trading_symbol(exchange, symbol, kite, user=None):
-    try:
-        logger.info(f"[{user}] Fetching instruments from exchange: {exchange}")
-        instruments = kite.instruments(exchange)
-        logger.info(f"[{user}] Instruments fetched. Searching for {symbol}")
-
-        for instrument in instruments:
-            if instrument['tradingsymbol'] == symbol:
-                logger.info(f"[{user}] Trading Symbol Found: {instrument['tradingsymbol']}")
-                return instrument['tradingsymbol']
-
-        logger.warning(f"[{user}] Trading symbol '{symbol}' not found in exchange '{exchange}'")
-        return None
-
-    except Exception as e:
-        logger.exception(f"[{user}] Exception occurred while fetching trading symbol '{symbol}' from exchange '{exchange}'")
-        return None
-
-def get_order_details(order_id, kite):
-    try:
-        # Fetch order history
-        # kite = KiteConnect(api_key=api_key)
-        # kite.set_access_token(access_token)
-        order_history = kite.order_history(order_id)
-        # print("order_history>>>",order_history)
-        if order_history:
-            return order_history
-        else:
-            return {"status": "Failed", "error": "No order history found for the given order ID."}
-    except Exception as e:
-        return {"status": "Failed", "error": f"Failed to fetch order history: {str(e)}"}
-
-
-
-def make_serializable(data):
-    """Convert non-serializable objects in a data structure to serializable formats"""
-    from datetime import datetime  # Import here to ensure it's available
-    
-    if isinstance(data, dict):
-        return {k: make_serializable(v) for k, v in data.items()}
-    elif isinstance(data, list):
-        return [make_serializable(v) for v in data]
-    elif isinstance(data, datetime):  # Use the directly imported datetime
-        return data.isoformat()
-    elif isinstance(data, (str, int, float, bool)) or data is None:
-        return data
-    else:
-        return str(data)
