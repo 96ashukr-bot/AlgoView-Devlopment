@@ -21,6 +21,230 @@ from main.models import CompanySmtpDetails, Tradeorderhistory
 from main.tasks import send_trade_email_async
 logger = logging.getLogger('main')
 from django.db.models import Q
+import pytz
+import http.client
+
+# Setup logger
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logger = logging.getLogger(__name__)
+
+CACHE_FILE = "angel_token_cache.json"
+CACHE_EXPIRY = timedelta(hours=1)
+
+def fetch_and_cache_token_data():
+    url = "https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json"
+    
+    try:
+        logger.info("Fetching token data from API...")
+        response = requests.get(url, timeout=10)  
+        response.raise_for_status()
+        data = response.json()
+
+        with open(CACHE_FILE, "w") as f:
+            json.dump({"timestamp": datetime.utcnow().isoformat(), "data": data}, f)
+
+        logger.info("Token data successfully cached.")
+        return data
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error fetching token data: {e}")
+        return None
+
+# done finish
+def load_cached_token_data():
+    if os.path.exists(CACHE_FILE):
+        print("CACHE_FILE>>>>",CACHE_FILE)
+        with open(CACHE_FILE, "r") as f:
+            cached_data = json.load(f)
+            timestamp = datetime.fromisoformat(cached_data["timestamp"])
+
+            if datetime.utcnow() - timestamp < CACHE_EXPIRY:
+                logger.info("Using cached token data.")
+                return cached_data["data"]
+            else:
+                logger.info("Cache expired. Fetching new token data.")
+
+    return fetch_and_cache_token_data()
+
+# done finish
+def get_token_details1111(trading_symbol):
+    logger.info(f"Searching for trading symbol: {trading_symbol}")
+    data = load_cached_token_data()
+    if not data:
+        logger.error("Failed to load token data.")
+        return {"status": "Failed", "message": "Unable to fetch token data"}
+
+    # Convert list to dictionary for faster lookup
+    token_dict = {item["symbol"]: item for item in data}
+
+    if trading_symbol in token_dict:
+        item = token_dict[trading_symbol]
+        logger.info(f"Found token for symbol {trading_symbol}: {item['token']}")
+        return {
+            "status": "success",
+            "token": item.get("token"),
+            "symbol": item.get("symbol"),
+            "expiry": item.get("expiry"),
+        }
+
+    logger.warning(f"No token data found for trading symbol: {trading_symbol}")
+    return {"status": "Failed", "message": f"No details found for trading symbol: {trading_symbol}"}
+
+def get_token_details(trading_symbol):
+    url = "https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json"
+    
+    try:
+        response = requests.get(url)
+        response.raise_for_status()  
+        data = response.json() 
+        logger.info(f"trading_symbol of Angle is ::::::::::::::{trading_symbol}")
+        for item in data:
+            if item.get("symbol") == trading_symbol:
+                print("csv token from master data api>>>",item)
+                # Return the token and any other details
+                return {
+                    "status": "success", 
+                    "token": item.get("token"),
+                    "symbol": item.get("symbol"),
+                    "expiry": item.get("expiry"),              
+                }
+        return {"status": "Failed",  # Indicate that the symbol was not found
+            "message": f"No details found for trading symbol: {trading_symbol}"}
+    except requests.exceptions.RequestException as e:
+        print(f"An error occurred while fetching data: {str(e)}") 
+        return {"status": "Failed", "message": f"An error occurred while fetching data:  {str(e)}"}
+
+def generate_totp(token_secret):
+    """
+    Generate TOTP using the provided secret.
+    """
+    try:
+        return pyotp.TOTP(token_secret).now()
+    except Exception as e:
+        logger.error(f"Failed to generate TOTP: {e}")
+        return None
+
+# done finish
+def get_access_token(client_code, password, totp, state, api_key, broker_details):
+    """
+    Retrieve access token using the AngelOne API and save it in the database.
+    """
+    try:
+        if ( broker_details.access_token and broker_details.access_token_expiry and  broker_details.access_token_expiry > datetime.now(timezone.utc)):
+            logger.info("Reusing existing valid access token............")
+            return broker_details.access_token
+        # Generate TOTP
+        totp = generate_totp(totp)
+        if not totp:
+            logger.error("Failed to generate TOTP.")
+            return None
+
+        # Prepare payload and headers
+        payload = json.dumps({
+            "clientcode": client_code,
+            "password": password,
+            "totp": totp,
+            "state": state
+        })
+
+        headers = {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-UserType': 'USER',
+            'X-SourceID': 'WEB',
+            'X-MACAddress': '00:1A:2B:3C:4D:5E',  # Update with real MAC address
+            'X-PrivateKey': api_key
+        }
+
+        # Make API request
+        conn = http.client.HTTPSConnection("apiconnect.angelone.in")
+        conn.request("POST", "/rest/auth/angelbroking/user/v1/loginByPassword", payload, headers)
+        res = conn.getresponse()
+        data = res.read()
+        response_data = json.loads(data.decode("utf-8"))
+
+        if response_data.get("status") and response_data.get("message") == "SUCCESS":
+            # Calculate expiry time (28 hours from now)
+            expiry_time = datetime.now() + timedelta(hours=2)
+            logger.info(f"Access token retrieved successfully.{expiry_time}")
+
+            # Save token details in the database
+            broker_details.access_token = response_data["data"]["jwtToken"]
+            broker_details.refreshToken = response_data["data"]["refreshToken"]
+            broker_details.isTokenExpired = False
+            broker_details.access_token_expiry = expiry_time
+            broker_details.tokenCreatedAt = datetime.now()
+            broker_details.save()
+
+            return response_data["data"]["jwtToken"]
+        else:
+            logger.error(f"Login failed: {response_data}")
+            return None
+    except Exception as e:
+        logger.error(f"Exception in get_access_token: {e}")
+        return None
+    
+def place_order(access_token, payload, api_key):
+    """
+    Place an order using the AngelOne API.
+    """
+    try:
+        conn = http.client.HTTPSConnection("apiconnect.angelone.in")
+        headers = {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-UserType': 'USER',
+            'X-SourceID': 'WEB',
+            'X-PrivateKey': api_key,
+            'X-MACAddress': '00:1A:2B:3C:4D:5E',  # Replace with actual MAC address
+            'Authorization': f'Bearer {access_token}'  # Use obtained token
+        }
+
+        conn.request("POST", "/rest/secure/angelbroking/order/v1/placeOrder", payload, headers)
+        res = conn.getresponse()
+        data = res.read()
+        response_data = json.loads(data.decode("utf-8"))
+
+        if response_data.get('status') == 'success':
+            logger.info("Order placed successfully.")
+            return response_data
+        else:
+            logger.error(f"Order placement failed: {response_data}")
+            return response_data
+    except Exception as e:
+        logger.error(f"Exception in place_order: {e}")
+        return None
+
+def get_order_details(unique_order_id, api_key, auth_token):
+    """
+    Retrieve order details using the AngelOne API.
+    """
+    try:
+        headers = {
+            'X-PrivateKey': api_key,
+            'Accept': 'application/json',
+            'X-SourceID': 'WEB',
+            'X-UserType': 'USER',
+            'Authorization': f'Bearer {auth_token}',
+            'Content-Type': 'application/json'
+        }
+        conn = http.client.HTTPSConnection("apiconnect.angelone.in")
+        endpoint = f"/rest/secure/angelbroking/order/v1/details/{unique_order_id}"
+        conn.request("GET", endpoint, "", headers)
+        res = conn.getresponse()
+        logger.info(f"res details of angle one>>{res}")
+        data = res.read()
+        response_data = json.loads(data.decode("utf-8"))
+
+        if response_data:
+            logger.info("Order details retrieved successfully.")
+            return response_data
+        else:
+            logger.error("Failed to retrieve order details.")
+            return None
+    except Exception as e:
+        logger.error(f"Exception in get_order_details: {e}")
+        return None
+
 def place_Angle_order(broker_details,LivePrice,group_service,api_key,demate_user_name,totp,angle_pass,usertrade,tradingsymbol, quantity, product_type, transactiontype, 
         price, ordertype,lot_size, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal, Exchange,trade_order_status,
         Segment,Index_Symbol ,user=None, strategy=None):
@@ -147,7 +371,6 @@ def place_Angle_order(broker_details,LivePrice,group_service,api_key,demate_user
                 res_data="None response from API"
                 save_trade_order_history(LivePrice,group_service,transactiontype,trade_order_status,user,tradingsymbol, order_id, status, res_data, message,  strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol , order_params,broker="Angle One")
                 return {"data": {"status": "Failed", "message": "Invalid response structure from API"}}
-                
 
             uniqueorderid = data.get('uniqueorderid') 
 
@@ -190,7 +413,6 @@ def place_Angle_order(broker_details,LivePrice,group_service,api_key,demate_user
                 if not order_id:
                     order_id=uniqueorderid
                 logger.info(f"Order placed successfully for user {user}. Order ID: {order_id}")
-                # log_order(order_data, "orders_placed.csv")  
                 message = responsedetails['data'].get('text', 'completed successfully ')
                 status=responsedetails['data'].get('status', 'completed')
                 status="completed"
@@ -284,74 +506,6 @@ log_dir = "order_logs"
 if not os.path.exists(log_dir):
     os.makedirs(log_dir)
 
-import logging
-import requests
-import json
-import os
-
-# Setup logger
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
-logger = logging.getLogger(__name__)
-
-CACHE_FILE = "angel_token_cache.json"
-CACHE_EXPIRY = timedelta(hours=1)
-
-def fetch_and_cache_token_data():
-    url = "https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json"
-    
-    try:
-        logger.info("Fetching token data from API...")
-        response = requests.get(url, timeout=10)  
-        response.raise_for_status()
-        data = response.json()
-
-        with open(CACHE_FILE, "w") as f:
-            json.dump({"timestamp": datetime.utcnow().isoformat(), "data": data}, f)
-
-        logger.info("Token data successfully cached.")
-        return data
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Error fetching token data: {e}")
-        return None
-
-def load_cached_token_data():
-    if os.path.exists(CACHE_FILE):
-        print("CACHE_FILE>>>>",CACHE_FILE)
-        with open(CACHE_FILE, "r") as f:
-            cached_data = json.load(f)
-            timestamp = datetime.fromisoformat(cached_data["timestamp"])
-
-            if datetime.utcnow() - timestamp < CACHE_EXPIRY:
-                logger.info("Using cached token data.")
-                return cached_data["data"]
-            else:
-                logger.info("Cache expired. Fetching new token data.")
-
-    return fetch_and_cache_token_data()
-
-def get_token_details1111(trading_symbol):
-    logger.info(f"Searching for trading symbol: {trading_symbol}")
-    data = load_cached_token_data()
-    if not data:
-        logger.error("Failed to load token data.")
-        return {"status": "Failed", "message": "Unable to fetch token data"}
-
-    # Convert list to dictionary for faster lookup
-    token_dict = {item["symbol"]: item for item in data}
-
-    if trading_symbol in token_dict:
-        item = token_dict[trading_symbol]
-        logger.info(f"Found token for symbol {trading_symbol}: {item['token']}")
-        return {
-            "status": "success",
-            "token": item.get("token"),
-            "symbol": item.get("symbol"),
-            "expiry": item.get("expiry"),
-        }
-
-    logger.warning(f"No token data found for trading symbol: {trading_symbol}")
-    return {"status": "Failed", "message": f"No details found for trading symbol: {trading_symbol}"}
-
 
 def convert_list_to_dict(data):
     return {item["symbol"]: item for item in data}
@@ -376,30 +530,6 @@ def get_token_detailsdict(trading_symbol):
 
     return {"status": "Failed", "message": f"No details found for trading symbol: {trading_symbol}"}
 
-
-def get_token_details(trading_symbol):
-    url = "https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json"
-    
-    try:
-        response = requests.get(url)
-        response.raise_for_status()  
-        data = response.json() 
-        logger.info(f"trading_symbol of Angle is ::::::::::::::{trading_symbol}")
-        for item in data:
-            if item.get("symbol") == trading_symbol:
-                print("csv token from master data api>>>",item)
-                # Return the token and any other details
-                return {
-                    "status": "success", 
-                    "token": item.get("token"),
-                    "symbol": item.get("symbol"),
-                    "expiry": item.get("expiry"),              
-                }
-        return {"status": "Failed",  # Indicate that the symbol was not found
-            "message": f"No details found for trading symbol: {trading_symbol}"}
-    except requests.exceptions.RequestException as e:
-        print(f"An error occurred while fetching data: {str(e)}") 
-        return {"status": "Failed", "message": f"An error occurred while fetching data:  {str(e)}"}
 def save_data_to_file(self, data, filename="symbol_data.json"):
     """
     Save JSON data to a file in the specified directory.
@@ -415,148 +545,6 @@ def save_data_to_file(self, data, filename="symbol_data.json"):
     except Exception as e:
         logger.error(f"Error saving data to file: {e}")
 
-
-import pytz
-from datetime import datetime, timedelta
-import pyotp
-import logging
-import http.client
-import json
-
-# Configure logging
-logger = logging.getLogger(__name__)
-
-def place_order(access_token, payload, api_key):
-    """
-    Place an order using the AngelOne API.
-    """
-    try:
-        conn = http.client.HTTPSConnection("apiconnect.angelone.in")
-        headers = {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'X-UserType': 'USER',
-            'X-SourceID': 'WEB',
-            'X-PrivateKey': api_key,
-            'X-MACAddress': '00:1A:2B:3C:4D:5E',  # Replace with actual MAC address
-            'Authorization': f'Bearer {access_token}'  # Use obtained token
-        }
-
-        conn.request("POST", "/rest/secure/angelbroking/order/v1/placeOrder", payload, headers)
-        res = conn.getresponse()
-        data = res.read()
-        response_data = json.loads(data.decode("utf-8"))
-
-        if response_data.get('status') == 'success':
-            logger.info("Order placed successfully.")
-            return response_data
-        else:
-            logger.error(f"Order placement failed: {response_data}")
-            return response_data
-    except Exception as e:
-        logger.error(f"Exception in place_order: {e}")
-        return None
-
-def get_order_details(unique_order_id, api_key, auth_token):
-    """
-    Retrieve order details using the AngelOne API.
-    """
-    try:
-        headers = {
-            'X-PrivateKey': api_key,
-            'Accept': 'application/json',
-            'X-SourceID': 'WEB',
-            'X-UserType': 'USER',
-            'Authorization': f'Bearer {auth_token}',
-            'Content-Type': 'application/json'
-        }
-        conn = http.client.HTTPSConnection("apiconnect.angelone.in")
-        endpoint = f"/rest/secure/angelbroking/order/v1/details/{unique_order_id}"
-        conn.request("GET", endpoint, "", headers)
-        res = conn.getresponse()
-        logger.info(f"res details of angle one>>{res}")
-        data = res.read()
-        response_data = json.loads(data.decode("utf-8"))
-
-        if response_data:
-            logger.info("Order details retrieved successfully.")
-            return response_data
-        else:
-            logger.error("Failed to retrieve order details.")
-            return None
-    except Exception as e:
-        logger.error(f"Exception in get_order_details: {e}")
-        return None
-
-def generate_totp(token_secret):
-    """
-    Generate TOTP using the provided secret.
-    """
-    try:
-        return pyotp.TOTP(token_secret).now()
-    except Exception as e:
-        logger.error(f"Failed to generate TOTP: {e}")
-        return None
-
-def get_access_token(client_code, password, totp, state, api_key, broker_details):
-    """
-    Retrieve access token using the AngelOne API and save it in the database.
-    """
-    try:
-        if ( broker_details.access_token and broker_details.access_token_expiry and  broker_details.access_token_expiry > datetime.now(timezone.utc)):
-            logger.info("Reusing existing valid access token............")
-            return broker_details.access_token
-        # Generate TOTP
-        totp = generate_totp(totp)
-        if not totp:
-            logger.error("Failed to generate TOTP.")
-            return None
-
-        # Prepare payload and headers
-        payload = json.dumps({
-            "clientcode": client_code,
-            "password": password,
-            "totp": totp,
-            "state": state
-        })
-
-        headers = {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'X-UserType': 'USER',
-            'X-SourceID': 'WEB',
-            'X-MACAddress': '00:1A:2B:3C:4D:5E',  # Update with real MAC address
-            'X-PrivateKey': api_key
-        }
-
-        # Make API request
-        conn = http.client.HTTPSConnection("apiconnect.angelone.in")
-        conn.request("POST", "/rest/auth/angelbroking/user/v1/loginByPassword", payload, headers)
-        res = conn.getresponse()
-        data = res.read()
-        response_data = json.loads(data.decode("utf-8"))
-
-        if response_data.get("status") and response_data.get("message") == "SUCCESS":
-            # Calculate expiry time (28 hours from now)
-            expiry_time = datetime.now() + timedelta(hours=2)
-            logger.info(f"Access token retrieved successfully.{expiry_time}")
-
-            # Save token details in the database
-            broker_details.access_token = response_data["data"]["jwtToken"]
-            broker_details.refreshToken = response_data["data"]["refreshToken"]
-            broker_details.isTokenExpired = False
-            broker_details.access_token_expiry = expiry_time
-            broker_details.tokenCreatedAt = datetime.now()
-            broker_details.save()
-
-            return response_data["data"]["jwtToken"]
-        else:
-            logger.error(f"Login failed: {response_data}")
-            return None
-    except Exception as e:
-        logger.error(f"Exception in get_access_token: {e}")
-        return None
-    
 def login_userss(username, password, token_secret, smartApi):
     response = {"status": False, "message": "", "data": None}
     totp = generate_totp(token_secret)

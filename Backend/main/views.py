@@ -2567,8 +2567,6 @@ class GetAliceTreadBook(APIView):
                 "message": f"An error occurred: {str(e)}"
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
-
 # Save the order log to the database
 from django.utils import timezone  
 
@@ -2892,7 +2890,14 @@ def place_order_broker(LivePrice,group_service,
                     Lots, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, Segment,
                     Index_Symbol, triggerPrice,trade_order_status
                 )
-            
+
+                # Check if the buy order succeeded before saving or logging
+                if response.get("data", {}).get("status") == "error":
+                    message = response.get("data", {}).get("message", f"BUY order for {symbol} failed.")
+                    save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message, strategy,Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty, webhook_signal,Exchange, Segment, Index_Symbol, order_params, broker="Upstox")
+                    logger.error(f"{user} : BUY Order failed. Reason: {message}")
+                    return {"data": {"status": "Failed", "message": message}} 
+
             logger.info(f"{user} : Upstox  Order. Response: {response}")
     
         elif trade.broker.lower() == "alice blue":
@@ -2940,6 +2945,7 @@ def place_order_broker(LivePrice,group_service,
                 response=place_alice_orders(LivePrice,group_service,api_skey,api_uid,trade_symbol,transaction_type, symbol, quantity,strategy,ordertype,
                 product_type, price,user, Lots,trade_order_status,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal ,Exchange, Segment,Index_Symbol,triggerPrice)
             logger.info(f"{user} : Alice blue. Response: {response} for user :::{user}")
+        
         elif trade.broker.lower() == "angle one":
             broker="Angle One"
             trade_symbol = f"{symbol}{day}{month}{year}{default_price}{Type}" 
@@ -2998,6 +3004,7 @@ def place_order_broker(LivePrice,group_service,
                     Index_Symbol=Index_Symbol , user=user, strategy=strategy)#exch_seg=exch_seg expiry=expiry
 
             logger.info(f"{user} : Angle one. Response: {response} for user: {user}")    
+        
         return response
     except Exception as e:
         response = {'data': {'status': 'Failed', "message": str(e)}}

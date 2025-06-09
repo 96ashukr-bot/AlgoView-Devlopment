@@ -154,7 +154,7 @@ def exit_existing_buy_position_Upstox(
     """
     try:
         print("symbol...", symbol, "user>>>>", user)
-        logger.info(f"trade_symbol...:::{trade_symbol} or group_service strategy:::{group_service}")
+        logger.info(f"{user} :trade_symbol...:::{trade_symbol} or group_service strategy:::{group_service}")
         open_buy_order_get = Tradeorderhistory.objects.filter(
             client=user,
             Index_Symbol=symbol,
@@ -175,7 +175,7 @@ def exit_existing_buy_position_Upstox(
 
         print("open_buy_order>>>>>>>", open_buy_order)
         if not open_buy_order:
-            message = f"No open BUY position found for {symbol} for user {user}."
+            message = f"{user} :No open BUY position found for {symbol} for user {user}."
             logger.info(message)
             return {"data": {"status": "error", "message": message}}
         if open_buy_order:
@@ -195,13 +195,13 @@ def exit_existing_buy_position_Upstox(
                 trade_symbol = f"{symbol}{int(price_of_order)}{Type}{day}{month}{year}"
                 print("trade_symbol>>>>", trade_symbol)
                 if trade_symbol != old_trade_symbol:
-                    msg=f"sell request not matching with existing order :{old_trade_symbol} new symbol: {trade_symbol} client: {user}"
+                    msg=f"{user} :sell request not matching with existing order :{old_trade_symbol} new symbol: {trade_symbol} client: {user}"
                     logger.info(f"{msg}")  
                     return {"data": {"status": "error", "message": msg}}
-                logger.info(f"Previous order {oid} entry price is {Entry_price}. Found open BUY order for {symbol}. Exiting position. Order ID: {open_buy_order.order_id}")
+                logger.info(f"{user} :Previous order {oid} entry price is {Entry_price}. Found open BUY order for {symbol}. Exiting position. Order ID: {open_buy_order.order_id}")
                 
                 if buy_order_close_status == "CLOSE":
-                    message = f"Existing BUY order already closed for {Index_Symbol} for user {user}."
+                    message = f"{user} :Existing BUY order already closed for {Index_Symbol} for user {user}."
                     logger.info(message)
                     return {"data": {"status": "error", "message": message}}
 
@@ -217,22 +217,22 @@ def exit_existing_buy_position_Upstox(
                     trade_order = Tradeorderhistory.objects.get(order_id=oid)
                     trade_order.trade_order_status = "CLOSE"
                     trade_order.save()
-                    logger.info(f"Existing BUY position successfully exited for {symbol}.")
+                    logger.info(f"{user} :Existing BUY position successfully exited for {symbol}.")
                     return sell_response
                 else:
-                    logger.error(f"Failed to exit existing BUY position for {symbol}. Response: {sell_response}")
+                    logger.error(f"{user} :Failed to exit existing BUY position for {symbol}. Response: {sell_response}")
                     return {"data": {"status": "error", "message": "Failed to exit existing position."}}
 
             except Exception as e:
-                logger.error(f"Error while processing existing BUY order exit: {str(e)}")
+                logger.error(f"{user} :Error while processing existing BUY order exit: {str(e)}")
                 return {"data": {"status": "error", "message": "Unexpected error occurred while exiting position."}}
         else:
-            message = f"No open BUY position found for {symbol} for user {user}."
+            message = f"{user} :No open BUY position found for {symbol} for user {user}."
             logger.info(message)
             return {"data": {"status": "error", "message": message}}
 
     except Exception as e:
-        logger.error(f"Error in exit_existing_buy_position_Upstox: {str(e)}")
+        logger.error(f"{user} :Error in exit_existing_buy_position_Upstox: {str(e)}")
         return {"data": {"status": "error", "message": "Unexpected error occurred."}}
 
     
