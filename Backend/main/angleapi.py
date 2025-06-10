@@ -24,11 +24,10 @@ from django.db.models import Q
 def place_Angle_order(broker_details,LivePrice,group_service,api_key,demate_user_name,totp,angle_pass,usertrade,tradingsymbol, quantity, product_type, transactiontype, 
         price, ordertype,lot_size, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal, Exchange,trade_order_status,
         Segment,Index_Symbol ,user=None, strategy=None):
-
+    
     try:
         logger.info(f"order for user:{user}")
         EntryQty=quantity
-        print("inside place_Angle_order:::::::::::")
         order_id=0
         status="Failed"
         tokendata = get_token_details(tradingsymbol) 
@@ -37,25 +36,24 @@ def place_Angle_order(broker_details,LivePrice,group_service,api_key,demate_user
             token_symbol = tokendata.get("symbol")
 
             if not token or not token_symbol:
-                logger.error(f"Missing token or symbol for trading symbol: {usertrade.symbol}")
+                logger.error(f"{user} : Missing token or symbol for trading symbol: {usertrade.symbol}")
                 response= {"data":{"status": "error", "message": "token symbole not found"}}
                 return response# continue
         else:
-            message= f"trading symbol is not found for this :{tradingsymbol}"
+            message= f"{user} : trading symbol is not found for this :{tradingsymbol}"
             res_data="no trading symbol found"
             order_params={}
             save_trade_order_history(LivePrice,group_service,transactiontype,trade_order_status,user,tradingsymbol, order_id, status, res_data,
                                      message, strategy,  Entry_type,Exit_type, Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal , 
                                      Exchange, Segment,Index_Symbol, order_params,broker="Angle One")
                 
-            logger.info(f"No token data found for trading symbol: {usertrade.symbol}")
+            logger.info(f"{user} : No token data found for trading symbol: {usertrade.symbol}")
             response= {"data":{"status": "error", "message": "token symbole not found"}}
             return response
         print("Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty>>>",Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty)
         smtp_details=CompanySmtpDetails.objects.first()
         default_from_email=smtp_details.email_host_user if smtp_details else   "no-reply@example.com" 
         logger.info(f"Angle one api order placement for user: {user} & trading symbol is: {tradingsymbol}")
-        print("product_type>>>",product_type)
         if product_type:
             if product_type.upper() =="NRML":
                product_type= "CARRYFORWARD"
@@ -76,28 +74,26 @@ def place_Angle_order(broker_details,LivePrice,group_service,api_key,demate_user
             "squareoff": "0",
             "triggerprice": "0",
             "stoploss": "0",
-            # "lotsize": lot_size,
             "quantity": quantity,
         }
         payload = json.dumps(order_params)
         print("payload>>>",payload)        
-        logger.info(f"order_params angle one...........{order_params}")
+        logger.info(f"{user} : order_params angle one...........{order_params}")
         api_key = api_key
         username = demate_user_name
-        Totp_Secret     = totp
+        Totp_Secret = totp
         password=angle_pass
         order_id=0
         status="Failed"
         res_data="unknown response",
         try:
             try:
-                print("username", username, "password", password, "totp", Totp_Secret,"api_key",api_key)
                 # Get a valid token
                 state="AngleOne"
                 access_token = get_access_token(username, password, totp, state, api_key,broker_details)
                 if not access_token:
                     error_message = "Unable to retrieve access token."
-                    logger.error("Failed to log in: %s", error_message)
+                    logger.error(f"{user} : Failed to log in: {error_message}")
                     res_data = "Invalid API key, TOTP, or invalid credentials. Please update your credentials."
                     message = error_message
                     save_trade_order_history(LivePrice, group_service, transactiontype,
@@ -109,7 +105,7 @@ def place_Angle_order(broker_details,LivePrice,group_service,api_key,demate_user
                 
             except Exception as e:
                 # Handle exceptions during the entire process
-                logger.error("An error occurred: %s", e)
+                logger.error(f"{user} : An error occurred: {e}")
                 res_data = "An exception occurred during login."
                 message = str(e)
                 save_trade_order_history(LivePrice,group_service,transactiontype,
@@ -118,13 +114,13 @@ def place_Angle_order(broker_details,LivePrice,group_service,api_key,demate_user
                     webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="Angle One"
                 )
                 return {"data": {"status": "Failed", "message": f"Exception: {message}"}}
-            logger.info(f"Login successful, placing order...")
-            logger.info(f"order_placement is for :::::::::::::::::::::::::::::::::::{user}")
+            logger.info(f"{user} : Login successful, placing order...")
+            logger.info(f"{user} : order_placement is for :::::::::::::::::::::::::::::::::::{user}")
 
             try:
                 logger.info(f"Attempting to place order for {user}")
                 response = place_order(access_token, payload, api_key)
-                logger.info(f"API Response:")
+                logger.info(f"{user} : API Response:")
             except Exception as e:
                 logger.error(f"Order placement failed for {user}: {str(e)}")
                 message = f"somthing wrong or token is invalid"
@@ -133,28 +129,26 @@ def place_Angle_order(broker_details,LivePrice,group_service,api_key,demate_user
         
                 return {"data": {"status": "Failed", "message": message}}
             # response = smartApi.placeOrderFullResponse(order_params)
-            logger.info(f"Angle API Response: {response}")
-            print("group_service>>>**)))))))))))",group_service)
+            logger.info(f"{user}: Angle API Response: {response}")
             if response is None:
-                logger.error("Received None response from API.")
+                logger.error(f"{user} : Received None response from API.")
                 message = f"somthing wrong or token is invalid"
                 res_data="None response from API"
                 save_trade_order_history(LivePrice,group_service,transactiontype,trade_order_status,user,tradingsymbol, order_id, status, res_data, message,  strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol , order_params,broker="Angle One")
                 return {"data": {"status": "Failed", "message": message}}
             data = response.get('data')
             if not data or not isinstance(data, dict):
-                logger.error(f"Invalid response structure from Angle One: {response}")
+                logger.error(f"{user} : Invalid response structure from Angle One: {response}")
                 res_data="None response from API"
                 save_trade_order_history(LivePrice,group_service,transactiontype,trade_order_status,user,tradingsymbol, order_id, status, res_data, message,  strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol , order_params,broker="Angle One")
                 return {"data": {"status": "Failed", "message": "Invalid response structure from API"}}
-                
 
             uniqueorderid = data.get('uniqueorderid') 
 
             # responsedetails =smartApi.individual_order_details(uniqueorderid)
-            responsedetails = get_order_details(uniqueorderid, api_key, access_token)
+            responsedetails = get_order_details(uniqueorderid, api_key, access_token, user)
             if not responsedetails or responsedetails.get('data') is None:
-                logger.error("No details found for the order.")
+                logger.error(f"{user} : No details found for the order.")
                 message = "No details found for the order."
                 order_id=uniqueorderid 
                 res_data=responsedetails
@@ -167,13 +161,12 @@ def place_Angle_order(broker_details,LivePrice,group_service,api_key,demate_user
                 )
                 return {"data": {"status": "Failed", "message": "Failed to retrieve order details."}}
 
-
             status = responsedetails['data'].get('status', 'unknown')
             order_id = responsedetails['data'].get('orderid', 'unknown')
             message = responsedetails['data'].get('text', 'No message provided')
 
             res_data=responsedetails 
-            logger.info(f"responsedetails>>>>{responsedetails}")
+            logger.info(f"{user} : responsedetails>>>>{responsedetails}")
             if status in ["completed", "complete"]:
                 transaction_type=responsedetails['data'].get('transactiontype', '')
                 if transaction_type == "BUY":
@@ -203,7 +196,7 @@ def place_Angle_order(broker_details,LivePrice,group_service,api_key,demate_user
                 
                 if not order_id:
                     order_id=uniqueorderid     
-                logger.info(f"Order is pending or open state, Order ID: {order_id}")
+                logger.info(f"{user} : Order is pending or open state, Order ID: {order_id}")
                 transaction_type=responsedetails['data'].get('transactiontype', '')
                 if transaction_type == "BUY":
                     trade_order_status="OPEN"
@@ -219,7 +212,7 @@ def place_Angle_order(broker_details,LivePrice,group_service,api_key,demate_user
                 message = responsedetails['data'].get('text', 'Unknown  reason')
                 status=responsedetails['data'].get('status', 'pending')
                 status="complete"
-                logger.info(f"Order is pending or in process reason is !!!::{message}")
+                logger.info(f"{user} : Order is pending or in process reason is !!!::{message}")
                 save_trade_order_history(LivePrice,group_service,transactiontype,trade_order_status,user,tradingsymbol, order_id, status, res_data, message,  strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol ,order_params, broker="Angle One")
                 response = {"data": {"status": status,"message":message}}
                 return response
@@ -241,7 +234,7 @@ def place_Angle_order(broker_details,LivePrice,group_service,api_key,demate_user
                     Exit_price=responsedetails['data'].get('averageprice', 0.0) 
                     ExitQty= responsedetails['data'].get('quantity', 0)#disclosedquantity 
                     print("enrty exit price ",Entry_price,Exit_price,"entry and type",Entry_type,Exit_type)
-                logger.info(f"Order Rejected reason!!!::{rejection_message} Order ID: {order_id}")
+                logger.info(f"{user} : Order Rejected reason!!!::{rejection_message} Order ID: {order_id}")
                 from_email = default_from_email,
                 # Send rejection email
                 print("user.firstName>>>>>",user.firstName)
@@ -253,20 +246,19 @@ def place_Angle_order(broker_details,LivePrice,group_service,api_key,demate_user
                 rejection_message = responsedetails['data'].get('text', 'Unknown rejection reason')
                 status=responsedetails['data'].get('status', 'Failed')
                 order_id=responsedetails['data']['orderid']     
-                logger.info(f"Order Rejected reason!!!::{rejection_message} Order ID: {order_id}")
+                logger.info(f"{user} : Order Rejected reason!!!::{rejection_message} Order ID: {order_id}")
                 save_trade_order_history(LivePrice,group_service,transactiontype,trade_order_status,user,tradingsymbol, order_id, status, res_data, rejection_message,  strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol ,order_params ,broker="Angle One")
                 response = {"data": {"status": status,"message":message}}
                 return response
         except Exception as e:
-            logging.error(f"Order could not be placed  !!!!!!!!!!!{e}")
+            logging.error(f"{user} : Order could not be placed  !!!!!!!!!!!{e}")
             msg=f"error in order place angle one {str(e)}"
             sleep(1)
             response = {"data": {"status": "Failed","message":msg}}
             return response
     except Exception as e:
-        logging.error(f"An unexpected error occurred: {e}")
+        logging.error(f"{user} : An unexpected error occurred: {e}")
         msg=f"An unexpected error occurred: {str(e)}"
-        
         response = {"data": {"status": "Failed","message":msg}}
         return response
  
@@ -457,7 +449,7 @@ def place_order(access_token, payload, api_key):
         logger.error(f"Exception in place_order: {e}")
         return None
 
-def get_order_details(unique_order_id, api_key, auth_token):
+def get_order_details(unique_order_id, api_key, auth_token, user= None):
     """
     Retrieve order details using the AngelOne API.
     """
@@ -471,21 +463,22 @@ def get_order_details(unique_order_id, api_key, auth_token):
             'Content-Type': 'application/json'
         }
         conn = http.client.HTTPSConnection("apiconnect.angelone.in")
+        logger.info(f"{user}: the get order details api is calling for the angle one.")
         endpoint = f"/rest/secure/angelbroking/order/v1/details/{unique_order_id}"
         conn.request("GET", endpoint, "", headers)
         res = conn.getresponse()
-        logger.info(f"res details of angle one>>{res}")
+        logger.info(f"{user} : Response details of angle one api >>{res}")
         data = res.read()
         response_data = json.loads(data.decode("utf-8"))
 
         if response_data:
-            logger.info("Order details retrieved successfully.")
+            logger.info(f"{user}: Order details retrieved successfully.")
             return response_data
         else:
-            logger.error("Failed to retrieve order details.")
+            logger.error(f"{user} Failed to retrieve order details.")
             return None
     except Exception as e:
-        logger.error(f"Exception in get_order_details: {e}")
+        logger.error(f"{user} : Exception in get_order_details: {e}")
         return None
 
 def generate_totp(token_secret):

@@ -23,24 +23,23 @@ def get_trading_symbol(exchange, symbol, kite, user=None):
         logger.exception(f"[{user}] Exception occurred while fetching trading symbol '{symbol}' from exchange '{exchange}'")
         return None
     
-def get_order_details(order_id, kite):
+def get_order_details(order_id, kite, user=None):
     try:
-        # Fetch order history
-        # kite = KiteConnect(api_key=api_key)
-        # kite.set_access_token(access_token)
         order_history = kite.order_history(order_id)
-        # print("order_history>>>",order_history)
         if order_history:
+            logger.info(f"{user} : order history.....: {order_history}")            
             return order_history
         else:
+            logger.info(f"{user}: No order history found for the given order ID")
             return {"status": "Failed", "error": "No order history found for the given order ID."}
     except Exception as e:
+        logger.info(f"{user} : Failed to fetch order history: {str(e)}")
         return {"status": "Failed", "error": f"Failed to fetch order history: {str(e)}"}
-    
 
 def make_serializable(data):
     """Convert non-serializable objects in a data structure to serializable formats"""
     from datetime import datetime  # Import here to ensure it's available
+    logger.info("=============================>>>>> make serializable ???")
     
     if isinstance(data, dict):
         return {k: make_serializable(v) for k, v in data.items()}
@@ -124,7 +123,7 @@ def place_zerodha_orders(
                                          webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="zerodha")
                 return response
 
-            order_history_response = get_order_details(order_id, kite)
+            order_history_response = get_order_details(order_id, kite, user)
             logger.info(f"[{user}] Fetched order history: {order_history_response}")
 
             if isinstance(order_history_response, dict) and order_history_response.get("error") == "Failed":
@@ -178,6 +177,7 @@ def place_zerodha_orders(
                     logger.info(f"[{user}] Final order status: {status}, Message: {message}")
                     if res_data is not None:
                         res_data = make_serializable(res_data)
+                        logger.info(f"[{user}] Make serializable status: {res_data}")
 
                     save_trade_order_history(LivePrice, group_service, transaction_type, trade_order_status, user, trade_symbol, order_id, status, res_data, message,
                                              strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
@@ -185,10 +185,11 @@ def place_zerodha_orders(
                     return {"data": {"status": status.lower(), "message": message}}
 
                 elif status in PENDING_STATUSES:
-                    message = f"Order is in pending state: {status}"
+                    message = f"{user} : Order is in pending state: {status}"
                     logger.info(f"[{user}] ----------+----------  {message}")
                     if res_data is not None:
                         res_data = make_serializable(res_data)
+                        logger.info(f"[{user}] Make serializable status: {res_data}")
 
                     save_trade_order_history(LivePrice, group_service, transaction_type, trade_order_status, user, trade_symbol, order_id, "pending", res_data, message,
                                              strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,

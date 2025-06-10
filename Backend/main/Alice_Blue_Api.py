@@ -53,8 +53,6 @@ def place_alice_orders(LivePrice,group_service,api_skey,api_uid,trading_symbol_a
         EntryQty=quantity
         smtp_details=CompanySmtpDetails.objects.first()
         default_from_email=smtp_details.email_host_user if smtp_details else   "no-reply@example.com" 
-        print(f"Order Type: {order_type}, Price: {price}, Trigger Price: {trigger_price}")
-        # # Convert price and trigger price to float if provided
         price = float(price) if price is not None else None
         trigger_price = float(trigger_price) if trigger_price is not None else None
         # symbol = 'INFY'  # Stock symbol
@@ -71,32 +69,30 @@ def place_alice_orders(LivePrice,group_service,api_skey,api_uid,trading_symbol_a
         def serialize_data(data):
             """Helper function to serialize datetime objects."""
             if isinstance(data, dict):
+                logger.info(f"{user}: the enstance data is return from the seralize data of the alice blue")
                 return {key: (value.isoformat() if isinstance(value, datetime) else value) for key, value in data.items()}
+            
+            logger.info(f"{user}: The final ouput without case from the seralize data")
             return data.isoformat() if isinstance(data, datetime) else data
 
         # Serialize `order_params` and other fields if necessary
         order_params = serialize_data(order_params)
-        print("transaction_type>>>>",transaction_type)
 
-
-        # Initialize Aliceblue API
-        # alice = Aliceblue(user_id=USER_ID, api_key=ALICE_API_KEY)
+        logger.info(f"{user}: AliceBlue api is calling now !!!")
         alice = Aliceblue(user_id=api_uid, api_key=api_skey)  # Example user attributes
+        logger.info(f"{user}: Response from AliceBlue api is : {alice}")
         # Check session validity
         session_id = alice.get_session_id()
         # print("session_id?????",session_id)
         if not session_id or not session_id.get('sessionID'):
             error_message = session_id.get('emsg', 'Invalid credentials or unauthorized access')
-            print(f"Failed to establish Aliceblue session. Reason!!!!!!!!!: {error_message}")          
             response = {"data": {"status": "Unauthorized", "message": error_message}}
             order_id=0
             status="Unauthorized"
             res_data=response,
-            print("error_message>>>>",error_message)
             message= f"{error_message}"
-            # if status=="Unauthorized":
             save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trading_symbol_aliceblue, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol, order_params,broker="Alice Blue")        
-            logger.error(f"Unauthorized access for user {user}. Reason: {error_message}")
+            logger.error(f"{user} : Unauthorized access for user {user}. Reason: {error_message}")
             return response
         if transaction_type.upper() == "BUY":
            transaction_type_alice = TransactionType.Buy
@@ -112,19 +108,17 @@ def place_alice_orders(LivePrice,group_service,api_skey,api_uid,trading_symbol_a
                 product_type = ProductType.Delivery
         else:
             product_type=None
-        # Place the order
         
         if Exchange=="NFO":
             fetch_instrument_data(alice, exchange="NFO")
-            logger.info(f"exchnage symbole....{trading_symbol_aliceblue}")
+            logger.info(f"{user} : exchnage symbole....{trading_symbol_aliceblue}")
             instrument = alice.get_instrument_by_symbol("NFO", trading_symbol_aliceblue)
-            logger.info(f"instrument>>>{instrument}")
+            logger.info(f"{user} : instrument>>>{instrument}")
         elif Exchange=="BSE":
             instrument = alice.get_instrument_by_symbol("BSE", trading_symbol_aliceblue)
-        # print("instrument>>>",instrument)
-        # Check if the instrument is valid
+
         if isinstance(instrument, Instrument):
-            logger.info(f"Instrument found: {instrument.symbol}")
+            logger.info(f"{user} : Instrument found: {instrument.symbol}")
         elif isinstance(instrument, dict) and instrument.get("stat") == "Not_ok":
             error_message = instrument.get("emsg", "Instrument not available")
             order_id=0
@@ -132,37 +126,19 @@ def place_alice_orders(LivePrice,group_service,api_skey,api_uid,trading_symbol_a
             res_data="unknown response"
             message=error_message
             save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trading_symbol_aliceblue,order_id , status, res_data, message,  strategy,  Entry_type,Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol, order_params,broker="Alice Blue")
-            logger.error(f"Instrument not found for symbol: {trading_symbol_aliceblue}, Reason: {error_message}")
+            logger.error(f"{user} : Instrument not found for symbol: {trading_symbol_aliceblue}, Reason: {error_message}")
             return {"data":{"status": "error", "message": error_message}}
         else:
-            logger.error(f"Unexpected response for instrument: {instrument}")
+            logger.error(f"{user} : Unexpected response for instrument: {instrument}")
             return {"data":{"status": "error", "message": "Unexpected response for instrument"}}
 
-        logger.info("Placing order with parameters:")
-
-        # Convert the dictionary to a JSON string if needed
-        # order_params_json = json.dumps(order_params, indent=4)
-        # logger.info(f"order payload for alice blue...",order_params)
-                
-        logger.info(f"Transaction: {transaction_type_alice}, Instrument: {instrument}, "
+        logger.info(f"{user} : Placing order with parameters:")
+ 
+        logger.info(f"{user} : Transaction: {transaction_type_alice}, Instrument: {instrument}, "
               f"Quantity: {quantity}, Order Type: {order_type}, Product Type: {product_type}, "
               f"Price: {price}, Trigger Price: {trigger_price}")
         response=None
-        
-        # lot_size = get_lot_size(trading_symbol_aliceblue)  # Implement this function to fetch lot size
-        # # To get the lot size, access the correct key, which is 'lot_size'
-        # lot = int(lot_size.get("lot_size", 0))  # Convert lot_size to an integer (default to 0 if not found)
 
-        # # Check if the order quantity is a multiple of the lot size
-        # if quantity % lot != 0:
-        #     logger.error(f"Invalid quantity {quantity}, it should be in multiples of lot size: {lot}")
-        #     order_id=0
-        #     status="Failed"
-        #     res_data="unknown response",
-        #     message=f"Invalid quantity {quantity}, it should be in multiples of lot size: {lot}"
-        #     save_trade_order_history(LivePrice,transaction_type,trade_order_status,user,trading_symbol_aliceblue, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal , Exchange, Segment,Index_Symbol, order_params,broker="Angle One")
-
-        #     return {"data": {"status": "error", "message": f"Quantity must be a multiple of lot size: {lot}"}}
         if order_type.upper()=="LIMIT":
             order_type=OrderType.Limit
             response = alice.place_order(transaction_type = transaction_type_alice,
@@ -173,7 +149,6 @@ def place_alice_orders(LivePrice,group_service,api_skey,api_uid,trading_symbol_a
                     price=price,
                     )
         elif order_type.upper()=="MARKET":
-            print("inside market order")
             response = alice.place_order(transaction_type = transaction_type_alice,
                         instrument = instrument, 
                         quantity = quantity, 
@@ -181,9 +156,8 @@ def place_alice_orders(LivePrice,group_service,api_skey,api_uid,trading_symbol_a
                         product_type = product_type,
                         trigger_price=trigger_price)
 
-        print(f"Order Response:::: {response}")
         if not response:
-            logger.error("Order API returned an empty response!")
+            logger.error(f"{user} : Order API returned an empty response!")
             response = {"data":{"status": "Failed", "message": "Empty response from API"}}
             error_message="error when placing order"
             order_id=0
@@ -200,8 +174,8 @@ def place_alice_orders(LivePrice,group_service,api_skey,api_uid,trading_symbol_a
             # Extract the status
             status = order_his.get('Status', '').lower()  # Retrieve 'Status' key, fallback to '' if not found
             res_data=order_his
-            logger.info(f"history of alice blue order_____________{order_his}")
-            logger.info(f"status......{status}")
+            logger.info(f"{user} : history of alice blue order_____________{order_his}")
+            logger.info(f"{user} : status......{status}")
             print("trade_order_status alice blue>>>>>>",trade_order_status)
             if status == "pending": 
                 transaction_types=res_data.get('Trantype','')
@@ -306,11 +280,11 @@ def place_alice_orders(LivePrice,group_service,api_skey,api_uid,trading_symbol_a
             save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trading_symbol_aliceblue, order_id, status, res_data, message,  strategy,   Entry_type,Exit_type,Entry_price,Exit_price,EntryQty,ExitQty  ,webhook_signal , Exchange, Segment,Index_Symbol, order_params,broker="Alice Blue")
             return response 
     except ValueError as val_err:
-        logger.error(f"Validation error: {val_err}")
+        logger.error(f"{user} : Validation error: {val_err}")
         return {"data":{"status": "error", "message": str(val_err)}}
 
     except AttributeError as attr_err:
-        logger.error(f"Attribute error: {attr_err}")
+        logger.error(f"{user} : Attribute error: {attr_err}")
         return {"data":{"status": "error", "message": str(attr_err)}}
 
     except Exception as e:
@@ -318,15 +292,11 @@ def place_alice_orders(LivePrice,group_service,api_skey,api_uid,trading_symbol_a
         # save_webhook_signals_logs(transaction_type, symbol, price, strategy, user, "Failed", failure_reason=str(e),json=json)
         return {"data":{"status": "error", "message": "An unexpected error occurred"}}
 
-
-
 from datetime import datetime  # Correct import at the top of your file
 
 def save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,client, trading_symbol, order_id, order_status, response_data, failure_reason,
       strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal, Exchange, Segment,Index_Symbol ,order_params=None,broker=None ):
-    print("Exit_type>>>>", Exit_type, "Entry_type>>>", Entry_type)
-    print("Entry_price....", Entry_price, "LivePrice", LivePrice)
-    
+    logger.info(f"{client} : Order history start to savingh : {order_id}")
     try:
 
         # Use current time for signals
@@ -339,10 +309,6 @@ def save_trade_order_history(LivePrice,group_service,transaction_type,trade_orde
             except (User.DoesNotExist, ValueError) as e:
                 logger.error(f"Invalid client: {client}. Error: {str(e)}")
                 return None
-
-        # Handle null prices by falling back to LivePrice
-        # final_entry_price = Entry_price if Entry_price is not 0
-        # final_exit_price = Exit_price if Exit_price is not 0
 
         # Create the trade history record
         trade_history = Tradeorderhistory.objects.create(
@@ -391,8 +357,6 @@ def save_trade_order_history(LivePrice,group_service,transaction_type,trade_orde
             f"Exit_price: {Exit_price}"
         )
         return None
-
-
 
 
 import holidays

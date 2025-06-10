@@ -93,14 +93,13 @@ def place_upstox_orders(LivePrice,group_service,
         EntryQty=quantity
         smtp_details=CompanySmtpDetails.objects.first()
         default_from_email=smtp_details.email_host_user if smtp_details else   "no-reply@example.com" 
-        # Fetch instrument details
+        logger.info(f"{user} : exchnage symbole....{trade_symbol}")
         if Exchange=="NFO":
-            logger.info(f"exchnage symbole....{trade_symbol}")
-            result = fetch_instrument_details(trade_symbol, "NSE")
-            # logger.info(f"instrument>>>{trade_symbol}")
+            result = fetch_instrument_details(trade_symbol, "NSE", user)
         elif Exchange=="BSE":
-            result = fetch_instrument_details(trade_symbol, "BSE")
+            result = fetch_instrument_details(trade_symbol, "BSE", user)
         
+        logger.info(f"{user} : The exchange result is : {result}")
         status="Failed"
         order_id=0
         message=""
@@ -113,7 +112,7 @@ def place_upstox_orders(LivePrice,group_service,
             'trigger_price': 0 }
         instrument_key = result.get("instrument_key")
         if not instrument_key:
-            logger.error(f"Instrument details not found for {trade_symbol}. Response: {result}")
+            logger.error(f"{user} : Instrument details not found for {trade_symbol}. Response: {result}")
             status="Failed"
             message="Instrument details not found"
             res_data=result
@@ -126,7 +125,7 @@ def place_upstox_orders(LivePrice,group_service,
                 "data": {
                     "status": "error", "message": "Instrument details not found.",  "error_details": result,}
                 }
-        logger.info(f"Fetched Instrument Key: {instrument_key}")
+        logger.info(f"{user} : Fetched Instrument Key: {instrument_key}")
         # Map product types to API-compatible values
         product_mapping = {"NRML": "N", "MIS": "I", "CNC": "D"}
         product_code = product_mapping.get(product_type.upper(), product_type)
@@ -146,21 +145,22 @@ def place_upstox_orders(LivePrice,group_service,
         
         headers = {"Authorization": f"Bearer {access_token}"}
         # Place the order
+        logger.info(f"{user} : Place the order API is calling for the Upstox !!")
         response = requests.post(PLACE__ORDER_URL, headers=headers, json=order_params)
         response_data = response.json()
 
-        logger.info(f"Order API response: {response_data} status code ::{response.status_code}")
+        logger.info(f"{user} : Order API response: {response_data} status code ::{response.status_code}")
 
         # Handle response based on status
         if response.status_code == 200 and response_data.get("status") == "success":
             order_id = response_data["data"]["order_id"]
-            logger.info(f"Order placed successfully get the Order details for Order ID: {order_id}")
+            logger.info(f"{user} : Order placed successfully get the Order details for Order ID: {order_id}")
             return handle_successful_order(LivePrice,group_service,transaction_type,
                 order_id, user, trade_symbol, strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty , webhook_signal,
                 Exchange, Segment, Index_Symbol, order_params, access_token,trade_order_status
             )
         elif response.status_code == 401:
-            logger.error(f"Unauthorized access for user {user}. Reason: {response_data.get('message', 'Unknown')}")
+            logger.error(f"{user} : Unauthorized access for user {user}. Reason: {response_data.get('message', 'Unknown')}")
             status= "Unauthorized"
             message="Unauthorized access"
             res_data=response_data
@@ -172,7 +172,7 @@ def place_upstox_orders(LivePrice,group_service,
             }
         elif response.status_code == 404:
             res_data=response_data.get('errors', 'Unknown')
-            logger.error(f"Resource not Found. Reason: {res_data}")
+            logger.error(f"{user} : Resource not Found. Reason: {res_data}")
             status= "errors"
             message="Resource not Found 404"
             save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, message, 
@@ -188,7 +188,7 @@ def place_upstox_orders(LivePrice,group_service,
             else:
                 message = "Unknown error occurred"
 
-            logger.error(f"Resource not Found. Reason: {message}")
+            logger.error(f"{user} : Resource not Found. Reason: {message}")
             
             status = "errors"
             res_data = response_data if response_data else "Unknown error"
@@ -202,7 +202,7 @@ def place_upstox_orders(LivePrice,group_service,
             return {"data": {"status": "error", "message": message}}
        
         else:
-            logger.error(f"Order placement Failed. Response: {response_data}")
+            logger.error(f"{user} : Order placement Failed. Response: {response_data}")
             status="error"
             message="Order placement Failed"
             res_data=response_data
@@ -211,10 +211,11 @@ def place_upstox_orders(LivePrice,group_service,
             webhook_signal , Exchange, Segment,Index_Symbol ,order_params,broker="upstox")          
             return {"data": { "status": "Failed", "message": "Order placement Failed.",  "error_details": response_data}}
     except Exception as e:
-        logger.exception(f"Unexpected error while placing order for {symbol}: {str(e)}")
+        logger.exception(f"{user} : Unexpected error while placing order for {symbol}: {str(e)}")
         return {
             "data": { "status": "error","message": "Unexpected error occurred.","error_details": str(e)}
             }
+
 def handle_successful_order(LivePrice,group_service,transaction_type,
     order_id, user, trade_symbol, strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal, Exchange,
     Segment, Index_Symbol, order_params, access_token,trade_order_status):
@@ -390,25 +391,29 @@ def handle_successful_order(LivePrice,group_service,transaction_type,
             }
         }
 
-def fetch_instrument_details(symbol_name, exchange="NSE"):
+def fetch_instrument_details(symbol_name, exchange="NSE", user = None):
     try:
+        logger.log(f"{user} : instrument details fetching for the upstox api calling !!")
         # URL of the gzipped JSON containing instruments data
         url = f"https://assets.upstox.com/market-quote/instruments/exchange/{exchange}.json.gz"
 
-        response = requests.get(url)
-        
+        response = requests.get(url)        
         if response.status_code != 200:
+            logger.log(f"{user} : Failed to fetch instruments data. Status : {response}")
             return {"error": f"Failed to fetch instruments data. Status code: {response.status_code}"}
 
         with gzip.GzipFile(fileobj=BytesIO(response.content)) as f:
             instruments_data = json.load(f)
         for instrument in instruments_data:
             if instrument.get("trading_symbol", "").replace(" ", "") == symbol_name:
+                logger.log(f"{user} : instrument_key is get it ?????????????========>>>>>>>")
                 return {"instrument_key": instrument.get("instrument_key")}
+
+        logger.log(f"{user} : No instruments found for symbol {symbol_name} on exchange {exchange}.")
         return {"error": f"No instruments found for symbol {symbol_name} on exchange {exchange}."}
     except Exception as e:
+        logger.log(f"{user} : Exception occurred: {str(e)}")
         return {"error": f"Exception occurred: {str(e)}"}
-
 
 def get_order_details(order_id, access_token):
     try:

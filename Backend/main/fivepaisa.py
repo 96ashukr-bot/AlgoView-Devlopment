@@ -158,10 +158,9 @@ def download_scrip_master(segment, save_path):
     except requests.RequestException as e:
         return {"status": "error", "message": f"Request failed: {str(e)}"}
 
-def get_symbol_scriptcode(symbol, segment, Exch,csv_dir):
+def get_symbol_scriptcode(symbol, segment, Exch, csv_dir, user=None):
     """
     Get the ScripCode for a symbol and exchange. Download or update the CSV if necessary.
-    
     :param symbol: The symbol to search for.
     :param Exch: The exchange (e.g., "N").
     :param segment: The segment for which to fetch the data.
@@ -187,14 +186,18 @@ def get_symbol_scriptcode(symbol, segment, Exch,csv_dir):
         if not filtered_df.empty:
             # Return the first matching record's ScripCode
             scrip_code = filtered_df.iloc[0]['ScripCode']
+            logger.info(f"{user}: filtered_df.empty is not empty in 5 paisa !!")
             return {"status": "success", "ScripCode": scrip_code}
         else:
             # No matching records found
+            logger.info(f"{user}: No records found matching the given symbol and exchange for 5 paisa ??")
             return {"status": "error", "message": "No records found matching the given symbol and exchange."}
     except Exception as e:
+        logger.info(f"{user}: An error occurred for 5 paisa : {e}")
         return {"status": "error", "message": "An error occurred.", "details": str(e)}
 
-def get_order_details(access_token, ClientCode, api_key, RemoteOrderID):
+def get_order_details(access_token, ClientCode, api_key, RemoteOrderID, user=None):
+    logger.info(f"{user} : Get Order Details Api is calling")
     url = "https://Openapi.5paisa.com/VendorsAPI/Service1.svc/V3/OrderBook"
     headers = {
         "Content-Type": "application/json",
@@ -210,26 +213,25 @@ def get_order_details(access_token, ClientCode, api_key, RemoteOrderID):
     }
     try:
         response = requests.post(url, json=order_status_request, headers=headers)
-        print("response...",response)
+        logger.info(f"{user} : Get Order Details Api has responed : {response}")
         if response.status_code == 200:
             response_data = response.json()
             order_details = response_data.get("body", {}).get("OrderBookDetail", [])
-            # Filter the order with the given RemoteOrderID
             filtered_order = next((order for order in order_details if order["RemoteOrderID"] == RemoteOrderID), None)
             if filtered_order:
-                logger.info(f"Order Details Found: {filtered_order}")
+                logger.info(f"{user} : Order Details Found: {filtered_order}")
                 return filtered_order
             else:
-                logger.info(f"No order found with RemoteOrderID: {RemoteOrderID}")
+                logger.info(f"{user} : No order found with RemoteOrderID: {RemoteOrderID}")
                 return None
         else:
-            logger.error(f"Failed to fetch order status. HTTP Status: {response.status_code}, Response: {response.text}")
+            logger.error(f"{user} : Failed to fetch order status. HTTP Status: {response.status_code}, Response: {response.text}")
             return {"status": "error", "message": f"Failed to fetch order status: {response.status_code}"}
     except requests.RequestException as e:
-        logger.error(f"Request failed: {e}")
+        logger.error(f"{user} : Request failed: {e}")
         return {"status": "error", "message": f"Request failed: {str(e)}"}
     except Exception as e:
-        logger.error(f"Unexpected error while fetching order details: {e}")
+        logger.error(f"{user} : Unexpected error while fetching order details: {e}")
         return {"status": "error", "message": "An error occurred while fetching the order details."}
 
 # Function to convert all values to native Python types
@@ -251,11 +253,11 @@ def convert_int64_to_int(obj):
 def place_5paisa_order(LivePrice,group_service,api_key,access_token,trade_symbol,transaction_type, symbol, quantity,strategy,ordertype,
         product_type, price,user, Lots,trade_order_status,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal
         ,Exchange, Segment,Index_Symbol,triggerPrice,trade):
-        
-        print("transaction_type>>",transaction_type,ordertype)
+    
+    try:
         EntryQty=quantity
         smtp_details=CompanySmtpDetails.objects.first()
-        default_from_email=smtp_details.email_host_user if smtp_details else   "no-reply@example.com" 
+        default_from_email=smtp_details.email_host_user if smtp_details else "no-reply@example.com" 
         segment="nse_fo"
         if Exchange=="NSE" or Exchange=="NFO":
             Exch="N"
@@ -271,33 +273,28 @@ def place_5paisa_order(LivePrice,group_service,api_key,access_token,trade_symbol
                     "OrderType": transaction_type,  # Order type (Buy or Sell)
                     "price":0,
                     "Qty": quantity,  # Quantity to trade
-                    # "DisQty": 0,  # Disclosed Quantity
-                    # "IsIntraday": True,  # Intraday flag
                     "AHPlaced": "N",  # After Hours order flag
-                    # "RemoteOrderID": unique_id  # Unique ID for the order
                 }
         csv_dir = os.path.join(os.path.dirname(__file__))
-        tokendata = get_symbol_scriptcode(trade_symbol, segment, Exch,csv_dir)
+        tokendata = get_symbol_scriptcode(trade_symbol, segment, Exch,csv_dir, user)
         if tokendata["status"] == "success":  
+            logger.info(f"{user} : token data status is success now !!")
             token = tokendata.get("ScripCode")
-            print("scritp coddeee",token)
-            # symbol = tokendata.get("Name").str.replace(" ", "")
             if not token:
-                logger.error(f"Missing token or symbol for trading symbol: {trade.symbol}")
+                logger.error(f"{user} : Missing token or symbol for trading symbol: {trade.symbol}")
                 response= {"data":{"status": "error", "message": "token symbole not found"}}
                 return response# continue
         else:
-            message= f"trading symbol is not found for this :{trade.symbol}"
+            message= f"{user} : trading symbol is not found for this :{trade.symbol}"
             res_data="trading symbol token not found"
             save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data,
                                      message, strategy,  Entry_type,Exit_type, Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal , 
                                      Exchange, Segment,Index_Symbol, order_params,broker="5paisa")
                 
-            logger.info(f"No token data found for trading symbol: {trade.symbol}")
+            logger.info(f"{user} :No token data found for trading symbol: {trade.symbol}")
             response= {"data":{"status": "error", "message": "token symbole not found"}}
             return response
         try:
-            # token=35021
             unique_id = str(uuid.uuid4()).replace("-", "")[:15]
             order_params = {
                 "head": {
@@ -316,7 +313,6 @@ def place_5paisa_order(LivePrice,group_service,api_key,access_token,trade_symbol
                     "RemoteOrderID": unique_id  # Unique ID for the order
                 }
             }
-            print("order_params>>>>>>>>>>>",order_params)
             # Set the Authorization header with the Bearer token
             headers = {
                 "Authorization": f"Bearer {access_token}",
@@ -324,32 +320,26 @@ def place_5paisa_order(LivePrice,group_service,api_key,access_token,trade_symbol
             }
             # When preparing your order_params, apply the conversion
             order_params = convert_int64_to_int(order_params)
-            # Place the order via a POST request
+            logger.info(f"{user} :Place order api url is called for the process !!")
             response = requests.post(PLACE_ORDER_URL, headers=headers, json=order_params)
-
-            # Print the response (can be used for debugging)
-            print("Response:", response)
+            logger.info(f"{user} :Place order api has responed : {response}")
 
             if  response.status_code == 200:
                 response=response.json()
-                print("response data of 5Paisa ::::::::",response)
                 order_id=response['body']['BrokerOrderID']
                 message = response.get('body', {}).get('Message', 'No message available')
                 if order_id==0:
                     res_data = response
                     status="Failed"
                     response = {"data": {"status": status}}
-                    print("message......",message)
-                    logger.info(f"Order details for found for {user}. Order ID: : {order_id}")
+                    logger.info(f"{user} : Order details for found for {user}. Order ID: : {order_id}")
                     save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type,Entry_price,Exit_price ,EntryQty,ExitQty,webhook_signal , Exchange, Segment,Index_Symbol,order_params, broker="5paisa")
 
                     return response
                     
                 ClientCode=response['body']['ClientCode']
-                print("ClientCode...",ClientCode)
                 RemoteOrderID=response['body']['RemoteOrderID']
-                order_his=get_order_details(access_token, ClientCode, api_key, RemoteOrderID)
-                print("order history  5Paisa::::::::",order_his)
+                order_his=get_order_details(access_token, ClientCode, api_key, RemoteOrderID, user)
                 if order_his==None:
                     response = {"data": {"status": "Failed"}}
                     logger.info(f"Order details for found for {user}. Order ID: : {order_id}")
@@ -360,8 +350,7 @@ def place_5paisa_order(LivePrice,group_service,api_key,access_token,trade_symbol
                 # Extract the status
                 status = order_his.get('OrderStatus', '').lower()  # Retrieve 'Status' key, fallback to '' if not found
                 res_data=order_his
-                # logger.info(f"history of 5paisa order_____________{order_his}")
-                logger.info(f"status. of 5Paisa.....{status}")
+                logger.info(f"{user} : status. of 5Paisa.....{status}")
                 if status == "Fully Executed" or status == "Partially Executed" or status == "fully executed":
                     order_id=res_data.get ('BrokerOrderId', 0)   
                     trasaction_type=res_data.get('BuySell','')
@@ -377,7 +366,7 @@ def place_5paisa_order(LivePrice,group_service,api_key,access_token,trade_symbol
                         ExitQty= res_data.get ('Qty', 0)
                     status="completed"
                     response = {"data": {"status":status }}
-                    logger.info(f"Order placed successfully for user {user}. Order ID: : {order_id}")
+                    logger.info(f"{user} : Order placed successfully for user {user}. Order ID: : {order_id}")
                     message=f"Order placed successfully for user {user}. Response: {response}"
                     save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type,Entry_price,Exit_price ,EntryQty,ExitQty,webhook_signal , Exchange, Segment,Index_Symbol,order_params, broker="5paisa")
                     return response
@@ -417,7 +406,8 @@ def place_5paisa_order(LivePrice,group_service,api_key,access_token,trade_symbol
                     response = {"data": {"status":status }}
                     logger.info(f"Order is pending  for user {user}. Order ID: {order_id}")
                     save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol,order_params, broker="5paisa")
-
+                
+                logger.info(f"{user} : The final response of the status : {response}")
                 return response
             elif  response.status_code == 401:
                 # error_message = response.get("message", "Unknown error")
@@ -432,5 +422,9 @@ def place_5paisa_order(LivePrice,group_service,api_key,access_token,trade_symbol
                 return response       
       
         except Exception as e:
-            logger.exception(f"Unexpected error while placing order for user {user}: {e}")
+            logger.exception(f"{user}: Unexpected error while placing order: {e}")
             return {"data": {"status": "error", "message": "An unexpected error occurred"}}
+    
+    except Exception as e:
+        logger.exception(f"{user}: Unexpected error while placing order for user : {e}")
+        return {"data": {"status": "error", "message": "An unexpected error occurred"}}

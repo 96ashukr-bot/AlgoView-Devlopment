@@ -593,8 +593,7 @@ def exit_existing_buy_position_zerodha_order(LivePrice,group_service,Type,day,mo
 def exit_existing_buy_position_fyers_order(default_price,LivePrice,group_service,Type,day,month,year,access_token,Api_key,trade_symbol, transaction_type, symbol, quantity,strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type,Entry_price,Exit_price,
                 EntryQty,ExitQty,webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice,trade_order_status): 
     try:
-        print("symbol...",symbol,"user>>>>",user)
-        print("trade_symbol...",trade_symbol,"strategy>>>",strategy)
+        logger.info(f'{user} : exit_existing_buy position_fyers_order is start now !')
         open_buy_order = Tradeorderhistory.objects.filter(
             client=user, 
             Index_Symbol=symbol,
@@ -604,7 +603,7 @@ def exit_existing_buy_position_fyers_order(default_price,LivePrice,group_service
             order_id__gt=0
         ).filter(Q(order_status="rejected")| Q(order_status="completed") |Q(order_status="complete")| Q(order_status="open")
                 |Q(order_status="pending")| Q(order_status="Transit")).last()
-        print("open_buy_order fyers order >>>>>>>",open_buy_order)
+
         if not open_buy_order:
             message = f"No open BUY position found for {symbol} for user {user}."
             logger.info(message)
@@ -621,7 +620,7 @@ def exit_existing_buy_position_fyers_order(default_price,LivePrice,group_service
             buy_order_close_status=open_buy_order.trade_order_status
             
             if buy_order_close_status=="CLOSE":
-                message=f"Existing BUY order already closed for {Index_Symbol} for user {user}."
+                message=f"{user} : Existing BUY order already closed for {Index_Symbol}."
                 order_id=0
                 status="Failed"
                 order_params={}
@@ -629,25 +628,23 @@ def exit_existing_buy_position_fyers_order(default_price,LivePrice,group_service
                 logger.info(f"{message}")
                 save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, old_trade_symbol, order_id, status, res_data, message,strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
                 webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="fyers")
-                print(">>>>>>>>")
                 return {"data": {"status": "error", "message": f"Existing BUY order already closed for {old_trade_symbol} for user {user}"}}
 
-            print("price_of_order>>>",int(price_of_order))
             symbol=symbol.upper()
             trade_symbol = f"{symbol}{year}{month}{day}{default_price}{Type}"
-            print("trade_symbol fyers order  >>>>",trade_symbol)
+
             if trade_symbol != old_trade_symbol:
-                msg=f"sell request not matching with existing order :{old_trade_symbol} new symbol: {trade_symbol} client: {user}"
+                msg=f"{user} : sell request not matching with existing order :{old_trade_symbol} new symbol: {trade_symbol}"
                 logger.info(f"{msg}")  
                 return {"data": {"status": "error", "message": msg}}
-            logger.info(f"Previous order {oid} entry price: {Entry_price}. Found open BUY order for {symbol}. Exiting position. Order ID: {oid}")
+            logger.info(f"{user} : Previous order {oid} entry price: {Entry_price}. Found open BUY order for {symbol}. Exiting position. Order ID: {oid}")
             try:
                 sell_response = place_fyers_orders(LivePrice,group_service,access_token,Api_key,trade_symbol, transaction_type, symbol, quantity,
                     strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type,Entry_price,Exit_price,
                     EntryQty,ExitQty,webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice,trade_order_status)
                 
             except Exception as e:
-                logger.error(f"Error placing sell order: {str(e)}")
+                logger.error(f"{user} : Error placing sell order: {str(e)}")
                 return {"data": {"status": "error", "message": f"Error placing sell order: {str(e)}"}}
 
             status_value = sell_response.get("data", {}).get("status")
@@ -656,27 +653,23 @@ def exit_existing_buy_position_fyers_order(default_price,LivePrice,group_service
                     trade_order = Tradeorderhistory.objects.get(order_id=oid)
                     trade_order.trade_order_status = "CLOSE"
                     trade_order.save()
-                    logger.info(f"Existing BUY position successfully exited for {symbol}.")
+                    logger.info(f"{user} : Existing BUY position successfully exited for {symbol}.")
                     return sell_response
                 except Exception as e:
-                    logger.error(f"Error updating trade order status: {str(e)}")
+                    logger.error(f"{user} : Error updating trade order status: {str(e)}")
                     return {"data": {"status": "error", "message": "Error updating trade order status."}}
 
             else:
-                logger.error(f"Failed to exit existing BUY position for {symbol}. Response: {sell_response}")
+                logger.error(f"{user} : Failed to exit existing BUY position for {symbol}. Response: {sell_response}")
                 return {"data": {"status": "error", "message": "Failed to exit existing position."}}
         else:
-            logger.info(f"No open BUY position found for {symbol} for user {user}.")
+            logger.info(f"{user} : No open BUY position found for {symbol} for user {user}.")
             message=f"No open BUY position found for {symbol} for user {user}."
             
             return {"data": {"status": "error", "message": "No open BUY position found."}} 
     except Exception as e:
-        logger.error(f"Unexpected error in exit_existing_buy_position_DhanOrder: {str(e)}")
+        logger.error(f"{user} : Unexpected error in exit_existing_buy_position_DhanOrder: {str(e)}")
         return {"data": {"status": "error", "message": f"Unexpected error: {str(e)}"}}
-
- 
-
-
 
 from django.utils.timezone import now
 from django.shortcuts import redirect

@@ -13,6 +13,8 @@
 from celery import shared_task
 from django.core.mail import send_mail
 from django.conf import settings
+import logging
+logger = logging.getLogger('main')
 
 from main.models import *
 from main.utils import get_smtp_connection
@@ -171,6 +173,7 @@ def send_trade_email_async(email, from_email, user_name, status, reason):
     smtp_connection = get_smtp_connection()
     if not smtp_connection:
         print("SMTP connection could not be established!")
+        logger.info(f"{user_name} : SMTP connection could not be established")
         return
     if isinstance(email, list):
         email = email[0]  
@@ -194,6 +197,7 @@ def send_trade_email_async(email, from_email, user_name, status, reason):
     email_message = EmailMultiAlternatives(subject, "", f"{company_sender_name} <{from_email}>", [email],connection=smtp_connection)
     email_message.attach_alternative(html_message, "text/html")
     email_message.send()
+    logger.info(f"{user_name} : Email has been sent !")
     
 @shared_task
 def resend_otp_email_async(user_email, otp_code):
