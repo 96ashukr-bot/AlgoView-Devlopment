@@ -34,7 +34,7 @@ def place_Angle_order(broker_details,LivePrice,group_service,api_key,demate_user
         if tokendata["status"] == "success":  
             token = tokendata.get("token")
             token_symbol = tokendata.get("symbol")
-
+            logger.info(f"{user} : Get Token Details is successed : {token_symbol}")
             if not token or not token_symbol:
                 logger.error(f"{user} : Missing token or symbol for trading symbol: {usertrade.symbol}")
                 response= {"data":{"status": "error", "message": "token symbole not found"}}
@@ -77,7 +77,6 @@ def place_Angle_order(broker_details,LivePrice,group_service,api_key,demate_user
             "quantity": quantity,
         }
         payload = json.dumps(order_params)
-        print("payload>>>",payload)        
         logger.info(f"{user} : order_params angle one...........{order_params}")
         api_key = api_key
         username = demate_user_name
@@ -377,7 +376,7 @@ def get_token_details(trading_symbol, user=None):
         response = requests.get(url)
         response.raise_for_status()  
         data = response.json() 
-        logger.info(f"{user} : trading_symbol of Angle is ::::::::::::::{trading_symbol}")
+        logger.info(f"{user} : trading_symbol of Angle api responce is ::::::::::::::{data}")
         for item in data:
             if item.get("symbol") == trading_symbol:
                 logger.info(f"{user} : csv token from master data api>>> {item}")
