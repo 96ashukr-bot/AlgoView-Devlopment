@@ -393,26 +393,26 @@ def handle_successful_order(LivePrice,group_service,transaction_type,
 
 def fetch_instrument_details(symbol_name, exchange="NSE", user = None):
     try:
-        logger.log(f"{user} : instrument details fetching for the upstox api calling !!")
+        logger.info(f"{user} : instrument details fetching for the upstox api calling !!")
         # URL of the gzipped JSON containing instruments data
         url = f"https://assets.upstox.com/market-quote/instruments/exchange/{exchange}.json.gz"
 
         response = requests.get(url)        
         if response.status_code != 200:
-            logger.log(f"{user} : Failed to fetch instruments data. Status : {response}")
+            logger.info(f"{user} : Failed to fetch instruments data. Status : {response}")
             return {"error": f"Failed to fetch instruments data. Status code: {response.status_code}"}
 
         with gzip.GzipFile(fileobj=BytesIO(response.content)) as f:
             instruments_data = json.load(f)
         for instrument in instruments_data:
             if instrument.get("trading_symbol", "").replace(" ", "") == symbol_name:
-                logger.log(f"{user} : instrument_key is get it ?????????????========>>>>>>>")
+                logger.info(f"{user} : instrument_key is get it ?????????????========>>>>>>>")
                 return {"instrument_key": instrument.get("instrument_key")}
 
-        logger.log(f"{user} : No instruments found for symbol {symbol_name} on exchange {exchange}.")
+        logger.info(f"{user} : No instruments found for symbol {symbol_name} on exchange {exchange}.")
         return {"error": f"No instruments found for symbol {symbol_name} on exchange {exchange}."}
     except Exception as e:
-        logger.log(f"{user} : Exception occurred: {str(e)}")
+        logger.info(f"{user} : Exception occurred: {str(e)}")
         return {"error": f"Exception occurred: {str(e)}"}
 
 def get_order_details(order_id, access_token):

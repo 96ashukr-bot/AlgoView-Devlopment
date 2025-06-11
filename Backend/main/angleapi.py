@@ -30,7 +30,7 @@ def place_Angle_order(broker_details,LivePrice,group_service,api_key,demate_user
         EntryQty=quantity
         order_id=0
         status="Failed"
-        tokendata = get_token_details(tradingsymbol) 
+        tokendata = get_token_details(tradingsymbol, user) 
         if tokendata["status"] == "success":  
             token = tokendata.get("token")
             token_symbol = tokendata.get("symbol")
@@ -369,29 +369,32 @@ def get_token_detailsdict(trading_symbol):
     return {"status": "Failed", "message": f"No details found for trading symbol: {trading_symbol}"}
 
 
-def get_token_details(trading_symbol):
+def get_token_details(trading_symbol, user=None):
     url = "https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json"
     
     try:
+        logger.info(f"{user} : Get token details api is calling now !!!")
         response = requests.get(url)
         response.raise_for_status()  
         data = response.json() 
-        logger.info(f"trading_symbol of Angle is ::::::::::::::{trading_symbol}")
+        logger.info(f"{user} : trading_symbol of Angle is ::::::::::::::{trading_symbol}")
         for item in data:
             if item.get("symbol") == trading_symbol:
-                print("csv token from master data api>>>",item)
-                # Return the token and any other details
+                logger.info(f"{user} : csv token from master data api>>> {item}")
                 return {
                     "status": "success", 
                     "token": item.get("token"),
                     "symbol": item.get("symbol"),
                     "expiry": item.get("expiry"),              
                 }
-        return {"status": "Failed",  # Indicate that the symbol was not found
+
+        logger.info(f"{user} : No details found for trading symbol: {trading_symbol}")
+        return {"status": "Failed",
             "message": f"No details found for trading symbol: {trading_symbol}"}
     except requests.exceptions.RequestException as e:
-        print(f"An error occurred while fetching data: {str(e)}") 
+        logger.info(f"{user} : An error occurred while fetching data: {str(e)}")
         return {"status": "Failed", "message": f"An error occurred while fetching data:  {str(e)}"}
+
 def save_data_to_file(self, data, filename="symbol_data.json"):
     """
     Save JSON data to a file in the specified directory.
@@ -592,7 +595,6 @@ def login_userss(username, password, token_secret, smartApi):
         logger.error("Login request failed: %s", e)
         response["message"] = f"Exception occurred: {str(e)}"
         return response
-
 
 from django.core.cache import cache
 import time
