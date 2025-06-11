@@ -36,15 +36,6 @@ class UserManager(BaseUserManager):
         if not email:
             raise ValueError(_('The Email field must be set'))
         email = self.normalize_email(email)
-        # # Ensure role is a Role instance and is active
-        # role = extra_fields.get('role')
-        # if isinstance(role, int):
-        #     role = Role.objects.get(id=role)
-        # elif not isinstance(role, Role):
-        #     raise ValueError(_('Invalid Role instance'))
-
-        # if role and role.status != Role.ACTIVE:
-        #     raise ValueError(_('Only active roles can be assigned to users'))
 
         user = self.model(email=email, firstName=firstName, lastName=lastName, phoneNumber=phoneNumber, **extra_fields)
         user.set_password(password)

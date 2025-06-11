@@ -283,7 +283,7 @@ def get_instruments_symbol_from_csv(compact_symbol_details, user=None):
             symbol_details_index = headers.index("Symbol Details")
             symbol_ticker_index = headers.index("Symbol Ticker")
         except ValueError:
-            print(" Required columns not found in CSV")
+            logger.info(f"{user} : Required columns not found in CSV.")
             return None
 
         # Match the compacted "Symbol Details"

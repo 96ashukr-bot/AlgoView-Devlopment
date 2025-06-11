@@ -119,7 +119,7 @@ def place_Angle_order(broker_details,LivePrice,group_service,api_key,demate_user
 
             try:
                 logger.info(f"Attempting to place order for {user}")
-                response = place_order(access_token, payload, api_key)
+                response = place_order(access_token, payload, api_key, user)
                 logger.info(f"{user} : API Response:")
             except Exception as e:
                 logger.error(f"Order placement failed for {user}: {str(e)}")
@@ -418,11 +418,12 @@ import json
 # Configure logging
 logger = logging.getLogger(__name__)
 
-def place_order(access_token, payload, api_key):
+def place_order(access_token, payload, api_key, user=None):
     """
     Place an order using the AngelOne API.
     """
     try:
+        logger.info(f'{user} : Place an order using the AngelOne API')
         conn = http.client.HTTPSConnection("apiconnect.angelone.in")
         headers = {
             'Content-Type': 'application/json',
@@ -438,15 +439,16 @@ def place_order(access_token, payload, api_key):
         res = conn.getresponse()
         data = res.read()
         response_data = json.loads(data.decode("utf-8"))
+        logger.info(f'{user} : Resoponse form the AngelOne API: {response_data}')
 
         if response_data.get('status') == 'success':
-            logger.info("Order placed successfully.")
+            logger.info(f"{user} : Order placed successfully.")
             return response_data
         else:
-            logger.error(f"Order placement failed: {response_data}")
+            logger.error(f"{user} : Order placement failed: {response_data}")
             return response_data
     except Exception as e:
-        logger.error(f"Exception in place_order: {e}")
+        logger.error(f"{user} : Exception in place_order: {e}")
         return None
 
 def get_order_details(unique_order_id, api_key, auth_token, user= None):
@@ -688,7 +690,8 @@ class SymbolExpiryDateListView(APIView):
                                 parsed_date = datetime.strptime(expiry, '%d%b%Y')
                                 expiry_dates.append(parsed_date.strftime('%d%b%Y'))
                             except ValueError:
-                                continue  
+                                logger.info(f'ValueError 1. ------------------------+++++++++++++++++++>>>>>>>>>>>>>>>>>>>>>>>>>>>>>XXXXXXXXXXXXXXXXXXXXXXXXXXX')
+                                continue
                         writer.writerow([entry.get('token', ''), entry.get('symbol', ''),
                                          entry.get('name', ''), entry.get('exch_seg', ''),
                                          expiry, entry.get('instrumenttype', '')])
@@ -787,6 +790,7 @@ class SymbolExpiryDateListViewsssss(APIView):
                                 parsed_date = datetime.strptime(expiry, '%d%b%Y')
                                 expiry_dates.append(parsed_date.strftime('%d%b%Y'))
                             except ValueError:
+                                logger.info(f'ValueError 2. ------------------------+++++++++++++++++++>>>>>>>>>>>>>>>>>>>>>>>>>>>>>XXXXXXXXXXXXXXXXXXXXXXXXXXX')
                                 continue  
                         writer.writerow([entry.get('token', ''), entry.get('symbol', ''),
                                          entry.get('name', ''), entry.get('exch_seg', ''),

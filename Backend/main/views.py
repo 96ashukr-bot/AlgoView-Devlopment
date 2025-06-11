@@ -3361,40 +3361,44 @@ class MyPlaceOrderWebhookView(APIView):
             # Write trade start entry
             writer.writerow([unique_trade_id, user_id, user_name, symbol, start_time, None])
 
+    def update_trade_status_in_csv(self, unique_trade_id, user=None):
+        try:
+            log_file_path = os.path.join('logs', 'missed_client_log.csv')
 
-    def update_trade_status_in_csv(self, unique_trade_id, new_status='Finish'):
-        log_file_path = os.path.join('logs', 'missed_client_log.csv')
+            if not os.path.isfile(log_file_path):
+                logger.error(f"{user} : CSV file not found: {log_file_path}")
+            updated_rows = []
+            found = False
 
-        if not os.path.isfile(log_file_path):
-            raise FileNotFoundError(f"CSV file not found: {log_file_path}")
+            # Read all rows
+            with open(log_file_path, mode='r', newline='') as file:
+                reader = csv.reader(file)
+                headers = next(reader)
+                for row in reader:
+                    if row[0] == unique_trade_id:
+                        row[-1] = 'Finish'
+                        found = True
+                    updated_rows.append(row)
 
-        updated_rows = []
-        found = False
+            if not found:
+                logger.error(f"{user} : Trade ID {unique_trade_id} not found in CSV.")
 
-        # Read all rows
-        with open(log_file_path, mode='r', newline='') as file:
-            reader = csv.reader(file)
-            headers = next(reader)
-            for row in reader:
-                if row[0] == unique_trade_id:
-                    row[-1] = new_status
-                    found = True
-                updated_rows.append(row)
-
-        if not found:
-            raise ValueError(f"Trade ID {unique_trade_id} not found in CSV.")
-
-        # Write all rows back
-        with open(log_file_path, mode='w', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow(headers)
-            writer.writerows(updated_rows)
-
+            # Write all rows back
+            with open(log_file_path, mode='w', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow(headers)
+                writer.writerows(updated_rows)
+        except:
+            logger.error(f"{user} : Error from Update trade status from csv function!!!")
 
     def generate_unique_trade_id(self, user_id, symbol, strategy_id, exchange, date_str):
-        raw = f"{user_id}-{symbol}-{strategy_id}-{exchange}-{date_str}"
-        unique_id = hashlib.sha256(raw.encode()).hexdigest()
-        return unique_id
+        try:
+            raw = f"{user_id}-{symbol}-{strategy_id}-{exchange}-{date_str}"
+            unique_id = hashlib.sha256(raw.encode()).hexdigest()
+            return unique_id
+        except:
+            unique_id = f'{user_id} No any id present'
+            return unique_id
 
     def handle_single_trade(self, trade, index, symbols, exch_seg, default_price, strategy_id,
                         alert_data, buy_sell_type, buy_sell, default_ordertype, limitPrice,
@@ -3590,7 +3594,7 @@ class MyPlaceOrderWebhookView(APIView):
                         
                 # Check order response and log or handle failures
                 logger.info(f"{user} : final order repsone :::::::::::::::::::::{order_response}\n")
-                self.update_trade_status_in_csv(unique_trade_id)
+                self.update_trade_status_in_csv(unique_trade_id, user)
 
                 print(" order_response['data']['status']:::::::::::", order_response['data']['status'])
                 if not order_response['data']['status']:
