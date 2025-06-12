@@ -88,7 +88,7 @@ def callback_upstox(request):
 def place_upstox_orders(LivePrice,group_service,
     access_token, trade_symbol, transaction_type, symbol, quantity, strategy, ordertype,
     product_type, price, user, Lots, Entry_type, Exit_type,Entry_price,Exit_price, EntryQty,ExitQty,webhook_signal, Exchange,
-    Segment, Index_Symbol, triggerPrice,trade_order_status):
+    Segment, Index_Symbol, triggerPrice,trade_order_status, history_id):
     try:
         EntryQty=quantity
         smtp_details=CompanySmtpDetails.objects.first()
@@ -120,7 +120,7 @@ def place_upstox_orders(LivePrice,group_service,
                 trade_symbol=symbol
             save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, message,  
             strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,
-            webhook_signal , Exchange, Segment,Index_Symbol ,order_params,broker="upstox")
+            webhook_signal , Exchange, Segment,Index_Symbol ,order_params,broker="upstox", history_id=history_id)
             return {
                 "data": {
                     "status": "error", "message": "Instrument details not found.",  "error_details": result,}
@@ -157,7 +157,7 @@ def place_upstox_orders(LivePrice,group_service,
             logger.info(f"{user} : Order placed successfully get the Order details for Order ID: {order_id}")
             return handle_successful_order(LivePrice,group_service,transaction_type,
                 order_id, user, trade_symbol, strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty , webhook_signal,
-                Exchange, Segment, Index_Symbol, order_params, access_token,trade_order_status
+                Exchange, Segment, Index_Symbol, order_params, access_token,trade_order_status, history_id
             )
         elif response.status_code == 401:
             logger.error(f"{user} : Unauthorized access for user {user}. Reason: {response_data.get('message', 'Unknown')}")
@@ -166,7 +166,7 @@ def place_upstox_orders(LivePrice,group_service,
             res_data=response_data
             save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, message,  
             strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,
-            webhook_signal , Exchange, Segment,Index_Symbol ,order_params,broker="upstox")
+            webhook_signal , Exchange, Segment,Index_Symbol ,order_params,broker="upstox", history_id=history_id)
             return {
                 "data": {  "status": "Unauthorized", "message": "Unauthorized access. Please check your token."}
             }
@@ -177,7 +177,7 @@ def place_upstox_orders(LivePrice,group_service,
             message="Resource not Found 404"
             save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, message, 
             strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,
-            webhook_signal , Exchange, Segment,Index_Symbol ,order_params,broker="upstox")
+            webhook_signal , Exchange, Segment,Index_Symbol ,order_params,broker="upstox", history_id=history_id)
             return { "data": {"status": "error","message":res_data}}
         elif response.status_code == 400:
             errors = response_data.get("errors", [])
@@ -196,7 +196,7 @@ def place_upstox_orders(LivePrice,group_service,
             save_trade_order_history(
                 LivePrice, group_service,transaction_type, trade_order_status, user, trade_symbol, order_id,
                 status, res_data, message, strategy, Entry_type, Exit_type, Entry_price, Exit_price,
-                EntryQty, ExitQty, webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="upstox"
+                EntryQty, ExitQty, webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="upstox", history_id=history_id
             )
 
             return {"data": {"status": "error", "message": message}}
@@ -208,7 +208,7 @@ def place_upstox_orders(LivePrice,group_service,
             res_data=response_data
             save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, message, 
             strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,
-            webhook_signal , Exchange, Segment,Index_Symbol ,order_params,broker="upstox")          
+            webhook_signal , Exchange, Segment,Index_Symbol ,order_params,broker="upstox", history_id=history_id)          
             return {"data": { "status": "Failed", "message": "Order placement Failed.",  "error_details": response_data}}
     except Exception as e:
         logger.exception(f"{user} : Unexpected error while placing order for {symbol}: {str(e)}")
@@ -218,7 +218,7 @@ def place_upstox_orders(LivePrice,group_service,
 
 def handle_successful_order(LivePrice,group_service,transaction_type,
     order_id, user, trade_symbol, strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal, Exchange,
-    Segment, Index_Symbol, order_params, access_token,trade_order_status):
+    Segment, Index_Symbol, order_params, access_token,trade_order_status, history_id):
     try:
         EntryQty=order_params['quantity']
         order_details = get_order_details(order_id, access_token)
@@ -245,7 +245,7 @@ def handle_successful_order(LivePrice,group_service,transaction_type,
             logger.exception(f"Error while fetching order details for Order ID {order_id}:")
             save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, rejection_message, 
             strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, 
-            Segment,Index_Symbol ,order_params , broker="Upstox")
+            Segment,Index_Symbol ,order_params , broker="Upstox", history_id=history_id)
             return {
                 "data": {
                     "status": "error",
@@ -282,7 +282,7 @@ def handle_successful_order(LivePrice,group_service,transaction_type,
             status=order_details['data']['status'] 
             save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, message,  
                                      strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,
-                                     webhook_signal , Exchange, Segment,Index_Symbol ,order_params,broker="upstox")
+                                     webhook_signal , Exchange, Segment,Index_Symbol ,order_params,broker="upstox", history_id=history_id)
             response={"data": {"status": "completed","message": "Order placed and details saved successfully."}}
             # from_email = default_from_email,
             # send_trade_email_async.delay(user.email, from_email,user.firstName,status, message)
@@ -307,7 +307,7 @@ def handle_successful_order(LivePrice,group_service,transaction_type,
 
             save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, rejection_message, 
             strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, 
-            Segment,Index_Symbol ,order_params , broker="Upstox")
+            Segment,Index_Symbol ,order_params , broker="Upstox", history_id=history_id)
             logger.info(f"Order Rejected reason!!!::{rejection_message} Order ID: {order_id}")
             # from_email = default_from_email,
             # Send rejection email
@@ -336,7 +336,7 @@ def handle_successful_order(LivePrice,group_service,transaction_type,
             status="complete"
             save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, rejection_message, 
             strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, 
-            Segment,Index_Symbol ,order_params , broker="Upstox")
+            Segment,Index_Symbol ,order_params , broker="Upstox", history_id=history_id)
             logger.info(f"Order  active and open in the market reason!!!::{rejection_message} Order ID: {order_id}")
             response = {"data": {"status": status,"message": "Order is Open "}}
             return response
@@ -360,7 +360,7 @@ def handle_successful_order(LivePrice,group_service,transaction_type,
 
             save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, rejection_message, 
             strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, 
-            Segment,Index_Symbol ,order_params , broker="Upstox")
+            Segment,Index_Symbol ,order_params , broker="Upstox", history_id=history_id)
             logger.info(f"Order  active and open in the market reason!!!::{rejection_message} Order ID: {order_id}")
             response = {"data": {"status": status,"message": "Order is Open "}}
             return response
@@ -371,7 +371,7 @@ def handle_successful_order(LivePrice,group_service,transaction_type,
             logger.warning(f"Failed to fetch order details for Order ID {order_id} with status {status} broker is :upstox")
             save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, rejection_message, 
             strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, 
-            Segment,Index_Symbol ,order_params , broker="Upstox")
+            Segment,Index_Symbol ,order_params , broker="Upstox", history_id=history_id)
             return {"data": {"status": "Failed","message": "Order placed but details could not be fetched."}}
                            
     except Exception as e:
@@ -382,7 +382,7 @@ def handle_successful_order(LivePrice,group_service,transaction_type,
         logger.exception(f"Error while fetching order details for Order ID {order_id}: {str(e)}")
         save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, rejection_message, 
         strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, 
-        Segment,Index_Symbol ,order_params , broker="Upstox")
+        Segment,Index_Symbol ,order_params , broker="Upstox", history_id=history_id)
         return {
             "data": {
                 "status": "error",

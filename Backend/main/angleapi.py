@@ -21,7 +21,7 @@ from main.models import CompanySmtpDetails, Tradeorderhistory
 from main.tasks import send_trade_email_async
 logger = logging.getLogger('main')
 from django.db.models import Q
-def place_Angle_order(broker_details,LivePrice,group_service,api_key,demate_user_name,totp,angle_pass,usertrade,tradingsymbol, quantity, product_type, transactiontype, 
+def place_Angle_order(history_id, broker_details,LivePrice,group_service,api_key,demate_user_name,totp,angle_pass,usertrade,tradingsymbol, quantity, product_type, transactiontype, 
         price, ordertype,lot_size, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal, Exchange,trade_order_status,
         Segment,Index_Symbol ,user=None, strategy=None):
     
@@ -45,7 +45,7 @@ def place_Angle_order(broker_details,LivePrice,group_service,api_key,demate_user
             order_params={}
             save_trade_order_history(LivePrice,group_service,transactiontype,trade_order_status,user,tradingsymbol, order_id, status, res_data,
                                      message, strategy,  Entry_type,Exit_type, Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal , 
-                                     Exchange, Segment,Index_Symbol, order_params,broker="Angle One")
+                                     Exchange, Segment,Index_Symbol, order_params,broker="Angle One", history_id=history_id)
                 
             logger.info(f"{user} : No token data found for trading symbol: {usertrade.symbol}")
             response= {"data":{"status": "error", "message": "token symbole not found"}}
@@ -98,7 +98,7 @@ def place_Angle_order(broker_details,LivePrice,group_service,api_key,demate_user
                     save_trade_order_history(LivePrice, group_service, transactiontype,
                         trade_order_status, user, tradingsymbol, order_id, status, res_data, message,
                         strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
-                        webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="Angle One"
+                        webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="Angle One", history_id=history_id
                     )
                     return {"data": {"status": "Failed", "message": error_message}}
                 
@@ -110,7 +110,7 @@ def place_Angle_order(broker_details,LivePrice,group_service,api_key,demate_user
                 save_trade_order_history(LivePrice,group_service,transactiontype,
                     trade_order_status, user, tradingsymbol, order_id, status, res_data, message,
                     strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
-                    webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="Angle One"
+                    webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="Angle One", history_id=history_id
                 )
                 return {"data": {"status": "Failed", "message": f"Exception: {message}"}}
             logger.info(f"{user} : Login successful, placing order...")
@@ -124,7 +124,7 @@ def place_Angle_order(broker_details,LivePrice,group_service,api_key,demate_user
                 logger.error(f"Order placement failed for {user}: {str(e)}")
                 message = f"somthing wrong or token is invalid"
                 res_data="None response from API"
-                save_trade_order_history(LivePrice,group_service,transactiontype,trade_order_status,user,tradingsymbol, order_id, status, res_data, message,  strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol , order_params,broker="Angle One")
+                save_trade_order_history(LivePrice,group_service,transactiontype,trade_order_status,user,tradingsymbol, order_id, status, res_data, message,  strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol , order_params,broker="Angle One", history_id=history_id)
         
                 return {"data": {"status": "Failed", "message": message}}
             # response = smartApi.placeOrderFullResponse(order_params)
@@ -133,13 +133,13 @@ def place_Angle_order(broker_details,LivePrice,group_service,api_key,demate_user
                 logger.error(f"{user} : Received None response from API.")
                 message = f"somthing wrong or token is invalid"
                 res_data="None response from API"
-                save_trade_order_history(LivePrice,group_service,transactiontype,trade_order_status,user,tradingsymbol, order_id, status, res_data, message,  strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol , order_params,broker="Angle One")
+                save_trade_order_history(LivePrice,group_service,transactiontype,trade_order_status,user,tradingsymbol, order_id, status, res_data, message,  strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol , order_params,broker="Angle One", history_id=history_id)
                 return {"data": {"status": "Failed", "message": message}}
             data = response.get('data')
             if not data or not isinstance(data, dict):
                 logger.error(f"{user} : Invalid response structure from Angle One: {response}")
                 res_data="None response from API"
-                save_trade_order_history(LivePrice,group_service,transactiontype,trade_order_status,user,tradingsymbol, order_id, status, res_data, message,  strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol , order_params,broker="Angle One")
+                save_trade_order_history(LivePrice,group_service,transactiontype,trade_order_status,user,tradingsymbol, order_id, status, res_data, message,  strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol , order_params,broker="Angle One", history_id=history_id)
                 return {"data": {"status": "Failed", "message": "Invalid response structure from API"}}
 
             uniqueorderid = data.get('uniqueorderid') 
@@ -156,7 +156,7 @@ def place_Angle_order(broker_details,LivePrice,group_service,api_key,demate_user
                 save_trade_order_history(LivePrice,group_service,transactiontype,
                     trade_order_status, user, tradingsymbol, order_id, status, res_data, message,
                     strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
-                    webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="Angle One"
+                    webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="Angle One", history_id=history_id
                 )
                 return {"data": {"status": "Failed", "message": "Failed to retrieve order details."}}
 
@@ -186,7 +186,7 @@ def place_Angle_order(broker_details,LivePrice,group_service,api_key,demate_user
                 message = responsedetails['data'].get('text', 'completed successfully ')
                 status=responsedetails['data'].get('status', 'completed')
                 status="completed"
-                save_trade_order_history(LivePrice,group_service,transactiontype,trade_order_status,user,tradingsymbol, order_id, status, res_data, message,   strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol ,order_params,broker="Angle One")
+                save_trade_order_history(LivePrice,group_service,transactiontype,trade_order_status,user,tradingsymbol, order_id, status, res_data, message,   strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol ,order_params,broker="Angle One", history_id=history_id)
                 response = {"data": {"status": status,"message":message}}
                 return response
             
@@ -212,7 +212,7 @@ def place_Angle_order(broker_details,LivePrice,group_service,api_key,demate_user
                 status=responsedetails['data'].get('status', 'pending')
                 status="complete"
                 logger.info(f"{user} : Order is pending or in process reason is !!!::{message}")
-                save_trade_order_history(LivePrice,group_service,transactiontype,trade_order_status,user,tradingsymbol, order_id, status, res_data, message,  strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol ,order_params, broker="Angle One")
+                save_trade_order_history(LivePrice,group_service,transactiontype,trade_order_status,user,tradingsymbol, order_id, status, res_data, message,  strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol ,order_params, broker="Angle One", history_id=history_id)
                 response = {"data": {"status": status,"message":message}}
                 return response
             
@@ -237,7 +237,7 @@ def place_Angle_order(broker_details,LivePrice,group_service,api_key,demate_user
                 from_email = default_from_email,
                 # Send rejection email
                 print("user.firstName>>>>>",user.firstName)
-                save_trade_order_history(LivePrice,group_service,transactiontype,trade_order_status,user,tradingsymbol, order_id, status, res_data, rejection_message,  strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol ,order_params ,broker="Angle One")
+                save_trade_order_history(LivePrice,group_service,transactiontype,trade_order_status,user,tradingsymbol, order_id, status, res_data, rejection_message,  strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol ,order_params ,broker="Angle One", history_id=history_id)
                 response = {"data": {"status": status,"message":message}}
                 return response
                 
@@ -246,7 +246,7 @@ def place_Angle_order(broker_details,LivePrice,group_service,api_key,demate_user
                 status=responsedetails['data'].get('status', 'Failed')
                 order_id=responsedetails['data']['orderid']     
                 logger.info(f"{user} : Order Rejected reason!!!::{rejection_message} Order ID: {order_id}")
-                save_trade_order_history(LivePrice,group_service,transactiontype,trade_order_status,user,tradingsymbol, order_id, status, res_data, rejection_message,  strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol ,order_params ,broker="Angle One")
+                save_trade_order_history(LivePrice,group_service,transactiontype,trade_order_status,user,tradingsymbol, order_id, status, res_data, rejection_message,  strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol ,order_params ,broker="Angle One", history_id=history_id)
                 response = {"data": {"status": status,"message":message}}
                 return response
         except Exception as e:
@@ -813,7 +813,7 @@ def exit_existing_buy_position_angleone(
     client_broker,LivePrice,group_service, Type, day, month, year, api_key, demate_user_name, totp, angle_pass,
     usertrade,tradingsymbol, quantity, product_type, transactiontype, price, ordertype, lot_size,
     Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty, webhook_signal,
-    Exchange, trade_order_status, Segment, Index_Symbol, user, strategy
+    Exchange, trade_order_status, Segment, Index_Symbol, user, strategy, history_id
 ):
     try:
         print("symbol...", Index_Symbol, "user>>>>", user,"group_service>>>",group_service)
@@ -860,7 +860,7 @@ def exit_existing_buy_position_angleone(
                 logger.info(f"{message}")
                 save_trade_order_history(LivePrice,group_service,transactiontype,trade_order_status,user,old_trade_symbol, order_id, status, res_data,
                     message, strategy,  Entry_type,Exit_type, Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal , 
-                    Exchange, Segment,Index_Symbol, order_params,broker="Angle One")
+                    Exchange, Segment,Index_Symbol, order_params,broker="Angle One", history_id=history_id)
                 return {"data": {"status": "error", "message": f"Existing BUY order already closed for {old_trade_symbol} for user {user}"}}
             print("buy last order id is >>>>",oid," buy order Price>>>>",LivePrice)
             try:
@@ -881,7 +881,7 @@ def exit_existing_buy_position_angleone(
                 f"Exiting position. Order ID: {open_buy_order.order_id}"
             )
             sell_response = place_Angle_order(
-                client_broker,LivePrice,group_service, api_key, demate_user_name, totp, angle_pass, usertrade, trading_symbol,
+                history_id, client_broker,LivePrice,group_service, api_key, demate_user_name, totp, angle_pass, usertrade, trading_symbol,
                 quantity, product_type, transactiontype, price, ordertype, lot_size,
                 Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
                 webhook_signal, Exchange, trade_order_status, Segment, Index_Symbol,

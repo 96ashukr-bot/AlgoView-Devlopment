@@ -10,7 +10,7 @@ from fyers_apiv3 import fyersModel
 
 def place_fyers_orders(LivePrice,group_service,access_token, Api_key, trade_symbol, transaction_type, symbol, quantity,
     strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type, Entry_price, Exit_price, 
-    EntryQty, ExitQty, webhook_signal, Exchange, Segment,Index_Symbol, triggerPrice, trade_order_status):
+    EntryQty, ExitQty, webhook_signal, Exchange, Segment,Index_Symbol, triggerPrice, trade_order_status, history_id):
     logger.info(f"{user} : place_fyers_orders started")
     try:
         response={"data":{"status": "error", "message": "not return any response"}}
@@ -61,7 +61,7 @@ def place_fyers_orders(LivePrice,group_service,access_token, Api_key, trade_symb
             response={"data": {"status": status,"message":message}}
             save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, symbol, order_id, status, res_data, message,  
                     strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
-                    webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="fyers")
+                    webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="fyers", history_id=history_id)
             return response
 
         logger.info(f"{user} : Fetched fyers trading_symbol: {trading_symbol}")
@@ -91,7 +91,7 @@ def place_fyers_orders(LivePrice,group_service,access_token, Api_key, trade_symb
                 response={"data": {"status": status,"message":message}}
                 save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, symbol, order_id, status, res_data, message,  
                             strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
-                            webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="fyers")
+                            webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="fyers", history_id=history_id)
                 
                 return response
             if response.status_code == 400 :#or order_response.get("s") == "error":
@@ -102,7 +102,7 @@ def place_fyers_orders(LivePrice,group_service,access_token, Api_key, trade_symb
                 response={"data": {"status": status,"message":message}}
                 save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, symbol, order_id, status, res_data, message,  
                             strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
-                            webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="fyers")
+                            webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="fyers", history_id=history_id)
                 
                 return response   
 
@@ -123,7 +123,7 @@ def place_fyers_orders(LivePrice,group_service,access_token, Api_key, trade_symb
                 logger.info(f"{user} : No order ID returned")
                 save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, symbol, order_id, status, res_data, message,
                                          strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
-                                         webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="fyers")
+                                         webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="fyers", history_id=history_id)
                 return response
 
             # Ensure that get_order_details is defined or handled properly
@@ -140,7 +140,7 @@ def place_fyers_orders(LivePrice,group_service,access_token, Api_key, trade_symb
                     response = {"data": {"status": status, "message": message}}
                     save_trade_order_history(LivePrice, group_service, transaction_type, trade_order_status, user, symbol, order_id, status, res_data, message,
                                             strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
-                                            webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="fyers")
+                                            webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="fyers", history_id=history_id)
                     return {"data": {"status": "Failed", "message": "Failed to retrieve order details."}}
             
                 status = order_history_response.get("status")  # Fyers uses integers
@@ -213,7 +213,7 @@ def place_fyers_orders(LivePrice,group_service,access_token, Api_key, trade_symb
                                         user, trade_symbol, order_id, status, res_data, message,
                                         strategy, Entry_type, Exit_type, Entry_price, Exit_price, 
                                         EntryQty, ExitQty, webhook_signal, Exchange, Segment, 
-                                        Index_Symbol, order_params, broker="fyers")
+                                        Index_Symbol, order_params, broker="fyers", history_id=history_id)
                     return response
         
 
@@ -224,7 +224,7 @@ def place_fyers_orders(LivePrice,group_service,access_token, Api_key, trade_symb
                     res_data=order_history_response
                     save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message,
                                             strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
-                                            webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="fyers")
+                                            webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="fyers", history_id=history_id)
                     return response
             else:
             
@@ -234,7 +234,7 @@ def place_fyers_orders(LivePrice,group_service,access_token, Api_key, trade_symb
                 response = {"data": {"status": status, "message": message}}
                 save_trade_order_history(LivePrice, group_service, transaction_type, trade_order_status, user, trade_symbol, order_id, status, None, message,
                                         strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
-                                        webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="fyers")
+                                        webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="fyers", history_id=history_id)
                 return response
         except Exception as e:
             error_message = f"{user} : Failed to place order: {str(e)}"
@@ -243,7 +243,7 @@ def place_fyers_orders(LivePrice,group_service,access_token, Api_key, trade_symb
             response={"data": {"status": status,"message": str(e)}}
             save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, trade_symbol, order_id, "Failed", None, str(e),
                                      strategy, Entry_type,Exit_type,Entry_price,Exit_price,EntryQty,ExitQty , webhook_signal, Exchange,
-                                     Segment, Index_Symbol, order_params, broker="fyers")
+                                     Segment, Index_Symbol, order_params, broker="fyers", history_id=history_id)
             return response
 
     except Exception as e:
@@ -254,7 +254,7 @@ def place_fyers_orders(LivePrice,group_service,access_token, Api_key, trade_symb
         response={"data": {"status": status,"message": str(e)}}
         save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, trade_symbol, order_id, "Failed", None, str(e),
                         strategy, Entry_type,Exit_type,Entry_price,Exit_price,EntryQty,ExitQty , webhook_signal, Exchange,
-                                    Segment, Index_Symbol, order_params, broker="fyers")
+                                    Segment, Index_Symbol, order_params, broker="fyers", history_id=history_id)
         return response
 
     

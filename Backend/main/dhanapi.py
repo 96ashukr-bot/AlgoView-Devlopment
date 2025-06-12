@@ -51,7 +51,7 @@ def get_trading_symbol_security_id(symbol, segment, Exch,expiry_date, user=None)
 
 def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_id, trade_symbol, transaction_type, symbol, quantity,
     strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type, Entry_price, Exit_price, 
-    EntryQty, ExitQty, webhook_signal, Exchange, Segment,Index_Symbol, triggerPrice, trade_order_status):
+    EntryQty, ExitQty, webhook_signal, Exchange, Segment,Index_Symbol, triggerPrice, trade_order_status, history_id):
     logger.info(f'{user} : dhan api  Exchange is:: {Exchange} product typweeee {product_type}')
     
     try:
@@ -86,7 +86,7 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
             logger.info(f'{user} : This is exception error in Dhan api {response}')
             save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message,  
                         strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
-                        webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan")
+                        webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan", history_id=history_id)
             return response
 
         trading_symbol = get_trading_symbol_security_id(trade_symbol, dhan,Exchange,expiry_date, user)
@@ -97,7 +97,7 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
             response={"data": {"status": status,"message":message}}
             save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message,  
                     strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
-                    webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan")
+                    webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan", history_id=history_id)
             return response
 
         logger.info(f"{user} : webhooks Fetched dhan trading_symbol: {trading_symbol}")
@@ -176,7 +176,7 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
                                                 user, trade_symbol, order_id, "Failed", None, message,
                                                 strategy, Entry_type, Exit_type, Entry_price, Exit_price, 
                                                 EntryQty, ExitQty, webhook_signal, Exchange, Segment, 
-                                                Index_Symbol, order_params, broker="dhan")
+                                                Index_Symbol, order_params, broker="dhan", history_id=history_id)
                             return response
                     else:
                         logger.warning(f"{user} : No lot size data found for security_id {security_id_str} in CSV")
@@ -195,7 +195,7 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
                 logger.info(f"{user} : order_response status is failure ??")
                 save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message,
                             strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
-                            webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan")
+                            webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan", history_id=history_id)
                 return response
             order_id = order_response.get('data', {}).get('orderId')
             if not order_id:
@@ -206,7 +206,7 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
                 response={"data": {"status": status,"message":message}}
                 save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message,
                             strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
-                            webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan")
+                            webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan", history_id=history_id)
                 return response
 
             # Ensure that get_order_details is defined or handled properly
@@ -229,7 +229,7 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
 
                 save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message,
                                         strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
-                                        webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan")
+                                        webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan", history_id=history_id)
                 return response
             
             elif status.lower() == 'complete' or status.lower()=="traded" or status.upper()=="TRADED":
@@ -253,7 +253,7 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
                 logger.info(f"{user} : Order placed and details saved successfully for the Dhan.")
                 save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message,
                                         strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
-                                        webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan")
+                                        webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan", history_id=history_id)
                 return response
             elif status.lower() == "rejected":
                 message = res_data.get('omsErrorDescription', 'not any reason get').lower()
@@ -271,7 +271,7 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
                 logger.info(f"Order is rejected for user {user}. Order ID: {order_id}")
                 save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message,
                                         strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
-                                        webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan")
+                                        webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan", history_id=history_id)
                 return response
             elif status.lower() == "pending":
                 message = res_data.get('omsErrorDescription', 'not any reason get').lower()
@@ -290,7 +290,7 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
                 
                 save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message,
                                         strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
-                                        webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan")
+                                        webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan", history_id=history_id)
                 return response
             elif status.lower() == "transit" or status == "TRANSIT":
                 message = res_data.get('omsErrorDescription', 'not any reason get').lower()
@@ -308,7 +308,7 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
                 
                 save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message,
                                         strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
-                                        webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan")
+                                        webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan", history_id=history_id)
                 return response
             else:
                 message = res_data.get('omsErrorDescription', 'not any reason get').lower()
@@ -320,7 +320,7 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
 
                 save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message,
                                         strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
-                                        webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan")
+                                        webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan", history_id=history_id)
                 return response     
         except Exception as e:
             error_message = f"{user} : Failed to place order: {str(e)}"
@@ -332,7 +332,7 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
             
             save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, trading_symbol, order_id, "Failed", None, str(e),
                                 strategy,  Entry_type,Exit_type,Entry_price,Exit_price,EntryQty,ExitQty , webhook_signal, Exchange,
-                                    Segment, Index_Symbol, order_params, broker="dhan")
+                                    Segment, Index_Symbol, order_params, broker="dhan", history_id=history_id)
             return response
 
     except Exception as e:
@@ -343,5 +343,5 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
         response={"data": {"status": "error","message": str(e)}}
         save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, trading_symbol, order_id, "Failed", None, str(e),
                                     strategy, Entry_type,Exit_type,Entry_price,Exit_price,EntryQty,ExitQty , webhook_signal, Exchange,
-                                    Segment, Index_Symbol, order_params, broker="dhan")
+                                    Segment, Index_Symbol, order_params, broker="dhan", history_id=history_id)
         return response

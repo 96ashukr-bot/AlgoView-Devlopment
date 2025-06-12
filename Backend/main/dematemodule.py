@@ -370,9 +370,6 @@ def exit_existing_buy_position_DhanOrder(expiry_date,LivePrice, group_service,Ty
             order_params = {}
             res_data = message
             logger.info(message)
-            # save_trade_order_history(LivePrice, transaction_type, trade_order_status, user, old_trade_symbol, order_id, status, res_data, message,
-            #                          strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
-            #                          webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan")
             return {"data": {"status": "error", "message": message}}
 
         print("price_of_order>>>", int(price_of_order))
@@ -422,7 +419,7 @@ def exit_existing_buy_position_DhanOrder(expiry_date,LivePrice, group_service,Ty
 
 def exit_existing_buy_position_5PaisaOrder(LivePrice,group_service,Type,day,month,fullyear,api_key,access_token,trade_symbol,transaction_type, symbol, quantity,strategy,ordertype,
             product_type, price,user, Lots,trade_order_status,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal ,Exchange, 
-            Segment,Index_Symbol,triggerPrice,trade):
+            Segment,Index_Symbol,triggerPrice,trade, history_id):
     try:
         print("symbol...",symbol,"user>>>>",user)
         print("trade_symbol...",trade_symbol,"strategy>>>",strategy)
@@ -458,7 +455,7 @@ def exit_existing_buy_position_5PaisaOrder(LivePrice,group_service,Type,day,mont
                 logger.info(f"{message}")
                 save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, old_trade_symbol, order_id, status, res_data, message,
                 strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
-                webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="5paisa")
+                webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="5paisa", history_id=history_id)
                 return {"data": {"status": "error", "message": f"Existing BUY order already closed for {old_trade_symbol} for user {user}"}}
 
             print("price_of_order>>>",int(price_of_order))
@@ -505,7 +502,7 @@ def exit_existing_buy_position_5PaisaOrder(LivePrice,group_service,Type,day,mont
 #zerodha sell order-----------------
 
 def exit_existing_buy_position_zerodha_order(LivePrice,group_service,Type,day,month,year,access_token,Api_key,trade_symbol, transaction_type, symbol, quantity,strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type,Entry_price,Exit_price,
-                EntryQty,ExitQty,webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice,trade_order_status): 
+                EntryQty,ExitQty,webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice,trade_order_status, history_id): 
     try:
         print("symbol...",symbol,"user>>>>",user)
         print("trade_symbol...",trade_symbol,"strategy>>>",strategy)
@@ -542,7 +539,7 @@ def exit_existing_buy_position_zerodha_order(LivePrice,group_service,Type,day,mo
                 res_data=message
                 logger.info(f"{message}")
                 save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, old_trade_symbol, order_id, status, res_data, message,strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
-                webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="zerodha")
+                webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="zerodha", history_id=history_id)
                 print(">>>>>>>>777777777777777777")
                 return {"data": {"status": "error", "message": f"Existing BUY order already closed for {old_trade_symbol} for user {user}"}}
 
@@ -591,7 +588,7 @@ def exit_existing_buy_position_zerodha_order(LivePrice,group_service,Type,day,mo
  
 
 def exit_existing_buy_position_fyers_order(default_price,LivePrice,group_service,Type,day,month,year,access_token,Api_key,trade_symbol, transaction_type, symbol, quantity,strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type,Entry_price,Exit_price,
-                EntryQty,ExitQty,webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice,trade_order_status): 
+                EntryQty,ExitQty,webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice,trade_order_status, history_id): 
     try:
         logger.info(f'{user} : exit_existing_buy position_fyers_order is start now !')
         open_buy_order = Tradeorderhistory.objects.filter(
@@ -627,7 +624,7 @@ def exit_existing_buy_position_fyers_order(default_price,LivePrice,group_service
                 res_data=message
                 logger.info(f"{message}")
                 save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, old_trade_symbol, order_id, status, res_data, message,strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
-                webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="fyers")
+                webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="fyers", history_id=history_id)
                 return {"data": {"status": "error", "message": f"Existing BUY order already closed for {old_trade_symbol} for user {user}"}}
 
             symbol=symbol.upper()

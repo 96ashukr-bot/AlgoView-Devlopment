@@ -486,6 +486,7 @@ class Tradeorderhistory(models.Model):
     EntryQty=models.IntegerField( null=True, blank=True)
     ExitQty=models.IntegerField( null=True, blank=True)
     trade_order_status = models.CharField(max_length=15, null=True, blank=True)
+    history_id = models.CharField(max_length=100, unique=True, null=True, blank=True)
 
     def __str__(self):
         return f"Order ID: {self.order_id}"

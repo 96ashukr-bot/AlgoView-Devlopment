@@ -116,7 +116,7 @@ class ClientBrokerDetailgAdmin(admin.ModelAdmin):
     search_fields = ("id", "client__email", "broker_name__broker_name")    
 @admin.register(Tradeorderhistory)    
 class ClientTradeHistoryAdmin(admin.ModelAdmin):
-    list_display = ("id", "client", "transaction_type", "trading_symbol", "date", "strategy", "GroupService", "order_id", "broker", "order_status", "SignalEntry_time")     
+    list_display = ("id", "client", "history_id", "transaction_type", "trading_symbol", "date", "strategy", "GroupService", "order_id", "broker", "order_status", "SignalEntry_time")     
     search_fields = ("id", "client__email")  # Change to a valid related field
 
   
