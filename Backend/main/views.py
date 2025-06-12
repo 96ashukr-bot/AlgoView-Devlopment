@@ -2646,8 +2646,10 @@ def place_order_broker(LivePrice,group_service,
         response = {"data": {"status": "Failed", "message": "Unsupported broker or no broker matched"}}
         status = "Failed"
         res_data = "Unknown response"
-        message=""
-
+        message = f"Order is placing by place order broker !!"
+        trade_symbol = None
+        save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user, trade_symbol, order_id, status, message, message, strategy,Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,order_params, broker=None, history_id = history_id
+        )
         if trade.broker.lower() == "fyers":
             symbol=symbol.upper()
             trade_symbol = f"{symbol}{year}{month}{day}{default_price}{Type}"
@@ -3138,8 +3140,9 @@ class PlaceOrderWebhookView(APIView):
                     if not trade.symbol:
                         logger.error(f"{trade.client} Symbol is missing for trade by user {trade.client}. Skipping this trade.")
                         message = f"Trade skipped due to missing symbol for user {trade.client}."
+                        res_data = message
                         save_trade_order_history(LivePrice,group_service,transaction_type,
-                            trade_order_status, user, trade.symbol, 0, status, "No symbol", message,
+                            trade_order_status, user, trade.symbol, 0, status, res_data, message,
                             trade.strategy, Entry_type, Exit_type, Entry_price, Exit_price,
                             EntryQty, ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,
                             order_params, broker=trade.broker
@@ -3201,8 +3204,8 @@ class PlaceOrderWebhookView(APIView):
                         trade_limit = (trade.trade_limit or 0) * 2
                         if not trade_limit or trade_limit==0:                           
                             message= f"Trade limit not set  for user {user}. No  trades allowed for this user symbol:{symbol}"
+                            res_data = message
                             save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal , Exchange, Segment,Index_Symbol,order_params,broker=trade.broker)
-                            
                             logger.warning(f"{user} : Trade limit not set  for user {user}. No  trades allowed today.{symbol}")
                             continue
                         if trade_limit:
@@ -3212,6 +3215,7 @@ class PlaceOrderWebhookView(APIView):
                             daily_trade_count = TradingLog.objects.filter(client=user, date=today ,symbol=symbol).count()
                             if daily_trade_count >= trade_limit:
                                 message= f"Trade limit reached for user {user}. No more trades allowed today."
+                                res_data = message
                                 save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal , Exchange, Segment,Index_Symbol,order_params,broker=trade.broker)
                                 
                                 logger.warning(f"{user} : Trade limit reached for user {user}. No more trades allowed today.")
@@ -3348,7 +3352,7 @@ class MyPlaceOrderWebhookView(APIView):
 
     def handle_single_trade(self, trade, index, symbols, exch_seg, default_price, strategy_id,
                         alert_data, buy_sell_type, buy_sell, default_ordertype, limitPrice,
-                        default_quantity, LivePrice, Lots, triggerPrice):  # Add it here
+                        default_quantity, LivePrice, Lots, triggerPrice, history_id):  # Add it here
         try:
             transaction_type=buy_sell_type
             default_expiry=trade.expiry_date
@@ -3364,7 +3368,7 @@ class MyPlaceOrderWebhookView(APIView):
             trade_symbol=symbols 
             user=trade.client
             logger.info('-------------------------------------------------------------------------------------------------------------------------------------')
-            logger.info(f"({index})-------------------- {trade.client} -------------------- {trade.symbol} ---------------> {trade.client.id}")
+            logger.info(f"({index})-------------------- {trade.client} -------------------- {trade.symbol} ---------------> {trade.client.id}---------->>>> {history_id}")
             logger.info('-------------------------------------------------------------------------------------------------------------------------------------')
             Type=None
             strategy=trade.strategy
@@ -3382,12 +3386,10 @@ class MyPlaceOrderWebhookView(APIView):
             "transaction_type":buy_sell,"price": limitPrice or 0 ,"ordertype": default_ordertype,"strategy": trade.strategy}
             order_params = serialize_to_json(order_params)
             print("symbol of tade>>>",trade.symbol)
-
-            history_id = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{trade.client.id}"
             
-            message = f" {trade.client} has started Trade."
+            message = f"{trade.client} has started Trade."
             save_trade_order_history(LivePrice,group_service,transaction_type,
-                    trade_order_status, user, trade.symbol, 0, status, "No symbol", message,
+                    trade_order_status, user, trade.symbol, 0, status, message, message,
                     trade.strategy, Entry_type, Exit_type, Entry_price, Exit_price,
                     EntryQty, ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,
                     order_params, broker=trade.broker, history_id = history_id)
@@ -3395,8 +3397,9 @@ class MyPlaceOrderWebhookView(APIView):
             if not trade.symbol:
                 logger.error(f"{trade.client} Symbol is missing for trade by user {trade.client}. Skipping this trade.")
                 message = f"Trade skipped due to missing symbol for user {trade.client}."
+                res_data = message
                 save_trade_order_history(LivePrice,group_service,transaction_type,
-                    trade_order_status, user, trade.symbol, 0, status, "No symbol", message,
+                    trade_order_status, user, trade.symbol, 0, status, res_data, message,
                     trade.strategy, Entry_type, Exit_type, Entry_price, Exit_price,
                     EntryQty, ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,
                     order_params, broker=trade.broker, history_id = history_id
@@ -3449,8 +3452,8 @@ class MyPlaceOrderWebhookView(APIView):
                 trade_limit = (trade.trade_limit or 0) * 2
                 if not trade_limit or trade_limit==0:                           
                     message= f"Trade limit not set  for user {user}. No  trades allowed for this user symbol:{symbol}"
+                    res_data = message
                     save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal , Exchange, Segment,Index_Symbol,order_params,broker=trade.broker, history_id = history_id)
-                    
                     logger.warning(f"{user} : Trade limit not set  for user {user}. No  trades allowed today.{symbol}")
                     return
                 if trade_limit:
@@ -3460,8 +3463,8 @@ class MyPlaceOrderWebhookView(APIView):
                     daily_trade_count = TradingLog.objects.filter(client=user, date=today ,symbol=symbol).count()
                     if daily_trade_count >= trade_limit:
                         message= f"Trade limit reached for user {user}. No more trades allowed today."
+                        res_data = message
                         save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal , Exchange, Segment,Index_Symbol,order_params,broker=trade.broker, history_id = history_id)
-                        
                         logger.warning(f"{user} : Trade limit reached for user {user}. No more trades allowed today.")
                         return
 
@@ -3652,13 +3655,14 @@ class MyPlaceOrderWebhookView(APIView):
 
             for index, trade in enumerate(all_enable_users, start=1):
                 try:
+                    history_id = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{trade.client.id}"
                     t = threading.Thread(
                         target=self.handle_single_trade,
                         args=(
                             trade, index, symbols, exch_seg, default_price,
                             strategy_id, alert_data, buy_sell_type, buy_sell,
                             default_ordertype, limitPrice, default_quantity,
-                            LivePrice, Lots, triggerPrice
+                            LivePrice, Lots, triggerPrice, history_id
                         )
                     )
                     t.start()

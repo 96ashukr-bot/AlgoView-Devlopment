@@ -87,7 +87,7 @@ def place_fyers_orders(LivePrice,group_service,access_token, Api_key, trade_symb
                 logger.error(f"{user} : Unauthorized - Access token might have expired.")
                 status = "Unauthorized"
                 message = f"{user} : Authentication failed. Please refresh your access token."
-                res_data = f"message"
+                res_data = f"Authentication failed. Please refresh your access token."
                 response={"data": {"status": status,"message":message}}
                 save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, symbol, order_id, status, res_data, message,  
                             strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,

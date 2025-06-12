@@ -123,7 +123,7 @@ def place_alice_orders(LivePrice,group_service,api_skey,api_uid,trading_symbol_a
             error_message = instrument.get("emsg", "Instrument not available")
             order_id=0
             status="Failed"
-            res_data="unknown response"
+            res_data="Instrument not available"
             message=error_message
             save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trading_symbol_aliceblue,order_id , status, res_data, message,  strategy,  Entry_type,Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol, order_params,broker="Alice Blue", history_id = history_id)
             logger.error(f"{user} : Instrument not found for symbol: {trading_symbol_aliceblue}, Reason: {error_message}")

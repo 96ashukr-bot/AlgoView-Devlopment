@@ -119,13 +119,16 @@ def place_Angle_order(history_id, broker_details,LivePrice,group_service,api_key
             try:
                 logger.info(f"Attempting to place order for {user}")
                 response = place_order(access_token, payload, api_key, user)
+
+                message = f"Place order is failed due to token issue !"
+                res_data=f"Attempting to place order for {user}"
+                save_trade_order_history(LivePrice,group_service,transactiontype,trade_order_status,user,tradingsymbol, order_id, status, res_data, message,  strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol , order_params,broker="Angle One", history_id=history_id)
                 logger.info(f"{user} : API Response:")
             except Exception as e:
                 logger.error(f"Order placement failed for {user}: {str(e)}")
                 message = f"somthing wrong or token is invalid"
-                res_data="None response from API"
+                res_data=f"None response from API {str(e)}"
                 save_trade_order_history(LivePrice,group_service,transactiontype,trade_order_status,user,tradingsymbol, order_id, status, res_data, message,  strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol , order_params,broker="Angle One", history_id=history_id)
-        
                 return {"data": {"status": "Failed", "message": message}}
             # response = smartApi.placeOrderFullResponse(order_params)
             logger.info(f"{user}: Angle API Response: {response}")
@@ -138,7 +141,7 @@ def place_Angle_order(history_id, broker_details,LivePrice,group_service,api_key
             data = response.get('data')
             if not data or not isinstance(data, dict):
                 logger.error(f"{user} : Invalid response structure from Angle One: {response}")
-                res_data="None response from API"
+                res_data=f"response from API : {response}"
                 save_trade_order_history(LivePrice,group_service,transactiontype,trade_order_status,user,tradingsymbol, order_id, status, res_data, message,  strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol , order_params,broker="Angle One", history_id=history_id)
                 return {"data": {"status": "Failed", "message": "Invalid response structure from API"}}
 
