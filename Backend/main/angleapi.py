@@ -40,8 +40,8 @@ def place_Angle_order(history_id, broker_details,LivePrice,group_service,api_key
                 response= {"data":{"status": "error", "message": "token symbole not found"}}
                 return response# continue
         else:
-            message= f"{user} : trading symbol is not found for this :{tradingsymbol}"
-            res_data="no trading symbol found"
+            message= f"Trading symbol is not found for this :{tradingsymbol}"
+            res_data = f"No token data found for trading symbol: {usertrade.symbol}"
             order_params={}
             save_trade_order_history(LivePrice,group_service,transactiontype,trade_order_status,user,tradingsymbol, order_id, status, res_data,
                                      message, strategy,  Entry_type,Exit_type, Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal , 
