@@ -31,7 +31,6 @@ def place_Angle_order(broker_details,LivePrice,group_service,api_key,demate_user
         order_id=0
         status="Failed"
         tokendata = get_token_details(tradingsymbol, user) 
-        logger.info(f"{user} : Get Token Details Response is : {tokendata}")
         if tokendata["status"] == "success":  
             token = tokendata.get("token")
             token_symbol = tokendata.get("symbol")

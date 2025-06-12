@@ -17,11 +17,11 @@ def get_trading_symbol(exchange, symbol, kite, user=None):
                 return instrument['tradingsymbol']
 
         logger.warning(f"[{user}] Trading symbol '{symbol}' not found in exchange '{exchange}'")
-        return 'error'
+        return None
 
     except Exception as e:
         logger.exception(f"[{user}] Exception occurred while fetching trading symbol '{symbol}' from exchange '{exchange}'")
-        return 'error'
+        return None
     
 def get_order_details(order_id, kite, user=None):
     try:
@@ -98,7 +98,7 @@ def place_zerodha_orders(
         logger.info(f"[{user}] Looking up trading symbol: {trade_symbol}")
         trading_symbol = get_trading_symbol(Exchange, trade_symbol, kite, user)
 
-        if trading_symbol == 'error':
+        if not trading_symbol:
             logger.error(f"[{user}] Trading symbol not found for {trade_symbol}")
             message = "Instrument details not found"
             response = {"data": {"status": status, "message": message}}
