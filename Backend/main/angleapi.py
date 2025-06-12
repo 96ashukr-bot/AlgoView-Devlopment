@@ -376,7 +376,7 @@ def get_token_details(trading_symbol, user=None):
         response = requests.get(url)
         response.raise_for_status()  
         data = response.json() 
-        logger.info(f"{user} : trading_symbol of Angle api responce is ::::::::::::::{data}")
+        logger.info(f"{user} : get token api has responced !!")
         for item in data:
             if item.get("symbol") == trading_symbol:
                 logger.info(f"{user} : csv token from master data api>>> {item}")
