@@ -1,24 +1,30 @@
-.env
-venv
-/venv
-Backend/.venv/
-
-/Backend/main/migrations/
-!/Backend/main/migrations/
-# Python
+# ========================
+# Python / Django
+# ========================
 venv/
+.venv/
 __pycache__/
 *.pyc
 db.sqlite3
 
-# Django
+# Environment variables
 .env
+
+# Django static/media
 staticfiles/
 media/
 
-# Node
+# Migrations (keep structure but ignore files)
+Backend/main/migrations/*
+!Backend/main/migrations/__init__.py
+
+# ========================
+# Node / React
+# ========================
 node_modules/
 build/
 
-# Mac
+# ========================
+# OS / Misc
+# ========================
 .DS_Store
