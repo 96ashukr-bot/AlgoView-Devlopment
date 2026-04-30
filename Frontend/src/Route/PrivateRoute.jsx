@@ -1,16 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { Navigate, Outlet } from "react-router-dom";
+import { getAccessToken, getRefreshToken } from "../Services/authStorage";
 
 const PrivateRoute = () => {
-  const [login, setLogin] = useState(JSON.parse(localStorage.getItem("login")));
-  const [authenticated, setAuthenticated] = useState(false);
+  const [hasSession, setHasSession] = useState(Boolean(getAccessToken() || getRefreshToken()));
 
   useEffect(() => {
-    setAuthenticated(JSON.parse(localStorage.getItem("authenticated")));
-    localStorage.setItem("authenticated", authenticated);
-    localStorage.setItem("login", login);
+    setHasSession(Boolean(getAccessToken() || getRefreshToken()));
   }, []);
-  return login || authenticated ? <Outlet /> : <Navigate exact to={`/login`} />;
+  return hasSession ? <Outlet /> : <Navigate exact to={`/login`} />;
 };
 
 export default PrivateRoute;

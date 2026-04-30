@@ -85,7 +85,7 @@ class LiecensAdmin(admin.ModelAdmin):
 
 @admin.register(Strategies)
 class StrategyAdmin(admin.ModelAdmin):
-    list_display=('id','name',)      
+    list_display=('id','name','execution_mode','multi_leg_template')
 @admin.register(Broker)
 class BrokersAdmin(admin.ModelAdmin):
     list_display=('id','broker_name','is_active','description')    
@@ -145,3 +145,53 @@ class WebsocketDetailsAdmin(admin.ModelAdmin):
 @admin.register(GroupService)
 class GroupServiceAdmin(admin.ModelAdmin):
     list_display = ['id','group_name','segment']         
+
+
+@admin.register(ClientMultiLegStrategySetting)
+class ClientMultiLegStrategySettingAdmin(admin.ModelAdmin):
+    list_display = ('id', 'client', 'strategy', 'group_service', 'broker', 'quantity', 'is_tread_status', 'updated_at')
+    search_fields = ('client__email', 'client__fullName', 'strategy__name', 'group_service')
+
+
+@admin.register(StrategyExecution)
+class StrategyExecutionAdmin(admin.ModelAdmin):
+    list_display = (
+        'id',
+        'client',
+        'strategy_name',
+        'underlying',
+        'broker',
+        'status',
+        'total_quantity',
+        'combined_pnl',
+        'entry_time',
+        'exit_time',
+        'updated_at',
+    )
+    list_filter = ('status', 'broker', 'strategy_name')
+    search_fields = ('client__email', 'client__fullName', 'strategy_name', 'underlying', 'idempotency_key')
+
+
+@admin.register(StrategyLeg)
+class StrategyLegAdmin(admin.ModelAdmin):
+    list_display = (
+        'id',
+        'strategy_execution',
+        'leg_name',
+        'transaction_type',
+        'option_type',
+        'strike_price',
+        'quantity',
+        'status',
+        'broker_order_id',
+        'updated_at',
+    )
+    list_filter = ('status', 'transaction_type', 'option_type', 'exchange')
+    search_fields = ('symbol', 'token', 'broker_order_id', 'strategy_execution__client__email')
+
+
+@admin.register(StrategyExecutionLog)
+class StrategyExecutionLogAdmin(admin.ModelAdmin):
+    list_display = ('id', 'strategy_execution', 'event_type', 'created_at')
+    list_filter = ('event_type',)
+    search_fields = ('strategy_execution__client__email', 'message')

@@ -129,7 +129,11 @@ const EditGroupService = () => {
                 group_name: groupName,
                 segment: selectedSegment?.id || '',
                 Strategy: selectedStrategies,
-                json_data: services,
+                json_data: services.map((service, index) => ({
+                    ...service,
+                    "S.No": service["S.No"] || index + 1,
+                    ScriptName: service.ScriptName || service.ServiceName,
+                })),
             };
 
             await updateGroupService(serviceId, payload);
@@ -266,7 +270,7 @@ const EditGroupService = () => {
                                             <tr>
                                                 <th style={{ backgroundColor: '#283F7B', color: 'white' }}>S.No</th>
                                                 <th style={{ backgroundColor: '#283F7B', color: 'white' }}>Segment</th>
-                                                <th style={{ backgroundColor: '#283F7B', color: 'white' }}>Service Name</th>
+                                                <th style={{ backgroundColor: '#283F7B', color: 'white' }}>Script Name</th>
                                                 <th style={{ backgroundColor: '#283F7B', color: 'white' }}>Lot Size</th>
                                                 <th style={{ backgroundColor: '#283F7B', color: 'white' }}>Qty</th>
                                                 <th style={{ backgroundColor: '#283F7B', color: 'white' }}>Product Type</th>
@@ -299,7 +303,7 @@ const EditGroupService = () => {
                                                             value={servicesList.find((s) => s.service_name === service.ServiceName)?.id || ''}
                                                             onChange={(e) => handleServiceNameChange(index, e.target.value)}
                                                         >
-                                                            <option value="">Select Service Name</option>
+                                                            <option value="">Select Script Name</option>
                                                             {servicesList.map((serviceOption) => (
                                                                 <option key={serviceOption.id} value={serviceOption.id}>
                                                                     {serviceOption.service_name}

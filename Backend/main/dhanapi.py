@@ -5,9 +5,11 @@ import logging
 from django.conf import settings
 import pandas as pd
 
-from main.Alice_Blue_Api import save_trade_order_history
+from main.broker_instrument_cache import ensure_dhan_instruments_file
 from main.models import CompanySmtpDetails
 from main.tasks import send_trade_email_async
+from main.broker_order_utils import normalize_order_type, resolve_limit_price
+from main.trade_history_service import save_trade_order_history
 logger = logging.getLogger('main')
 
 def fetch_order_details(order_id,dhan, user=None):
@@ -24,14 +26,15 @@ def fetch_order_details(order_id,dhan, user=None):
 def get_trading_symbol_security_id(symbol, segment, Exch,expiry_date, user=None):
     logger.info(f"{user}: the get_trading_symbol_security_id is calling now !")
     try:
-        csv_file_path = "main/dhantoken.csv"
+        csv_file_path = ensure_dhan_instruments_file()
         df = pd.read_csv(csv_file_path, low_memory=False)
+        normalized_symbol = str(symbol or "").strip().replace(" ", "").replace("-", "").upper()
         
         df['SEM_TRADING_SYMBOL'] = df['SEM_TRADING_SYMBOL'].astype(str).str.strip().str.replace(r"[^\w]", "", regex=True).str.upper()
         df['SEM_EXPIRY_DATE'] = pd.to_datetime(df['SEM_EXPIRY_DATE']).dt.strftime('%Y-%m-%d')
 
         filtered_df = df[
-            (df['SEM_TRADING_SYMBOL'] == symbol.upper()) & 
+            (df['SEM_TRADING_SYMBOL'] == normalized_symbol) & 
             (df['SEM_EXPIRY_DATE'] == expiry_date)
         ]
         
@@ -126,12 +129,35 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
             logger.info(f"{user} : Invalid transaction type: {transaction_type}")
             return {"status": "error", "message": "Invalid transaction type"}
 
+        requested_order_type = normalize_order_type(ordertype)
+        ltp = None
+        try:
+            if hasattr(dhan, "get_ltp_data"):
+                ltp_response = dhan.get_ltp_data({Exchange: [int(security_id)]})
+                exchange_quotes = (ltp_response or {}).get("data", {}).get(Exchange, {})
+                quote = exchange_quotes.get(str(int(security_id))) or exchange_quotes.get(int(security_id)) or {}
+                ltp = quote.get("last_price") or quote.get("ltp")
+        except Exception as e:
+            logger.warning(f"{user} : Dhan LTP fetch failed for security_id {security_id}: {str(e)}")
+
+        if requested_order_type == "LIMIT":
+            price = resolve_limit_price(price, ltp, transaction_type)
+            if not price:
+                message = "Unable to calculate Dhan limit price because live price is unavailable."
+                response = {"data": {"status": "Failed", "message": message}}
+                save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, trade_symbol, order_id, "Failed", None, message,
+                            strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
+                            webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan", history_id=history_id)
+                return response
+        elif requested_order_type == "MARKET":
+            price = 0
+
         # Validate order_type
-        if ordertype.upper() == "MARKET":
+        if requested_order_type == "MARKET":
             ordertype = dhan.MARKET
-        elif ordertype.upper() == "LIMIT":
+        elif requested_order_type == "LIMIT":
             ordertype = dhan.LIMIT
-        elif ordertype.upper() == "SL":
+        elif requested_order_type == "SL":
             ordertype = dhan.SL
         else:
             print("Invalid order type:", ordertype)
@@ -156,7 +182,7 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
             try:
                 # Load lot size data from CSV
                 logger.info(f"{user} : Load lot size data from CSV")
-                csv_path = "main/dhantoken.csv"
+                csv_path = ensure_dhan_instruments_file()
                 lot_data = pd.read_csv(csv_path, dtype={'SEM_SMST_SECURITY_ID': str})
                 
                 # Convert security_id to string for comparison
@@ -249,7 +275,17 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
                     Exit_price = res_data.get('averageTradedPrice', 0.0)
                     ExitQty = res_data.get('quantity', 0)
                 
-                response = {"data": {"status": "completed", "message": "Order placed and details saved successfully."}}
+                response = {
+                    "data": {
+                        "status": "completed",
+                        "message": "Order placed and details saved successfully.",
+                        "order_id": order_id,
+                        "order_type": requested_order_type,
+                        "price": res_data.get("averageTradedPrice") or order_params.get("price"),
+                        "ltp": ltp,
+                        "reference_price": ltp,
+                    }
+                }
                 logger.info(f"{user} : Order placed and details saved successfully for the Dhan.")
                 save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message,
                                         strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,

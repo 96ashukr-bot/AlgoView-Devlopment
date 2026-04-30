@@ -4,21 +4,21 @@ venv
 Backend/.venv/
 
 /Backend/main/migrations/
+!/Backend/main/migrations/
+# Python
+venv/
+__pycache__/
+*.pyc
+db.sqlite3
 
-__pycache__
-/__pycache__
-/main/__pycache__
-main/__pycache__
-Backend/main/__pycache__/
-/Backend/.env
-/Backend/venv
-Backend/algoview/__pycache__/
-/Backend/__pycache__
+# Django
+.env
+staticfiles/
+media/
 
-/Backend/main/__pycache__
+# Node
+node_modules/
+build/
 
-/Backend/localenv
-/Frontend/node_modules
-Frontend/node_modules
-Backend/media/kyc_documents/
-Backend/media/profile_pictures/
+# Mac
+.DS_Store

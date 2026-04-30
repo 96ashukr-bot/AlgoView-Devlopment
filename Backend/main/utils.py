@@ -1,25 +1,38 @@
+from django.conf import settings
 from django.core.mail import get_connection
 import requests
 from main.models import CompanySmtpDetails
 
-def get_smtp_connection():
-    """Fetch SMTP details from the database and return an SMTP connection."""
-    smtp_details = CompanySmtpDetails.objects.first()
+def _normalize_smtp_host(host, username=None, default_from_email=None):
+    host_value = str(host or "").strip()
+    sender_value = str(default_from_email or username or "").strip().lower()
+    if host_value.lower() == "smtp.zoho.com" and sender_value.endswith(".in"):
+        return "smtp.zoho.in"
+    return host_value
 
-    if not smtp_details:
-        print("SMTP details not found!")
-        return None
+
+def get_smtp_connection(smtp_details=None, *, open_connection=False):
+    """Fetch SMTP details from the database and return an SMTP connection."""
+    smtp_details = smtp_details or CompanySmtpDetails.objects.order_by("-id").first()
 
     try:
-        # Fetch SMTP details from DB
-        email_host = smtp_details.email_host
-        email_port = smtp_details.email_port
-        email_host_user = smtp_details.email_host_user
-        email_host_password = smtp_details.email_host_password  
-        email_use_tls = smtp_details.email_use_tls
-        default_from_email = smtp_details.default_from_email
-
-        # print(f"Email Host: {email_host}, Port: {email_port}, User: {email_host_user}")
+        # Prefer SMTP details from DB when available, otherwise fall back to
+        # environment-backed Django email settings for local/dev reliability.
+        email_host = _normalize_smtp_host(
+            getattr(smtp_details, 'email_host', None) or settings.EMAIL_HOST,
+            getattr(smtp_details, 'email_host_user', None) or settings.EMAIL_HOST_USER,
+            getattr(smtp_details, 'default_from_email', None) or settings.DEFAULT_FROM_EMAIL,
+        )
+        email_port = getattr(smtp_details, 'email_port', None) or settings.EMAIL_PORT
+        email_host_user = getattr(smtp_details, 'email_host_user', None) or settings.EMAIL_HOST_USER
+        email_host_password = getattr(smtp_details, 'email_host_password', None) or settings.EMAIL_HOST_PASSWORD
+        email_use_tls = getattr(smtp_details, 'email_use_tls', None)
+        if email_use_tls is None:
+            email_use_tls = settings.EMAIL_USE_TLS
+        email_port = int(email_port)
+        email_use_ssl = email_port == 465
+        if email_use_ssl:
+            email_use_tls = False
 
         # Ensure SMTP details are complete
         if not all([email_host, email_port, email_host_user, email_host_password]):
@@ -27,14 +40,19 @@ def get_smtp_connection():
             return None
 
         # Create and return SMTP connection
-        return get_connection(
+        connection = get_connection(
             backend='django.core.mail.backends.smtp.EmailBackend',
             host=email_host,
             port=email_port,
             username=email_host_user,
             password=email_host_password,
             use_tls=email_use_tls,
+            use_ssl=email_use_ssl,
+            timeout=20,
         )
+        if open_connection:
+            connection.open()
+        return connection
     except Exception as e:
         print(f"Error setting up SMTP connection: {e}")
         return None

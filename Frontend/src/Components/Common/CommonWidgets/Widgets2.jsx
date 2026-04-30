@@ -1,9 +1,5 @@
 import React from 'react';
-import ReactApexChart from 'react-apexcharts';
-import { Card, CardBody } from 'reactstrap';
-import { H4 } from '../../../AbstractElements';
-
-const Widgets2 = ({ data, chartClass, mainClass }) => {
+const Widgets2 = () => {
   return (
     <>
       {/* <Card className={`widget-1 widget-with-chart ${mainClass ? mainClass : ''}`}>

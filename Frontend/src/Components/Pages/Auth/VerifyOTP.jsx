@@ -1,5 +1,5 @@
 import React, { Fragment, useState, useEffect, useContext } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Col, Container, Form, FormGroup, Input, Label, Row } from 'reactstrap';
 import { Btn, H4, P, Image } from '../../../AbstractElements';
 import logoWhite from '../../../assets/images/logo/logo (1).png';
@@ -11,12 +11,18 @@ import 'react-toastify/dist/ReactToastify.css';
 
 const VerifyOTP = ({ email }) => {
   const { logo } = useContext(LogoContext);
+  const location = useLocation();
   const [otp, setOtp] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [timer, setTimer] = useState(120);
   const [isResendDisabled, setIsResendDisabled] = useState(true);
   const navigate = useNavigate();
+  const resolvedEmail =
+    email ||
+    location?.state?.email ||
+    (typeof window !== 'undefined' ? window.localStorage.getItem('pendingOtpEmail') : '') ||
+    '';
 
   useEffect(() => {
     let countdown;
@@ -55,7 +61,7 @@ const VerifyOTP = ({ email }) => {
       console.log("Removing keydown event listener.");
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [otp, email]);
+  }, [otp, resolvedEmail]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -66,14 +72,23 @@ const VerifyOTP = ({ email }) => {
       setLoading(false);
       return;
     }
+    if (!resolvedEmail) {
+      setError('Login session expired. Please sign in again to request a fresh OTP.');
+      setLoading(false);
+      return;
+    }
 
     try {
-      const response = await verifyOtp(email, otp);
+      const response = await verifyOtp(resolvedEmail, otp);
 
       if (response.message === "Please change your password as this is a one-time temporary password.") {
+        localStorage.removeItem('pendingOtpEmail');
+        localStorage.removeItem('pendingOtpApiBaseUrl');
         toast.success('Account verified! Please change your password.');
         navigate('/pages/authentication/create-pwd/:layout');
       } else if (response.message === "login successfully") {
+        localStorage.removeItem('pendingOtpEmail');
+        localStorage.removeItem('pendingOtpApiBaseUrl');
         if (response.ekyc_status === true) {
           toast.success('Login successful! Redirecting to dashboard.');
           navigate('/dashboard/algoviewtech/user');
@@ -108,8 +123,13 @@ const VerifyOTP = ({ email }) => {
 
   const handleResendOtp = async () => {
     setLoading(true);
+    if (!resolvedEmail) {
+      toast.error('Login session expired. Please sign in again.');
+      setLoading(false);
+      return;
+    }
     try {
-      const response = await resendOtp(email);
+      const response = await resendOtp(resolvedEmail);
       if (response.success) {
         toast.success('A new OTP has been resent to your registered email.');
         setTimer(120);
@@ -147,6 +167,11 @@ const VerifyOTP = ({ email }) => {
                   <div className='login-main'>
                     <Form className='theme-form login-form' onSubmit={handleSubmit}>
                       <H4>Verify Your OTP</H4>
+                      {resolvedEmail && (
+                        <P attrPara={{ className: 'mb-2' }}>
+                          OTP sent to <strong>{resolvedEmail}</strong>
+                        </P>
+                      )}
                       <FormGroup>
                         <Label for='otp' className='m-0'>Enter OTP</Label>
                         <Row>

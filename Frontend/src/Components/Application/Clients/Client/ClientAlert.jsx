@@ -2,8 +2,7 @@ import React, { useEffect } from 'react';
 import Swal from 'sweetalert2';
 import {
   getClientBrokerTradeAlert,
-  getBrokerTokenExpiry,
-  getClientBrokerDetail,
+  getBrokerRuntimeStatus,
 } from '../../../../Services/Authentication';
 
 const ClientAlert = () => {
@@ -17,10 +16,10 @@ const ClientAlert = () => {
         html: `
           <div style="text-align: left;">
             <p style="margin-bottom: 15px;"><strong>Step 1: Select Broker</strong>: First, select the broker ( Select Broker ) to start trading.</p>
-            <p style="margin-bottom: 15px;"><strong>Step 2: Broker Details</strong>: Fill in the proper broker details.</p>
-            <p style="margin-bottom: 15px;"><strong>Step 3: Broker Login</strong>: Log in daily via click on the ( Broker Login ) toggle, before trading starts for brokers like <strong> Upstox, Zerodha, Fyers, and 5Paisa </strong></p>
+            <p style="margin-bottom: 15px;"><strong>Step 2: Broker Setup</strong>: Fill only the broker-specific fields shown after selection and save them.</p>
+            <p style="margin-bottom: 15px;"><strong>Step 3: Broker Login / Connect</strong>: Complete the daily login or redirect-based connect flow required by that broker before trading starts.</p>
             <p style="margin-bottom: 15px;"><strong>Manually Broker Logged In</strong>: For brokers like <strong> Alice Blue , Dhan </strong>.  Log in daily on their specific dashboards.</p>
-            <p style="margin-bottom: 15px;"><strong>ANGLE ONE</strong>: If you are selected the  <strong> Angle One </strong> broker, then make sure your <strong> TOTP  </strong> Secret should be right , because in the case of ANGLE ONE broker activation is depend on the <strong> TOTP </strong> Secret. </p>
+            <p style="margin-bottom: 15px;"><strong>ANGLE ONE</strong>: Save API key, client ID, password, and TOTP secret in the broker setup screen. AlgoView stores them securely for future session recovery.</p>
           </div>
         `,
         icon: 'info',
@@ -46,9 +45,7 @@ const ClientAlert = () => {
         ) {
           showTokenExpiryCheck = false;
 
-          const brokerMatch = response.message.match(/broker '(\w+)'/);
           const fieldsMatch = response.message.match(/: ([\w\s,]+)/);
-          const broker = brokerMatch ? brokerMatch[1] : 'Unknown Broker';
           const missingFields = fieldsMatch
             ? fieldsMatch[1].split(', ').map((field) => field.trim())
             : [];
@@ -78,39 +75,37 @@ const ClientAlert = () => {
       })
       .finally(() => {
         if (showTokenExpiryCheck) {
-          // Step 2: Get broker name to check if token expiry alert should be shown
-          getClientBrokerDetail()
-            .then((brokerRes) => {
-              const brokerName =
-                brokerRes?.data?.broker_name?.broker_name?.toUpperCase();
-              const allowedBrokers = ['ZERODHA', 'UPSTOX', 'FYERS', '5PAISA'];
+          getBrokerRuntimeStatus()
+            .then((runtime) => {
+              const sessionStatus = runtime?.session?.status || 'unavailable';
+              const tokenStatus = runtime?.token?.status || 'unavailable';
+              const isActive = Boolean(
+                runtime?.session?.is_active ||
+                runtime?.token?.is_active ||
+                sessionStatus === 'active' ||
+                tokenStatus === 'active'
+              );
 
-              if (allowedBrokers.includes(brokerName)) {
-                // Step 3: Check if token is expired
-                getBrokerTokenExpiry()
-                  .then((res) => {
-                    if (res?.isTokenExpired) {
-                      Swal.fire({
-                        title: 'Broker Login Session',
-                        text:
-                          res.message ||
-                          'Please log in again to continue trading.',
-                        icon: 'warning',
-                        confirmButtonText: 'OK',
-                        width: '30em',
-                        customClass: {
-                          popup: 'swal-popup',
-                        },
-                      });
-                    }
-                  })
-                  .catch((error) => {
-                    console.error('Error checking broker token expiry:', error);
-                  });
+              if (!isActive) {
+                const message =
+                  tokenStatus === 'expired'
+                    ? 'Broker token has expired. Please log in again to continue trading.'
+                    : 'Please log in again to continue trading. You are not logged in yet.';
+
+                Swal.fire({
+                  title: 'Broker Login Session',
+                  text: message,
+                  icon: 'warning',
+                  confirmButtonText: 'OK',
+                  width: '30em',
+                  customClass: {
+                    popup: 'swal-popup',
+                  },
+                });
               }
             })
             .catch((error) => {
-              console.error('Error fetching broker detail:', error);
+              console.error('Error fetching broker runtime status:', error);
             });
         }
       });

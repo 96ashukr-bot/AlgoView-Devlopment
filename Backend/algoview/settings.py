@@ -14,25 +14,70 @@ import os
 from pathlib import Path
 import logging
 import logging.config
+from urllib.parse import urlparse
+from django.core.exceptions import ImproperlyConfigured
+
+
+def _env_bool(value):
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return False
+    normalized = str(value).strip().lower()
+    if normalized in {"1", "true", "yes", "on", "debug"}:
+        return True
+    if normalized in {"0", "false", "no", "off", "release", "prod", "production"}:
+        return False
+    return bool(value)
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+APP_ENV = config("APP_ENV", default="development").strip().lower()
+IS_TEST = APP_ENV == "test" or "PYTEST_CURRENT_TEST" in os.environ
+IS_PRODUCTION = APP_ENV in {"production", "prod", "staging"}
+
+
+def _require(name, value):
+    if value in (None, "", []):
+        raise ImproperlyConfigured(f"{name} must be configured")
+    return value
+
+
+def _append_unique(items, value):
+    if not value or value in items:
+        return items
+    items.append(value)
+    return items
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-7jwmkcbftdxtro)*t%h0=8@-5z#pf2+16kut9s8s27xr#c3jll'
+if IS_PRODUCTION:
+    SECRET_KEY = _require("DJANGO_SECRET_KEY", config('DJANGO_SECRET_KEY', default=''))
+else:
+    SECRET_KEY = config('DJANGO_SECRET_KEY', default='dev-only-secret-key-change-before-shared-use')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-ALLOWED_HOSTS = ['*']
-CORS_ALLOW_ALL_ORIGINS = True
+DEBUG = config('DEBUG', default=False, cast=_env_bool)
+if IS_PRODUCTION and DEBUG:
+    raise ImproperlyConfigured("DEBUG must be disabled in production/staging")
+ALLOWED_HOSTS = config(
+    'ALLOWED_HOSTS',
+    default='localhost,127.0.0.1',
+    cast=lambda value: [item.strip() for item in value.split(',') if item.strip()],
+)
+if IS_PRODUCTION and (not ALLOWED_HOSTS or "*" in ALLOWED_HOSTS):
+    raise ImproperlyConfigured("ALLOWED_HOSTS must be explicitly configured in production/staging")
+CORS_ALLOW_ALL_ORIGINS = config('CORS_ALLOW_ALL_ORIGINS', default=False, cast=_env_bool)
 CORS_ALLOW_CREDENTIALS = True
-CORS_ORIGIN_ALLOW_ALL = True
+CORS_ORIGIN_ALLOW_ALL = CORS_ALLOW_ALL_ORIGINS
+if IS_PRODUCTION and CORS_ALLOW_ALL_ORIGINS:
+    raise ImproperlyConfigured("CORS_ALLOW_ALL_ORIGINS must be disabled in production/staging")
 FILE_UPLOAD_PERMISSIONS = 0o644  
 # Optional: Set X-Frame-Options header to allow specific origins for embedding your site in frames
-X_FRAME_OPTIONS = 'ALLOWALL'
+X_FRAME_OPTIONS = 'SAMEORIGIN'
 
 CSRF_TRUSTED_ORIGINS = [
     "https://sparksadmin.algoview.in",
@@ -49,6 +94,17 @@ CORS_ALLOWED_ORIGINS = [
     "https://client.algoview.in",
     "https://sparksadmin.algoview.in"
 ]
+
+FRONTEND_APP_URL = config("FRONTEND_APP_URL", default="http://localhost:3000").rstrip("/")
+UPSTOX_REDIRECT_URL = config("UPSTOX_REDIRECT_URL", default="").strip()
+
+if UPSTOX_REDIRECT_URL:
+    parsed_upstox_redirect = urlparse(UPSTOX_REDIRECT_URL)
+    upstox_origin = f"{parsed_upstox_redirect.scheme}://{parsed_upstox_redirect.netloc}" if parsed_upstox_redirect.scheme and parsed_upstox_redirect.netloc else ""
+    upstox_host = parsed_upstox_redirect.hostname or ""
+    _append_unique(CSRF_TRUSTED_ORIGINS, upstox_origin)
+    _append_unique(CORS_ALLOWED_ORIGINS, upstox_origin)
+    _append_unique(ALLOWED_HOSTS, upstox_host)
 
 # Application definition
 
@@ -121,14 +177,27 @@ ASGI_APPLICATION = 'algoview.asgi.application'
 #     }
 # }
 # Database settings
+DB_ENGINE = config('DB_ENGINE', default='django.db.backends.sqlite3' if not IS_PRODUCTION else '')
+DB_NAME = config('DB_NAME', default=str(BASE_DIR / 'db.sqlite3') if not IS_PRODUCTION else '')
+DB_USER = config('DB_USER', default='')
+DB_PASSWORD = config('DB_PASSWORD', default='')
+DB_HOST = config('DB_HOST', default='')
+DB_PORT = config('DB_PORT', default='')
+
+if IS_PRODUCTION:
+    _require("DB_ENGINE", DB_ENGINE)
+    _require("DB_NAME", DB_NAME)
+    if DB_ENGINE == 'django.db.backends.sqlite3':
+        raise ImproperlyConfigured("SQLite is not allowed in production/staging")
+
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('DATABASE_NAME'),
-        'USER': config('DATABASE_USER'),
-        'PASSWORD': config('DATABASE_PASSWORD'),
-        'HOST': config('DATABASE_HOST'),
-        'PORT': config('DATABASE_PORT', default=5432, cast=int),
+        'ENGINE': DB_ENGINE,
+        'NAME': DB_NAME,
+        'USER': DB_USER,
+        'PASSWORD': DB_PASSWORD,
+        'HOST': DB_HOST,
+        'PORT': DB_PORT,
     }
 }
 
@@ -165,6 +234,15 @@ TIME_ZONE = 'Asia/Kolkata'
 USE_I18N = True
 
 USE_TZ = True
+
+SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', default=not DEBUG, cast=_env_bool)
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = config('SESSION_COOKIE_SAMESITE', default='Lax')
+CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', default=not DEBUG, cast=_env_bool)
+CSRF_COOKIE_HTTPONLY = False
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = 'same-origin'
 
 
 # Static files (CSS, JavaScript, Images)
@@ -216,15 +294,48 @@ AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',  # Default backend
 )
 
-CELERY_BROKER_URL = 'redis://localhost:6379/0'  # URL for Redis
-CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'  # Backend for results
+REDIS_URL = config('REDIS_URL', default='redis://localhost:6379/1')
+CELERY_BROKER_URL = config('CELERY_BROKER_URL', default='redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND', default=CELERY_BROKER_URL)
+
+BROKER_ENCRYPTION_KEYS = config(
+    'BROKER_ENCRYPTION_KEYS',
+    default='' if IS_PRODUCTION else 'MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=',
+)
+if IS_PRODUCTION:
+    _require("BROKER_ENCRYPTION_KEYS", BROKER_ENCRYPTION_KEYS)
+ANGELONE_CALLBACK_STATE_TTL_SECONDS = config('ANGELONE_CALLBACK_STATE_TTL_SECONDS', default=600, cast=int)
+ANGELONE_SESSION_TTL_SECONDS = config('ANGELONE_SESSION_TTL_SECONDS', default=43200, cast=int)
+ANGELONE_REMOTE_VALIDATION_TTL_SECONDS = config('ANGELONE_REMOTE_VALIDATION_TTL_SECONDS', default=300, cast=int)
+ANGELONE_LOGIN_LOCK_SECONDS = config('ANGELONE_LOGIN_LOCK_SECONDS', default=30, cast=int)
+ANGELONE_LOGIN_LOCK_WAIT_SECONDS = config('ANGELONE_LOGIN_LOCK_WAIT_SECONDS', default=10, cast=int)
+ANGELONE_CIRCUIT_BREAKER_FAILURE_THRESHOLD = config('ANGELONE_CIRCUIT_BREAKER_FAILURE_THRESHOLD', default=5, cast=int)
+ANGELONE_CIRCUIT_BREAKER_RECOVERY_SECONDS = config('ANGELONE_CIRCUIT_BREAKER_RECOVERY_SECONDS', default=60, cast=int)
+ANGELONE_SESSION_CACHE_PREFIX = config('ANGELONE_SESSION_CACHE_PREFIX', default='angelone:session')
+ANGELONE_STATE_CACHE_PREFIX = config('ANGELONE_STATE_CACHE_PREFIX', default='angelone:state')
+ANGELONE_LOCK_CACHE_PREFIX = config('ANGELONE_LOCK_CACHE_PREFIX', default='angelone:lock')
+ANGELONE_CIRCUIT_CACHE_PREFIX = config('ANGELONE_CIRCUIT_CACHE_PREFIX', default='angelone:circuit')
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': REDIS_URL,
+        'TIMEOUT': 300,
+    },
+    'circuit_breaker': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': REDIS_URL,
+        'TIMEOUT': 300,
+    },
+}
+
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC' 
 
 CONTACT_NUM="+919988746583"
-REDIRECT_URL="https://sparks.algoview.in/callback"
+REDIRECT_URL=config('BROKER_REDIRECT_URL', default="https://sparks.algoview.in/auth-callback/")
 #LOGIN_LINK="'http://localhost:3000/login"
 #HELP_CENTER_LINK="'http://localhost:3000"
 #COMPANY_WEBSITE="'http://localhost:3000"
@@ -234,6 +345,11 @@ COMPANY_WEBSITE="https://www.admin.algoview.in/"
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
+    'filters': {
+        'sanitize_secrets': {
+            '()': 'main.logging_filters.SecretRedactionFilter',
+        },
+    },
     'formatters': {
         'verbose': {  # Formatter to include date and time
             'format': '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -245,12 +361,14 @@ LOGGING = {
             'level': 'DEBUG',  # Minimum level to log
             'class': 'logging.StreamHandler',
             'formatter': 'verbose',  # Apply the formatter here
+            'filters': ['sanitize_secrets'],
         },
         'file': {  # Logs to a file
             'level': 'DEBUG',
             'class': 'logging.FileHandler',
             'filename': os.path.join(BASE_DIR, 'logs/webhooks.log'),  # Ensure this file exists and the directory is writable
             'formatter': 'verbose',  # Apply the formatter here
+            'filters': ['sanitize_secrets'],
         },
     },
     'loggers': {
@@ -267,8 +385,5 @@ LOGGING = {
     },
 }
 
-VENDOR_KEY=   "CNh6IRx0kF8c1MSyNBPaOhcaaVmiitbm"
-RESPONSE_URL="http://127.0.0.1:8000/callback/"
-RAZORPAY_KEY_ID = "rzp_live_FoBYFWo05rPt3O"
-RAZORPAY_SECRET = "9HVvVesHKK7e5L8vA8W0llFe"
-
+RAZORPAY_KEY_ID = config('RAZORPAY_KEY_ID', default="")
+RAZORPAY_SECRET = config('RAZORPAY_SECRET', default="")

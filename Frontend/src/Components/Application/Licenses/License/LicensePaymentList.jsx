@@ -1,7 +1,6 @@
 import React, { Fragment, useEffect, useState } from 'react';
-import { Col, Card, Table, CardHeader, Pagination, PaginationItem, PaginationLink, Input, Button } from 'reactstrap';
+import { Col, Card, Table, CardHeader, Pagination, PaginationItem, PaginationLink, Button } from 'reactstrap';
 import { H3 } from '../../../../AbstractElements';
-import { FaEye } from 'react-icons/fa';
 import { RotatingLines } from 'react-loader-spinner';
 import { baseUrl } from '../../../../ConfigUrl/config';
 import { useNavigate } from 'react-router';
@@ -12,7 +11,6 @@ const LicensePaymentList = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage] = useState(10);
     const [sortConfig, setSortConfig] = useState({ key: '', direction: '' });
-    const [searchQuery, setSearchQuery] = useState('');
     const [pagesPerGroup] = useState(4);
     const [currentGroup, setCurrentGroup] = useState(1);
     const navigate = useNavigate();
@@ -37,11 +35,6 @@ const LicensePaymentList = () => {
         }
     };
 
-    const handleViewClient = () => {
-        console.log('View payment:', );
-        navigate(`/license/view-license-payment`);
-      };
-
     const handleSort = (key) => {
         let direction = 'asc';
         if (sortConfig.key === key && sortConfig.direction === 'asc') {
@@ -58,18 +51,7 @@ const LicensePaymentList = () => {
     };
 
     // Filter signals based on the search query
-    const filteredSignals = signals.filter(signal => {
-        const signalDate = signal.signal_time ? new Date(signal.signal_time).toLocaleDateString('en-GB') : ''; // Format as dd/mm/yyyy
-        const searchLower = searchQuery.toLowerCase();
-
-        return (
-            (signalDate && signalDate.includes(searchLower)) ||
-            (signal.order_type && signal.order_type.toLowerCase().includes(searchLower)) ||
-            (signal.symbol && signal.symbol.toLowerCase().includes(searchLower)) ||
-            (signal.strategy && signal.strategy.toLowerCase().includes(searchLower)) ||
-            (signal.price && signal.price.toString().includes(searchLower))
-        );
-    });
+    const filteredSignals = signals;
 
 
     // Pagination logic

@@ -3,25 +3,31 @@ import csv
 from django.forms import ValidationError
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.permissions import AllowAny, IsAuthenticated
 import time
 import requests
 import logging
 from django.db.models import Q
-from main.Alice_Blue_Api import place_alice_orders, save_trade_order_history
+from main.Alice_Blue_Api import place_alice_orders
 from main.dhanapi import place_dhan_orders
 from main.fivepaisa import fetch_access_token_5paisa, place_5paisa_order
 from main.fyersapi import place_fyers_orders
 from main.models import ClientBrokerdetails, Tradeorderhistory
 from main.upstock import place_upstox_orders
 from main.zerodha import place_zerodha_orders
+from main.broker_registry import get_broker_setup_spec, broker_field_is_configured
+from main.angelone.services.state_service import CallbackStateService
+from main.services.login_activity_service import LoginActivityService
+from main.trade_history_service import save_trade_order_history
 logger = logging.getLogger('main')
 from datetime import datetime, timedelta  
 import os
 from django.conf import settings
 import hashlib
 import json
+import secrets
 from rest_framework import permissions, status
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse, urlunparse
 def get_lot_size(trading_symbol):
     # URL to fetch instrument details (for example, for Angel One)
     url = "https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json"
@@ -51,9 +57,9 @@ def trading_Symbol_sum(trade, symbols, day, month, year, Type, default_price):
     if trade.broker.lower() == 'alice blue':
         trade_symbol = f"{symbols}{day}{month}{year}{Type[0]}{default_price}"
         logger.info(f"{trade.client} : Trading Symbol (Alice Blue): %s", trade_symbol)
-    elif trade.broker.lower() == 'angle one':
+    elif trade.broker.lower() in {'angel one', 'angle one'}:
         trade_symbol = f"{symbols}{day}{month}{year}{default_price}{Type}"
-        logger.info(f"{trade.client} : Trading Symbol (Angle One): %s", trade_symbol)
+        logger.info(f"{trade.client} : Trading Symbol (Angel One): %s", trade_symbol)
     elif trade.broker.lower() == "upstox":
         trade_symbol = f"{symbols}{default_price}{Type}{day}{month}{year}"
         logger.info(f"{trade.client} : Trading Symbol (Upstox): %s", trade_symbol)
@@ -63,83 +69,22 @@ def trading_Symbol_sum(trade, symbols, day, month, year, Type, default_price):
     
     # Return the generated trading symbol
     return trade_symbol
-from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-from rest_framework.exceptions import NotFound
 from django.http import JsonResponse
-# https://software.algosparks.co.in/?type=login&status=success&request_token=Thk7L77Phj3AuNjOY3FmGCgvhIZ8416L&action=login#/login
-# https://software.alcrafttechnology.com/login?code=YNJ5jw
-#UPSTOX 
-AUTHORIZATION_URL = 'https://login.upstox.com/login/v2/oauth/authorize'
-REDIRECT_URI_UPSTOX = 'https://software.alcrafttechnology.com/login' 
-TOKEN_URL_UPSTOX = 'https://api.upstox.com/v2/login/authorization/token'
-AUTH_URL_UPSTOX = "https://api.upstox.com/v2/login/authorization/dialog"
-AUTH_URL_ZERODHA="https://kite.zerodha.com/connect/login"
-# Base URL for Upstox API
-BASE_URL = "https://api.upstox.com"
+
+
+def _normalize_broker_name_for_redirect(name):
+    normalized = str(name or "").strip().lower()
+    if normalized in {"angle one", "angleone", "angelone"}:
+        return "angel one"
+    if normalized in {"5 paisa", "five paisa"}:
+        return "5paisa"
+    return normalized
+
+
 class LoginDematAPIView(APIView):
     permission_classes = [IsAuthenticated]
     def get(self, request, *args, **kwargs):
-        try:
-            # Get the logged-in user
-            user = request.user
-            print(">>>>>>>>",user)
-            # Retrieve broker details for the user
-            broker_details = ClientBrokerdetails.objects.filter(client=user).first()
-            if not broker_details:
-                raise NotFound("Broker details not found for the user.")
-            
-            broker = broker_details.broker_name
-            print("broker>>>>>>",broker)
-            
-            # Generate login URL based on broker
-            if str(broker).lower() == "upstox":
-                state = "upstox"
-                client_key = broker_details.broker_API_KEY
-                login_url = (
-                    f"{AUTH_URL_UPSTOX}?client_id={client_key}&"
-                    f"redirect_uri={REDIRECT_URI_UPSTOX}&"
-                    f"response_type=Auth_code&"
-                    f"state={state}"
-                )
-                print("login_url???????",login_url)
-            elif broker.lower() == "zerodha":
-                state = "zerodha"
-                api_key = "jsdgh8p7k3yvfii8"  # Replace with your API Key
-                redirect_url = "https://software.algosparks.co.in/#/login"  # Your callback URL
-                login_url = (
-                    f"{AUTH_URL_ZERODHA}?api_key={api_key}&v=3"
-                    f"&redirect_url={redirect_url}&state={state}"
-                )
-            elif broker == "alice blue":
-                state = "alice_blue"
-                app_code = broker_details.broker_API_UID  # Replace with the Alice Blue App Code
-                redirect_uri = "https://software.algosparks.co.in/#/login"  # Your callback URL
-                login_url = (
-                    f"https://ant.aliceblueonline.com/oauth2/auth?client_id={app_code}&"
-                    f"redirect_uri={redirect_uri}&response_type=code&state={state}"
-                )
-            elif broker.lower() == "angel one":
-                state = "angel_one"
-                client_code = broker_details.broker_API_UID
-                redirect_uri = "https://software.algosparks.co.in/#/login"  # Replace with your callback URL
-                login_url = (
-                    f"https://smartapi.angelbroking.com/publisher-login?api_key={client_code}&"
-                    f"redirect_url={redirect_uri}&state={state}"
-                )
-            else:
-                return JsonResponse(
-                    {"error": f"Unsupported broker: {broker_details.broker_name}"}, 
-                    status=400
-                )
-
-            return JsonResponse({"login_url": login_url}, status=200)
-
-        except NotFound as e:
-            return JsonResponse({"error": str(e)}, status=404)
-        except Exception as e:
-            return JsonResponse({"error": "An error occurred. Please try again later.", "details": str(e)}, status=500)
+        return BrokerLoginRedirectView().get(request, *args, **kwargs)
 
 
 def exit_existing_buy_position_Upstox(
@@ -668,11 +613,92 @@ def exit_existing_buy_position_fyers_order(default_price,LivePrice,group_service
         logger.error(f"{user} : Unexpected error in exit_existing_buy_position_DhanOrder: {str(e)}")
         return {"data": {"status": "error", "message": f"Unexpected error: {str(e)}"}}
 
+from django.utils import timezone
 from django.utils.timezone import now
-from django.shortcuts import redirect
 from kiteconnect import KiteConnect
-from django.contrib.auth.decorators import login_required
-REDIRECT_URI=settings.REDIRECT_URL
+
+
+def _broker_callback_url():
+    configured_url = getattr(settings, "REDIRECT_URL", "").strip()
+    if not configured_url:
+        return configured_url
+
+    parsed = urlparse(configured_url)
+    if parsed.path.rstrip("/") == "/callback":
+        parsed = parsed._replace(path="/auth-callback/")
+        return urlunparse(parsed)
+    return configured_url
+
+
+def _resolve_frontend_return_url(request):
+    configured_frontend = getattr(settings, "FRONTEND_APP_URL", "").rstrip("/")
+    request_origin = ""
+    if request is not None:
+        request_origin = (request.headers.get("Origin") or "").rstrip("/")
+        if not request_origin:
+            referer = (request.headers.get("Referer") or "").strip()
+            if referer:
+                try:
+                    from urllib.parse import urlparse
+
+                    parsed = urlparse(referer)
+                    if parsed.scheme and parsed.netloc:
+                        request_origin = f"{parsed.scheme}://{parsed.netloc}"
+                except Exception:
+                    request_origin = ""
+    base = request_origin or configured_frontend
+    return f"{base}/dashboard/algoviewtech/user" if base else None
+
+
+def _create_broker_callback_state(request, broker_details, broker_name):
+    state = secrets.token_urlsafe(24)
+    client_code = broker_details.get_canonical_client_code() or f"{broker_name}-{broker_details.client_id}"
+    CallbackStateService().create(
+        state=state,
+        user_id=broker_details.client_id,
+        broker_details_id=broker_details.id,
+        client_code=client_code,
+        frontend_redirect_url=_resolve_frontend_return_url(request),
+    )
+    return state
+
+
+def _save_session_tokens_compat(broker_details, request_token, access_token, refresh_token=None, feed_token=None, expiry=None):
+    broker_details.request_token = request_token
+    broker_details.set_session_tokens(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        feed_token=feed_token,
+        expiry=expiry,
+        mark_token_created=True,
+    )
+    broker_details.access_token = access_token or None
+    broker_details.refreshToken = refresh_token or None
+    broker_details.feed_token = feed_token or None
+    broker_details.isTokenExpired = not bool(access_token)
+    broker_details.tokenCreatedAt = now()
+    broker_details.save()
+
+
+def _next_session_cutoff(hour, minute):
+    now_time = now()
+    expiry_date = now_time.date() if now_time.hour < hour or (now_time.hour == hour and now_time.minute < minute) else now_time.date() + timedelta(days=1)
+    return datetime.combine(expiry_date, datetime.min.time(), tzinfo=now_time.tzinfo) + timedelta(hours=hour, minutes=minute)
+
+
+def _get_active_broker_details_for_user(user, normalized_broker_name=None):
+    queryset = (
+        ClientBrokerdetails.objects.filter(client=user)
+        .select_related("broker_name")
+        .order_by("-tokenCreatedAt", "-id")
+    )
+    if normalized_broker_name:
+        for broker_details in queryset:
+            if broker_details.broker_name and _normalize_broker_name_for_redirect(broker_details.broker_name.broker_name) == normalized_broker_name:
+                return broker_details
+    return queryset.first()
+
+
 class BrokerLoginRedirectView(APIView):
     permission_classes = [IsAuthenticated]  
 
@@ -682,28 +708,38 @@ class BrokerLoginRedirectView(APIView):
             return Response({"error": "User not authenticated"}, status=403)
 
         try:
-            # Retrieve broker details for the logged-in user
-            broker_details = ClientBrokerdetails.objects.get(client=user)
-            broker_name = broker_details.broker_name.broker_name.lower()
-            print("broker_name>>>",broker_name)
-            # broker_name=request.GET.get('state')
+            broker_name_hint = _normalize_broker_name_for_redirect(request.GET.get("broker", ""))
+            broker_details = _get_active_broker_details_for_user(user, broker_name_hint)
+            if not broker_details or not broker_details.broker_name:
+                return Response(
+                    {"error": "Broker details not found for the user", "message": "Please select and save broker details first."},
+                    status=404,
+                )
+
+            broker_name = _normalize_broker_name_for_redirect(broker_details.broker_name.broker_name)
             if broker_name == "zerodha":
-                Response = self.redirect_to_zerodha(broker_details)
+                response = self.redirect_to_zerodha(request, broker_details)
 
             elif broker_name == "5paisa":
-                Response = self.redirect_to_5paisa(broker_details)
+                response = self.redirect_to_5paisa(request, broker_details)
 
             elif broker_name == "alice blue":
-                Response = self.redirect_to_alice_blue(broker_details)
+                response = self.redirect_to_alice_blue(broker_details)
 
             elif broker_name == "upstox":
-                Response = self.redirect_to_upstox(broker_details)
+                response = self.redirect_to_upstox(request, broker_details)
 
             elif broker_name == "fyers":
-                Response = self.redirect_to_fyers(broker_details)
+                response = self.redirect_to_fyers(request, broker_details)
+
+            elif broker_name == "dhan":
+                response = self.redirect_to_dhan(request, broker_details)
+
+            elif broker_name == "angel one":
+                response = self.redirect_to_angel_one(request, broker_details)
 
             else:
-                Response = Response({"error": "Unsupported broker"}, status=400)
+                response = Response({"error": "Unsupported broker", "message": "Selected broker is not supported for login."}, status=400)
             
             try:
                 log_file_path = os.path.join('logs', 'login_demat_log.csv')
@@ -714,7 +750,7 @@ class BrokerLoginRedirectView(APIView):
                     'username': user.email if user.email else "unknown",
                     'broker': str(broker_name),
                     'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                    'action': Response
+                    'action': getattr(response, "status_code", "unknown")
                 }
 
                 file_exists = os.path.isfile(log_file_path)
@@ -728,96 +764,192 @@ class BrokerLoginRedirectView(APIView):
                 logger.error(f"# CSV # Fail silently to avoid disrupting the API")
                 pass
 
-            return Response
+            return response
 
-        except ClientBrokerdetails.DoesNotExist:
-            return Response({"error": "Broker details not found for the user"}, status=404)
         except Exception as e:
-            return Response({"error": str(e)}, status=500)
+            logger.exception("Broker login redirect failed for user %s", user.id)
+            return Response({"error": str(e), "message": str(e)}, status=500)
 
-    def redirect_to_zerodha(self, broker_details):
+    def redirect_to_zerodha(self, request, broker_details):
         api_key = broker_details.broker_API_KEY
-        # redirect_url ="https://www.admin.algoview.in/callback"  # Replace with your callback URL
-        
-        state = "zerodha"  # Include user-specific state
-        
-        zerodha_url = (
-            f"https://kite.zerodha.com/connect/login?api_key={api_key}&v=3"
-            f"&redirect_uri={REDIRECT_URI}&state={state}"
-        )
+        if not api_key or not broker_details.broker_API_SKEY:
+            return Response({"error": "Zerodha credentials are incomplete."}, status=400)
+        state = _create_broker_callback_state(request, broker_details, "zerodha")
+        params = urlencode({"api_key": api_key, "v": "3", "redirect_params": state})
+        zerodha_url = f"https://kite.zerodha.com/connect/login?{params}"
         return Response({"redirect_url": zerodha_url})
 
-    def redirect_to_5paisa(self, broker_details):
-        # redirect_url ="https://www.admin.algoview.in/callback" 
+    def redirect_to_5paisa(self, request, broker_details):
         VENDOR_KEY = broker_details.broker_API_KEY
-        state="5paisa"
-        paisa_url = (f"https://dev-openapi.5paisa.com/WebVendorLogin/VLogin/Index?"f"VendorKey={VENDOR_KEY}&ResponseURL={REDIRECT_URI}&State={state}"
-    )    
+        if not VENDOR_KEY or not broker_details.broker_API_SKEY or not broker_details.broker_API_UID:
+            return Response({"error": "5Paisa credentials are incomplete."}, status=400)
+        state = _create_broker_callback_state(request, broker_details, "5paisa")
+        params = urlencode({"VendorKey": VENDOR_KEY, "ResponseURL": _broker_callback_url(), "State": state})
+        paisa_url = f"https://dev-openapi.5paisa.com/WebVendorLogin/VLogin/Index?{params}"
         return Response({"redirect_url": paisa_url})
 
     def redirect_to_alice_blue(self, broker_details):
-        return redirect("login-aliceblue")  
-    
-    def redirect_to_fyers(self, broker_details):
-        CLIENT_ID = broker_details.broker_API_KEY
-        
-        RESPONSE_TYPE = "code"
-        STATE = "fyers"
-        print(f"REDIRECT_URI:::{REDIRECT_URI}")
-        params = {
-            "client_id": CLIENT_ID,
-            "redirect_uri": REDIRECT_URI,
-            "response_type": RESPONSE_TYPE,
-            "state": STATE
-        }
-
-        login_url = f"https://api-t1.fyers.in/api/v3/generate-authcode?{urlencode(params)}"
-
-        print("CLIENT_ID >>>", CLIENT_ID)
-        print("Redirect URL >>>", login_url)
-
-        return Response({"redirect_url": login_url})
-    
-    def redirect_to_upstox(self, broker_details):
-        CLIENT_KEY = broker_details.broker_API_KEY
-        print("CLIENT_KEY>>>",CLIENT_KEY)
-        CLIENT_SECRET = broker_details.broker_API_SKEY
-        state="upstox"
-        AUTH_URL = "https://api.upstox.com/v2/login/authorization/dialog"
-        # Ensure REDIRECT_URI is properly defined
-        login_url = (
-            f"{AUTH_URL}?client_id={CLIENT_KEY}&"
-            f"redirect_uri={REDIRECT_URI}&"
-            f"response_type=Auth_code&"
-            f"state={state}"
+        return Response(
+            {
+                "status": "manual_session",
+                "message": (
+                    "Alice Blue does not use this OAuth redirect flow in this system. "
+                    "Please save Alice Blue API credentials/API UID; the session is generated during order placement."
+                ),
+            },
+            status=200,
         )
-        print("login_url>>", login_url)
+    
+    def redirect_to_fyers(self, request, broker_details):
+        CLIENT_ID = broker_details.broker_API_KEY
+        if not CLIENT_ID or not broker_details.broker_API_SKEY:
+            return Response({"error": "FYERS credentials are incomplete."}, status=400)
+        STATE = _create_broker_callback_state(request, broker_details, "fyers")
+        redirect_uri = _broker_callback_url()
+        try:
+            from fyers_apiv3 import fyersModel
+
+            session = fyersModel.SessionModel(
+                client_id=CLIENT_ID,
+                secret_key=broker_details.broker_API_SKEY,
+                redirect_uri=redirect_uri,
+                response_type="code",
+                grant_type="authorization_code",
+                state=STATE,
+            )
+            login_url = session.generate_authcode()
+        except Exception:
+            params = {
+                "client_id": CLIENT_ID,
+                "redirect_uri": redirect_uri,
+                "response_type": "code",
+                "state": STATE
+            }
+            login_url = f"https://api-t1.fyers.in/api/v3/generate-authcode?{urlencode(params)}"
+
         return Response({"redirect_url": login_url})
+    
+    def redirect_to_upstox(self, request, broker_details):
+        CLIENT_KEY = broker_details.broker_API_KEY
+        CLIENT_SECRET = broker_details.broker_API_SKEY
+        if not CLIENT_KEY or not CLIENT_SECRET:
+            return Response({"error": "Upstox credentials are incomplete."}, status=400)
+        state = _create_broker_callback_state(request, broker_details, "upstox")
+        AUTH_URL = "https://api.upstox.com/v2/login/authorization/dialog"
+        params = urlencode({"client_id": CLIENT_KEY, "redirect_uri": _broker_callback_url(), "response_type": "code", "state": state})
+        login_url = f"{AUTH_URL}?{params}"
+        return Response({"redirect_url": login_url})
+
+    def redirect_to_dhan(self, request, broker_details):
+        app_id = broker_details.broker_API_KEY
+        app_secret = broker_details.broker_API_SKEY
+        dhan_client_id = broker_details.broker_API_UID or broker_details.broker_Demate_User_Name
+        if not app_id or not app_secret or not dhan_client_id:
+            return Response(
+                {"error": "Dhan credentials are incomplete. App ID/API Key, App Secret/API Secret, and Dhan Client ID are required."},
+                status=400,
+            )
+
+        try:
+            response = requests.post(
+                f"https://auth.dhan.co/app/generate-consent?client_id={dhan_client_id}",
+                headers={"app_id": app_id, "app_secret": app_secret},
+                timeout=10,
+            )
+            payload = response.json() if response.content else {}
+        except Exception as exc:
+            logger.exception("Dhan consent generation failed for broker_details=%s", broker_details.id)
+            return Response({"error": "Failed to initiate Dhan consent flow.", "message": str(exc)}, status=502)
+
+        if response.status_code >= 400 or payload.get("status") not in {None, "success"}:
+            return Response(
+                {
+                    "error": "Dhan consent generation failed.",
+                    "response": payload,
+                },
+                status=response.status_code if response.status_code >= 400 else 400,
+            )
+
+        consent_app_id = payload.get("consentAppId")
+        if not consent_app_id:
+            return Response({"error": "Dhan did not return consentAppId.", "response": payload}, status=400)
+
+        state = _create_broker_callback_state(request, broker_details, "dhan")
+        params = urlencode({"consentAppId": consent_app_id, "state": state})
+        login_url = f"https://auth.dhan.co/login/consentApp-login?{params}"
+        broker_details.request_token = consent_app_id
+        broker_details.tokenCreatedAt = now()
+        broker_details.save(update_fields=["request_token", "tokenCreatedAt"])
+        return Response({"redirect_url": login_url, "consent_app_id": consent_app_id})
+
+    def redirect_to_angel_one(self, request, broker_details):
+        from main.angelone_views import build_angelone_redirect_payload
+
+        try:
+            payload = build_angelone_redirect_payload(request.user, broker_details=broker_details, request=request)
+            return Response(payload)
+        except LookupError as exc:
+            return Response({"error": str(exc), "message": str(exc)}, status=404)
+        except ValueError as exc:
+            payload = {"error": str(exc), "message": str(exc)}
+            missing_fields = getattr(exc, "missing_fields", None)
+            if missing_fields:
+                payload["missing_fields"] = missing_fields
+            return Response(payload, status=400)
 
 class BrokerCallbackView(APIView):
-    permission_classes = [IsAuthenticated]  
+    permission_classes = [AllowAny]  
 
     def get(self, request, *args, **kwargs):
-        print("callback url calleddd......")
+        if request.GET.get("auth_token") or request.GET.get("access_token") or request.GET.get("jwtToken"):
+            from main.angelone_views import angelone_callback as secure_angelone_callback
+
+            return secure_angelone_callback(request)
+
         # Get the authorization code and state from the URL
         try:
-            user = request.user  
-            broker_details = ClientBrokerdetails.objects.get(client=user)
-            print("broker_details:::::::::::",broker_details)
-            broker  = broker_details.broker_name.broker_name
-            broker_name=request.GET.get('state',"") 
+            broker_state = request.GET.get('state') or request.GET.get('redirect_params') or ""
+            state_record = CallbackStateService().consume(broker_state) if broker_state else None
+            if state_record:
+                broker_details = ClientBrokerdetails.objects.select_related("broker_name").filter(id=state_record.broker_details_id, client_id=state_record.user_id).first()
+                if not broker_details or not broker_details.broker_name:
+                    raise ValidationError("Broker details not found for callback state")
+                broker_name = _normalize_broker_name_for_redirect(broker_details.broker_name.broker_name)
+            else:
+                user = request.user if getattr(request, "user", None) and request.user.is_authenticated else None
+                if not user and (request.GET.get("tokenId") or request.GET.get("token_id")):
+                    broker_details = (
+                        ClientBrokerdetails.objects.select_related("broker_name")
+                        .filter(
+                            broker_name__broker_name__iexact="dhan",
+                            request_token__isnull=False,
+                            tokenCreatedAt__gte=now() - timedelta(minutes=15),
+                        )
+                        .order_by("-tokenCreatedAt", "-id")
+                        .first()
+                    )
+                    if broker_details:
+                        broker_name = "dhan"
+                    else:
+                        raise ValidationError("Invalid or expired Dhan callback state")
+                elif not user:
+                    raise ValidationError("Invalid or expired broker callback state")
+                else:
+                    broker_name = _normalize_broker_name_for_redirect(broker_state)
+                    broker_details = _get_active_broker_details_for_user(user, broker_name)
+                    if not broker_details or not broker_details.broker_name:
+                        raise ValidationError("Broker details not found for the user")
 
-            broker_name = broker_name.lower()
-            print(" Broker from State Param:", broker_name)
             if broker_name == "zerodha":
-                request_token = request.GET.get('code')
+                request_token = request.GET.get('request_token') or request.GET.get('code')
                 return self.handle_zerodha(request_token, broker_details)
 
             elif broker_name == "5paisa":
-                request_token = request.GET.get('code')
+                request_token = request.GET.get('RequestToken') or request.GET.get('request_token') or request.GET.get('code')
                 return self.handle_5paisa(request_token, broker_details)
 
             elif broker_name == "alice blue":
+                request_token = request.GET.get('authCode') or request.GET.get('code')
                 return self.handle_alice_blue(request_token, broker_details)
 
             elif broker_name == "upstox":
@@ -829,57 +961,58 @@ class BrokerCallbackView(APIView):
                 
                 return self.handle_fyers(request_token, broker_details)
 
+            elif broker_name == "dhan":
+                token_id = request.GET.get("tokenId") or request.GET.get("token_id") or request.GET.get("code")
+                return self.handle_dhan(token_id, broker_details)
+
+            elif broker_name == "angel one":
+                return self.handle_angle_one(request, broker_details)
+
             else:
                 raise ValidationError("Unsupported broker")
 
-        except ClientBrokerdetails.DoesNotExist:
-            raise ValidationError("Broker details not found for the user")
         except Exception as e:
-            raise ValidationError(str(e))
+            logger.exception("Broker callback failed")
+            return JsonResponse({"message": "Failed", "error": str(e)}, status=400)
 
     def handle_fyers(self, request_token, broker_details):
         try:
+            if not request_token:
+                return JsonResponse({"message": "Failed", "error": "Authorization code not provided"}, status=400)
             CLIENT_ID = broker_details.broker_API_KEY
             SECRET_KEY = broker_details.broker_API_SKEY
-            GRANT_TYPE = "authorization_code"
+            redirect_uri = _broker_callback_url()
+            try:
+                from fyers_apiv3 import fyersModel
 
-            #  Correct hash: SHA256("client_id:secret_key")
-            raw_string = f"{CLIENT_ID}:{SECRET_KEY}"
-            app_id_hash = hashlib.sha256(raw_string.encode()).hexdigest()
-
-            # Token exchange endpoint
-            token_url = "https://api-t1.fyers.in/api/v3/validate-authcode"
-            payload = {
-                "grant_type": GRANT_TYPE,
-                "appIdHash": app_id_hash,
-                "code": request_token
-            }
-
-            headers = {"Content-Type": "application/json"}
-            response = requests.post(token_url, data=json.dumps(payload), headers=headers)
-            token_data = response.json()
-
-            # print("Access Token Response:", json.dumps(token_data, indent=4))
-
+                session = fyersModel.SessionModel(
+                    client_id=CLIENT_ID,
+                    secret_key=SECRET_KEY,
+                    redirect_uri=redirect_uri,
+                    response_type="code",
+                    grant_type="authorization_code",
+                )
+                session.set_token(request_token)
+                token_data = session.generate_token()
+            except Exception:
+                token_url = "https://api-t1.fyers.in/api/v3/validate-authcode"
+                headers = {"Content-Type": "application/json"}
+                token_data = {}
+                for raw_string in (f"{CLIENT_ID}{SECRET_KEY}", f"{CLIENT_ID}:{SECRET_KEY}"):
+                    app_id_hash = hashlib.sha256(raw_string.encode()).hexdigest()
+                    payload = {
+                        "grant_type": "authorization_code",
+                        "appIdHash": app_id_hash,
+                        "code": request_token
+                    }
+                    response = requests.post(token_url, data=json.dumps(payload), headers=headers, timeout=10)
+                    token_data = response.json() if response.content else {}
+                    if token_data.get("access_token"):
+                        break
             access_token = token_data.get("access_token")
-            print("access_token>>>",access_token)
             if access_token:
-                now_time = now()
-
-                #  Set expiry to next 3:30 AM
-                if now_time.hour < 3 or (now_time.hour == 3 and now_time.minute < 30):
-                    expiry_date = now_time.date()
-                else:
-                    expiry_date = now_time.date() + timedelta(days=1)
-                expiry_time = datetime.combine(expiry_date, datetime.min.time()) + timedelta(hours=3, minutes=30)
-
-                # Save token data
-                broker_details.request_token = request_token
-                broker_details.access_token = access_token
-                broker_details.access_token_expiry = expiry_time
-                broker_details.isTokenExpired = False
-                broker_details.tokenCreatedAt = now()
-                broker_details.save()
+                expiry_time = _next_session_cutoff(3, 30)
+                _save_session_tokens_compat(broker_details, request_token, access_token, expiry=expiry_time)
 
                 return JsonResponse({"message": "success", "access_token": access_token})
             else:
@@ -890,57 +1023,29 @@ class BrokerCallbackView(APIView):
   
     def handle_zerodha(self, request_token, broker_details):
         try:
+            if not request_token:
+                return JsonResponse({"message": "Failed", "error": "Request token not provided"}, status=400)
             kite = KiteConnect(api_key=broker_details.broker_API_KEY)
             session_data = kite.generate_session(request_token, api_secret=broker_details.broker_API_SKEY)
             access_token = session_data['access_token']
             if access_token:
-                # Calculate expiry at 6 AM next day
-                expiry_time = datetime.combine(now().date() + timedelta(days=1), datetime.min.time()) + timedelta(hours=6)
-
-                # Save details
-                broker_details.request_token = request_token
-                broker_details.access_token = access_token
-                broker_details.access_token_expiry = expiry_time
-                broker_details.isTokenExpired = False
-                broker_details.tokenCreatedAt = now()
-                broker_details.save()
+                expiry_time = _next_session_cutoff(6, 0)
+                _save_session_tokens_compat(broker_details, request_token, access_token, expiry=expiry_time)
          
                 return JsonResponse({"message": "success", "access_token": access_token})
             else:
                 return JsonResponse({"message": "success", "access_token": access_token})
         except Exception as e:
             return JsonResponse({"message":"Failed","error": str(e)}, status=500)
-            # try:
-            #     AUTH_TOKEN_URL="https://api.kite.trade/session/token"
-            #     headers={
-            #             "api_key": broker_details.broker_API_SKEY,
-            #             "request_token": request_token,
-            #             "checksum": generate_checksum(broker_details.broker_API_SKEY, broker_details.broker_API_UID, request_token),
-            #         }
-            #     # Make a POST request to fetch the access token
-            #     response = requests.post(AUTH_TOKEN_URL,headers)
-            #     response_data = response.json()
-            #     print("response_data>>>",response_data)
-            #     return JsonResponse({
-            #         "message": "Callback successful",
-            #         "access_token": response_data.get("access_token"),
-                    
-            #     })
-            # except Exception as e:
-            #     return JsonResponse({"error": str(e)}, status=500)
+
     def handle_5paisa(self, request_token, broker_details):
         try:
+            if not request_token:
+                return JsonResponse({"message": "Failed", "error": "Request token not provided"}, status=400)
             access_token = fetch_access_token_5paisa(request_token,broker_details)
             if access_token:
-                now_time = now()
-                expiry_date = now_time.date() if now_time.hour < 3 or (now_time.hour == 3 and now_time.minute < 30) else now_time.date() + timedelta(days=1)
-                expiry_time = datetime.combine(expiry_date, datetime.min.time()) + timedelta(hours=3, minutes=30)
-                broker_details.request_token = request_token
-                broker_details.access_token = access_token
-                broker_details.access_token_expiry =expiry_time# now() + timedelta(days=1) 
-                broker_details.isTokenExpired = False
-                broker_details.tokenCreatedAt = now()
-                broker_details.save()
+                expiry_time = _next_session_cutoff(23, 59)
+                _save_session_tokens_compat(broker_details, request_token, access_token, expiry=expiry_time)
                 return JsonResponse({"message": "success", "access_token": access_token})
             else:
                 return JsonResponse({"message": "Failed"}, status=400)
@@ -948,69 +1053,125 @@ class BrokerCallbackView(APIView):
             return JsonResponse({"message":"Failed","error": str(e)}, status=500)
     def handle_alice_blue(self, request_token, broker_details):
         try: 
-            access_token = "aliceblue_access_token_placeholder" 
-            if access_token:
-                # Save access token and other details
-                broker_details.request_token = request_token
-                broker_details.access_token = access_token
-                broker_details.access_token_expiry = now() + timedelta(days=1)  # Assuming 1-day validity
-                broker_details.save()
-                
-                return JsonResponse({"message": "success", "access_token": access_token})
-            else:
-                return JsonResponse({"message": "Failed"}, status=400)
+            return JsonResponse(
+                {
+                    "message": "Alice Blue uses API key and API UID session generation during order placement. No OAuth token callback is required.",
+                    "status": "manual_session",
+                },
+                status=200,
+            )
         
         except Exception as e:
             return JsonResponse({"message":"Failed","error": str(e)}, status=500)
 
     def handle_upstox(self, request_token, broker_details):
         try:
-            # Example Upstox-specific token generation logic
             TOKEN_URL = 'https://api.upstox.com/v2/login/authorization/token' 
-            auth_code = request_token  # Assuming `request_token` is the auth code
+            auth_code = request_token
             
             if not auth_code:
                 return JsonResponse({"error": "Authorization code not provided"}, status=400)
             CLIENT_KEY=broker_details.broker_API_KEY
             CLIENT_SECRET=broker_details.broker_API_SKEY
-            print("CLIENT_KEY>>>>",CLIENT_KEY,">>skey>>>>>",CLIENT_SECRET)
-            REDIRECT_URI="https://sparks.algoview.in/callback"
+            redirect_uri = _broker_callback_url()
             data = {
                 'code': auth_code,
                 'client_id': CLIENT_KEY,
                 'client_secret': CLIENT_SECRET,
-                'redirect_uri': REDIRECT_URI,
+                'redirect_uri': redirect_uri,
                 'grant_type': 'authorization_code'
             }
-            response = requests.post(TOKEN_URL, data=data)
-            print("response>>>>",response)
+            response = requests.post(TOKEN_URL, data=data, timeout=10)
             if response.status_code == 200:
-                access_token = response.json().get('access_token')
-                # Calculate Expiry Time (Fixed at 3:30 AM the Next Day)
-                now_time = now()
-                expiry_date = now_time.date() if now_time.hour < 3 or (now_time.hour == 3 and now_time.minute < 30) else now_time.date() + timedelta(days=1)
-                expiry_time = datetime.combine(expiry_date, datetime.min.time()) + timedelta(hours=3, minutes=30)
-                print("expiry_time>>>>",expiry_time)
-                # Save access token and expiry time
-                broker_details.request_token = request_token
-                broker_details.access_token = access_token
-                broker_details.access_token_expiry = expiry_time
-                broker_details.isTokenExpired = False
-                broker_details.tokenCreatedAt = now()
-                broker_details.save()
-                
-                # Save access token and other details
-                # broker_details.request_token = request_token
-                # broker_details.access_token = access_token
-                # broker_details.access_token_expiry = now() + timedelta(days=1)  # Assuming 1-day validity
-                # broker_details.save()
+                payload = response.json() if response.content else {}
+                access_token = payload.get('access_token')
+                refresh_token = payload.get('refresh_token')
+                expires_in = payload.get("expires_in")
+                expiry_time = None
+                if expires_in:
+                    try:
+                        expiry_time = now() + timedelta(seconds=int(expires_in))
+                    except (TypeError, ValueError):
+                        expiry_time = None
+                if expiry_time is None:
+                    expiry_time = _next_session_cutoff(3, 30)
+                _save_session_tokens_compat(broker_details, request_token, access_token, refresh_token=refresh_token, expiry=expiry_time)
                 logger.info(f"Upstox callback processed successfully")
                 return JsonResponse({"message": "success", "access_token": access_token})
             else:
-                return JsonResponse({"message": "Failed"}, status=400)
+                try:
+                    error_payload = response.json() if response.content else {}
+                except ValueError:
+                    error_payload = {"raw": response.text}
+                return JsonResponse({"message": "Failed", "response": error_payload}, status=400)
         
         except Exception as e:
             return JsonResponse({"message":"Failed","error": str(e)}, status=500)
+
+    def handle_dhan(self, token_id, broker_details):
+        try:
+            if not token_id:
+                return JsonResponse({"message": "Failed", "error": "Dhan tokenId not provided"}, status=400)
+
+            app_id = broker_details.broker_API_KEY
+            app_secret = broker_details.broker_API_SKEY
+            if not app_id or not app_secret:
+                return JsonResponse(
+                    {"message": "Failed", "error": "Dhan App ID/API Key and App Secret/API Secret are required."},
+                    status=400,
+                )
+
+            response = requests.get(
+                f"https://auth.dhan.co/app/consumeApp-consent?tokenId={token_id}",
+                headers={"app_id": app_id, "app_secret": app_secret},
+                timeout=10,
+            )
+            payload = response.json() if response.content else {}
+            if response.status_code >= 400 or payload.get("accessToken") is None:
+                return JsonResponse(
+                    {
+                        "message": "Failed to generate Dhan access token",
+                        "response": payload,
+                    },
+                    status=response.status_code if response.status_code >= 400 else 400,
+                )
+
+            access_token = payload.get("accessToken")
+            expiry_time = None
+            expiry_raw = payload.get("expiryTime")
+            if expiry_raw:
+                try:
+                    expiry_time = datetime.fromisoformat(str(expiry_raw).replace("Z", "+00:00"))
+                    if timezone.is_naive(expiry_time):
+                        expiry_time = timezone.make_aware(expiry_time)
+                except (TypeError, ValueError):
+                    expiry_time = None
+            if expiry_time is None:
+                expiry_time = now() + timedelta(hours=24)
+
+            dhan_client_id = payload.get("dhanClientId") or broker_details.broker_API_UID or broker_details.broker_Demate_User_Name
+            broker_details.broker_API_UID = dhan_client_id
+            _save_session_tokens_compat(broker_details, token_id, access_token, expiry=expiry_time)
+            broker_details.broker_API_UID = dhan_client_id
+            broker_details.save(update_fields=["broker_API_UID"])
+
+            return JsonResponse(
+                {
+                    "message": "success",
+                    "access_token": access_token,
+                    "dhanClientId": dhan_client_id,
+                    "expiryTime": expiry_time.isoformat() if expiry_time else None,
+                }
+            )
+
+        except Exception as e:
+            logger.exception("Dhan callback failed for broker_details=%s", getattr(broker_details, "id", None))
+            return JsonResponse({"message": "Failed", "error": str(e)}, status=500)
+
+    def handle_angle_one(self, request, broker_details):
+        from main.angelone_views import angelone_callback
+
+        return angelone_callback(request)
 
 from rest_framework import status
 class CheckTokenValidityView(APIView):
@@ -1018,25 +1179,51 @@ class CheckTokenValidityView(APIView):
 
     def get(self, request, *args, **kwargs):
         try:
-            user = request.user  
-            broker_details = ClientBrokerdetails.objects.get(client=user)
-            if not broker_details.access_token_expiry:
-                broker_details.isTokenExpired = True
-                broker_details.save()
-                return Response({
-                    "message": "Please log in again to continue trading. You are not logged in yet.",
-                    "isTokenExpired": broker_details.isTokenExpired
-                }, status=status.HTTP_200_OK)
-            if broker_details.access_token_expiry and now() > broker_details.access_token_expiry:
-                broker_details.isTokenExpired = True
-                broker_details.save()
-                
-                return Response({"message": "Token has expired", "isTokenExpired": broker_details.isTokenExpired}, status=status.HTTP_200_OK)
-            
-            return Response({"message": "Token is valid", "isTokenExpired": broker_details.isTokenExpired}, status=status.HTTP_200_OK)
+            summary = LoginActivityService().build_summary(request.user, request=request)
+            broker_data = (summary.get("data") or {}).get("broker") or {}
+            session = broker_data.get("session") or {}
+            token = broker_data.get("token") or {}
 
-        except ClientBrokerdetails.DoesNotExist:
-            return Response({"error": "Broker details not found"}, status=status.HTTP_404_NOT_FOUND)
+            session_status = session.get("status") or "unavailable"
+            token_status = token.get("status") or "unavailable"
+            is_active = bool(
+                session.get("is_active")
+                or token.get("is_active")
+                or session_status == "active"
+                or token_status == "active"
+            )
+
+            if is_active:
+                return Response(
+                    {
+                        "message": "Token is valid",
+                        "isTokenExpired": False,
+                        "session_status": session_status,
+                        "token_status": token_status,
+                    },
+                    status=status.HTTP_200_OK,
+                )
+
+            if token_status == "expired":
+                return Response(
+                    {
+                        "message": "Token has expired",
+                        "isTokenExpired": True,
+                        "session_status": session_status,
+                        "token_status": token_status,
+                    },
+                    status=status.HTTP_200_OK,
+                )
+
+            return Response(
+                {
+                    "message": "Please log in again to continue trading. You are not logged in yet.",
+                    "isTokenExpired": True,
+                    "session_status": session_status,
+                    "token_status": token_status,
+                },
+                status=status.HTTP_200_OK,
+            )
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)    
     
@@ -1058,25 +1245,13 @@ class GetClientBrokerDetailsSettingView(APIView):
 
         broker_name = broker_details.broker_name.broker_name.lower() if broker_details.broker_name else ""
 
+        spec = get_broker_setup_spec(broker_name)
         missing_fields = []
 
-        def check_fields(required_fields):
-            for field in required_fields:
-                if not getattr(broker_details, field):
-                    missing_fields.append(field)
-
-        broker_requirements = {
-            "upstox": ["broker_API_KEY", "broker_API_SKEY"],
-            "zerodha": ["broker_API_KEY", "broker_API_SKEY"],
-            "alice blue": ["broker_API_KEY", "broker_API_UID"],
-            "angle one": ["broker_API_KEY", "broker_Demate_User_Name", "broker_Totp_Authcode", "broker_pass"],
-            "dhan": ["broker_API_KEY", "access_token"],
-            "fyers": ["broker_API_KEY", "broker_API_SKEY"],
-            "5paisa": ["broker_API_KEY", "broker_API_SKEY","broker_API_UID"],
-        }
-
-        if broker_name in broker_requirements:
-            check_fields(broker_requirements[broker_name])
+        if spec:
+            for field_spec in spec["fields"]:
+                if field_spec.get("required") and not broker_field_is_configured(broker_details, field_spec["key"]):
+                    missing_fields.append(field_spec["key"])
             if missing_fields:
                 return Response(
                     {

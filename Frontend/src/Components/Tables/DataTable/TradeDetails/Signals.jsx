@@ -153,7 +153,10 @@ const Signals = () => {
                                     type="text"
                                     placeholder="Search..."
                                     value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    onChange={(e) => {
+                                        setCurrentPage(1);
+                                        setSearchQuery(e.target.value);
+                                    }}
                                     style={{ width: '200px', display: 'inline-block', marginRight: '10px' }}
                                 />
                                 <Button className='search-btn-clr'>Search</Button>
@@ -171,7 +174,7 @@ const Signals = () => {
                                             <th onClick={() => handleSort('order_type')} className='custom-col-design'>Order Type <FaArrowUp className="arrow-icon" /> <FaArrowDown className="arrow-icon" /></th>
                                             <th onClick={() => handleSort('symbol')} className='custom-col-design'>Symbol <FaArrowUp className="arrow-icon" /> <FaArrowDown className="arrow-icon" /></th>
                                             <th onClick={() => handleSort('price')} className='custom-col-design'>Price <FaArrowUp className="arrow-icon" /> <FaArrowDown className="arrow-icon" /></th>
-                                            <th onClick={() => handleSort('strategy')} className='custom-col-design'>Entry Type <FaArrowUp className="arrow-icon" /> <FaArrowDown className="arrow-icon" /></th>
+                                            <th onClick={() => handleSort('strategy')} className='custom-col-design'>Strategy <FaArrowUp className="arrow-icon" /> <FaArrowDown className="arrow-icon" /></th>
                                             <th onClick={() => handleSort('created_at')} className='custom-col-design'>Created At <FaArrowUp className="arrow-icon" /> <FaArrowDown className="arrow-icon" /></th>
                                         </tr>
                                     </thead>

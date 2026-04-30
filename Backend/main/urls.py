@@ -5,7 +5,7 @@ from rest_framework_simplejwt.views import (
     TokenRefreshView,
 )
 from main.Alice_Blue_Api import SymbolExpirDateListView
-from main.angleapi import SymbolExpiryDateListView
+from main.angleapi_upgraded import SymbolExpiryDateListView
 from main.companyprofile import *
 from main.permissions import RolePermissionListView, UpdateRolePermissionsView
 from main.upstock import *
@@ -14,11 +14,26 @@ from .views import *
 from django.conf.urls.static import static
 from main import views
 from main.dematemodule import BrokerCallbackView, CheckTokenValidityView, GetClientBrokerDetailsSettingView, LoginDematAPIView,BrokerLoginRedirectView
+from main.angelone_views import (
+    AngelOneSettingsView,
+    AngelOneTokenStatusView,
+    AngelOneLogoutView,
+)
+from main.multileg_views import (
+    MultiLegActiveListAPIView,
+    MultiLegExecuteAPIView,
+    MultiLegKillSwitchAPIView,
+    MultiLegStrategyDetailAPIView,
+    MultiLegStrategyExitAPIView,
+    MultiLegStrategyLogsAPIView,
+)
 urlpatterns = [
     path('signup/', UserRegistrationView.as_view(), name='user-registration'),
     path('login/', CustomLoginView.as_view(), name='login'),
     path('logout/', LogoutView.as_view(), name='logout'),
     path('user-activity-log/', UserActivityLogView.as_view(), name='user-activity-log'),
+    path('login-activity/', LoginActivitySummaryView.as_view(), name='login-activity-summary'),
+    path('login-activity/<int:user_id>/', LoginActivitySummaryView.as_view(), name='login-activity-summary-by-id'),
     # path('user-login-logout/', UserLastLoginLogoutAPIView.as_view(), name='user-login-logout'),
     path('verify-otp/', OTPVerifyView.as_view(), name='otp_verify'),
     path('resend-otp/', ResendOTPView.as_view(), name='resend_otp'),
@@ -51,6 +66,8 @@ urlpatterns = [
     path('get-alice-orders/', GetAliceOrderBook.as_view(), name='get-order-book'),
     path('get-alice-tread-history/', GetAliceTreadBook.as_view(), name='get-tread-book'),
     path('order-logs-list/', OrderLogListView.as_view(), name='order-log-list'),
+    path('webhook-diagnostics/', WebhookDiagnosticsAPIView.as_view(), name='webhook-diagnostics'),
+    path('sl-tp-watcher/scan/', SLTPWatcherScanAPIView.as_view(), name='sl-tp-watcher-scan'),
     path('user-activity-logs/', UserActivityLogListView.as_view(), name='user-activity-logs'),
     path('user-last-login/', LastLoginActivityView.as_view(), name='last-login'),
     path('get-city-data/',Get_city_data.as_view(), name='cites'),
@@ -110,6 +127,7 @@ urlpatterns = [
     path('update-trade-status/', UpdateTradeSettingStatusView.as_view(), name='update_client_setting'),
     path('client-trade-settings/update/', UpdateClientTradeSettingAPIView.as_view(), name='update-trade-setting'),
     path('get-client-trade-setting/', GetTradeSettingAPIView.as_view(), name='get-trade-settings'),   
+    path('client-multi-leg-settings/', ClientMultiLegTradeSettingAPIView.as_view(), name='client-multi-leg-settings'),
     path('clients/trading/status/count/', ClientTradingStatusCountView.as_view(), name='client-trading-status-count'),
     path('clients/onboarding/stats/', ClientOnboardingStatsView.as_view(), name='client-onboarding-stats'),
 
@@ -129,6 +147,8 @@ urlpatterns = [
     path("client/<int:client_id>/update-trade-status/",ClientsTradeStatusView.as_view(),name='clienttrade-status-by-id'),
     path("get-client-broker-details/", ClientBrokerDetailsView.as_view(), name='get-client-broker'),
     path("update-client-broker/", ClientBrokerDetailsView.as_view(), name='update-client-broker'),
+    path("broker-runtime-status/", BrokerRuntimeStatusView.as_view(), name='broker-runtime-status'),
+    path("broker-generate-token/", BrokerGenerateTokenView.as_view(), name='broker-generate-token'),
     path("enable-disable-broker/", EnableDisableBrokerView.as_view(), name='update-status-broker'),
     path("get-client-api-status/", EnableDisableBrokerView.as_view(), name='get-status-broker'),
     path('get-sub-segments-by-segment/', SubSegmentsListView.as_view(), name='sub-segments-list'),
@@ -149,25 +169,15 @@ urlpatterns = [
     path('update-company-profile/', CompanyProfileUpdateView.as_view(), name='put-company_profile_detail'),
     path('get-company-smtp/', CompanySmtpDetailView.as_view(), name='get-company-smtp-detail'),  
     path('update-company-smtp/', CompanySmtpUpdateView.as_view(), name='put-company-smtp-detail'), 
+    path('test-company-smtp/', CompanySmtpTestView.as_view(), name='test-company-smtp'), 
     
     path("create-order/", CreateOrderView.as_view(), name="create-order"),
     path("payment-callback/", PaymentCallbackView.as_view(), name="payment-callback"),
     path("verify-payment/", VerifyPaymentAPIView.as_view(), name="payment-callback"),
-    # path('callback/', views.oauth_callback, name='oauth_callback'),
-    # path('login-5paisa/', views.login_redirect, name='login_redirect'),
-    path("login-5paisa/",initiate_oauth_login, name="initiate_oauth"),
-    path("callback-5paisa/", oauth_callback, name="oauth_callback"),
-
-    path('login-zerodha/', views.login_zerodha_redirect, name='login-zerodha'),
-    path('callback-zerodha/', views.zerodha_callback, name='zerodha-callback'),
-    path('login-angelone/', views.login_angelone_redirect, name='login-angelone'),
-    path('callback-angelone/', views.angelone_callback, name='angelone-callback'),
-    path("callback/aliceblue/", views.aliceblue_callback, name="aliceblue_callback"),
-    path("login-aliceblue/", views.login_aliceblue, name="login_aliceblue"),
-    path("place-zerodha-order/", place_zerodha_order, name="zerodha-order"),
-    path('login-upstox/',get_upstox_login_url,name="login_upstox_redirect"),
-    path('callback-upstox/',callback_upstox,name="login_upstox_redirect"),
-    path("broker-login/", LoginDematAPIView.as_view(), name="login_broker"),
+    path('angelone/settings/', AngelOneSettingsView.as_view(), name='angelone-settings'),
+    path('angelone/token-status/', AngelOneTokenStatusView.as_view(), name='angelone-token-status'),
+    path('angelone/logout/', AngelOneLogoutView.as_view(), name='angelone-logout'),
+    path("broker-login/", BrokerLoginRedirectView.as_view(), name="login_broker_legacy"),
     
     path('trade-history-filter/', TradeOrderHistoryFilterView.as_view(), name='trade_history_filter'),
     path("get-websocket-token/", WebsocketTokenView.as_view(), name="websocket-token"),
@@ -180,6 +190,13 @@ urlpatterns = [
     path("get-client-broker-details-by-id/<int:pk>/", AdminClientBrokerDetailsView.as_view(), name='get-client-broker'),
     path('broker-log-activity/<int:id>/', BrokerLogActivityView.as_view(), name='broker-log-activity'),
     path('user-broker-log/<int:user_id>/', UserBrokerLogActivityView.as_view(), name='user-broker-log'),
+    path('strategies/multileg/execute/', MultiLegExecuteAPIView.as_view(), name='multileg-execute'),
+    path('strategies/multileg/active/', MultiLegActiveListAPIView.as_view(), name='multileg-active'),
+    path('strategies/multileg/<int:execution_id>/', MultiLegStrategyDetailAPIView.as_view(), name='multileg-detail'),
+    path('strategies/multileg/<int:execution_id>/exit/', MultiLegStrategyExitAPIView.as_view(), name='multileg-exit'),
+    path('strategies/multileg/<int:execution_id>/logs/', MultiLegStrategyLogsAPIView.as_view(), name='multileg-logs'),
+    path('strategies/multileg/kill-switch/', MultiLegKillSwitchAPIView.as_view(), name='multileg-kill-switch'),
+    path('client/kill-switch/', ClientGlobalKillSwitchAPIView.as_view(), name='client-global-kill-switch'),
     
     path('client-broker-details-setting-aleart/', GetClientBrokerDetailsSettingView.as_view(), name='client-broker-details'),
     path('client-complete-trade-history/',TradeCompleteListView.as_view(), name='client-completed-trade-details'),
@@ -190,4 +207,3 @@ urlpatterns = [
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-

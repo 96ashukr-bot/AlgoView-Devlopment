@@ -118,7 +118,7 @@ const GroupService = () => {
     const indexOfLastItem = currentPage * itemsPerPage;
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;
 
-    const currentServices = filteredServices;
+    let currentServices = filteredServices;
 
     if (currentPage === 1 && filteredServices.length > itemsPerPage) {
         const extraItem = filteredServices[filteredServices.length - 1];

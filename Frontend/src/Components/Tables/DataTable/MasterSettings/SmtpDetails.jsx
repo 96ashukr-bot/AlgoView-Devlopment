@@ -3,7 +3,7 @@ import { Col, Card, CardHeader, CardBody, Form, Label, Row, Input, Button, Spinn
 import { ToastContainer, toast } from 'react-toastify';
 import Swal from 'sweetalert2';
 import 'react-toastify/dist/ReactToastify.css';
-import { updateSmtpDetails, getSmtpDetails } from '../../../../Services/Authentication';
+import { updateSmtpDetails, getSmtpDetails, testSmtpDetails } from '../../../../Services/Authentication';
 
 const SmtpDetails = () => {
   const [SmtpDetails, setSmtpDetails] = useState({
@@ -16,6 +16,7 @@ const SmtpDetails = () => {
 
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const [testing, setTesting] = useState(false);
 
   useEffect(() => {
     fetchSmtpDetails();
@@ -86,6 +87,15 @@ const SmtpDetails = () => {
     try {
       const response = await updateSmtpDetails(SmtpDetails);
       if (response.status === 'success') {
+        if (response.data) {
+          setSmtpDetails({
+            email_host: response.data.email_host || '',
+            email_port: response.data.email_port || '',
+            email_host_user: response.data.email_host_user || '',
+            email_host_password: response.data.email_host_password || '',
+            default_from_email: response.data.default_from_email || '',
+          });
+        }
         toast.success(response.message || 'SMTP Details updated successfully!');
       } else {
         toast.error(response.message || 'Failed to update SMTP details');
@@ -94,6 +104,22 @@ const SmtpDetails = () => {
       toast.error(error.message || 'An error occurred while updating SMTP details');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleTestSmtp = async () => {
+    setTesting(true);
+    try {
+      const response = await testSmtpDetails({ recipient: SmtpDetails.default_from_email });
+      if (response.status === 'success') {
+        toast.success(response.message || 'SMTP test email sent successfully!');
+      } else {
+        toast.error(response.message || 'SMTP test failed');
+      }
+    } catch (error) {
+      toast.error(error.message || 'SMTP test failed');
+    } finally {
+      setTesting(false);
     }
   };
 
@@ -197,6 +223,9 @@ const SmtpDetails = () => {
 
               <Button color="primary" type="submit" className="mt-4 search-btn-clr" disabled={loading}>
                 {loading ? <Spinner size="sm" /> : 'Save'}
+              </Button>
+              <Button color="secondary" type="button" className="mt-4 ms-3" onClick={handleTestSmtp} disabled={testing || loading}>
+                {testing ? <Spinner size="sm" /> : 'Test SMTP'}
               </Button>
 
             </Form>

@@ -10,10 +10,13 @@ from dateutil.relativedelta import relativedelta
 
 from datetime import datetime,timedelta  # Import timedelta from datetime
 from django.utils import timezone  # To handle timezones correctly in Djang
-from pytz import timezone
+from pytz import timezone as pytz_timezone
+
+from main.angelone.utils.crypto import decrypt_value, encrypt_value
+from main.broker_registry import normalize_broker_name
 def get_ist_time():
     # Convert the current UTC time to IST
-    ist_timezone = timezone('Asia/Kolkata')
+    ist_timezone = pytz_timezone('Asia/Kolkata')
     return now().astimezone(ist_timezone)
 class Role(models.Model):
     ACTIVE = 'active'
@@ -143,43 +146,31 @@ class User(AbstractBaseUser, PermissionsMixin):
         super().save(*args, **kwargs)
     
     def calculate_dates(self):
-        """Calculate start_date_client and end_date_client based on to_month."""
-        today = datetime.today()
-                
-        license_type = getattr(self.license, 'name', None)  # Modify 'name' to match your actual attribute
+        """Calculate client service dates from the selected license."""
+        today = timezone.localdate()
+        license_type = (getattr(self.license, 'name', '') or '').strip().lower()
 
-        if license_type == "Live" or license_type == "live":
-            print("Inside Live license section")
-            if self.to_month:
-                print("inside to month......")
-                try:
-                    if self.to_month:
-                        months = int(self.to_month)
-                        self.start_date_client = today.date()
-                        self.end_date_client = (today + relativedelta(months=months)).date()
-                    # elif "day" in self.to_month:
-                    #     days = int(self.to_month.split()[0])
-                    #     self.start_date_client = today.date()
-                    #     self.end_date_client = (today + timedelta(days=days)).date()
-                    else:
-                        # Handle unexpected format by setting dates to None
-                        self.start_date_client = None
-                        self.end_date_client = None
-                except ValueError:
-                    # Handle invalid integer conversion
-                    self.start_date_client = None
-                    self.end_date_client = None
+        if license_type == "live":
+            try:
+                months = int(self.to_month or 0)
+            except (TypeError, ValueError):
+                months = 0
+
+            if 1 <= months <= 12:
+                self.to_month = months
+                self.start_date_client = today
+                self.end_date_client = today + relativedelta(months=months)
             else:
-                # If no to_month provided, set dates to None
                 self.start_date_client = None
                 self.end_date_client = None
-
-        elif license_type == "Demo" or license_type == "demo":
-            print("Inside Demo license section")
-            # Retain the provided start and end dates as is
-            # If you don't need to assign dates, just omit these lines
-            self.start_date_client = self.start_date_client
-            self.end_date_client = self.end_date_client
+        elif license_type == "demo":
+            self.to_month = None
+            self.start_date_client = today
+            self.end_date_client = today + timedelta(days=3)
+        else:
+            self.to_month = None
+            self.start_date_client = None
+            self.end_date_client = None
                 
             
 class KYC(models.Model):
@@ -344,10 +335,51 @@ class Services(models.Model):
     def __str__(self):
         return self.service_name
 class Strategies(models.Model):
+    EXECUTION_MODE_INDICATOR = "INDICATOR_BASED"
+    EXECUTION_MODE_MULTI_LEG = "MULTI_LEG"
+    EXECUTION_MODE_CHOICES = (
+        (EXECUTION_MODE_INDICATOR, "Indicator Based Strategies"),
+        (EXECUTION_MODE_MULTI_LEG, "Multi Leg Option Strategies"),
+    )
+
+    MULTI_LEG_SHORT_STRADDLE = "SHORT_STRADDLE"
+    MULTI_LEG_BULL_CALL_SPREAD = "BULL_CALL_SPREAD"
+    MULTI_LEG_BEAR_CALL_SPREAD = "BEAR_CALL_SPREAD"
+    MULTI_LEG_BEAR_PUT_SPREAD = "BEAR_PUT_SPREAD"
+    MULTI_LEG_LONG_CALL_BUTTERFLY = "LONG_CALL_BUTTERFLY"
+    MULTI_LEG_SHORT_CALL_BUTTERFLY = "SHORT_CALL_BUTTERFLY"
+    MULTI_LEG_LONG_CALL_CONDOR = "LONG_CALL_CONDOR"
+    MULTI_LEG_SHORT_CALL_CONDOR = "SHORT_CALL_CONDOR"
+    MULTI_LEG_LONG_IRON_CONDOR = "LONG_IRON_CONDOR"
+    MULTI_LEG_SHORT_IRON_BUTTERFLY = "SHORT_IRON_BUTTERFLY"
+    MULTI_LEG_TEMPLATE_CHOICES = (
+        (MULTI_LEG_SHORT_STRADDLE, "Short Straddle"),
+        (MULTI_LEG_BULL_CALL_SPREAD, "Bull Call Spread"),
+        (MULTI_LEG_BEAR_CALL_SPREAD, "Bear Call Spread"),
+        (MULTI_LEG_BEAR_PUT_SPREAD, "Bear Put Spread"),
+        (MULTI_LEG_LONG_CALL_BUTTERFLY, "Long Call Butterfly"),
+        (MULTI_LEG_SHORT_CALL_BUTTERFLY, "Short Call Butterfly"),
+        (MULTI_LEG_LONG_CALL_CONDOR, "Long Call Condor"),
+        (MULTI_LEG_SHORT_CALL_CONDOR, "Short Call Condor"),
+        (MULTI_LEG_LONG_IRON_CONDOR, "Long Iron Condor"),
+        (MULTI_LEG_SHORT_IRON_BUTTERFLY, "Short Iron Butterfly"),
+    )
+
     name = models.CharField(max_length=150)
     Lots=models.IntegerField(blank=True,null=True)
     segment = models.ForeignKey(Segment, on_delete=models.SET_NULL, null=True, blank=True, related_name='strategy_segments')
     category = models.ForeignKey(categories, on_delete=models.SET_NULL, null=True, blank=True, related_name='strategy_categories')
+    execution_mode = models.CharField(
+        max_length=30,
+        choices=EXECUTION_MODE_CHOICES,
+        default=EXECUTION_MODE_INDICATOR,
+    )
+    multi_leg_template = models.CharField(
+        max_length=40,
+        choices=MULTI_LEG_TEMPLATE_CHOICES,
+        null=True,
+        blank=True,
+    )
     description = models.TextField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
     is_submit= models.BooleanField(default=True)
@@ -368,6 +400,154 @@ class Strategies(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class ClientMultiLegStrategySetting(models.Model):
+    ORDER_TYPE_CHOICES = (
+        ("MARKET", "MARKET"),
+        ("LIMIT", "LIMIT"),
+    )
+
+    client = models.ForeignKey('User', on_delete=models.CASCADE, related_name='multi_leg_trade_settings')
+    strategy = models.ForeignKey('Strategies', on_delete=models.CASCADE, related_name='client_multi_leg_settings')
+    segment = models.ForeignKey('Segment', on_delete=models.SET_NULL, null=True, blank=True)
+    underlying = models.CharField(max_length=30, default="NIFTY", null=True, blank=True)
+    group_service = models.CharField(max_length=255, null=True, blank=True)
+    broker = models.CharField(max_length=50, null=True, blank=True)
+    product_type = models.CharField(max_length=20, null=True, blank=True)
+    order_type = models.CharField(
+        max_length=20,
+        choices=ORDER_TYPE_CHOICES,
+        default="LIMIT",
+        null=True,
+        blank=True,
+    )
+    buffer_percentage = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    quantity = models.IntegerField(null=True, blank=True)
+    trade_limit = models.IntegerField(null=True, blank=True)
+    max_loss_for_day = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    max_profit_for_day = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    expiry_date = models.DateTimeField(null=True, blank=True)
+    start_time = models.TimeField(null=True, blank=True)
+    end_time = models.TimeField(null=True, blank=True)
+    is_tread_status = models.BooleanField(default=False)
+    sl_type = models.CharField(max_length=50, null=True, blank=True)
+    stop_loss = models.IntegerField(null=True, blank=True)
+    target = models.IntegerField(null=True, blank=True)
+    legs = models.JSONField(default=list, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('client', 'strategy')
+
+    def __str__(self):
+        return f"{self.client_id}-{self.strategy_id}-{self.strategy.name}"
+
+
+class StrategyExecution(models.Model):
+    STATUS_PENDING = "PENDING"
+    STATUS_EXECUTING = "EXECUTING"
+    STATUS_ACTIVE = "ACTIVE"
+    STATUS_EXITING = "EXITING"
+    STATUS_EXITED = "EXITED"
+    STATUS_FAILED = "FAILED"
+    STATUS_ROLLED_BACK = "ROLLED_BACK"
+    STATUS_CANCELLED = "CANCELLED"
+    STATUS_CHOICES = (
+        (STATUS_PENDING, "Pending"),
+        (STATUS_EXECUTING, "Executing"),
+        (STATUS_ACTIVE, "Active"),
+        (STATUS_EXITING, "Exiting"),
+        (STATUS_EXITED, "Exited"),
+        (STATUS_FAILED, "Failed"),
+        (STATUS_ROLLED_BACK, "Rolled Back"),
+        (STATUS_CANCELLED, "Cancelled"),
+    )
+
+    client = models.ForeignKey('User', on_delete=models.CASCADE, related_name='strategy_executions')
+    broker = models.CharField(max_length=100)
+    strategy_name = models.CharField(max_length=100)
+    underlying = models.CharField(max_length=100)
+    expiry = models.DateTimeField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    entry_time = models.DateTimeField(null=True, blank=True)
+    exit_time = models.DateTimeField(null=True, blank=True)
+    total_quantity = models.IntegerField(default=0)
+    combined_pnl = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    max_pnl_seen = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    trailing_stop_level = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
+    exit_reason = models.CharField(max_length=255, null=True, blank=True)
+    idempotency_key = models.CharField(max_length=150, unique=True, null=True, blank=True)
+    config_snapshot = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.strategy_name}#{self.id} - {self.client_id}"
+
+
+class StrategyLeg(models.Model):
+    STATUS_PLANNED = "PLANNED"
+    STATUS_EXECUTING = "EXECUTING"
+    STATUS_ACTIVE = "ACTIVE"
+    STATUS_EXITING = "EXITING"
+    STATUS_EXITED = "EXITED"
+    STATUS_FAILED = "FAILED"
+    STATUS_ROLLED_BACK = "ROLLED_BACK"
+    STATUS_CHOICES = (
+        (STATUS_PLANNED, "Planned"),
+        (STATUS_EXECUTING, "Executing"),
+        (STATUS_ACTIVE, "Active"),
+        (STATUS_EXITING, "Exiting"),
+        (STATUS_EXITED, "Exited"),
+        (STATUS_FAILED, "Failed"),
+        (STATUS_ROLLED_BACK, "Rolled Back"),
+    )
+    TRANSACTION_CHOICES = (
+        ("BUY", "BUY"),
+        ("SELL", "SELL"),
+    )
+    OPTION_TYPE_CHOICES = (
+        ("CE", "CE"),
+        ("PE", "PE"),
+    )
+
+    strategy_execution = models.ForeignKey('StrategyExecution', on_delete=models.CASCADE, related_name='legs')
+    leg_name = models.CharField(max_length=100)
+    transaction_type = models.CharField(max_length=4, choices=TRANSACTION_CHOICES)
+    option_type = models.CharField(max_length=2, choices=OPTION_TYPE_CHOICES)
+    strike_price = models.DecimalField(max_digits=12, decimal_places=2)
+    symbol = models.CharField(max_length=255)
+    token = models.CharField(max_length=100, null=True, blank=True)
+    lot_size = models.IntegerField(default=0)
+    quantity = models.IntegerField(default=0)
+    order_type = models.CharField(max_length=20, null=True, blank=True)
+    limit_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    broker_order_id = models.CharField(max_length=255, null=True, blank=True)
+    entry_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    exit_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PLANNED)
+    pnl = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    stop_loss = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    exchange = models.CharField(max_length=20, default="NFO")
+    order_response = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.strategy_execution_id}:{self.leg_name}"
+
+
+class StrategyExecutionLog(models.Model):
+    strategy_execution = models.ForeignKey('StrategyExecution', on_delete=models.CASCADE, related_name='logs')
+    event_type = models.CharField(max_length=100)
+    message = models.TextField()
+    metadata = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.strategy_execution_id}:{self.event_type}"
 class GroupService(models.Model):
     group_name = models.CharField(max_length=100)
     segment = models.ForeignKey(Segment, on_delete=models.SET_NULL, null=True, blank=True, related_name='group_Segments')
@@ -404,6 +584,11 @@ class TradingLog(models.Model):
     symbol = models.CharField(max_length=50,null=True, blank=True)
     strategy = models.CharField(max_length=50,null=True, blank=True)
 class ClientTradeSetting(models.Model):
+    ORDER_TYPE_CHOICES = (
+        ("MARKET", "MARKET"),
+        ("LIMIT", "LIMIT"),
+    )
+
     client = models.ForeignKey('User', on_delete=models.CASCADE, null=True, blank=True)
     segment = models.ForeignKey('Segment', on_delete=models.CASCADE, null=True, blank=True)
     sub_segment = models.ForeignKey('SubSegment',on_delete=models.CASCADE, null=True, blank=True)
@@ -413,6 +598,8 @@ class ClientTradeSetting(models.Model):
     strategy = models.CharField(max_length=50,null=True, blank=True)
     broker = models.CharField(max_length=50,null=True, blank=True)
     product_type = models.CharField(max_length=20,null=True, blank=True)
+    order_type = models.CharField(max_length=20, choices=ORDER_TYPE_CHOICES, default="LIMIT", null=True, blank=True)
+    buffer_percentage = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
     
     buy_sell = models.CharField(max_length=10, null=True, blank=True)  # "Buy" or "Sell"
     quantity = models.IntegerField(null=True, blank=True)
@@ -443,16 +630,202 @@ class ClientBrokerdetails(models.Model):
     broker_Demate_User_Name = models.CharField(max_length=50,null=True, blank=True)
     broker_Totp_Authcode=models.CharField(max_length=250,null=True, blank=True)
     broker_pass=models.CharField(max_length=50,null=True, blank=True)
+    
+    # Buffer settings for limit orders (per compliance requirements)
+    buffer_percentage = models.DecimalField(
+        max_digits=5, 
+        decimal_places=2, 
+        default=2.50,
+        null=True,
+        blank=True,
+        help_text="Buffer percentage for limit orders (0.1 to 10.0). Default: 2.5%"
+    )
+    enable_market_orders = models.BooleanField(
+        default=False,
+        help_text="Market orders are disabled by default for compliance"
+    )
+    
     # New fields for token management
     request_token = models.TextField(null=True, blank=True)  # Temporary request token
     access_token = models.TextField(null=True, blank=True)
     refreshToken = models.TextField(null=True, blank=True)
+    feed_token = models.TextField(null=True, blank=True)
     access_token_expiry = models.DateTimeField(null=True, blank=True)  # Expiry of the access token (if applicable)
     isTokenExpired=models.BooleanField(default=False,null=True, blank=True)
     tokenCreatedAt=models.DateTimeField(auto_now_add=True,null=True, blank=True)
+    encrypted_broker_api_secret = models.TextField(null=True, blank=True)
+    encrypted_broker_password = models.TextField(null=True, blank=True)
+    encrypted_broker_totp_secret = models.TextField(null=True, blank=True)
+    encrypted_access_token = models.TextField(null=True, blank=True)
+    encrypted_refresh_token = models.TextField(null=True, blank=True)
+    encrypted_feed_token = models.TextField(null=True, blank=True)
+    broker_last_logout_at = models.DateTimeField(null=True, blank=True)
     
     def __str__(self):
         return f"Trade Setting {self.broker_name} - {self.broker_API_SKEY}"
+
+    def is_angel_one_broker(self) -> bool:
+        return bool(
+            self.broker_name
+            and self.broker_name.broker_name
+            and normalize_broker_name(self.broker_name.broker_name) == "angel one"
+        )
+
+    def get_canonical_client_code(self) -> str:
+        return (self.broker_Demate_User_Name or self.broker_API_UID or "").strip()
+
+    def _get_secret(self, field_name: str):
+        return decrypt_value(getattr(self, field_name, None))
+
+    def _set_secret(self, field_name: str, value) -> None:
+        setattr(self, field_name, encrypt_value(value))
+
+    def _normalize_secret_input(self, value):
+        if isinstance(value, str):
+            value = value.strip()
+        return value or None
+
+    def get_broker_api_secret(self):
+        return self._get_secret("encrypted_broker_api_secret")
+
+    def set_broker_api_secret(self, value) -> None:
+        self._set_secret("encrypted_broker_api_secret", self._normalize_secret_input(value))
+        if self.is_angel_one_broker():
+            self.broker_API_SKEY = None
+
+    def get_broker_password(self):
+        secret = self._get_secret("encrypted_broker_password")
+        if isinstance(secret, str):
+            secret = secret.strip()
+        if secret:
+            return secret
+
+        legacy = self.broker_pass
+        if isinstance(legacy, str):
+            legacy = legacy.strip()
+        return legacy or None
+
+    def set_broker_password(self, value) -> None:
+        self._set_secret("encrypted_broker_password", self._normalize_secret_input(value))
+        if self.is_angel_one_broker():
+            self.broker_pass = None
+
+    def get_broker_totp_secret(self):
+        secret = self._get_secret("encrypted_broker_totp_secret")
+        if isinstance(secret, str):
+            secret = secret.strip()
+        if secret:
+            return secret
+
+        legacy = self.broker_Totp_Authcode
+        if isinstance(legacy, str):
+            legacy = legacy.strip()
+        return legacy or None
+
+    def get_angel_one_login_credentials(self):
+        client_code = self.get_canonical_client_code()
+        if isinstance(client_code, str):
+            client_code = client_code.strip()
+
+        api_key = self.broker_API_KEY
+        if isinstance(api_key, str):
+            api_key = api_key.strip()
+
+        return {
+            "client_code": client_code or None,
+            "api_key": api_key or None,
+            "password": self.get_broker_password(),
+            "totp_secret": self.get_broker_totp_secret(),
+        }
+
+    def set_broker_totp_secret(self, value) -> None:
+        self._set_secret("encrypted_broker_totp_secret", self._normalize_secret_input(value))
+        if self.is_angel_one_broker():
+            self.broker_Totp_Authcode = None
+
+    def _promote_angel_one_credentials(self):
+        promoted_fields = set()
+        if not self.is_angel_one_broker():
+            return promoted_fields
+
+        raw_api_secret = self._normalize_secret_input(self.broker_API_SKEY)
+        raw_password = self._normalize_secret_input(self.broker_pass)
+        raw_totp_secret = self._normalize_secret_input(self.broker_Totp_Authcode)
+
+        if raw_api_secret:
+            self.set_broker_api_secret(raw_api_secret)
+            promoted_fields.update({"encrypted_broker_api_secret", "broker_API_SKEY"})
+        elif self.broker_API_SKEY != raw_api_secret:
+            self.broker_API_SKEY = raw_api_secret
+            promoted_fields.add("broker_API_SKEY")
+
+        if raw_password:
+            self.set_broker_password(raw_password)
+            promoted_fields.update({"encrypted_broker_password", "broker_pass"})
+        elif self.broker_pass != raw_password:
+            self.broker_pass = raw_password
+            promoted_fields.add("broker_pass")
+
+        if raw_totp_secret:
+            self.set_broker_totp_secret(raw_totp_secret)
+            promoted_fields.update({"encrypted_broker_totp_secret", "broker_Totp_Authcode"})
+        elif self.broker_Totp_Authcode != raw_totp_secret:
+            self.broker_Totp_Authcode = raw_totp_secret
+            promoted_fields.add("broker_Totp_Authcode")
+
+        return promoted_fields
+
+    def get_access_token_secure(self):
+        return self._get_secret("encrypted_access_token")
+
+    def get_refresh_token_secure(self):
+        return self._get_secret("encrypted_refresh_token")
+
+    def get_feed_token_secure(self):
+        return self._get_secret("encrypted_feed_token")
+
+    def set_session_tokens(
+        self,
+        access_token,
+        refresh_token=None,
+        feed_token=None,
+        expiry=None,
+        mark_token_created: bool = False,
+    ) -> None:
+        self._set_secret("encrypted_access_token", access_token)
+        self._set_secret("encrypted_refresh_token", refresh_token)
+        self._set_secret("encrypted_feed_token", feed_token)
+        if self.is_angel_one_broker():
+            self.access_token = None
+            self.refreshToken = None
+            self.feed_token = None
+        self.access_token_expiry = expiry
+        self.isTokenExpired = not bool(access_token)
+        if mark_token_created:
+            self.tokenCreatedAt = timezone.now()
+
+    def clear_session_tokens(self) -> None:
+        self.set_session_tokens(None, None, None, expiry=None)
+        self.request_token = None
+
+    def mark_broker_logout(self) -> None:
+        self.broker_last_logout_at = timezone.now()
+
+    def clear_legacy_angel_sensitive_fields(self) -> None:
+        if not self.is_angel_one_broker():
+            return
+        self.broker_pass = None
+        self.broker_Totp_Authcode = None
+        self.access_token = None
+        self.refreshToken = None
+        self.feed_token = None
+
+    def save(self, *args, **kwargs):
+        promoted_fields = self._promote_angel_one_credentials()
+        update_fields = kwargs.get("update_fields")
+        if update_fields is not None and promoted_fields:
+            kwargs["update_fields"] = list(set(update_fields).union(promoted_fields))
+        super().save(*args, **kwargs)
     
 class Tradeorderhistory(models.Model):
     client = models.ForeignKey('User', on_delete=models.CASCADE)

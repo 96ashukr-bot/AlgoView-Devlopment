@@ -4,7 +4,7 @@ import { H3 } from '../../../../AbstractElements';
 import { FaArrowUp, FaArrowDown, } from 'react-icons/fa';
 import { RotatingLines } from 'react-loader-spinner';
 import Swal from 'sweetalert2';
-import { getClientTradeStatus, updateClientTradeStatus, TradeStatusSearch } from '../../../../Services/Authentication';
+import { getClientTradeStatus, updateClientTradeStatus } from '../../../../Services/Authentication';
 import './TradeDetails.css'
 
 const TradingStatus = () => {
@@ -20,11 +20,7 @@ const TradingStatus = () => {
     const [pageBatch, setPageBatch] = useState(0);
 
     useEffect(() => {
-        if (searchQuery) {
-            handleSearch();
-        } else {
-            fetchTradingStatus();
-        }
+        fetchTradingStatus();
 
         const handleResize = () => {
             setIsMobile(window.innerWidth <= 768);
@@ -42,13 +38,14 @@ const TradingStatus = () => {
     const fetchTradingStatus = async () => {
         try {
             setLoading(true);
-            const response = await getClientTradeStatus(currentPage, itemsPerPage);
+            const response = await getClientTradeStatus(currentPage, itemsPerPage, searchQuery);
 
             if (response.results && response.results.length > 0) {
                 setTradingStatus(response.results);
                 setTotalPages(Math.ceil(response.count / itemsPerPage));
             } else {
                 setTradingStatus([]);
+                setTotalPages(1);
             }
         } catch (err) {
             console.error("Error fetching data:", err);
@@ -58,21 +55,12 @@ const TradingStatus = () => {
         }
     };
 
-    const handleSearch = async () => {
-        try {
-            setLoading(true);
-            const response = await TradeStatusSearch(searchQuery);
-            if (response?.results?.length > 0) {
-                setTradingStatus(response.results);
-            } else {
-                setTradingStatus([]);
-            }
-        } catch (error) {
-            console.error('Error during search:', error);
-            setError("Search failed.");
-        } finally {
-            setLoading(false);
+    const handleSearch = () => {
+        if (currentPage !== 1) {
+            setCurrentPage(1);
+            return;
         }
+        fetchTradingStatus();
     };
 
     const toggleTradingStatus = async (clientId, currentState) => {
@@ -100,13 +88,6 @@ const TradingStatus = () => {
         }
     };
 
-    const filteredTradingStatus = tradingStatus.filter(status =>
-        (status.fullName && status.fullName.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (status.email && status.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (status.phoneNumber && status.phoneNumber.includes(searchQuery)) ||
-        (status.end_date_client && status.end_date_client.toLowerCase().includes(searchQuery.toLowerCase()))
-    );
-
     const handleSort = (key) => {
         let direction = 'asc';
         if (sortConfig.key === key && sortConfig.direction === 'asc') {
@@ -125,12 +106,7 @@ const TradingStatus = () => {
     const indexOfLastStatus = currentPage * itemsPerPage;
     const indexOfFirstStatus = indexOfLastStatus - itemsPerPage;
 
-    let currentTradingStatus = filteredTradingStatus;
-
-    if (currentPage === 1 && filteredTradingStatus.length > itemsPerPage) {
-        const extraItem = filteredTradingStatus[filteredTradingStatus.length - 1];
-        currentTradingStatus = [extraItem, ...currentTradingStatus.slice(0, itemsPerPage - 1)];
-    }
+    const currentTradingStatus = tradingStatus;
 
     const handlePreviousBatch = () => {
         if (pageBatch > 0) setPageBatch(pageBatch - 1);
@@ -173,7 +149,10 @@ const TradingStatus = () => {
                                     type="text"
                                     placeholder="Search..."
                                     value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    onChange={(e) => {
+                                        setCurrentPage(1);
+                                        setSearchQuery(e.target.value);
+                                    }}
                                     onKeyDown={(e) => {
                                         if (e.key === 'Enter') {
                                             handleSearch();

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
-  fetchUserProfile, updateUserProfile, fetchClientLoginActivity, updateAddress, updateUserProfileImage, changePassword,
-  fetchLastLogin, getCityData, getStateData, searchCity, searchState, getClientBrokerLoginActivity
+  fetchUserProfile, updateUserProfile, updateAddress, updateUserProfileImage, changePassword,
+  fetchLastLogin, getCityData, getStateData, searchCity, searchState, fetchLoginActivitySummary, getClientBrokerDetail, getAngelOneTokenStatus
 } from '../../../../Services/Authentication';
 import {
   Dropdown,
@@ -13,15 +13,13 @@ import man from "../../../../assets/images/dashboard/defaultpicture.jpg";
 import 'react-datepicker/dist/react-datepicker.css';
 import { Eye, EyeOff, Target, Info, CheckCircle, User } from 'react-feather';
 import { toast, ToastContainer } from 'react-toastify';
-import DatePicker from 'react-datepicker';
 import 'react-toastify/dist/ReactToastify.css';
 import { baseUrl } from '../../../../ConfigUrl/config';
+import { getAccessTokenIssuedAt } from '../../../../Services/authStorage';
 import "./UserProfiles.css";
 const UserProfiles = () => {
   const [activeTab, setActiveTab] = useState('1');
   const [sameAddress, setSameAddress] = useState(false);
-  const [startDate, setStartDate] = useState(null);
-  const [endDate, setEndDate] = useState(null);
   const [cities, setCities] = useState([]);
   const [states, setStates] = useState([]);
   const [lastLogin, setLastLogin] = useState('');
@@ -44,7 +42,6 @@ const UserProfiles = () => {
     zip_code: '',
   });
   const [userId, setClientId] = useState(null);
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const isClient = userProfile?.role?.name === 'Client';
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -80,27 +77,45 @@ const UserProfiles = () => {
   const [brokerLastLogin, setBrokerLastLogin] = useState('');
   const [brokerLastLogout, setBrokerLastLogout] = useState('');
   const [isTokenExpired, setIsTokenExpired] = useState(false);
+  const [loginActivity, setLoginActivity] = useState({
+    panel: {
+      panel_login_time: null,
+      panel_logout_time: null,
+    },
+    broker: {
+      is_configured: false,
+      broker_name: null,
+      session: { status: 'unavailable', is_active: false },
+      token: { status: 'unavailable', is_active: false, is_expired: false, expires_at: null },
+      last_login_at: null,
+      last_logout_at: null,
+    },
+  });
   const toggleDropdown = () => setDropdownOpen(!dropdownOpen);
   const toggleDropdownState = () => setDropdownOpenState(!dropdownOpenState);
   const toggleDropdownCity = () => setDropdownOpenCity(!dropdownOpenCity);
   const toggleDropdownPermanentState = () => setDropdownOpenPermanentState(!dropdownOpenPermanentState);
 
-  const handleChange = date => {
-    setStartDate(date);
-  };
-
   useEffect(() => {
-    console.log("UseriiiiiiiiiiID:", userId);
     getUserProfile();
     getLastLogin();
     loadCityData();
     loadStateData();
-    if (userId) {
-      getClientLoginActivity();
-      getBrokerLoginActivity();
-    } else {
-      console.log("User  ID is null, cannot fetch login activity.");
-    }
+    getLoginActivity();
+  }, [userId]);
+
+  useEffect(() => {
+    const refreshBrokerActivity = () => {
+      getLoginActivity();
+    };
+
+    window.addEventListener('broker-runtime-updated', refreshBrokerActivity);
+    window.addEventListener('focus', refreshBrokerActivity);
+
+    return () => {
+      window.removeEventListener('broker-runtime-updated', refreshBrokerActivity);
+      window.removeEventListener('focus', refreshBrokerActivity);
+    };
   }, [userId]);
 
   const formatDateTime = (dateTime) => {
@@ -116,36 +131,122 @@ const UserProfiles = () => {
     return `${year}/${month}/${day}, ${hours}:${minutes}:${seconds}`;
   };
 
-  const getClientLoginActivity = async () => {
-    console.log("Fetching login activity for userId:", userId,);
-    try {
-      const loginActivityData = await fetchClientLoginActivity(userId);
-      setCurrentLoginTime(formatDateTime(loginActivityData.current_login_time));
-      setLastLoginTime(formatDateTime(loginActivityData.last_login_time));
-      setLastLogoutTime(formatDateTime(loginActivityData.last_logout_time));
-    } catch (error) {
-      console.error("Error fetching client login activity:", error);
-      setCurrentLoginTime('Not Found');
-      setLastLoginTime('Not Found');
-      setLastLogoutTime('Not Found');
-    }
-  };
+  const getLoginActivity = async (targetUserId = userId) => {
+    const currentSessionLoginTime = getAccessTokenIssuedAt();
 
-  const getBrokerLoginActivity = async () => {
-    console.log("Fetching broker login activity for userId:", userId);
+    const applyActivityData = (activityData) => {
+      const normalizedActivity = {
+        ...activityData,
+        panel: {
+          ...(activityData?.panel || {}),
+          current_panel_login_time:
+            currentSessionLoginTime ||
+            activityData?.panel?.current_panel_login_time ||
+            activityData?.panel?.panel_login_time ||
+            null,
+          panel_login_time:
+            currentSessionLoginTime ||
+            activityData?.panel?.current_panel_login_time ||
+            activityData?.panel?.panel_login_time ||
+            null,
+        },
+      };
+
+      setLoginActivity(normalizedActivity);
+      setCurrentLoginTime(formatDateTime(normalizedActivity?.panel?.panel_login_time));
+      setLastLoginTime(formatDateTime(normalizedActivity?.panel?.panel_login_time));
+      setLastLogoutTime(formatDateTime(normalizedActivity?.panel?.panel_logout_time));
+      setBrokerLastLogin(formatDateTime(normalizedActivity?.broker?.last_login_at));
+      setBrokerLastLogout(formatDateTime(normalizedActivity?.broker?.last_logout_at));
+      setIsTokenExpired(Boolean(normalizedActivity?.broker?.token?.is_expired));
+    };
+
+    const hasRenderableActivity = (activityData) => Boolean(
+      activityData?.panel?.current_panel_login_time ||
+      activityData?.panel?.panel_login_time ||
+      activityData?.panel?.panel_logout_time ||
+      activityData?.broker?.is_configured ||
+      activityData?.broker?.last_login_at ||
+      activityData?.broker?.last_logout_at ||
+      activityData?.broker?.token?.expires_at ||
+      activityData?.broker?.token?.status === 'active' ||
+      activityData?.broker?.token?.status === 'expired'
+    );
+
+    const buildFallbackActivity = async () => {
+      const [lastLoginResult, brokerDetailResult, angelTokenStatusResult] = await Promise.allSettled([
+        fetchLastLogin(),
+        getClientBrokerDetail(),
+        getAngelOneTokenStatus(),
+      ]);
+
+      const lastLoginData = lastLoginResult.status === 'fulfilled' ? lastLoginResult.value : null;
+      const brokerDetail = brokerDetailResult.status === 'fulfilled' ? brokerDetailResult.value?.data || null : null;
+      const angelTokenData = angelTokenStatusResult.status === 'fulfilled' ? angelTokenStatusResult.value : null;
+
+      const tokenExpiry = angelTokenData?.expires_at || brokerDetail?.access_token_expiry || null;
+      const tokenExpired =
+        typeof angelTokenData?.is_expired === 'boolean'
+          ? angelTokenData.is_expired
+          : Boolean(brokerDetail?.isTokenExpired);
+      const tokenStatus = angelTokenData?.token_status || (!brokerDetail?.has_access_token ? 'unavailable' : (tokenExpired ? 'expired' : 'active'));
+      const hasToken =
+        typeof angelTokenData?.has_access_token === 'boolean'
+          ? angelTokenData.has_access_token
+          : Boolean(brokerDetail?.has_access_token);
+      const isBrokerConfigured = Boolean(
+        brokerDetail?.broker_name ||
+        brokerDetail?.broker_API_UID ||
+        brokerDetail?.broker_Demate_User_Name
+      );
+
+      return {
+        panel: {
+          current_panel_login_time: currentSessionLoginTime || lastLoginData?.current_login_time || null,
+          previous_panel_login_time: lastLoginData?.last_login_time || null,
+          panel_login_time: currentSessionLoginTime || lastLoginData?.current_login_time || lastLoginData?.last_login_time || null,
+          panel_logout_time: lastLoginData?.last_logout_time || null,
+        },
+        broker: {
+          is_configured: isBrokerConfigured,
+          broker_name: brokerDetail?.broker_name?.broker_name || null,
+          session: {
+            status: angelTokenData?.session_status || (tokenStatus === 'active' || tokenStatus === 'expired' ? 'active' : (isBrokerConfigured ? 'inactive' : 'unavailable')),
+            is_active: typeof angelTokenData?.session_active === 'boolean'
+              ? angelTokenData.session_active
+              : Boolean(tokenStatus === 'active' || tokenStatus === 'expired'),
+            last_activity_at: angelTokenData?.last_activity_at || null,
+            validated_at: angelTokenData?.validated_at || null,
+          },
+          token: {
+            status: tokenStatus,
+            is_active: Boolean(hasToken && !tokenExpired),
+            is_expired: tokenExpired,
+            expires_at: tokenExpiry,
+          },
+          last_login_at: brokerDetail?.tokenCreatedAt || null,
+          last_logout_at: angelTokenData?.last_logout_at || brokerDetail?.broker_last_logout_at || null,
+        },
+      };
+    };
+
     try {
-      const loginActivityData = await getClientBrokerLoginActivity(userId);
-      if (loginActivityData && loginActivityData.length > 0) {
-        const activity = loginActivityData[0];
-        setBrokerLastLogin(activity.last_login);
-        setBrokerLastLogout(activity.logout_time ? activity.logout_time : 'N/A');
-        setIsTokenExpired(activity.isTokenExpired);
+      const activityData = await fetchLoginActivitySummary(targetUserId);
+      if (hasRenderableActivity(activityData)) {
+        applyActivityData(activityData);
+        return;
       }
+
+      const fallbackActivity = await buildFallbackActivity();
+      applyActivityData(fallbackActivity);
     } catch (error) {
-      console.error("Error fetching broker login activity:", error);
-      setBrokerLastLogin('Not Found');
-      setBrokerLastLogout('Not Found');
-      setIsTokenExpired(false);
+      try {
+        const fallbackActivity = await buildFallbackActivity();
+        applyActivityData(fallbackActivity);
+      } catch (fallbackError) {
+        console.error("Error fetching login activity:", error);
+        console.error("Error fetching fallback login activity:", fallbackError);
+      }
     }
   };
 
@@ -259,11 +360,11 @@ const UserProfiles = () => {
         fullName: `${data.firstName} ${data.lastName}`,
       });
 
-      setClientId(data.client);
+      const resolvedUserId = typeof data?.id === 'number'
+        ? data.id
+        : (typeof data?.client === 'number' ? data.client : null);
+      setClientId(resolvedUserId);
       // Use correct fields for client start and end dates
-      setStartDate(data.start_date_client ? new Date(data.start_date_client) : null);
-      setEndDate(data.end_date_client ? new Date(data.end_date_client) : null);
-
       setUserProfileNew(data)
 
       setAddressLine1(data.current_add_line_1)
@@ -305,6 +406,53 @@ const UserProfiles = () => {
 
   const formattedLastLogin = new Date(lastLogin).toLocaleString();
 
+  const formatDateField = (value) => {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return '';
+    }
+    return date.toISOString().split('T')[0];
+  };
+
+  const formatActivityValue = (value, fallback = 'Unavailable') => {
+    if (!value) return fallback;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return fallback;
+    }
+    return formatDateTime(value);
+  };
+
+  const renderStatusBadge = (status) => {
+    const normalized = (status || 'unavailable').toLowerCase();
+    const palette = {
+      active: { background: '#d1fae5', color: '#065f46', label: 'Active' },
+      inactive: { background: '#fee2e2', color: '#991b1b', label: 'Inactive' },
+      expired: { background: '#fee2e2', color: '#991b1b', label: 'Expired' },
+      unavailable: { background: '#e5e7eb', color: '#374151', label: 'Unavailable' },
+    };
+    const styles = palette[normalized] || palette.unavailable;
+
+    return (
+      <span
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minWidth: '110px',
+          padding: '8px 12px',
+          borderRadius: '999px',
+          backgroundColor: styles.background,
+          color: styles.color,
+          fontWeight: 600,
+        }}
+      >
+        {styles.label}
+      </span>
+    );
+  };
+
   const readUrl = (event) => {
     if (event.target.files.length === 0) return;
     const file = event.target.files[0];
@@ -334,8 +482,6 @@ const UserProfiles = () => {
     try {
       const updatedProfile = {
         fullName: userProfile.fullName,
-        start_date_client: startDate?.toISOString().split('T')[0],
-        end_date_client: endDate ? endDate.toISOString().split('T')[0] : null
       };
       await updateUserProfile(updatedProfile);
       toast.success("Profile updated successfully!");
@@ -548,25 +694,23 @@ const UserProfiles = () => {
                         {isClient && (
                           <>
                             <FormGroup className="row">
-                              <Label className="col-sm-4 col-form-label">Start Date</Label>
+                              <Label className="col-sm-4 col-form-label">Client Creation Date</Label>
                               <Col sm="8">
-                                <DatePicker
-                                  className="form-control digits"
-                                  selected={startDate}
-                                  onChange={handleChange}
-                                />
+                                <Input type="text" value={formatDateTime(userProfile.created_at)} readOnly />
                               </Col>
                             </FormGroup>
 
                             <FormGroup className="row">
-                              <Label className="col-sm-4 col-form-label">End Date</Label>
+                              <Label className="col-sm-4 col-form-label">Service Start Date</Label>
                               <Col sm="8">
-                                <DatePicker
-                                  className="form-control"
-                                  selected={endDate}
-                                  onChange={(date) => setEndDate(date)}
-                                  placeholderText="No end date"
-                                />
+                                <Input type="date" value={formatDateField(userProfile.start_date_client)} readOnly />
+                              </Col>
+                            </FormGroup>
+
+                            <FormGroup className="row">
+                              <Label className="col-sm-4 col-form-label">Service End Date</Label>
+                              <Col sm="8">
+                                <Input type="date" value={formatDateField(userProfile.end_date_client)} readOnly />
                               </Col>
                             </FormGroup>
                           </>
@@ -890,47 +1034,54 @@ const UserProfiles = () => {
                     </TabPane>
 
                     <TabPane tabId="4">
-                      <p style={{ fontSize: '18px', fontWeight: '500' }}>Daily Login Activity</p>
+                      <p style={{ fontSize: '18px', fontWeight: '500' }}>Login Activity</p>
                       <Form className="theme-form">
                         <FormGroup className="row">
-                          <Label className="col-sm-4 col-form-label">Broker Login</Label>
-                          <Col sm="8">
-                            <Input type="text" value={brokerLastLogin || 'not found'} readOnly />
-                          </Col>
-                        </FormGroup>
-                        <FormGroup className="row">
-                          <Label className="col-sm-4 col-form-label">Broker Logout</Label>
-                          <Col sm="8">
-                            <Input type="text" value={brokerLastLogout || 'not found'} readOnly />
-                          </Col>
-                        </FormGroup>
-                        <FormGroup className="row">
-                          <Label className="col-sm-4 col-form-label">Token Expired</Label>
+                          <Label className="col-sm-4 col-form-label">Panel Login Time</Label>
                           <Col sm="8">
                             <Input
                               type="text"
-                              value={isTokenExpired ? "Token is expired" : "Token is not expired"}
+                              value={formatActivityValue(
+                                loginActivity.panel?.current_panel_login_time || loginActivity.panel?.panel_login_time
+                              )}
                               readOnly
-                              style={{ color: isTokenExpired ? 'red' : 'green' }}
                             />
                           </Col>
                         </FormGroup>
                         <FormGroup className="row">
-                          <Label className="col-sm-4 col-form-label">Login</Label>
+                          <Label className="col-sm-4 col-form-label">Panel Logout Time</Label>
                           <Col sm="8">
-                            <Input type="text" value={currentLoginTime || 'not found'} readOnly />
+                            <Input type="text" value={formatActivityValue(loginActivity.panel?.panel_logout_time)} readOnly />
                           </Col>
                         </FormGroup>
                         <FormGroup className="row">
-                          <Label className="col-sm-4 col-form-label">Last Login</Label>
+                          <Label className="col-sm-4 col-form-label">Broker Session</Label>
                           <Col sm="8">
-                            <Input type="text" value={lastLoginTime || 'not found'} readOnly />
+                            <div>{renderStatusBadge(loginActivity.broker?.session?.status)}</div>
                           </Col>
                         </FormGroup>
                         <FormGroup className="row">
-                          <Label className="col-sm-4 col-form-label">Last Logout</Label>
+                          <Label className="col-sm-4 col-form-label">Broker Token</Label>
                           <Col sm="8">
-                            <Input type="text" value={lastLogoutTime || 'not found'} readOnly />
+                            <div>{renderStatusBadge(loginActivity.broker?.token?.status)}</div>
+                          </Col>
+                        </FormGroup>
+                        <FormGroup className="row">
+                          <Label className="col-sm-4 col-form-label">Token Expiry</Label>
+                          <Col sm="8">
+                            <Input type="text" value={formatActivityValue(loginActivity.broker?.token?.expires_at)} readOnly />
+                          </Col>
+                        </FormGroup>
+                        <FormGroup className="row">
+                          <Label className="col-sm-4 col-form-label">Broker Last Login</Label>
+                          <Col sm="8">
+                            <Input type="text" value={formatActivityValue(loginActivity.broker?.last_login_at)} readOnly />
+                          </Col>
+                        </FormGroup>
+                        <FormGroup className="row">
+                          <Label className="col-sm-4 col-form-label">Broker Last Logout</Label>
+                          <Col sm="8">
+                            <Input type="text" value={formatActivityValue(loginActivity.broker?.last_logout_at)} readOnly />
                           </Col>
                         </FormGroup>
                       </Form>

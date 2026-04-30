@@ -187,7 +187,6 @@ const TradeView = () => {
             'Signal Exit Time': signal.SignalExit_time || '-',
             Symbol: signal.trading_symbol || '-',
             Strategy: signal.strategy || '-',
-            'Entry Type': signal.Entry_type || '-',
             'Entry Qty': signal.EntryQty || '-',
             'Exit Qty': signal.ExitQty || '-',
             'Entry Price': signal.Entry_Price !== null ? signal.Entry_Price : '-',
@@ -278,7 +277,6 @@ const TradeView = () => {
                 (signal.strategy && signal.strategy.toLowerCase().includes(searchLower)) ||
                 (signal.GroupService && signal.GroupService.toLowerCase().includes(searchLower)) ||
                 // (signal.order_status && String(signal.order_status).toLowerCase().includes(searchLower)) ||
-                (signal.Entry_type && String(signal.Entry_type).toLowerCase().includes(searchLower)) ||
                 (signal.client?.full_name && signal.client.full_name.toLowerCase().includes(searchLower)) ||
                 (signal.broker && signal.broker.toLowerCase().includes(searchLower))
             )
@@ -494,15 +492,6 @@ const TradeView = () => {
                                                 <FaArrowUp className="sort-arrow-left" />
                                                 <FaArrowDown className="sort-arrow-right" />
                                             </th>
-                                            <th onClick={() => handleSort('Entry_type')} className="custom-col-design">
-                                                Entry Type
-                                                <FaArrowUp className="sort-arrow-left" />
-                                                <FaArrowDown className="sort-arrow-right" />
-                                            </th>
-                                            <th onClick={() => handleSort('Exit_type')} className='custom-col-design'>Exit Type
-                                                <FaArrowUp className="sort-arrow-left" />
-                                                <FaArrowDown className="sort-arrow-right" />
-                                            </th>
                                             <th onClick={() => handleSort('EntryQty')} className="custom-col-design">
                                                 Entry Qty
                                                 <FaArrowUp className="sort-arrow-left" />
@@ -569,8 +558,6 @@ const TradeView = () => {
                                                         <td>{signal.GroupService || '-'}</td>
                                                         {/* <td>{signal.strategy || '-'}</td> */}
                                                         <td>{signal.broker || '-'}</td>
-                                                        <td>{signal.Entry_type || '-'}</td>
-                                                        <td>{signal.Exit_type || '-'}</td>
                                                         <td>{signal.EntryQty || '-'}</td>
                                                         <td>{signal.ExitQty || '-'}</td>
                                                         <td>{signal.Entry_Price !== null ? signal.Entry_Price : '-'}</td>

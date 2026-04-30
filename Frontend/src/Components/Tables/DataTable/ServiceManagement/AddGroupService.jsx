@@ -116,6 +116,7 @@ const AddGroupService = () => {
             json_data: services.map((service, index) => ({
                 "S.No": index + 1,
                 segment: service.segment,
+                ScriptName: service.ServiceName,
                 ServiceName: service.ServiceName,
                 LotSize: service.LotSize,
                 Qty: service.Qty,
@@ -220,7 +221,7 @@ const AddGroupService = () => {
                                             <tr>
                                                 <th className='custom-col-design'>S.No</th>
                                                 <th className='custom-col-design'>Segment</th>
-                                                <th className='custom-col-design'>Service Name</th>
+                                                <th className='custom-col-design'>Script Name</th>
                                                 <th className='custom-col-design'>Lot Size</th>
                                                 <th className='custom-col-design'>Qty</th>
                                                 <th className='custom-col-design'>Product Type</th>
@@ -255,7 +256,7 @@ const AddGroupService = () => {
                                                                 handleInputChange(index, 'ServiceName', e.target.value)
                                                             }
                                                         >
-                                                            <option value="">Select Service</option>
+                                                            <option value="">Select Script</option>
                                                             {serviceOptions.map((svc) => (
                                                                 <option key={svc.id} value={svc.service_name}>
                                                                     {svc.service_name}

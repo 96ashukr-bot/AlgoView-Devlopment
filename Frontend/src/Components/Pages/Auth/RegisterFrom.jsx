@@ -1,6 +1,6 @@
 import React, { Fragment, useState, useContext } from 'react';
 import { Form, FormGroup, Input, Label, Row, Col } from 'reactstrap';
-import { Btn, H4, P, H6, Image } from '../../../AbstractElements';
+import { Btn, H4, P, Image } from '../../../AbstractElements';
 import { Link, useNavigate } from 'react-router-dom';
 import logoWhite from '../../../assets/images/logo/logo (1).png';
 import logoDark from '../../../assets/images/logo/logo (1).png';

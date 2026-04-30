@@ -1,89 +1,28 @@
 
 import requests
-from django.conf import settings
+import json
 from django.shortcuts import redirect
 from django.http import JsonResponse
-from main.Alice_Blue_Api import save_trade_order_history
-from main.models import ClientBrokerdetails, CompanySmtpDetails
-# from django.urls import reverse
+from main.models import CompanySmtpDetails
+from main.broker_instrument_cache import load_upstox_instruments
+from main.broker_order_utils import normalize_order_type, resolve_limit_price
+from main.trade_history_service import save_trade_order_history
 import logging
 logger = logging.getLogger('main')
-import gzip
-import json
-from io import BytesIO
-from django.http import JsonResponse
 from datetime import datetime
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# # Constants (You can keep these in settings.py for better management)
-# CLIENT_ID = 'your_client_id'  # Replace with your Upstox Client ID
-# CLIENT_SECRET = 'your_api_secret'  # Replace with your Upstox API Secret
-# REDIRECT_URI = 'https://yourdomain.com/callback'  # Make sure it matches the registered redirect URI
-AUTHORIZATION_URL = 'https://login.upstox.com/login/v2/oauth/authorize'
-
-#UPSTOX
-CLIENT_KEY = '5fc50c51-44a3-43bc-98d5-8258e3ddfea1'  
-CLIENT_SECRET = 'ajpiqe2sgh' 
-# REDIRECT_URI = 'https://software.alcrafttechnology.com/login' 
-TOKEN_URL = 'https://api.upstox.com/v2/login/authorization/token'
-AUTH_URL = "https://api.upstox.com/v2/login/authorization/dialog"
-REDIRECT_URI = "https://www.admin.algoview.in/callback"
-# Base URL for Upstox API
-BASE_URL = "https://api.upstox.com"
 PLACE__ORDER_URL="https://api-hft.upstox.com/v2/order/place"
+MARKET_QUOTE_LTP_URL = "https://api.upstox.com/v2/market-quote/ltp"
 
 def get_upstox_login_url(request):
-    try:
-        # Add a broker identifier in the state
-        state = "upstox" 
-        print("CLIENT_KEY>>",CLIENT_KEY)
-        # The lowercase field (tradingsymbol) is deprecated and will be removed in future versions. Use the snake_case versions for consistency.
-        # trading_symbol
-        login_url = (
-            f"{AUTH_URL}?client_id={CLIENT_KEY}&"
-            f"redirect_uri={REDIRECT_URI}&"
-            f"response_type=Auth_code&"
-            f"state={state}"
-        )
-        # state = "alice_blue"
-        # app_code =""# broker_details.broker_API_UID  # Replace with the Alice Blue App Code
-        # redirect_uri = "https://software.algosparks.co.in/#/login"  # Your callback URL
-        # login_url = (
-        #     f"https://ant.aliceblueonline.com/oauth2/auth?client_id={app_code}&"
-        #     f"redirect_uri={redirect_uri}&response_type=code&state={state}"
-        # )
-        return redirect(login_url)
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)
+    return redirect("/broker_auth_login/?broker=upstox")
 
 def callback_upstox(request):
-    try:
-        auth_code ="qhssBZ"
-        if not auth_code:
-            return JsonResponse({"error": "Authorization code not provided"}, status=400)
-        
-        data = {
-                'code': auth_code,
-                'client_id': CLIENT_KEY,
-                'client_secret': CLIENT_SECRET,
-                'redirect_uri': REDIRECT_URI,
-                'grant_type': 'authorization_code'
-            }
+    from main.dematemodule import BrokerCallbackView
 
-        # Send POST request to get the access token
-        response = requests.post(TOKEN_URL, data=data)
-
-        # Check the response status and print the access token
-        if response.status_code == 200:
-            print("Access Token Response:", response.json())
-            access_token = response.json().get('access_token')
-            return JsonResponse({"access_token": access_token}, status=200)
-        else:
-            return JsonResponse({"error": response.json()}, status=response.status_code)
-
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)
+    return BrokerCallbackView.as_view()(request)
 
 def place_upstox_orders(LivePrice,group_service,
     access_token, trade_symbol, transaction_type, symbol, quantity, strategy, ordertype,
@@ -94,10 +33,19 @@ def place_upstox_orders(LivePrice,group_service,
         smtp_details=CompanySmtpDetails.objects.first()
         default_from_email=smtp_details.email_host_user if smtp_details else   "no-reply@example.com" 
         logger.info(f"{user} : exchnage symbole....{trade_symbol}")
-        if Exchange=="NFO":
-            result = fetch_instrument_details(trade_symbol, "NSE", user)
-        elif Exchange=="BSE":
-            result = fetch_instrument_details(trade_symbol, "BSE", user)
+        upstox_exchange = {
+            "NFO": "NSE",
+            "NSE": "NSE",
+            "NSE_EQ": "NSE",
+            "NSE_FO": "NSE",
+            "NSE_COM": "NSE",
+            "BSE": "BSE",
+            "BSE_EQ": "BSE",
+            "BSE_FO": "BSE",
+            "MCX": "MCX",
+            "MCX_FO": "MCX",
+        }.get(str(Exchange or "").upper(), "NSE")
+        result = fetch_instrument_details(trade_symbol, upstox_exchange, user)
         
         logger.info(f"{user} : The exchange result is : {result}")
         status="Failed"
@@ -126,6 +74,33 @@ def place_upstox_orders(LivePrice,group_service,
                     "status": "error", "message": "Instrument details not found.",  "error_details": result,}
                 }
         logger.info(f"{user} : Fetched Instrument Key: {instrument_key}")
+        requested_order_type = normalize_order_type(ordertype)
+        ltp = None
+        try:
+            quote_response = requests.get(
+                MARKET_QUOTE_LTP_URL,
+                headers={"Authorization": f"Bearer {access_token}"},
+                params={"instrument_key": instrument_key},
+                timeout=5,
+            )
+            quote_data = quote_response.json() if quote_response.content else {}
+            if quote_response.status_code == 200:
+                quote_values = quote_data.get("data", {})
+                first_quote = next(iter(quote_values.values()), {}) if isinstance(quote_values, dict) else {}
+                ltp = first_quote.get("last_price") or first_quote.get("ltp")
+        except Exception as e:
+            logger.warning(f"{user} : Upstox LTP fetch failed for {instrument_key}: {str(e)}")
+
+        if requested_order_type == "LIMIT":
+            price = resolve_limit_price(price, ltp, transaction_type)
+            if not price:
+                message = "Unable to calculate Upstox limit price because live price is unavailable."
+                save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, "Failed", result, message,
+                strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,
+                webhook_signal , Exchange, Segment,Index_Symbol ,order_params,broker="upstox", history_id=history_id)
+                return {"data": {"status": "Failed", "message": message}}
+        elif requested_order_type == "MARKET":
+            price = 0
         # Map product types to API-compatible values
         product_mapping = {"NRML": "N", "MIS": "I", "CNC": "D"}
         product_code = product_mapping.get(product_type.upper(), product_type)
@@ -133,9 +108,9 @@ def place_upstox_orders(LivePrice,group_service,
         order_params = {
             "quantity": quantity,
             "product": product_code,
-            "price": price if ordertype.upper() == "LIMIT" else 0,
+            "price": price if requested_order_type == "LIMIT" else 0,
             "instrument_token": instrument_key,
-            "order_type": ordertype.upper(),
+            "order_type": requested_order_type,
             "transaction_type": transaction_type.upper(),
             'validity': 'DAY',  # Order validity (DAY)
             # 'disclosed_quantity': 0,  # Not disclosing partial quantity
@@ -155,10 +130,19 @@ def place_upstox_orders(LivePrice,group_service,
         if response.status_code == 200 and response_data.get("status") == "success":
             order_id = response_data["data"]["order_id"]
             logger.info(f"{user} : Order placed successfully get the Order details for Order ID: {order_id}")
-            return handle_successful_order(LivePrice,group_service,transaction_type,
+            handled_response = handle_successful_order(LivePrice,group_service,transaction_type,
                 order_id, user, trade_symbol, strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty , webhook_signal,
                 Exchange, Segment, Index_Symbol, order_params, access_token,trade_order_status, history_id
             )
+            handled_response.setdefault("data", {})
+            handled_response["data"].update({
+                "order_id": order_id,
+                "order_type": requested_order_type,
+                "price": price if requested_order_type == "LIMIT" else None,
+                "ltp": ltp,
+                "reference_price": ltp,
+            })
+            return handled_response
         elif response.status_code == 401:
             logger.error(f"{user} : Unauthorized access for user {user}. Reason: {response_data.get('message', 'Unknown')}")
             status= "Unauthorized"
@@ -223,14 +207,21 @@ def handle_successful_order(LivePrice,group_service,transaction_type,
         EntryQty=order_params['quantity']
         order_details = get_order_details(order_id, access_token)
         logger.info(f"after order deatis are fetched resp::{order_details}")
-        # Extract order status and ID safely
-        if 'data' in order_details and isinstance(order_details['data'], dict):
-            order_status = order_details['data'].get('status', '').lower()
-            order_id = order_details['data'].get('order_id', '')
+        if not isinstance(order_details, dict):
+            order_details = {"data": {}, "raw": order_details}
+
+        order_data = order_details.get("data")
+        if isinstance(order_data, list):
+            order_data = order_data[0] if order_data and isinstance(order_data[0], dict) else {}
+        elif not isinstance(order_data, dict):
+            order_data = {}
+
+        if order_data:
+            order_status = str(order_data.get('status', '') or '').lower()
+            order_id = order_data.get('order_id', '') or order_id
         else:
             print("Error: 'data' key missing in API response")
             order_status = "Failed"
-            # order_id = 0
             rejection_message="error while fetching order due to network issue"
             status="success"
             res_data=order_details
@@ -257,82 +248,64 @@ def handle_successful_order(LivePrice,group_service,transaction_type,
         print(f"Order Status: {order_status}, Order ID: {order_id}")
 
         res_data=order_details
-        # order_id=order_details['data']['order_id']
-        # order_status = order_details['data'].get('status', '').lower()
         logger.info(f"order_status:::{order_status}")
-        # order_id = order_details['data'].get('order_id', '')
-        # print("order_id>>",order_id)
-        if order_details['data']['status'] =="complete"or  order_details['data']['status'] =="completed" or order_details['data']['status'] =="success" or order_details['data']['status'] =="SUCCESS":
-            transaction_type=order_details['data'].get('transaction_type', '')
+        if order_status in {"complete", "completed", "success"}:
+            transaction_type=order_data.get('transaction_type', '')
             if transaction_type == "BUY":
                 trade_order_status="OPEN"
                 Entry_type="LE"
-                Entry_price=order_details['data'].get('average_price', 0.0)
-                EntryQty=order_details['data'].get('quantity', 0)
+                Entry_price=order_data.get('average_price', 0.0)
+                EntryQty=order_data.get('quantity', 0)
             elif transaction_type == "SELL": 
                 trade_order_status="CLOSE"
                 Exit_type="LX"
-                Exit_price=order_details['data'].get('average_price', 0.0) 
-                ExitQty= order_details['data'].get('quantity', 0)#disclosedquantity
+                Exit_price=order_data.get('average_price', 0.0) 
+                ExitQty= order_data.get('quantity', 0)#disclosedquantity
             logger.info(f"Order Placed Successfully, Order ID:{order_id}")
-            # log_order(order_data, "orders_placed.csv")  
-            message = order_details['data'].get('status_message', 'completed successfully ')
+            message = order_data.get('status_message', 'completed successfully ')
             res_data=order_details
             
-            status=order_details['data']['status'] 
+            status=order_data.get('status', 'completed')
             save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, message,  
                                      strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,
                                      webhook_signal , Exchange, Segment,Index_Symbol ,order_params,broker="upstox", history_id=history_id)
             response={"data": {"status": "completed","message": "Order placed and details saved successfully."}}
-            # from_email = default_from_email,
-            # send_trade_email_async.delay(user.email, from_email,user.firstName,status, message)
-            # save_webhook_signals_logs(order_params['transactiontype'], symbol, price, strategy, user, status=order_details['data'].get('status'),failure_reason="your order place succesfully", json=json)
             return response
-        elif order_details['data']['status'] == "rejected":
-            rejection_message= order_details['data'].get('status_message', 'Unknown rejection reason')
-            status=order_details['data'].get('status', 'rejected')
-            transaction_type=order_details['data'].get('transaction_type', '')
+        elif order_status == "rejected":
+            rejection_message= order_data.get('status_message', 'Unknown rejection reason')
+            status=order_data.get('status', 'rejected')
+            transaction_type=order_data.get('transaction_type', '')
             print("transaction_type.........",transaction_type)
             if transaction_type == "BUY":
-                # trade_order_status="OPEN"
                 Entry_type="LE"
-                Entry_price=order_details['data'].get('average_price', 0.0)
+                Entry_price=order_data.get('average_price', 0.0)
                 print("Entry_price>>>",Entry_price)
-                EntryQty=order_details['data'].get('quantity', 0)
+                EntryQty=order_data.get('quantity', 0)
             elif transaction_type == "SELL": 
-                # trade_order_status="CLOSE"
                 Exit_type="LX"
-                Exit_price=order_details['data'].get('average_price', 0.0) 
-                ExitQty= order_details['data'].get('quantity', 0)#disclosedquantity
+                Exit_price=order_data.get('average_price', 0.0) 
+                ExitQty= order_data.get('quantity', 0)#disclosedquantity
 
             save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, rejection_message, 
             strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, 
             Segment,Index_Symbol ,order_params , broker="Upstox", history_id=history_id)
             logger.info(f"Order Rejected reason!!!::{rejection_message} Order ID: {order_id}")
-            # from_email = default_from_email,
-            # Send rejection email
-            # print("user.firstName>>>>>",user.firstName)
-            # send_trade_email_async.delay(user.email, from_email,user.firstName,status, rejection_message)
-            # save_webhook_signals_logs(order_params['transactiontype'], symbol, price, strategy, user, status=responsedetails['data'].get('status'),
             response = {"data": {"status": status,"message": "Order is rejected "}}
             return response
-        elif order_details['data']['status'] == "open":
+        elif order_status == "open":
             logger.info(f"Upstox order is active and open in the market. for order ID: {order_id}")
-            rejection_message= order_details['data'].get('status_message', 'Unknown Open reason')
-            status=order_details['data'].get('status', 'open')
-            transaction_type=order_details['data'].get('transaction_type', '')
-            # print("transaction_type.........",transaction_type)
+            rejection_message= order_data.get('status_message', 'Unknown Open reason')
+            status=order_data.get('status', 'open')
+            transaction_type=order_data.get('transaction_type', '')
             if transaction_type == "BUY":
-                # trade_order_status="OPEN"
                 Entry_type="LE"
-                Entry_price=order_details['data'].get('average_price', 0.0)
+                Entry_price=order_data.get('average_price', 0.0)
                 print("Entry_price>>>",Entry_price)
-                EntryQty=order_details['data'].get('quantity', 0)
+                EntryQty=order_data.get('quantity', 0)
             elif transaction_type == "SELL": 
-                # trade_order_status="CLOSE"
                 Exit_type="LX"
-                Exit_price=order_details['data'].get('average_price', 0.0) 
-                ExitQty= order_details['data'].get('quantity', 0)#disclosedquantity
+                Exit_price=order_data.get('average_price', 0.0) 
+                ExitQty= order_data.get('quantity', 0)#disclosedquantity
             status="complete"
             save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, rejection_message, 
             strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, 
@@ -340,23 +313,20 @@ def handle_successful_order(LivePrice,group_service,transaction_type,
             logger.info(f"Order  active and open in the market reason!!!::{rejection_message} Order ID: {order_id}")
             response = {"data": {"status": status,"message": "Order is Open "}}
             return response
-        elif order_details['data']['status'] == "put order req received":
+        elif order_status == "put order req received":
             logger.info(f"Upstox order is active and open in the market. for order ID: {order_id}")
-            rejection_message= order_details['data'].get('status_message', 'Unknown Open reason')
-            status=order_details['data'].get('status', 'put order req received')
-            transaction_type=order_details['data'].get('transaction_type', '')
-            # print("transaction_type.........",transaction_type)
+            rejection_message= order_data.get('status_message', 'Unknown Open reason')
+            status=order_data.get('status', 'put order req received')
+            transaction_type=order_data.get('transaction_type', '')
             if transaction_type == "BUY":
-                # trade_order_status="OPEN"
                 Entry_type="LE"
-                Entry_price=order_details['data'].get('average_price', 0.0)
+                Entry_price=order_data.get('average_price', 0.0)
                 print("Entry_price>>>",Entry_price)
-                EntryQty=order_details['data'].get('quantity', 0)
+                EntryQty=order_data.get('quantity', 0)
             elif transaction_type == "SELL": 
-                # trade_order_status="CLOSE"
                 Exit_type="LX"
-                Exit_price=order_details['data'].get('average_price', 0.0) 
-                ExitQty= order_details['data'].get('quantity', 0)#disclosedquantity
+                Exit_price=order_data.get('average_price', 0.0) 
+                ExitQty= order_data.get('quantity', 0)#disclosedquantity
 
             save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, rejection_message, 
             strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, 
@@ -366,8 +336,8 @@ def handle_successful_order(LivePrice,group_service,transaction_type,
             return response
         else:
             
-            status=order_details['data']['status']
-            rejection_message= order_details['data'].get('status_message', 'Unknown rejection reason')
+            status=order_data.get('status', 'Failed')
+            rejection_message= order_data.get('status_message', 'Unknown rejection reason')
             logger.warning(f"Failed to fetch order details for Order ID {order_id} with status {status} broker is :upstox")
             save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, rejection_message, 
             strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, 
@@ -394,18 +364,11 @@ def handle_successful_order(LivePrice,group_service,transaction_type,
 def fetch_instrument_details(symbol_name, exchange="NSE", user = None):
     try:
         logger.info(f"{user} : instrument details fetching for the upstox api calling !!")
-        # URL of the gzipped JSON containing instruments data
-        url = f"https://assets.upstox.com/market-quote/instruments/exchange/{exchange}.json.gz"
-
-        response = requests.get(url)        
-        if response.status_code != 200:
-            logger.info(f"{user} : Failed to fetch instruments data. Status : {response}")
-            return {"error": f"Failed to fetch instruments data. Status code: {response.status_code}"}
-
-        with gzip.GzipFile(fileobj=BytesIO(response.content)) as f:
-            instruments_data = json.load(f)
+        normalized_symbol_name = str(symbol_name or "").replace(" ", "").replace("-", "").upper()
+        instruments_data = load_upstox_instruments(exchange)
         for instrument in instruments_data:
-            if instrument.get("trading_symbol", "").replace(" ", "") == symbol_name:
+            instrument_symbol = str(instrument.get("trading_symbol", "")).replace(" ", "").replace("-", "").upper()
+            if instrument_symbol == normalized_symbol_name:
                 logger.info(f"{user} : instrument_key is get it ?????????????========>>>>>>>")
                 return {"instrument_key": instrument.get("instrument_key")}
 
@@ -476,4 +439,3 @@ def get_order_details2222(order_id, access_token):
     except Exception as e:
         logger.info(f"Exception occurred: {str(e)}")
         return {"error":"None" }
-

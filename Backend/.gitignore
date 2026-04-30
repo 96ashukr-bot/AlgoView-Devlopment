@@ -65,3 +65,4 @@ env/
 
 */migrations/*
 !*/migrations/__init__.py
+!main/migrations/0001_add_order_type_and_buffer_to_client_trade_setting.py

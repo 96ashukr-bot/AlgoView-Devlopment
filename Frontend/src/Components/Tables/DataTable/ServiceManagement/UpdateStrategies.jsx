@@ -103,7 +103,7 @@ const UpdateStrategies = () => {
 
     const indexOfLastClient = currentPage * clientsPerPage;
     const indexOfFirstClient = indexOfLastClient - clientsPerPage;
-    const currentClients = filteredClients;
+    let currentClients = filteredClients;
 
     if (currentPage === 1 && filteredClients.length > itemsPerPage) {
         const extraItem = filteredClients[filteredClients.length - 1];

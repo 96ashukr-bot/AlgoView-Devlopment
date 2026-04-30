@@ -15,7 +15,6 @@ export const MENUITEMSNEW = [
           { path: `/tradedetails/signals`, title: "Signals", type: "link" },
           { path: `/tradedetails/client-trade-history`, title: "Trade History", type: "link" },
           { path: `/tradedetails/complete-trade-history`, title: "Complete Trade", type: "link" },
-          { path: `/tradedetails/trade-view`, title: "Client Trade", type: "link" },
         ],
       },
 
@@ -29,7 +28,8 @@ export const MENUITEMSNEW = [
         children: [
           // { path: `/service-manage/all-service-list`, title: "All Service", type: "link" },
           // { path: `/service-manage/group-services-list`, title: "Group Service", type: "link" },
-          { path: `/service-manage/clientstrategies`, title: "Strategies", type: "link" },          
+          { path: `/service-manage/client-group-service`, title: "Group Service", type: "link" },
+          { path: `/dashboard/strategies/multileg-execution`, title: "Multi Leg Execution", type: "link" },
         ],
       },
      

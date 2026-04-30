@@ -1,17 +1,16 @@
 import os
-from django.conf import settings
-from django.http import JsonResponse, HttpResponseRedirect
-from django.shortcuts import render
 import requests
 import pandas as pd
-from io import StringIO
-from main.Alice_Blue_Api import save_trade_order_history
 from main.models import *
 from main.tasks import send_trade_email_async
+from main.broker_order_utils import normalize_order_type, resolve_limit_price
+from main.trade_history_service import save_trade_order_history
+from main.broker_instrument_cache import ensure_fivepaisa_scrip_master_file
 import logging
 import uuid
 logger = logging.getLogger('main')
 PLACE_ORDER_URL = "https://Openapi.5paisa.com/VendorsAPI/Service1.svc/V1/PlaceOrderRequest"  # Example URL (change to actual API endpoint)
+MARKET_FEED_URL = "https://Openapi.5paisa.com/VendorsAPI/Service1.svc/MarketFeed"
 
 """
 The access token  generated after successful login request remains valid thought a day from 
@@ -19,81 +18,6 @@ the time of its generation. Token expires every day at 11:59 PM.
 """
 
 ACCESS_TOKEN_URL = "https://Openapi.5paisa.com/VendorsAPI/Service1.svc/GetAccessToken"
-AUTH_LOGIN_URL="https://dev-openapi.5paisa.com/WebVendorLogin/VLogin/Index"
-# Replace with your 5Paisa credentials
-
-REDIRECT_URL = "https://www.admin.algoview.in/callback"
-STATE = "5paisa"
-# Provided credentials
-VENDOR_KEY = "CNh6IRx0kF8c1MSyNBPaOhcaaVmiitbm"  # Your API Key (App Key)
-USER_ID = "87CUsmjf7dP"  # Your User ID
-ENCRYPTION_KEY = "UFDlfZjoOsj07XipwGuFUDPAGeER61Q7"  # Your Encryption Key
-def initiate_oauth_login(request):
-    logger.info(f"Vendor Key: {VENDOR_KEY}")
-    
-    state = "5paisa"
-    oauth_url = (
-        f"https://dev-openapi.5paisa.com/WebVendorLogin/VLogin/Index?"
-        f"VendorKey={VENDOR_KEY}&ResponseURL={REDIRECT_URL}&State={state}"
-    )
-
-    # Redirect the user to the OAuth login page
-    return HttpResponseRedirect(oauth_url)
-
-def oauth_callback(request):
-    """
-    Handles the callback from 5Paisa after successful login.
-    """
-    request_token ="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1bmlxdWVfbmFtZSI6IjUxMDcyMDY3Iiwicm9sZSI6IkNOaDZJUngwa0Y4YzFNU3lOQlBhT2hjYWFWbWlpdGJtIiwibmJmIjoxNzQwNjM4NTEwLCJleHAiOjE3NDA2Mzg1NDAsImlhdCI6MTc0MDYzODUxMH0.OxUUJgtfPi4rL8H2y0HpO0ijnJ10dApZTIMAEIw3szM"# request.GET.get("RequestToken")
-    state = "5paisa"#request.GET.get("state")
-
-    if not request_token:
-        return JsonResponse({"error": "RequestToken is missing"}, status=400)
-
-    # Log RequestToken and State
-    # print(f"RequestToken: {request_token}")
-    # print(f"State: {state}")
-
-    # Fetch Access Token
-    access_token = fetch_access_token(request_token)
-    if access_token:
-        return JsonResponse({"AccessToken": access_token})
-    else:
-        return JsonResponse({"error": "Failed to fetch AccessToken"}, status=500)
-def fetch_access_token(request_token):
-    payload ={
-    "head": {
-        "Key":VENDOR_KEY
-    },
-    "body": {
-        "RequestToken":request_token,
-        "EncryKey": ENCRYPTION_KEY,
-        "UserId":USER_ID
-        }
-    }
-    
-
-    headers = {
-        "Content-Type": "application/json"
-    }
-
-    try:
-        # Make the POST request to fetch the access token
-        response = requests.post(ACCESS_TOKEN_URL, json=payload, headers=headers)
-        print("response.........",response.json())
-        if response.status_code == 200:
-            response_data = response.json()  
-            if "body" in response_data and "AccessToken" in response_data["body"]:
-                return response_data["body"]["AccessToken"]  # Return the access token
-            else:
-                print("Error in response body:", response_data)
-        else:
-            print(f"Error: {response.status_code}, Response: {response.text}")
-
-    except Exception as e:
-        print(f"Exception occurred: {e}")
-
-    return None  # Return None if fetching the token failed
 def fetch_access_token_5paisa(request_token,broker_details):
         api_key=broker_details.broker_API_KEY
         encreption_key=broker_details.broker_API_SKEY
@@ -115,23 +39,19 @@ def fetch_access_token_5paisa(request_token,broker_details):
         }
 
         try:
-            # Make the POST request to fetch the access token
-            response = requests.post(ACCESS_TOKEN_URL, json=payload, headers=headers)
-            print("response.........",response.json())
+            response = requests.post(ACCESS_TOKEN_URL, json=payload, headers=headers, timeout=10)
             if response.status_code == 200:
                 response_data = response.json()  
                 if "body" in response_data and "AccessToken" in response_data["body"]:
-                    return response_data["body"]["AccessToken"]  # Return the access token
-                else:
-                    return None
-                    # print("Error in response body:", response_data)
+                    return response_data["body"]["AccessToken"]
+                logger.warning("5Paisa access token response did not include AccessToken")
             else:
-                print(f"Error: {response.status_code}, Response: {response.text}")
+                logger.warning("5Paisa access token request failed with status %s", response.status_code)
 
         except Exception as e:
-            print(f"Exception occurred: {e}")
+            logger.exception("5Paisa access token request failed")
 
-        return None  # Return None if fetching the token failed
+        return None
 from datetime import datetime
 def download_scrip_master(segment, save_path):
     """
@@ -168,20 +88,15 @@ def get_symbol_scriptcode(symbol, segment, Exch, csv_dir, user=None):
     :return: A dictionary with the status and ScripCode or an error message.
     """
     try:
-        os.makedirs(csv_dir, exist_ok=True)
-        # Generate the file path for the current segment
-        today = datetime.today()
-        csv_file_name = f"scrip_master_{segment}_{today.strftime('%Y_%m')}.csv"
-        csv_file_path = os.path.join(csv_dir, csv_file_name)
-        if not os.path.exists(csv_file_path):
-            print("Downloading the latest Scrip Master...",csv_file_path)
-            download_status = download_scrip_master(segment, csv_file_path)
-            if download_status["status"] != "success":
-                return download_status
+        normalized_symbol = str(symbol or "").replace(" ", "").replace("-", "").upper()
+        try:
+            csv_file_path = ensure_fivepaisa_scrip_master_file(segment)
+        except Exception as exc:
+            return {"status": "error", "message": f"5Paisa scrip master unavailable: {str(exc)}"}
 
         df = pd.read_csv(csv_file_path)
-        df['Name'] = df['Name'].str.replace(" ", "")
-        filtered_df = df[(df['Name'] == symbol) & (df['Exch'] == Exch)]
+        df['Name'] = df['Name'].astype(str).str.replace(" ", "").str.replace("-", "").str.upper()
+        filtered_df = df[(df['Name'] == normalized_symbol) & (df['Exch'] == Exch)]
 
         if not filtered_df.empty:
             # Return the first matching record's ScripCode
@@ -296,6 +211,41 @@ def place_5paisa_order(LivePrice,group_service,api_key,access_token,trade_symbol
             return response
         try:
             unique_id = str(uuid.uuid4()).replace("-", "")[:15]
+            requested_order_type = normalize_order_type(ordertype)
+            headers = {
+                "Authorization": f"Bearer {access_token}",
+                "Content-Type": "application/json"
+            }
+            ltp = None
+            try:
+                market_feed_payload = {
+                    "head": {"key": api_key},
+                    "body": {
+                        "MarketFeedData": [
+                            {"Exch": "N", "ExchType": "D", "ScripCode": token}
+                        ],
+                        "LastRequestTime": "/Date(0)/",
+                        "RefreshRate": "H",
+                    },
+                }
+                ltp_response = requests.post(MARKET_FEED_URL, headers=headers, json=market_feed_payload, timeout=5)
+                ltp_data = ltp_response.json() if ltp_response.content else {}
+                feed_data = ltp_data.get("body", {}).get("Data") or ltp_data.get("body", {}).get("MarketFeedData") or []
+                if feed_data:
+                    quote = feed_data[0]
+                    ltp = quote.get("LastRate") or quote.get("LastTradedPrice") or quote.get("ltp")
+            except Exception as e:
+                logger.warning(f"{user} : 5Paisa LTP fetch failed for token {token}: {str(e)}")
+
+            if requested_order_type == "LIMIT":
+                price = resolve_limit_price(price, ltp, transaction_type)
+                if not price:
+                    message = "Unable to calculate 5Paisa limit price because live price is unavailable."
+                    save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, "Failed", "LTP unavailable", message,  strategy,  Entry_type,Exit_type,Entry_price,Exit_price ,EntryQty,ExitQty,webhook_signal , Exchange, Segment,Index_Symbol,order_params, broker="5paisa", history_id=history_id)
+                    return {"data": {"status": "Failed", "message": message}}
+            elif requested_order_type == "MARKET":
+                price = 0
+
             order_params = {
                 "head": {
                     "key": api_key
@@ -305,7 +255,7 @@ def place_5paisa_order(LivePrice,group_service,api_key,access_token,trade_symbol
                     "ExchangeType": "D",  # Derivatives
                     "ScripCode": token,  # Numeric Scrip Code from token
                     "OrderType": transaction_type,  # Order type (Buy or Sell)
-                    "price":0,
+                    "price": price if requested_order_type == "LIMIT" else 0,
                     "Qty": quantity,  # Quantity to trade
                     # "DisQty": 0,  # Disclosed Quantity
                     "IsIntraday": True,  # Intraday flag
@@ -314,10 +264,6 @@ def place_5paisa_order(LivePrice,group_service,api_key,access_token,trade_symbol
                 }
             }
             # Set the Authorization header with the Bearer token
-            headers = {
-                "Authorization": f"Bearer {access_token}",
-                "Content-Type": "application/json"  # Content-Type for JSON payload
-            }
             # When preparing your order_params, apply the conversion
             order_params = convert_int64_to_int(order_params)
             logger.info(f"{user} :Place order api url is called for the process !!")
@@ -365,7 +311,16 @@ def place_5paisa_order(LivePrice,group_service,api_key,access_token,trade_symbol
                         Exit_price=res_data.get ('AveragePrice', 0.0)  
                         ExitQty= res_data.get ('Qty', 0)
                     status="completed"
-                    response = {"data": {"status":status }}
+                    response = {
+                        "data": {
+                            "status": status,
+                            "order_id": order_id,
+                            "order_type": requested_order_type,
+                            "price": Entry_price or Exit_price or order_params["body"].get("price"),
+                            "ltp": ltp,
+                            "reference_price": ltp,
+                        }
+                    }
                     logger.info(f"{user} : Order placed successfully for user {user}. Order ID: : {order_id}")
                     message=f"Order placed successfully for user {user}. Response: {response}"
                     save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type,Entry_price,Exit_price ,EntryQty,ExitQty,webhook_signal , Exchange, Segment,Index_Symbol,order_params, broker="5paisa", history_id=history_id)

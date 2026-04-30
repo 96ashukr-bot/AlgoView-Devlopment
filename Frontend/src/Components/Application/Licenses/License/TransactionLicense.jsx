@@ -7,7 +7,6 @@ import {
 import './License.css';
 
 const TransactionLicense = () => {
-    const [licenses, setLicenses] = useState([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage] = useState(10);
     const [searchQuery, setSearchQuery] = useState('');

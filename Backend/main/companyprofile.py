@@ -12,6 +12,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.utils.timezone import now, timedelta
 from .models import WebsocketDetails
+from django.core.mail import EmailMultiAlternatives
+from main.utils import get_smtp_connection
 
 
 class UpdateWebSocketToken(APIView):
@@ -273,5 +275,49 @@ class CompanySmtpUpdateView(APIView):
                 "status": "error",
                 "message": f"An unexpected error occurred: {str(e)}"
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class CompanySmtpTestView(APIView):
+    def post(self, request, *args, **kwargs):
+        try:
+            smtp_details = CompanySmtpDetails.objects.get(user=request.user)
+        except CompanySmtpDetails.DoesNotExist:
+            return Response({
+                "status": "failed",
+                "message": "SMTP configuration not found.",
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        connection = get_smtp_connection(smtp_details=smtp_details, open_connection=True)
+        if not connection:
+            return Response({
+                "status": "failed",
+                "message": "SMTP connection could not be established. Please verify host, port, username, and password.",
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            recipient = request.data.get("recipient") or smtp_details.default_from_email or smtp_details.email_host_user
+            sender = smtp_details.default_from_email or smtp_details.email_host_user
+            email_message = EmailMultiAlternatives(
+                "AlgoView SMTP Test",
+                "SMTP test email from AlgoView. If you received this, your email account is working.",
+                sender,
+                [recipient],
+                connection=connection,
+            )
+            email_message.send()
+            return Response({
+                "status": "success",
+                "message": f"SMTP test email sent to {recipient}.",
+            }, status=status.HTTP_200_OK)
+        except Exception as exc:
+            return Response({
+                "status": "failed",
+                "message": f"SMTP test failed: {str(exc)}",
+            }, status=status.HTTP_400_BAD_REQUEST)
+        finally:
+            try:
+                connection.close()
+            except Exception:
+                pass
 
    

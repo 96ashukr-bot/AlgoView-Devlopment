@@ -7,7 +7,7 @@ import { saveAs } from 'file-saver';
 import { H3 } from '../../../../AbstractElements';
 import { RotatingLines } from 'react-loader-spinner';
 import { FaArrowUp, FaArrowDown } from 'react-icons/fa';
-import { getTradeHistory, getTradeStrategy, getBroker, TradeHistorySearch, getTradeResponse } from '../../../../Services/Authentication';
+import { getTradeHistory, getTradeStrategy, getBroker, getTradeResponse } from '../../../../Services/Authentication';
 import './TradeDetails.css';
 import { Modal, ModalHeader, ModalBody, ModalFooter } from 'reactstrap';
 import { getStockSymbolLivePriceSocketUrl } from '../../../../ConfigUrl/config';
@@ -65,11 +65,7 @@ const TradeHistory = () => {
     const ws = useRef(null);
 
     useEffect(() => {
-        if (searchQuery) {
-            handleSearch();
-        } else {
-            fetchTradeHistory();
-        }
+        fetchTradeHistory();
         fetchTradeStrategies();
         fetchBrokers();
 
@@ -311,6 +307,7 @@ const TradeHistory = () => {
                 setTotalPages(Math.ceil(response.count / itemsPerPage));
             } else {
                 setTradeHistory([]); // Handle empty pages.
+                setTotalPages(1);
             }
         } catch (err) {
             console.error("Error fetching data:", err);
@@ -320,21 +317,12 @@ const TradeHistory = () => {
         }
     };
 
-    const handleSearch = async () => {
-        try {
-            setLoading(true);
-            const response = await TradeHistorySearch(searchQuery, itemsPerPage);
-            if (response?.results?.length > 0) {
-                setTradeHistory(response.results);
-            } else {
-                setTradeHistory([]);
-            }
-        } catch (error) {
-            console.error('Error during search:', error);
-            setError("Search failed.");
-        } finally {
-            setLoading(false);
+    const handleSearch = () => {
+        if (currentPage !== 1) {
+            setCurrentPage(1);
+            return;
         }
+        fetchTradeHistory();
     };
 
     const calculateTotal = (exitPrice, exitQty, entryPrice, entryQty, orderStatus) => {
@@ -369,6 +357,7 @@ const TradeHistory = () => {
     };
 
     const handleReset = () => {
+        setCurrentPage(1);
         setFormData({
             fromDate: '',
             toDate: '',
@@ -388,7 +377,6 @@ const TradeHistory = () => {
             'Signal Exit Time': signal.SignalExit_time || '-',
             Symbol: signal.trading_symbol || '-',
             Strategy: signal.strategy || '-',
-            'Entry Type': signal.Entry_type || '-',
             'Entry Qty': signal.EntryQty || '-',
             'Exit Qty': signal.ExitQty || '-',
             'Entry Price': signal.Entry_Price !== null ? signal.Entry_Price : '-',
@@ -428,6 +416,7 @@ const TradeHistory = () => {
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
+        setCurrentPage(1);
         setFormData({ ...formData, [name]: value });
     };
 
@@ -446,56 +435,10 @@ const TradeHistory = () => {
         setTradeHistory(sortedSignals);
     };
 
-    const filteredSignals = tradeHistory.filter(signal => {
-        const signalDate = signal.SignalEntry_time ? new Date(signal.SignalEntry_time) : null;
-        const signalExitDate = signal.SignalExit_time ? new Date(signal.SignalExit_time) : null;
-        const fromDate = new Date(formData.fromDate);
-        const toDate = new Date(formData.toDate);
-
-        // Adjust toDate to include the entire day
-        toDate.setHours(23, 59, 59, 999); // Set to the end of the day
-
-        const searchLower = searchQuery.toLowerCase();
-
-        const isWithinDateRange = (!formData.fromDate || signalDate >= fromDate) &&
-            (!formData.toDate || signalDate <= toDate);
-
-        // Compare with the broker name from the dropdown
-        const matchesBroker = !formData.broker || (signal.broker && signal.broker.toLowerCase() === formData.broker.toLowerCase());
-        const matchesOrderStatus = !formData.orderStatus || (signal.order_status && signal.order_status.toLowerCase() === formData.orderStatus.toLowerCase());
-        const matchesIndexSymbol = !formData.indexSymbol || signal.Index_Symbol === formData.indexSymbol;
-        const matchesStrategy = !formData.strategy || (signal.strategy && signal.strategy.toLowerCase() === formData.strategy.toLowerCase());
-
-        return (
-            isWithinDateRange &&
-            matchesBroker &&
-            matchesOrderStatus &&
-            matchesIndexSymbol &&
-            matchesStrategy &&
-            (
-                (signalDate && signalDate.toLocaleDateString('en-GB').includes(searchLower)) ||
-                (signalExitDate && signalExitDate.toLocaleDateString('en-GB').includes(searchLower)) ||
-                (signal.trading_symbol && signal.trading_symbol.toLowerCase().includes(searchLower)) ||
-                (signal.strategy && signal.strategy.toLowerCase().includes(searchLower)) ||
-                (signal.GroupService && signal.GroupService.toLowerCase().includes(searchLower)) ||
-                // (signal.order_status && String(signal.order_status).toLowerCase().includes(searchLower)) ||
-                (signal.Entry_type && String(signal.Entry_type).toLowerCase().includes(searchLower)) ||
-                (signal.client?.full_name && signal.client.full_name.toLowerCase().includes(searchLower)) ||
-                (signal.broker && signal.broker.toLowerCase().includes(searchLower))
-
-            )
-        );
-    });
-
     const indexOfLastSignal = currentPage * itemsPerPage;
     const indexOfFirstSignal = indexOfLastSignal - itemsPerPage;
 
-    let currentSignals = filteredSignals;
-
-    if (currentPage === 1 && filteredSignals.length > itemsPerPage) {
-        const extraItem = filteredSignals[filteredSignals.length - 1];
-        currentSignals = [extraItem, ...currentSignals.slice(0, itemsPerPage - 1)];
-    }
+    const currentSignals = tradeHistory;
 
     const handlePreviousBatch = () => {
         if (pageBatch > 0) setPageBatch(pageBatch - 1);
@@ -563,7 +506,10 @@ const TradeHistory = () => {
                                     type="text"
                                     placeholder="Search..."
                                     value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    onChange={(e) => {
+                                        setCurrentPage(1);
+                                        setSearchQuery(e.target.value);
+                                    }}
                                     onKeyDown={(e) => {
                                         if (e.key === 'Enter') {
                                             handleSearch();
@@ -717,14 +663,6 @@ const TradeHistory = () => {
                                                 <FaArrowUp className="sort-arrow-left" />
                                                 <FaArrowDown className="sort-arrow-right" />
                                             </th>
-                                            <th onClick={() => handleSort('Entry_type')} className='custom-col-design'>Entry Type
-                                                <FaArrowUp className="sort-arrow-left" />
-                                                <FaArrowDown className="sort-arrow-right" />
-                                            </th>
-                                            <th onClick={() => handleSort('Exit_type')} className='custom-col-design'>Exit Type
-                                                <FaArrowUp className="sort-arrow-left" />
-                                                <FaArrowDown className="sort-arrow-right" />
-                                            </th>
                                             <th onClick={() => handleSort('EntryQty')} className='custom-col-design'>Entry Qty
                                                 <FaArrowUp className="sort-arrow-left" />
                                                 <FaArrowDown className="sort-arrow-right" />
@@ -802,8 +740,6 @@ const TradeHistory = () => {
                                                         <td>{signal.GroupService || '-'}</td>
                                                         {/* <td>{signal.strategy || '-'}</td> */}
                                                         <td>{signal.broker || '-'}</td>
-                                                        <td>{signal.Entry_type || '-'}</td>
-                                                        <td>{signal.Exit_type || '-'}</td>
                                                         <td>{signal.EntryQty || '-'}</td>
                                                         <td>{signal.ExitQty || '-'}</td>
                                                         <td>{signal.Entry_Price !== null ? signal.Entry_Price : '-'}</td>

@@ -1,9 +1,10 @@
-import React, { Fragment } from 'react';
+import React, { Fragment, useEffect, useMemo, useState } from 'react';
 import { Col, Card, CardHeader, CardBody, Row } from 'reactstrap';
 import { FaEye } from 'react-icons/fa';
 import Swal from 'sweetalert2';
 import 'sweetalert2/dist/sweetalert2.min.css';
 import './ApiKeys.css';
+import { getBroker } from '../../../../Services/Authentication';
 import aliceblue from '../../../../assets/images/logo/aliceblue.jpeg';
 import zerodhaLogo from '../../../../assets/images/logo/zerodha.png';
 import paisaLogo from '../../../../assets/images/logo/5paisa.png';
@@ -14,144 +15,168 @@ import fyersLogo from '../../../../assets/images/logo/fyers.png';
 import kotakLogo from '../../../../assets/images/logo/kotakneo.png';
 import upstocksLogo from '../../../../assets/images/logo/upstox.png';
 import dhanLogo from '../../../../assets/images/logo/dhan.jpg';
-import upStox from '../../../../assets/images/logo/upstoxlogin.png';
-import panchPaisa from '../../../../assets/images/logo/panchpaisa.png';
-import zerodha from '../../../../assets/images/logo/zerodhalogin.png';
+import upStoxGuide from '../../../../assets/images/logo/upstoxlogin.png';
+import zerodhaGuide from '../../../../assets/images/logo/zerodhalogin.png';
+
+const brokerAssetMap = {
+    upstox: { logo: upstocksLogo, guideImage: upStoxGuide },
+    zerodha: { logo: zerodhaLogo, guideImage: zerodhaGuide },
+    '5paisa': { logo: paisaLogo, guideImage: null },
+    'alice blue': { logo: aliceblue, guideImage: null },
+    dhan: { logo: dhanLogo, guideImage: null },
+    'angel one': { logo: angelOneLogo, guideImage: null },
+    'market hub': { logo: marketHubLogo, guideImage: null },
+    'master trust': { logo: masterTrustLogo, guideImage: null },
+    fyers: { logo: fyersLogo, guideImage: null },
+    'kotak neo': { logo: kotakLogo, guideImage: null },
+};
+
+const brokerDocs = {
+    upstox: {
+        links: [
+            { label: 'Upstox Developer Console', href: 'https://upstox.com/developer/' },
+        ],
+    },
+    zerodha: {
+        links: [
+            { label: 'Zerodha Kite Connect', href: 'https://kite.trade/' },
+        ],
+    },
+    '5paisa': {
+        links: [
+            { label: '5Paisa Developer Portal', href: 'https://www.5paisa.com/developer-api' },
+        ],
+    },
+    'alice blue': {
+        links: [
+            { label: 'Alice Blue ANT', href: 'https://ant.aliceblueonline.com/' },
+        ],
+    },
+    dhan: {
+        links: [
+            { label: 'Dhan Developer Portal', href: 'https://dhanhq.co/' },
+        ],
+    },
+    'angel one': {
+        links: [
+            { label: 'Angel One SmartAPI', href: 'https://smartapi.angelone.in/' },
+        ],
+    },
+    fyers: {
+        links: [
+            { label: 'FYERS API Dashboard', href: 'https://myapi.fyers.in/dashboard' },
+        ],
+    },
+    'kotak neo': {
+        links: [
+            { label: 'Kotak Neo TradeAPI Portal', href: 'https://napi.kotaksecurities.com/devportal/apis' },
+        ],
+    },
+};
+
+const formatAuthMode = (authMode) => (authMode || 'broker_specific').replace(/_/g, ' ');
+
+const renderFieldChecklist = (fields) => {
+    if (!fields?.length) {
+        return '<p>No broker-specific credentials are required from the panel for this broker.</p>';
+    }
+
+    const items = fields
+        .map(
+            (field) =>
+                `<li><strong>${field.label}</strong>${field.required ? ' (required)' : ''}${field.secret ? ' - stored securely' : ''}</li>`
+        )
+        .join('');
+
+    return `
+        <p><strong>Broker setup fields:</strong></p>
+        <ul style="padding-left: 20px; margin-bottom: 12px;">${items}</ul>
+    `;
+};
+
+const buildInstructionHtml = (broker) => {
+    const normalizedName = broker.broker_name.toLowerCase();
+    const schema = broker.setup_schema || {};
+    const connectLabel = schema.connect_action_label || 'Broker Login';
+    const fieldChecklist = renderFieldChecklist(schema.fields);
+    const docs = brokerDocs[normalizedName]?.links || [];
+    const guideImage = brokerAssetMap[normalizedName]?.guideImage;
+
+    const connectStep = schema.connect_path
+        ? `<p><strong>Step 3:</strong> Use the dashboard action <strong>${connectLabel}</strong> to start the broker-side authentication flow.</p>`
+        : `<p><strong>Step 3:</strong> Complete the broker authentication flow outside AlgoView if this broker does not support a panel login button.</p>`;
+
+    const docsHtml = docs.length
+        ? `<p><strong>Reference links:</strong></p><ul style="padding-left: 20px;">${docs
+              .map((doc) => `<li><a href="${doc.href}" target="_blank" rel="noreferrer">${doc.label}</a></li>`)
+              .join('')}</ul>`
+        : '';
+
+    const imageHtml = guideImage
+        ? `<img src="${guideImage}" alt="${broker.broker_name} guide" style="max-width: 220px; margin: 8px 0; width: 100%;" />`
+        : '';
+
+    const authModeHtml = `<p><strong>Authentication mode:</strong> ${formatAuthMode(schema.auth_mode)}</p>`;
+    const callbackHtml = schema.supports_callback
+        ? '<p><strong>Callback:</strong> AlgoView expects the broker to redirect back to the configured callback URL after successful authentication.</p>'
+        : '';
+
+    return `
+        <h4>${broker.broker_name} Setup</h4>
+        <p>Kindly follow these steps to link your account with this Algo Software.</p>
+        <div style="text-align: left;">
+            <p><strong>Step 1:</strong> Open the Client Dashboard and use <strong>Select Broker</strong> to choose <strong>${broker.broker_name}</strong>.</p>
+            <p><strong>Step 2:</strong> Save only the broker-specific fields shown in the broker setup screen.</p>
+            ${fieldChecklist}
+            ${authModeHtml}
+            ${connectStep}
+            ${callbackHtml}
+            ${imageHtml}
+            ${docsHtml}
+        </div>
+    `;
+};
 
 const ApiKeys = () => {
-    const brokers = [
-        {
-            name: "UPSTOX",
-            details: "API Process of UPSTOX :",
-            instructions: `
-            <p><strong>Step 1:</strong> Client Dashboard --> First select the Broker UPSTOX ( Click on the 'Select Broker' Switch Toggle ).</p>
-            <p><strong>Step 2:</strong> Client Dashboard --> Click on the 'Broker Login' Switch Toggle.</p>
-            <p><strong>Step 3:</strong> After logging in as a broker, you will be redirected to the UPSTOX website, where you need to first enter your mobile number, followed by the OTP, and then the MPIN.</p>
-            <img src="${upStox}" alt="UPSTOCKS Logo" style="max-width: 200px; margin-top: 5px; margin-bottom: 5px; width:100%" />
-            <p>Step 4: After login, enter the following redirect URL :
-            <a href="https://www.sparks.algoview.in/callback?code=Auth_code&state=upstox" target="_blank">https://www.sparks.algoview/callback?code=Auth_code&state=upstox</a></p>`,
-            logo: upstocksLogo
-        },
-        {
-            name: "ZERODHA",
-            details: "API Process of Zerodha :",
-            instructions: `
-                           <p><strong>Step 1:</strong> Client Dashboard --> First select the Broker ZERODHA ( Click on the 'Select Broker' Switch Toggle ).</p>
-                           <p><strong>Step 2:</strong> Client Dashboard --> Click on the 'Broker Login' Switch Toggle.</p>
-                           <p>Step 4: <a href="https://kite.trade/" target="_blank">Click here</a> to log in to Zerodha Kite.</p>
-                           <p><strong>Step 5:</strong> After logging in as a broker, you will be redirected to the UPSTOX website, where you need to first enter your mobile number, followed by the OTP, and then the PIN.</p>
-                            <img src="${zerodha}" alt="UPSTOCKS Logo" style="max-width: 200px; margin-top: 5px; margin-bottom: 5px; width:100%" />
-                           <p>Step 6: After login : 
-                           <a href="https://www.sparks.algoview/backend/zerodha?key=YOUR_PANEL_CLIENT_KEY" target="_blank">https://www.sparks.algoview/backend/zerodha?key=YOUR_PANEL_CLIENT_KEY</a></p>`,
-            logo: zerodhaLogo
-        },
-        {
-            name: "5 PAISA",
-            details: "API setup instructions for 5 Paisa :",
-            instructions: `
-                        <p><strong>Step 1:</strong> Client Dashboard --> First select the Broker 5Paisa ( Click on the 'Select Broker' Switch Toggle ).</p>
-                        <p><strong>Step 2:</strong> Client Dashboard --> Click on the 'Broker Login' Switch Toggle.</p>
-                        <p><strong>Step 3:</strong> After logging in as a broker, you will be redirected to the 5Paisa website, where you need to first enter your mobile number, followed by the OTP, and then the PIN.</p>
-                        <img src="${panchPaisa}" alt="paisa Logo" style="max-width: 200px; margin-top: 5px; margin-bottom: 5px; width:100%" />
-                        <p>Step 4: After login, enter the following redirect URL :
-                        <a href="https://www.sparks.algoview.in/callback?code=Auth_code&state=5paisa" target="_blank">https://www.sparks.algoview/callback?code=Auth_code&state=5paisa</a></p>`,
-            logo: paisaLogo
-        },
-        {
-            name: "ALICE BLUE",
-            details: "API Process of Alice Blue :",
-            instructions: `
-            <p><strong>Step 1:</strong> Login to the Aliceblue ANT web application: 
-                           <a href="https://ant.aliceblueonline.com/" target="_blank">https://ant.aliceblueonline.com/</a></p>
-                           <p><strong>Step 2:</strong> Navigate to APPS --> 'API key' Users can generate API key via the below button.</p>
-                           <p><strong>Step 3:</strong> After accepting the 'Terms and Conditions', the generated API key will be sent to the User's registered mail.</p>
-                           <p><strong>Step 4:</strong> For authentication and authorization work flow, use that 'API key'.</p>
-                           <p><strong>Step 5:</strong> To use the ALICE BLUE API you need USERID AND APIKEY.</p>
-                            <a href="https://www.sparks.algoview/callback?code=Auth_code&state=aliceblue" target="_blank">https://www.sparks.algoview/callback?code=Auth_code&state=aliceblue</a></p>
-                           `,
-            logo: aliceblue
-        },
-        {
-            name: "DHAN",
-            details: "Log in to your Dhan account :",
-            instructions: `<p>Step 1: After login, enter the following redirect URL :</p>`,
-            logo: dhanLogo
-        },
-        {
-            name: "ANGEL ONE",
-            details: "API Process of Angel One :",
-            instructions: `<p><strong>Step 1:</strong> Sign up for Smart API: 
-                           <a href="https://smartapi.angelbroking.com/signup" target="_blank">https://smartapi.angelbroking.com/signup</a></p>
-                           <p><strong>Step 2:</strong> Login to Angel One Smart API: 
-                           <a href="https://smartapi.angelbroking.com/signin#" target="_blank">https://smartapi.angelbroking.com/signin#</a></p>
+    const [brokers, setBrokers] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-                           <p><strong>Step 3:</strong> Create an App Choose the Trading API.</p>
+    useEffect(() => {
+        const loadBrokers = async () => {
+            try {
+                const response = await getBroker();
+                setBrokers(Array.isArray(response) ? response : []);
+            } catch (error) {
+                setBrokers([]);
+            } finally {
+                setLoading(false);
+            }
+        };
 
-                           <p><strong>Step 4:</strong> You will get the API KEY.</p>
-                           <p><strong>Step 5:</strong> Enable TOTP using Angle One CLIENT ID and PIN: 
-                           <a href="https://www.sparks.algoviewsmartapi.angelbroking.com/enable-totp" target="_blank">https://smartapi.angelbroking.com/enable-totp</a></p>
-                           <p><strong>Step 6:</strong> To use ANGEL ONE API : ApiKey, ClientID, PIN, TOTP is Mandatory.</p>`,
-            logo: angelOneLogo
-        },
-        {
-            name: "MARKET HUB",
-            details: "Log in to your Market Hub account :",
-            instructions: `<p>Step 1: After login, enter the following redirect URL :</p>`,
-            logo: marketHubLogo
-        },
-        {
-            name: "MASTER TRUST",
-            details: "Log in to your Master Trust account :",
-            instructions: `<p>Step 1: After login, enter the following redirect URL :</p>`,
-            logo: masterTrustLogo
-        },
-        {
-            name: "FYERS",
-            details: "API Process of Fyers :",
-            instructions: `
-                           <p><strong>Step 1:</strong> Sign in to the fyers API Web Portal using 4 digit PIN: 
-                           <a href="https://login.fyers.in/?cb=https://myapi.fyers.in" target="_blank">https://login.fyers.in/?cb=https://myapi.fyers.in</a></p>
-                           <p><strong>Step 2:</strong> Click on Create APP and Added the following details : -> App Name, Redirect URL & Description</p>
-                           <p><strong>Step 3:</strong> App Permissions - Select Order Placement and  Historical Data.</p>
-                           <p><strong>Step 4:</strong> After Creating API you will see your API which is inactive at: 
-                           <a href="https://myapi.fyers.in/dashboard" target="_blank">https://myapi.fyers.in/dashboard</a></p>
-                           <p><strong>Step 5:</strong> After successful login, user is redirected to the redirect uri with the auth_code where you need to  accept the terms and condition to active the url for the first time.</p>
-                           <p><strong>Step 6:</strong> POST the auth_code and appIdHash (SHA-256 of api_id + app_secret) to Validate Authcode API endpoint.</p>
-                           <p><strong>Step 7:</strong> Obtain the access_token use that for all the subsequent requests.</p>
-                           <p><strong>Step 8:</strong> To use the FYERS API you need : -> 
-                           redirect_uri, client_id, secret_key, grant_type, response_type, state & auth_code
-                           </p>
-                           `,
-            logo: fyersLogo
-        },
-        {
-            name: "KOTAK NEO",
-            details: "API Process of Kotak Neo :",
-            instructions: `<p><strong>Step 1:</strong> Visit our Neo TradeAPI Portal (Username and Password are the API Credentials that you receive after registering for Kotak Neo TradeAPI and note your Demat account credentials): 
-                           <a href="https://napi.kotaksecurities.com/devportal/apis" target="_blank">https://napi.kotaksecurities.com/devportal/apis</a></p>
-                           <p><strong>Step 2:</strong> Login and open application marked ‘Default application’.</p>
+        loadBrokers();
+    }, []);
 
-                           <p><strong>Step 3:</strong>On the left panel under ‘Production Keys’, click ‘OAuth2 Tokens’.</p>
-
-                           <p><strong>Step 4:</strong>You will find your consumer key, access token, and your API secret.</p>
-                           <p><strong>Step 5:</strong> Click ‘Generate access token’ and change the default validity of 3600 seconds to a validity period of your choice. (after this period elapses you will need to generate it again)</p>
-                           <p><strong>Step 6:</strong> Once you have your consumer key and access token at your disposal, you can use the APIs.</p>`,
-            logo: kotakLogo
-        },
-
-    ];
+    const brokerCards = useMemo(
+        () =>
+            brokers.map((broker) => {
+                const normalizedName = broker.broker_name.toLowerCase();
+                return {
+                    ...broker,
+                    logo: brokerAssetMap[normalizedName]?.logo || marketHubLogo,
+                    instructions: buildInstructionHtml(broker),
+                };
+            }),
+        [brokers]
+    );
 
     const handleIconClick = (broker) => {
         Swal.fire({
-            title: `${broker.name} API Information`,
-            html: `<h4>${broker.details}</h4>
-                   <p>Kindly follow these steps to link your account with this Algo Software.</p>
-                   <div style="text-align: left;">${broker.instructions}</div>`,
+            title: `${broker.broker_name} API Information`,
+            html: broker.instructions,
             icon: 'info',
             confirmButtonText: 'Close',
             customClass: { popup: 'swal2-dark' },
-            // width: '40%',
-            className: 'custom-swal-style'
+            className: 'custom-swal-style',
         });
     };
 
@@ -160,32 +185,39 @@ const ApiKeys = () => {
             <Col sm="12">
                 <Card className="main-card">
                     <CardHeader className="text-center">
-                        <h3>API Keys</h3>
-                        <p>Manage your API keys and related settings.</p>
+                        <h3>Broker Setup Help</h3>
+                        <p>Broker onboarding steps now follow the same broker-specific schema used in the client setup flow.</p>
                     </CardHeader>
                     <CardBody>
-                        <Row className="justify-content-center">
-                            {brokers.map((broker, index) => (
-                                <Col key={index} sm="6" md="4" lg="3" className="mb-4">
-                                    <Card className="broker-card">
-                                        <div className="card-content">
-                                            <img
-                                                src={broker.logo}
-                                                alt={`${broker.name} Logo`}
-                                                className="broker-logo"
-                                            />
-                                            <p className="broker-name">{broker.name}</p>
-                                        </div>
-                                        <div className="card-footer search-btn-clr">
-                                            <FaEye
-                                                className="eye-icon"
-                                                onClick={() => handleIconClick(broker)}
-                                            />
-                                        </div>
-                                    </Card>
-                                </Col>
-                            ))}
-                        </Row>
+                        {loading ? (
+                            <p className="text-center mb-0">Loading broker setup help...</p>
+                        ) : (
+                            <Row className="justify-content-center">
+                                {brokerCards.map((broker, index) => (
+                                    <Col key={broker.id || index} sm="6" md="4" lg="3" className="mb-4">
+                                        <Card className="broker-card">
+                                            <div className="card-content">
+                                                <img
+                                                    src={broker.logo}
+                                                    alt={`${broker.broker_name} Logo`}
+                                                    className="broker-logo"
+                                                />
+                                                <p className="broker-name">{broker.broker_name}</p>
+                                                <small style={{ color: '#6b7280', textTransform: 'capitalize' }}>
+                                                    {formatAuthMode(broker.setup_schema?.auth_mode)}
+                                                </small>
+                                            </div>
+                                            <div className="card-footer search-btn-clr">
+                                                <FaEye
+                                                    className="eye-icon"
+                                                    onClick={() => handleIconClick(broker)}
+                                                />
+                                            </div>
+                                        </Card>
+                                    </Col>
+                                ))}
+                            </Row>
+                        )}
                     </CardBody>
                 </Card>
             </Col>

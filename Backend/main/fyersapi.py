@@ -1,8 +1,10 @@
 from django.http import JsonResponse
 import requests
 import os
-from main.Alice_Blue_Api import save_trade_order_history
+from main.broker_instrument_cache import ensure_fyers_instruments_file
 from main.models import ClientBrokerdetails, CompanySmtpDetails
+from main.broker_order_utils import normalize_order_type, resolve_limit_price
+from main.trade_history_service import save_trade_order_history
 import logging
 logger = logging.getLogger('main')
 import csv 
@@ -52,7 +54,7 @@ def place_fyers_orders(LivePrice,group_service,access_token, Api_key, trade_symb
             "Content-Type": "application/json"
         }    
 
-        trading_symbol = get_instruments_symbol_from_csv(trade_symbol,user)
+        trading_symbol = get_instruments_symbol_from_csv(trade_symbol, exchange=Exchange, segment=Segment, user=user)
 
         if not trading_symbol:
             logger.error(f"{user} : trading_symbol details not found for {trade_symbol}")
@@ -65,21 +67,49 @@ def place_fyers_orders(LivePrice,group_service,access_token, Api_key, trade_symb
             return response
 
         logger.info(f"{user} : Fetched fyers trading_symbol: {trading_symbol}")
+        requested_order_type = normalize_order_type(ordertype)
+        ltp = None
+        try:
+            quote_response = requests.get(
+                "https://api-t1.fyers.in/data/quotes",
+                headers=headers,
+                params={"symbols": trading_symbol},
+                timeout=5,
+            )
+            quote_data = quote_response.json() if quote_response.content else {}
+            if quote_response.status_code == 200:
+                quotes = quote_data.get("d") or []
+                if quotes:
+                    ltp = quotes[0].get("v", {}).get("lp")
+        except Exception as e:
+            logger.warning(f"{user} : Fyers LTP fetch failed for {trading_symbol}: {str(e)}")
+
+        if requested_order_type == "LIMIT":
+            price = resolve_limit_price(price, ltp, transaction_type)
+            if not price:
+                message = "Unable to calculate Fyers limit price because live price is unavailable."
+                save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, symbol, order_id, status, "LTP unavailable", message,  
+                        strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
+                        webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="fyers", history_id=history_id)
+                return {"data": {"status": "Failed", "message": message}}
+        elif requested_order_type == "MARKET":
+            price = 0
+
         order_params = {
             "symbol": trading_symbol,
             "qty": quantity,
-            "type": 2 if ordertype.upper() == "MARKET" else 1,  # ✅ Fix is here
+            "type": 2 if requested_order_type == "MARKET" else 1,
             "side": 1 if transaction_type.upper() == "BUY" else -1,
             "productType": product_type.upper(),  # e.g., "INTRADAY"
             "validity": "DAY",
             "orderTag": "tag1"
         }
         print("ordertype>>>",ordertype)
-        if ordertype == "LIMIT":
+        if requested_order_type == "LIMIT":
             order_params["limitPrice"] = float(price)
         logger.info(f"{user} : paylod of order{order_params}")
         try:
-            response = requests.post(order_url, headers=headers, json=order_params)
+            response = requests.post(order_url, headers=headers, json=order_params, timeout=10)
            
             logger.info(f"{user} : order_response of fyers::::::::::::{response}")
             order_response = response.json()
@@ -106,7 +136,7 @@ def place_fyers_orders(LivePrice,group_service,access_token, Api_key, trade_symb
                 
                 return response   
 
-            if response.status_code == 200 and order_response.get("s") == "error":
+            if response.status_code == 200 and order_response.get("s") == "ok":
                 print(" Order submitted successfully.")
                 print(" Order ID:", order_response.get("id"))
                 order_id=order_response.get("id")
@@ -168,7 +198,17 @@ def place_fyers_orders(LivePrice,group_service,access_token, Api_key, trade_symb
                         Exit_price = res_data.get('tradedPrice', 0.0)  
                         ExitQty = res_data.get('qty', 0)
                         
-                    response = {"data": {"status": "completed", "message": message}}
+                    response = {
+                        "data": {
+                            "status": "completed",
+                            "message": message,
+                            "order_id": order_id,
+                            "order_type": requested_order_type,
+                            "price": res_data.get("tradedPrice") or order_params.get("limitPrice"),
+                            "ltp": ltp,
+                            "reference_price": ltp,
+                        }
+                    }
                     
                 elif status == 4:# status == 'Transit' or status =='Transit':
                     status='Transit'
@@ -259,10 +299,11 @@ def place_fyers_orders(LivePrice,group_service,access_token, Api_key, trade_symb
 
     
 
-def get_instruments_symbol_from_csv(compact_symbol_details, user=None):
+def get_instruments_symbol_from_csv(compact_symbol_details, exchange=None, segment=None, user=None):
     try:
         logger.info(f"{user} : get_instruments_symbol_from_csv.")
-        csv_path="main/fyers_instrument_symbol.csv"
+        normalized_requested_symbol = str(compact_symbol_details or "").replace(" ", "").replace("-", "").upper()
+        csv_path = ensure_fyers_instruments_file(exchange=exchange, segment=segment)
         if not os.path.exists(csv_path):
             print(f" CSV file not found at: {csv_path}")
             return None
@@ -289,8 +330,8 @@ def get_instruments_symbol_from_csv(compact_symbol_details, user=None):
         # Match the compacted "Symbol Details"
         for row in data_rows:
             raw_symbol_details = row[symbol_details_index]
-            normalized_symbol_details = raw_symbol_details.replace(" ", "")
-            if normalized_symbol_details.upper() == compact_symbol_details:
+            normalized_symbol_details = raw_symbol_details.replace(" ", "").replace("-", "").upper()
+            if normalized_symbol_details == normalized_requested_symbol:
                 return row[symbol_ticker_index]
 
         print(f" Symbol Details '{compact_symbol_details}' not found in CSV")
@@ -320,4 +361,3 @@ def get_order_details(order_id, client_id,access_token, user=None):
     except Exception as e:
         logger.info(f"{user} : code blois rising error by exception>{e}")
         return {"status": "Failed", "error": f"Failed to fetch order history: {str(e)}"}
-

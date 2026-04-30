@@ -90,6 +90,8 @@ const Signin = ({ selected }) => {
       localStorage.setItem("login", JSON.stringify(true));
 
       if (message.includes("OTP sent to your email")) {
+        localStorage.setItem("pendingOtpEmail", email);
+        localStorage.setItem("pendingOtpApiBaseUrl", response._apiBaseUrlUsed || "");
         setSubmitted(true);
         toast.success("OTP sent to your email. Please verify.");
       } else {

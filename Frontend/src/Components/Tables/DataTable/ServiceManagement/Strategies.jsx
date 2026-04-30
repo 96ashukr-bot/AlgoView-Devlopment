@@ -97,13 +97,15 @@ const Strategies = () => {
     const filteredStrategies = strategies.filter(strategy =>
         strategy.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         strategy.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        strategy.segment?.short_name.toLowerCase().includes(searchQuery.toLowerCase())
+        strategy.segment?.short_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        strategy.execution_mode_label?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        strategy.multi_leg_template_label?.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     const indexOfLastStrategy = currentPage * itemsPerPage;
     const indexOfFirstStrategy = indexOfLastStrategy - itemsPerPage;
 
-    const currentStrategies = filteredStrategies;
+    let currentStrategies = filteredStrategies;
 
     if (currentPage === 1 && filteredStrategies.length > itemsPerPage) {
         const extraItem = filteredStrategies[filteredStrategies.length - 1];
@@ -180,13 +182,15 @@ const Strategies = () => {
                                             <th onClick={() => handleSort('segment')} className='custom-col-design'>
                                                 Segment <FaArrowUp className="arrow-icon" /> <FaArrowDown className="arrow-icon" />
                                             </th>
+                                            <th className='custom-col-design'>Strategy Type</th>
+                                            <th className='custom-col-design'>Template</th>
                                             <th className='custom-col-design'>Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {loading ? (
                                             <tr>
-                                                <td colSpan="6" style={{ textAlign: 'center', height: '100px' }}>
+                                                <td colSpan="7" style={{ textAlign: 'center', height: '100px' }}>
                                                     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
                                                         <RotatingLines
                                                             strokeColor="#283F7B"
@@ -205,6 +209,8 @@ const Strategies = () => {
                                                     <td>{strategy.name}</td>
                                                     <td>{strategy.description || 'N/A'}</td>
                                                     <td>{strategy.segment?.short_name || 'N/A'}</td>
+                                                    <td>{strategy.execution_mode_label || 'Indicator Based Strategies'}</td>
+                                                    <td>{strategy.multi_leg_template_label || 'N/A'}</td>
                                                     <td>
                                                         <FaUser
                                                             title="Profile"
@@ -231,7 +237,7 @@ const Strategies = () => {
                                             ))
                                         ) : (
                                             <tr>
-                                                <td colSpan="5" style={{ textAlign: 'center' }}>No Strategies Found</td>
+                                                <td colSpan="7" style={{ textAlign: 'center' }}>No Strategies Found</td>
                                             </tr>
                                         )}
                                     </tbody>

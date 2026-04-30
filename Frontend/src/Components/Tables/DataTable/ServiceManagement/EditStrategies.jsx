@@ -1,40 +1,48 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Col, Card, CardHeader, CardBody, Form, Label, Row, Input, Button, Spinner, FormGroup
+  Col, Card, CardHeader, CardBody, Form, Label, Row, Input, Button, Spinner
 } from 'reactstrap';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { AiOutlineCloseCircle } from 'react-icons/ai';
 import './ServiceManagement.css';
 import { baseUrl } from '../../../../ConfigUrl/config';
 import Swal from 'sweetalert2';
-import { getStrategyById, getSegmentsList, getCategoriesList, updateStrategy,} from '../../../../Services/Authentication'; // Import the updateStrategy function
+import { getStrategyById, getSegmentsList, updateStrategy,} from '../../../../Services/Authentication'; // Import the updateStrategy function
 // import './Settings.css'
+
+const EXECUTION_MODE_OPTIONS = [
+  { value: 'INDICATOR_BASED', label: 'Indicator Based Strategies' },
+  { value: 'MULTI_LEG', label: 'Multi Leg Option Strategies' },
+];
+
+const MULTI_LEG_TEMPLATE_OPTIONS = [
+  { value: 'SHORT_STRADDLE', label: 'Short Straddle' },
+  { value: 'BULL_CALL_SPREAD', label: 'Bull Call Spread' },
+  { value: 'BEAR_CALL_SPREAD', label: 'Bear Call Spread' },
+  { value: 'BEAR_PUT_SPREAD', label: 'Bear Put Spread' },
+  { value: 'LONG_CALL_BUTTERFLY', label: 'Long Call Butterfly' },
+  { value: 'SHORT_CALL_BUTTERFLY', label: 'Short Call Butterfly' },
+  { value: 'LONG_CALL_CONDOR', label: 'Long Call Condor' },
+  { value: 'SHORT_CALL_CONDOR', label: 'Short Call Condor' },
+  { value: 'LONG_IRON_CONDOR', label: 'Long Iron Condor' },
+  { value: 'SHORT_IRON_BUTTERFLY', label: 'Short Iron Butterfly' },
+];
 
 const EditStrategies = () => {
   const { id } = useParams();
   const [formData, setFormData] = useState({
     id: null,
     strategyName: '',
-    Lots: '',
-    category: '',
     segment: '',
-    indicator: null,
-    strategyTester: null,
     strategyLogo: null,
     description: '',
-    monthly: '',
-    quarterly: '',
-    halfYearly: '',
-    yearly: ''
+    executionMode: 'INDICATOR_BASED',
+    multiLegTemplate: '',
   });
 
-  const [previewIndicator, setPreviewIndicator] = useState(null);
-  const [previewTester, setPreviewTester] = useState(null);
   const [previewLogo, setPreviewLogo] = useState(null);
   const [segments, setSegments] = useState([]);
-  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [error, setError] = useState(null);
@@ -43,7 +51,6 @@ const EditStrategies = () => {
   useEffect(() => {
     fetchStrategy();
     fetchSegments();
-    fetchCategories();
   }, []);
 
   const fetchStrategy = async () => {
@@ -55,27 +62,17 @@ const EditStrategies = () => {
       setFormData({
         id: strategy.id,
         strategyName: strategy.name,
-        Lots: strategy.Lots,
-        category: strategy.category.id,
         segment: strategy.segment.id, 
-        indicator: strategy.Indicator,
-        strategyTester: strategy.Strategy_Tester,
         strategyLogo: strategy.Strategy_Logo,
         description: strategy.description,
-        monthly: strategy.monthly_amount,
-        quarterly: strategy.quarterly_amount,
-        halfYearly: strategy.half_yearly_amount,
-        yearly: strategy.yearly_amount
+        executionMode: strategy.execution_mode || 'INDICATOR_BASED',
+        multiLegTemplate: strategy.multi_leg_template || '',
       });
   
       // Construct full URLs for previews
-      const fullIndicatorUrl = strategy.Indicator ? `${baseUrl}${strategy.Indicator}` : null;
-      const fullTesterUrl = strategy.Strategy_Tester ? `${baseUrl}${strategy.Strategy_Tester}` : null;
       const fullLogoUrl = strategy.Strategy_Logo ? `${baseUrl}${strategy.Strategy_Logo}` : null;
   
       // Preview images if they exist
-      if (fullIndicatorUrl) setPreviewIndicator(fullIndicatorUrl);
-      if (fullTesterUrl) setPreviewTester(fullTesterUrl);
       if (fullLogoUrl) setPreviewLogo(fullLogoUrl);
   
     } catch (error) {
@@ -101,22 +98,6 @@ const EditStrategies = () => {
     }
 };
 
-const fetchCategories = async () => {
-    try {
-        const data = await getCategoriesList();
-        if (Array.isArray(data)) {
-            setCategories(data); 
-        } else if (data.results) {
-            setCategories(data.results);
-        } else {
-            throw new Error('Unexpected response structure');
-        }
-    } catch (err) {
-        setError(err.message);
-    } finally {
-        setLoading(false);
-    }
-};
   const handleChange = (e) => {
     const { name, value: inputValue, files } = e.target;
 
@@ -129,45 +110,26 @@ const fetchCategories = async () => {
 
       const imageUrl = URL.createObjectURL(file);
 
-      if (name === 'indicator') {
-        setPreviewIndicator(imageUrl);
-      } else if (name === 'strategyTester') {
-        setPreviewTester(imageUrl);
-      } else if (name === 'strategyLogo') {
+      if (name === 'strategyLogo') {
         setPreviewLogo(imageUrl);
       }
     } else {
       setFormData((prevData) => ({
         ...prevData,
         [name]: inputValue,
+        ...(name === 'executionMode' && inputValue !== 'MULTI_LEG' ? { multiLegTemplate: '' } : {}),
       }));
     }
 
     setErrors((prevErrors) => ({ ...prevErrors, [name]: '' }));
   };
 
-  const removeImage = (field) => {
-    setFormData((prevData) => ({
-      ...prevData,
-      [field]: null,
-    }));
-
-    if (field === 'indicator') {
-      setPreviewIndicator(null);
-    } else if (field === 'strategyTester') {
-      setPreviewTester(null);
-    } else if (field === 'strategyLogo') {
-      setPreviewLogo(null);
-    }
-  };
-
   const validateForm = () => {
     const newErrors = {};
     if (!formData.strategyName) newErrors.strategyName = 'Strategy Name is required';
-    if (!formData.Lots) newErrors.Lots = 'Per Lot Amount is required';
-    if (!formData.category) newErrors.category = 'Category is required';
     if (!formData.segment) newErrors.segment = 'Segment is required';
     if (!formData.description) newErrors.description = 'Strategy Description is required';
+    if (formData.executionMode === 'MULTI_LEG' && !formData.multiLegTemplate) newErrors.multiLegTemplate = 'Strategy Template is required';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -185,17 +147,14 @@ const fetchCategories = async () => {
     const payload = {
       name: formData.strategyName,
       description: formData.description,
-      Lots: formData.Lots.toString(),
-      indicator: formData.indicator || {},
-      strategyTester: formData.strategyTester || {},
-      strategyLogo: formData.strategyLogo || {},
-      monthly_amount: formData.monthly,
-      quarterly_amount: formData.quarterly,
-      half_yearly_amount: formData.halfYearly,
-      yearly_amount: formData.yearly,
-      category: formData.category, 
-      segment: parseInt(formData.segment), 
+      segment: parseInt(formData.segment),
+      execution_mode: formData.executionMode,
+      multi_leg_template: formData.executionMode === 'MULTI_LEG' ? formData.multiLegTemplate : null,
     };
+
+    if (formData.strategyLogo instanceof File) {
+      payload.Strategy_Logo = formData.strategyLogo;
+    }
   
     console.log('Payload:', payload);
   
@@ -248,48 +207,45 @@ const fetchCategories = async () => {
                   {errors.strategyName && <div className="invalid-feedback text-danger">{errors.strategyName}</div>}
                 </Col>
 
-                {/* Per Lot Amount */}
                 <Col md="6" className="mb-3">
-                  <Label htmlFor="Lots">Per Lot Amount
-                    <span style={{ color: 'red', fontSize: '20px' }}>*</span>
-                  </Label>
-                  <Input
-                    type="number"
-                    name="Lots"
-                    id="Lots"
-                    placeholder="Enter Per Lot Amount"
-                    value={formData.Lots}
-                    onChange={handleChange}
-                    className={`form-control ${errors.Lots ? 'is-invalid' : ''} custom-input-style`}
-                    required
-                  />
-                  {errors.Lots && <div className="invalid-feedback text-danger">{errors.Lots}</div>}
-                </Col>
-
-                {/* Category */}
-                <Col md="6" className="mb-3">
-                  <Label htmlFor="category">Select Category
+                  <Label htmlFor="executionMode">Strategy Type
                     <span style={{ color: 'red', fontSize: '20px' }}>*</span>
                   </Label>
                   <Input
                     type="select"
-                    name="category"
-                    id="category"
-                    value={formData.category}
+                    name="executionMode"
+                    id="executionMode"
+                    value={formData.executionMode}
                     onChange={handleChange}
-                    className={`form-control ${errors.category ? 'is-invalid' : ''} custom-input-style`}
-                    required
+                    className="custom-input-style"
                   >
-                    <option value="">Select Category</option>
-                    {categories.map((category) => (
-                      <option key={category.id} value={category.id}>
-                        {category.name}
-                      </option>
+                    {EXECUTION_MODE_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
                     ))}
                   </Input>
-                  {errors.category && (
-                    <div className="invalid-feedback text-danger">{errors.category}</div>
-                  )}
+                </Col>
+
+                <Col md="6" className="mb-3">
+                  <Label htmlFor="multiLegTemplate">Strategy Template
+                    {formData.executionMode === 'MULTI_LEG' && (
+                      <span style={{ color: 'red', fontSize: '20px' }}>*</span>
+                    )}
+                  </Label>
+                  <Input
+                    type="select"
+                    name="multiLegTemplate"
+                    id="multiLegTemplate"
+                    value={formData.multiLegTemplate}
+                    onChange={handleChange}
+                    disabled={formData.executionMode !== 'MULTI_LEG'}
+                    className={`form-control ${errors.multiLegTemplate ? 'is-invalid' : ''} custom-input-style`}
+                  >
+                    <option value="">Select Strategy Template</option>
+                    {MULTI_LEG_TEMPLATE_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </Input>
+                  {errors.multiLegTemplate && <div className="invalid-feedback text-danger">{errors.multiLegTemplate}</div>}
                 </Col>
 
                 {/* Segment */}
@@ -318,67 +274,9 @@ const fetchCategories = async () => {
                   )}
                 </Col>
 
-                {/* Indicator */}
-                <Col md="6" className="mb-3">
-                  <Label htmlFor="indicator">Indicator
-                    <span style={{ color: 'red', fontSize: '20px' }}>*</span>
-                  </Label>
-                  <Input
-                    type="file"
-                    name="indicator"
-                    id="indicator"
-                    accept="image/*"
-                    onChange={handleChange}
-                    className={`form-control ${errors.indicator ? 'is-invalid' : ''} custom-input-style`}
-                  />
-                  {previewIndicator && (
-                    <div className="preview-container" style={{marginTop:'10px'}}>
-                      <img src={previewIndicator} alt="Preview" className="preview-image" />
-                      <AiOutlineCloseCircle
-                        size={24}
-                        className="position-absolute top-0 end-0 text-danger cursor-pointer"
-                        onClick={() => removeImage('indicator')}
-                      />
-                    </div>
-                  )}
-                  {errors.indicator && (
-                    <div className="invalid-feedback text-danger">{errors.indicator}</div>
-                  )}
-                </Col>
-
-                {/* Strategy Tester */}
-                <Col md="6" className="mb-3">
-                  <Label htmlFor="strategyTester">Strategy Tester
-                    <span style={{ color: 'red', fontSize: '20px' }}>*</span>
-                  </Label>
-                  <Input
-                    type="file"
-                    name="strategyTester"
-                    id="strategyTester"
-                    accept="image/*"
-                    onChange={handleChange}
-                    className={`form-control ${errors.strategyTester ? 'is-invalid' : ''} custom-input-style`}
-                  />
-                  {previewTester && (
-                    <div className="preview-container" style={{marginTop:'10px'}}>
-                      <img src={previewTester} alt="Preview" className="preview-image" />
-                      <AiOutlineCloseCircle
-                        size={24}
-                        className="position-absolute top-0 end-0 text-danger cursor-pointer"
-                        onClick={() => removeImage('strategyTester')}
-                      />
-                    </div>
-                  )}
-                  {errors.strategyTester && (
-                    <div className="invalid-feedback text-danger">{errors.strategyTester}</div>
-                  )}
-                </Col>
-
                 {/* Strategy Logo */}
                 <Col md="6" className="mb-3">
-                  <Label htmlFor="strategyLogo">Strategy Logo
-                    <span style={{ color: 'red', fontSize: '20px' }}>*</span>
-                  </Label>
+                  <Label htmlFor="strategyLogo">Strategy Logo</Label>
                   <Input
                     type="file"
                     name="strategyLogo"
@@ -390,12 +288,6 @@ const fetchCategories = async () => {
                   {previewLogo && (
                     <div className="preview-container" style={{marginTop:'10px'}}>
                       <img src={previewLogo} alt="Preview" className="preview-image" />
-                      <AiOutlineCloseCircle
-                        size={24}
-                        className="position-absolute top-0 end-0 text-danger cursor-pointer"
-                        onClick={() => removeImage('strategyLogo')}
-                        style={{cursor: 'pointer'}}
-                      />
                     </div>
                   )}
                   {errors.strategyLogo && (
@@ -421,68 +313,6 @@ const fetchCategories = async () => {
                   )}
                 </Col>
 
-                {/* Pricing Plans */}
-                <Col md="12" className="mb-3">
-                  <h6>Pricing Plans</h6>
-                  <Row>
-                    <Col md="3" className="mb-3">
-                      <Label htmlFor="monthly">Monthly
-                        <span style={{ color: 'red', fontSize: '20px' }}>*</span>
-                      </Label>
-                      <Input
-                        type="number"
-                        name="monthly"
-                        id="monthly"
-                        className='custom-input-style'
-                        placeholder="Monthly Amount"
-                        value={formData.monthly}
-                        onChange={handleChange}
-                      />
-                    </Col>
-                    <Col md="3" className="mb-3">
-                      <Label htmlFor="quarterly">Quarterly
-                        <span style={{ color: 'red', fontSize: '20px' }}>*</span>
-                      </Label>
-                      <Input
-                        type="number"
-                        name="quarterly"
-                        id="quarterly"
-                        className='custom-input-style'
-                        placeholder="Quarterly Amount"
-                        value={formData.quarterly}
-                        onChange={handleChange}
-                      />
-                    </Col>
-                    <Col md="3" className="mb-3">
-                      <Label htmlFor="halfYearly">Half Yearly
-                        <span style={{ color: 'red', fontSize: '20px' }}>*</span>
-                      </Label>
-                      <Input
-                        type="number"
-                        name="halfYearly"
-                        id="halfYearly"
-                        className='custom-input-style'
-                        placeholder="Half Yearly Amount"
-                        value={formData.halfYearly}
-                        onChange={handleChange}
-                      />
-                    </Col>
-                    <Col md="3" className="mb-3">
-                      <Label htmlFor="yearly">Yearly
-                        <span style={{ color: 'red', fontSize: '20px' }}>*</span>
-                      </Label>
-                      <Input
-                        type="number"
-                        name="yearly"
-                        id="yearly"
-                        className='custom-input-style'
-                        placeholder="Yearly Amount"
-                        value={formData.yearly}
-                        onChange={handleChange}
-                      />
-                    </Col>
-                  </Row>
-                </Col>
               </Row>
               <Button className='search-btn-clr' type="submit" disabled={loading}>
                 {loading ? <Spinner size="sm" /> : 'Update Strategy'}

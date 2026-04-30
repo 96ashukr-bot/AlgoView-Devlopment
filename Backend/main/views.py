@@ -1,9 +1,10 @@
 import csv
 from decimal import Decimal
 import json
-import threading
 import os
 import hashlib
+import re
+from numbers import Number
 from amqp import NotFound
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
@@ -21,12 +22,24 @@ from django.core.mail import send_mail
 from django.conf import settings
 import time
 from rest_framework.generics import ListAPIView,UpdateAPIView
-from main.angleapi import exit_existing_buy_position_angleone, get_token_details, place_Angle_order
+from main.angleapi_upgraded import exit_existing_buy_position_angleone, get_token_details, place_Angle_order
+from main.angelone_views import login_angelone_redirect, angelone_callback, angelone_callbackaa, place_angel_one_trade
+from main.execution_engine import ExecutionRequest, get_execution_engine
+from main.services.multileg_execution import get_multileg_execution_engine
 from main.dematemodule import  exit_existing_buy_position_5PaisaOrder, exit_existing_buy_position_Aliceblue, exit_existing_buy_position_DhanOrder, exit_existing_buy_position_Upstox, exit_existing_buy_position_fyers_order, exit_existing_buy_position_zerodha_order, trading_Symbol_sum
 from main.dhanapi import place_dhan_orders
 from main.fivepaisa import fetch_access_token_5paisa, place_5paisa_order
 from main.fyersapi import place_fyers_orders
-from main.permissions import  IsAdminRole
+from main.permissions import (
+    IsAdminOrSuperadmin,
+    IsAdminRole,
+    can_access_client_record,
+    is_admin_or_superadmin,
+    is_admin_user,
+    is_superadmin_user,
+)
+from main.services.login_activity_service import LoginActivityService
+from main.broker_registry import broker_field_is_configured, get_broker_setup_spec, get_default_broker_catalog, normalize_broker_name
 from main.tasks import resend_otp_email_async, send_kyc_email_async, send_trade_email_async,send_password_reset_email
 from rest_framework import status
 # from django.utils.timezone import make_aware
@@ -42,7 +55,9 @@ from rest_framework.views import APIView
 from django.contrib import messages
 from pya3 import *
 from decouple import config
-from main.Alice_Blue_Api import ALICE_ORDER_URL,GET_ORDER_BOOK_URL,GET_TREAD_BOOK_URL, is_market_open, place_alice_orders, save_trade_order_history
+from main.Alice_Blue_Api import ALICE_ORDER_URL,GET_ORDER_BOOK_URL,GET_TREAD_BOOK_URL, is_market_open, place_alice_orders
+from main.trade_history_service import save_trade_order_history
+from main.sl_tp_watcher_service import get_sl_tp_watcher_service
 from rest_framework.pagination import PageNumberPagination        
 from main.email import EmailService
 from django.contrib.auth.signals import user_logged_in, user_logged_out
@@ -72,6 +87,747 @@ ALICE_API_KEY=config('ALICE_API_KEY')
 import logging
 logger = logging.getLogger('main')
 UserModel = get_user_model()
+
+
+def _get_selected_broker_detail_for_user(user):
+    return (
+        ClientBrokerdetails.objects.filter(client=user)
+        .select_related("broker_name")
+        .order_by("-tokenCreatedAt", "-id")
+        .first()
+    )
+
+
+def _ensure_default_broker_catalog():
+    for broker_item in get_default_broker_catalog():
+        broker_name = broker_item["broker_name"]
+        Broker.objects.get_or_create(
+            broker_name=broker_name,
+            defaults={
+                "description": broker_item.get("description"),
+                "is_active": broker_item.get("is_active", True),
+            },
+        )
+    return Broker.objects.filter(is_active=True).order_by("broker_name")
+
+
+def _resolve_order_preferences(request_data, trade_setting):
+    requested_order_type = (
+        request_data.get("order_type")
+        or request_data.get("orderType")
+        or getattr(trade_setting, "order_type", None)
+        or "LIMIT"
+    )
+    order_type = str(requested_order_type).upper()
+
+    requested_buffer = request_data.get("buffer_percentage")
+    if requested_buffer in (None, ""):
+        buffer_percentage = getattr(trade_setting, "buffer_percentage", None)
+    else:
+        buffer_percentage = requested_buffer
+
+    return order_type, buffer_percentage
+
+
+WEBHOOK_SYMBOL_MAPPING = {
+    "NIFTY BANK": "BANKNIFTY",
+    "BANK NIFTY": "BANKNIFTY",
+    "BANKNIFTY": "BANKNIFTY",
+    "NIFTY 50": "NIFTY",
+    "NIFTY": "NIFTY",
+    "NIFTY FIN SERVICE": "FINNIFTY",
+    "FINNIFTY": "FINNIFTY",
+    "MID CAP NIFTY": "MIDCPNIFTY",
+    "NIFTY MID SELECT": "MIDCPNIFTY",
+    "MIDCPNIFTY": "MIDCPNIFTY",
+    "SENSEX": "SENSEX",
+}
+
+
+def _normalize_webhook_symbol(value):
+    normalized_value = str(value or "").strip().upper()
+    return WEBHOOK_SYMBOL_MAPPING.get(normalized_value, normalized_value.replace(" ", ""))
+
+
+def _trade_matches_webhook_symbol(trade, webhook_symbol):
+    normalized_webhook_symbol = _normalize_webhook_symbol(webhook_symbol)
+    candidate_values = [
+        getattr(trade, "symbol", None),
+        getattr(getattr(trade, "sub_segment", None), "name", None),
+        getattr(getattr(trade, "sub_segment", None), "short_name", None),
+    ]
+    normalized_candidates = {
+        _normalize_webhook_symbol(candidate)
+        for candidate in candidate_values
+        if str(candidate or "").strip()
+    }
+    return normalized_webhook_symbol in normalized_candidates
+
+
+def _get_webhook_strategy_identifier(alert_data):
+    for key in ("stratergyid", "strategyid", "strategyTag"):
+        value = alert_data.get(key)
+        if str(value or "").strip():
+            return str(value).strip()
+    return ""
+
+
+def _get_matching_webhook_trades(alert_data, webhook_symbol):
+    strategy_identifier = _get_webhook_strategy_identifier(alert_data)
+    if not strategy_identifier:
+        return ClientTradeSetting.objects.none(), ""
+
+    candidate_queryset = ClientTradeSetting.objects.filter(
+        group_service__iexact=strategy_identifier,
+    ).select_related("client", "segment", "sub_segment")
+
+    ready_count = 0
+    blocked_count = 0
+    for trade in candidate_queryset:
+        reasons = _collect_trade_skip_reasons(
+            trade,
+            webhook_symbol=webhook_symbol,
+            strategy_identifier=strategy_identifier,
+        )
+        if reasons:
+            blocked_count += 1
+        else:
+            ready_count += 1
+
+    logger.info(
+        "Webhook trade scan completed for strategy '%s' and symbol '%s': total=%s ready=%s blocked=%s",
+        strategy_identifier,
+        webhook_symbol,
+        candidate_queryset.count(),
+        ready_count,
+        blocked_count,
+    )
+
+    return candidate_queryset, strategy_identifier
+
+
+def _get_trade_execution_symbol(trade):
+    return (
+        str(getattr(trade, "symbol", "") or "").strip()
+        or str(getattr(getattr(trade, "sub_segment", None), "short_name", "") or "").strip()
+        or str(getattr(getattr(trade, "sub_segment", None), "name", "") or "").strip()
+    )
+
+
+def _get_client_broker_name(client):
+    if not client:
+        return None
+    broker_detail = ClientBrokerdetails.objects.filter(client=client).select_related("broker_name").first()
+    if broker_detail and broker_detail.broker_name:
+        return broker_detail.broker_name.broker_name
+    return None
+
+
+def _collect_trade_skip_reasons(trade, *, webhook_symbol=None, strategy_identifier=None):
+    reasons = []
+    client = getattr(trade, "client", None)
+    execution_symbol = _get_trade_execution_symbol(trade)
+    normalized_strategy = str(strategy_identifier or "").strip()
+    configured_group_service = str(getattr(trade, "group_service", "") or "").strip()
+    broker_name = str(getattr(trade, "broker", "") or "").strip()
+    broker_detail = ClientBrokerdetails.objects.filter(client=client).select_related("broker_name").first() if client else None
+
+    if not client:
+        reasons.append("Missing client mapping")
+        return reasons
+
+    if not getattr(client, "is_enable", False):
+        reasons.append("Client trading is disabled")
+
+    if not getattr(trade, "is_tread_status", False):
+        reasons.append("Trade toggle is disabled")
+
+    if not execution_symbol:
+        reasons.append("Symbol/script is missing")
+
+    if webhook_symbol and execution_symbol and not _trade_matches_webhook_symbol(trade, webhook_symbol):
+        reasons.append("Webhook symbol does not match client script")
+
+    if not configured_group_service:
+        reasons.append("Group service is missing on trade setting")
+    elif normalized_strategy and configured_group_service.casefold() != normalized_strategy.casefold():
+        reasons.append("Webhook group service does not match client group service")
+
+    if not broker_name:
+        reasons.append("Broker is missing on trade setting")
+
+    if not broker_detail or not broker_detail.broker_name:
+        reasons.append("Client broker details are not configured")
+    elif broker_name and broker_detail.broker_name.broker_name.casefold() != broker_name.casefold():
+        reasons.append("Trade broker and client broker setup do not match")
+    else:
+        normalized_broker_name = normalize_broker_name(broker_name or broker_detail.broker_name.broker_name)
+        setup_spec = get_broker_setup_spec(normalized_broker_name)
+        if setup_spec:
+            missing_fields = [
+                field_spec["label"]
+                for field_spec in setup_spec["fields"]
+                if field_spec.get("required") and not broker_field_is_configured(broker_detail, field_spec["key"])
+            ]
+            if missing_fields:
+                reasons.append(f"Broker credentials are incomplete: {', '.join(missing_fields)}")
+
+        if normalized_broker_name not in {"alice blue", "angel one"}:
+            access_token = None
+            access_token_getter = getattr(broker_detail, "get_access_token_secure", None)
+            if callable(access_token_getter):
+                access_token = access_token_getter()
+            access_token = access_token or getattr(broker_detail, "access_token", None)
+            if not str(access_token or "").strip():
+                reasons.append("Broker access token is missing")
+            else:
+                expiry = getattr(broker_detail, "access_token_expiry", None)
+                if expiry:
+                    try:
+                        expiry_value = make_aware(expiry) if timezone.is_naive(expiry) else expiry
+                    except Exception:
+                        expiry_value = expiry
+                    if expiry_value and expiry_value <= timezone.now():
+                        reasons.append("Broker access token has expired")
+
+    if not str(getattr(trade, "product_type", "") or "").strip():
+        reasons.append("Product type is missing")
+
+    quantity = _safe_positive_int(getattr(trade, "quantity", None))
+    if quantity is None:
+        reasons.append("Quantity is missing or invalid")
+
+    if getattr(trade, "expiry_date", None) is None:
+        reasons.append("Expiry date is missing")
+
+    return reasons
+
+
+def _get_trade_limit_skip_reason(trade, symbol):
+    configured_limit = int((getattr(trade, "trade_limit", 0) or 0) * 2)
+    if configured_limit <= 0:
+        return "Trade limit is not configured"
+
+    daily_trade_count = TradingLog.objects.filter(
+        client=getattr(trade, "client", None),
+        date=timezone.localdate(),
+        symbol=symbol,
+    ).count()
+    if daily_trade_count >= configured_limit:
+        return f"Daily trade limit reached ({daily_trade_count}/{configured_limit})"
+    return None
+
+
+def _build_trade_history_payload(status_value, message, *, skip_reasons=None, order_response=None):
+    payload = {"status": status_value, "message": message}
+    if skip_reasons:
+        payload["skip_reasons"] = skip_reasons
+        payload["skipped"] = True
+    if order_response is not None:
+        payload["order_response"] = order_response
+    return {"data": payload}
+
+
+def _save_webhook_trade_skip(
+    *,
+    trade,
+    history_id,
+    live_price,
+    group_service,
+    transaction_type,
+    strategy,
+    webhook_signal,
+    exchange,
+    segment,
+    index_symbol,
+    order_params,
+    reason_message,
+    skip_reasons,
+):
+    save_trade_order_history(
+        live_price,
+        group_service,
+        transaction_type,
+        "SKIPPED",
+        trade.client,
+        index_symbol or trade.symbol,
+        0,
+        "Failed",
+        _build_trade_history_payload("Failed", reason_message, skip_reasons=skip_reasons),
+        reason_message,
+        strategy,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        webhook_signal,
+        exchange,
+        segment,
+        index_symbol,
+        order_params,
+        broker=trade.broker,
+        history_id=history_id,
+    )
+
+
+def _resolve_webhook_request_context(request_data):
+    alert_data = request_data
+    if not alert_data:
+        raise ValidationError("No alert data received.")
+
+    raw_symbol = request_data.get("text", "")
+    signal_price = alert_data.get("signalprice", 0)
+    default_price = round_price(signal_price)
+    strategy_id = _get_webhook_strategy_identifier(alert_data)
+    if not strategy_id:
+        raise ValidationError("Webhook strategy identifier is missing.")
+
+    transaction_type = str(request_data.get("ordertype", "BUY-O") or "BUY-O").upper()
+    order_type_mapping = {
+        "BUY-O": "Buy CE",
+        "SELL-C": "Close CE",
+        "SELL-C_O": "Close CE & Buy PE",
+        "SELL-O": "BUY PE",
+        "BUY-C": "Close PE",
+        "BUY-C_O": "Close PE & Buy CE",
+    }
+    action_description = order_type_mapping.get(transaction_type)
+    if not action_description:
+        raise ValidationError("Invalid OrderType received.")
+
+    if action_description == "Close CE & Buy PE":
+        buy_sell = "CE PE"
+    elif action_description == "Close PE & Buy CE":
+        buy_sell = "PE CE"
+    else:
+        buy_sell = action_description.split()[-1]
+
+    symbols = _normalize_webhook_symbol(raw_symbol)
+    exch_seg = "BSE" if symbols.upper() == "SENSEX" else "NFO"
+
+    return {
+        "alert_data": alert_data,
+        "strategy_id": strategy_id,
+        "transaction_type": transaction_type,
+        "buy_sell": buy_sell,
+        "symbols": symbols,
+        "exch_seg": exch_seg,
+        "default_price": default_price,
+        "default_ordertype": str(request_data.get("orderType") or request_data.get("order_type") or "LIMIT").upper(),
+        "strategy_tag": request_data.get("strategyTag", "ce entry"),
+        "limit_price": request_data.get("limitPrice", 0),
+        "default_quantity": 0,
+        "lots": 1,
+        "trigger_price": 0,
+        "live_price": default_price,
+    }
+
+
+def _process_webhook_trade(trade, index, context, *, history_id=None):
+    history_id = history_id or f"{datetime.now().strftime('%Y%m%d%H%M%S%f')}_{trade.client_id}_{trade.id}"
+    alert_data = context["alert_data"]
+    symbols = context["symbols"]
+    exch_seg = context["exch_seg"]
+    default_price = context["default_price"]
+    default_quantity = context["default_quantity"]
+    live_price = context["live_price"]
+    lots = context["lots"]
+    trigger_price = context["trigger_price"]
+    buy_sell_type = context["transaction_type"]
+    buy_sell = context["buy_sell"]
+    limit_price = context["limit_price"]
+    strategy_id = context["strategy_id"]
+
+    transaction_type = buy_sell_type
+    default_expiry = trade.expiry_date
+    group_service = trade.group_service
+    strategy = trade.strategy
+    segment = trade.segment.name if trade.segment else None
+    exchange = exch_seg
+    user = trade.client
+    trade_symbol = _get_trade_execution_symbol(trade) or symbols
+    index_symbol = trade_symbol or None
+    resolved_order_type, resolved_buffer_percentage = _resolve_order_preferences(alert_data, trade)
+    order_params = serialize_to_json(
+        {
+            "symbol": trade_symbol,
+            "Exchange": exch_seg,
+            "quantity": trade.quantity or default_quantity,
+            "product_type": trade.product_type,
+            "transaction_type": buy_sell,
+            "price": limit_price or 0,
+            "ordertype": resolved_order_type,
+            "order_type": resolved_order_type,
+            "buffer_percentage": resolved_buffer_percentage,
+            "strategy": strategy,
+        }
+    )
+
+    logger.info(
+        "Webhook trade evaluation started for client=%s trade_setting=%s symbol=%s history_id=%s index=%s",
+        getattr(user, "id", None),
+        trade.id,
+        trade_symbol,
+        history_id,
+        index,
+    )
+
+    base_skip_reasons = _collect_trade_skip_reasons(
+        trade,
+        webhook_symbol=symbols,
+        strategy_identifier=strategy_id,
+    )
+    trade_limit_reason = _get_trade_limit_skip_reason(trade, trade_symbol.upper() if trade_symbol else "")
+    if trade_limit_reason:
+        base_skip_reasons.append(trade_limit_reason)
+
+    if base_skip_reasons:
+        reason_message = "; ".join(base_skip_reasons)
+        logger.warning(
+            "Skipping webhook trade for client=%s trade_setting=%s reasons=%s",
+            getattr(user, "id", None),
+            trade.id,
+            base_skip_reasons,
+        )
+        _save_webhook_trade_skip(
+            trade=trade,
+            history_id=history_id,
+            live_price=live_price,
+            group_service=group_service,
+            transaction_type=transaction_type,
+            strategy=strategy,
+            webhook_signal=alert_data,
+            exchange=exchange,
+            segment=segment,
+            index_symbol=index_symbol,
+            order_params=order_params,
+            reason_message=reason_message,
+            skip_reasons=base_skip_reasons,
+        )
+        return {
+            "history_id": history_id,
+            "client_id": trade.client_id,
+            "client_name": getattr(user, "fullName", None) or getattr(user, "userName", None),
+            "trade_setting_id": trade.id,
+            "script_name": trade_symbol,
+            "status": "skipped",
+            "reason": reason_message,
+            "skip_reasons": base_skip_reasons,
+        }
+
+    save_trade_order_history(
+        live_price,
+        group_service,
+        transaction_type,
+        "PROCESSING",
+        user,
+        trade_symbol,
+        0,
+        "Pending",
+        _build_trade_history_payload("Pending", "Trade execution started."),
+        "Trade execution started.",
+        strategy,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        alert_data,
+        exchange,
+        segment,
+        index_symbol,
+        order_params,
+        broker=trade.broker,
+        history_id=history_id,
+    )
+
+    try:
+        expiry_date = None
+        day = month = year = fullyear = ""
+        if default_expiry:
+            expiry_date = localtime(default_expiry)
+            day = expiry_date.strftime("%d")
+            month = expiry_date.strftime("%b").upper()
+            year = expiry_date.strftime("%y")
+            fullyear = expiry_date.strftime("%Y")
+
+        quantity = trade.quantity or default_quantity
+        product_type = trade.product_type
+        price = limit_price
+        ordertype = resolved_order_type
+        entry_type = exit_type = entry_price = exit_price = entry_qty = exit_qty = None
+
+        order_response = None
+        if transaction_type == "SELL-C_O":
+            transaction_type = "SELL-C"
+            action, option_type = manage_order(transaction_type, buy_sell, None)
+            order_response = place_order_broker(
+                live_price, group_service, trade, user, action, trade_symbol, quantity, strategy, ordertype,
+                product_type, price, lots, None, entry_type, exit_type, entry_price, exit_price, entry_qty, exit_qty,
+                alert_data, exchange, segment, index_symbol, trigger_price, day, month, year, fullyear, default_price,
+                option_type, order_params, history_id
+            )
+            transaction_type = "SELL-O"
+            action, option_type = manage_order(transaction_type, buy_sell, option_type)
+            order_response = place_order_broker(
+                live_price, group_service, trade, user, action, trade_symbol, quantity, strategy, ordertype,
+                product_type, price, lots, None, entry_type, exit_type, entry_price, exit_price, entry_qty, exit_qty,
+                alert_data, exchange, segment, index_symbol, trigger_price, day, month, year, fullyear, default_price,
+                option_type, order_params, history_id
+            )
+        elif transaction_type == "BUY-C_O":
+            transaction_type = "BUY-C"
+            action, option_type = manage_order(transaction_type, buy_sell, None)
+            order_response = place_order_broker(
+                live_price, group_service, trade, user, action, trade_symbol, quantity, strategy, ordertype,
+                product_type, price, lots, None, entry_type, exit_type, entry_price, exit_price, entry_qty, exit_qty,
+                alert_data, exchange, segment, index_symbol, trigger_price, day, month, year, fullyear, default_price,
+                option_type, order_params, history_id
+            )
+            transaction_type = "BUY-O"
+            action, option_type = manage_order(transaction_type, buy_sell, option_type)
+            order_response = place_order_broker(
+                live_price, group_service, trade, user, action, trade_symbol, quantity, strategy, ordertype,
+                product_type, price, lots, None, entry_type, exit_type, entry_price, exit_price, entry_qty, exit_qty,
+                alert_data, exchange, segment, index_symbol, trigger_price, day, month, year, fullyear, default_price,
+                option_type, order_params, history_id
+            )
+        else:
+            action, option_type = manage_order(transaction_type, buy_sell, None)
+            order_response = place_order_broker(
+                live_price, group_service, trade, user, action, trade_symbol, quantity, strategy, ordertype,
+                product_type, price, lots, None, entry_type, exit_type, entry_price, exit_price, entry_qty, exit_qty,
+                alert_data, exchange, segment, index_symbol, trigger_price, day, month, year, fullyear, default_price,
+                option_type, order_params, history_id
+            )
+
+        normalized_response = order_response or {"data": {"status": "Failed", "message": "No broker response received."}}
+        response_data = normalized_response.get("data", {}) if isinstance(normalized_response, dict) else {}
+        broker_status = str(response_data.get("status", "Failed") or "Failed").lower()
+        message = str(response_data.get("message") or response_data.get("error") or "")
+
+        if broker_status in {"complete", "completed", "open"}:
+            TradingLog.objects.create(
+                client=user,
+                symbol=trade_symbol.upper() if trade_symbol else trade_symbol,
+                strategy=strategy,
+            )
+            final_status = "success"
+        else:
+            final_status = "failed"
+
+        return {
+            "history_id": history_id,
+            "client_id": trade.client_id,
+            "client_name": getattr(user, "fullName", None) or getattr(user, "userName", None),
+            "trade_setting_id": trade.id,
+            "script_name": trade_symbol,
+            "status": final_status,
+            "broker_status": broker_status,
+            "reason": message or f"Broker returned status {broker_status}.",
+            "response": normalized_response,
+        }
+    except Exception as exc:
+        error_message = f"Unhandled exception while processing trade: {str(exc)}"
+        logger.exception(
+            "Webhook trade processing failed for client=%s trade_setting=%s history_id=%s",
+            getattr(user, "id", None),
+            trade.id,
+            history_id,
+        )
+        _save_webhook_trade_skip(
+            trade=trade,
+            history_id=history_id,
+            live_price=live_price,
+            group_service=group_service,
+            transaction_type=transaction_type,
+            strategy=strategy,
+            webhook_signal=alert_data,
+            exchange=exchange,
+            segment=segment,
+            index_symbol=index_symbol,
+            order_params=order_params,
+            reason_message=error_message,
+            skip_reasons=[error_message],
+        )
+        return {
+            "history_id": history_id,
+            "client_id": trade.client_id,
+            "client_name": getattr(user, "fullName", None) or getattr(user, "userName", None),
+            "trade_setting_id": trade.id,
+            "script_name": trade_symbol,
+            "status": "failed",
+            "reason": error_message,
+            "skip_reasons": [error_message],
+        }
+
+
+def _get_group_service_script_name(entry):
+    if not isinstance(entry, dict):
+        return ""
+    return str(entry.get("ScriptName") or entry.get("ServiceName") or "").strip()
+
+
+def _sync_client_trade_settings_from_group_service(client, fallback_segment_id=None, fallback_subsegments=None):
+    group_service = getattr(client, "Group_service", None)
+    resolved_pairs = []
+    seen_pairs = set()
+    entry_defaults_by_pair = {}
+    existing_trade_settings = {
+        (int(trade.segment_id), int(trade.sub_segment_id)): trade
+        for trade in ClientTradeSetting.objects.filter(client=client)
+        if trade.segment_id and trade.sub_segment_id
+    }
+
+    def add_pair(segment_id, sub_segment_id):
+        if not segment_id or not sub_segment_id:
+            return
+        pair = (int(segment_id), int(sub_segment_id))
+        if pair not in seen_pairs:
+            seen_pairs.add(pair)
+            resolved_pairs.append(pair)
+
+    if group_service and isinstance(group_service.json_data, list):
+        for entry in group_service.json_data:
+            entry_segment_id = entry.get("segment") or getattr(group_service, "segment_id", None) or fallback_segment_id
+            script_name = _get_group_service_script_name(entry)
+            if not entry_segment_id or not script_name:
+                continue
+
+            sub_segment = SubSegment.objects.filter(
+                segment_id=entry_segment_id
+            ).filter(
+                Q(name__iexact=script_name) | Q(short_name__iexact=script_name)
+            ).first()
+
+            if not sub_segment:
+                sub_segment = SubSegment.objects.create(
+                    segment_id=entry_segment_id,
+                    name=script_name,
+                    short_name=script_name,
+                    status=True,
+                )
+
+            if sub_segment:
+                add_pair(entry_segment_id, sub_segment.id)
+                entry_defaults_by_pair[(int(entry_segment_id), int(sub_segment.id))] = {
+                    "product_type": str(entry.get("ProductType") or "").strip() or None,
+                    "quantity": int(entry.get("Qty")) if str(entry.get("Qty") or "").strip().isdigit() else (
+                        int(entry.get("LotSize")) if str(entry.get("LotSize") or "").strip().isdigit() else None
+                    ),
+                }
+
+    if fallback_segment_id and fallback_subsegments:
+        for sub_segment_id in fallback_subsegments:
+            add_pair(fallback_segment_id, sub_segment_id)
+
+    group_service_name = group_service.group_name if group_service else None
+    retained_pairs = set()
+    for segment_id, sub_segment_id in resolved_pairs:
+        retained_pairs.add((int(segment_id), int(sub_segment_id)))
+        sub_segment = SubSegment.objects.filter(pk=sub_segment_id).first()
+        existing_trade = existing_trade_settings.get((int(segment_id), int(sub_segment_id)))
+        symbol_value = (
+            (existing_trade.symbol if existing_trade else None)
+            or getattr(sub_segment, "short_name", None)
+            or getattr(sub_segment, "name", None)
+        )
+        entry_defaults = entry_defaults_by_pair.get((int(segment_id), int(sub_segment_id)), {})
+        defaults = {
+            "group_service": group_service_name,
+            "symbol": str(symbol_value or "").strip() or None,
+            "broker": (
+                (existing_trade.broker if existing_trade else None)
+                or _get_client_broker_name(client)
+            ),
+            "product_type": (
+                (existing_trade.product_type if existing_trade else None)
+                or entry_defaults.get("product_type")
+            ),
+            "quantity": (
+                (existing_trade.quantity if existing_trade and existing_trade.quantity else None)
+                or entry_defaults.get("quantity")
+            ),
+        }
+        ClientTradeSetting.objects.update_or_create(
+            client=client,
+            segment_id=segment_id,
+            sub_segment_id=sub_segment_id,
+            defaults=defaults,
+        )
+
+    obsolete_ids = [
+        trade.id
+        for pair, trade in existing_trade_settings.items()
+        if pair not in retained_pairs
+    ]
+    if obsolete_ids:
+        ClientTradeSetting.objects.filter(id__in=obsolete_ids).delete()
+
+    return resolved_pairs
+
+
+def _sync_client_multi_leg_settings(client):
+    assigned_multi_leg_strategies = Strategies.objects.filter(
+        Q(client_strategy=client) | Q(clients=client),
+        execution_mode=Strategies.EXECUTION_MODE_MULTI_LEG,
+        is_active=True,
+    ).select_related("segment").distinct()
+    retained_ids = set()
+
+    for strategy in assigned_multi_leg_strategies:
+        defaults = {
+            "segment": strategy.segment,
+            "group_service": getattr(getattr(client, "Group_service", None), "group_name", None),
+            "broker": _get_client_broker_name(client),
+        }
+        setting, _ = ClientMultiLegStrategySetting.objects.update_or_create(
+            client=client,
+            strategy=strategy,
+            defaults=defaults,
+        )
+        retained_ids.add(setting.id)
+
+    ClientMultiLegStrategySetting.objects.filter(client=client).exclude(id__in=retained_ids).delete()
+    return retained_ids
+
+
+def _parse_multi_leg_expiry_date(expiry_value):
+    expiry_text = str(expiry_value or "").strip()
+    if not expiry_text:
+        return None
+
+    normalized_expiry_text = expiry_text.split("T", 1)[0]
+    for date_format in ("%Y-%m-%d", "%d%b%Y", "%d%b%y"):
+        try:
+            parsed_expiry = datetime.strptime(normalized_expiry_text.upper(), date_format)
+            india_tz = pytz_timezone('Asia/Kolkata')
+            return make_aware(parsed_expiry, timezone=india_tz)
+        except ValueError:
+            continue
+
+    try:
+        parsed_expiry = datetime.fromisoformat(expiry_text)
+        india_tz = pytz_timezone('Asia/Kolkata')
+        if timezone.is_naive(parsed_expiry):
+            return make_aware(parsed_expiry, timezone=india_tz)
+        return parsed_expiry
+    except ValueError:
+        return None
+
+
+def _format_execution_price(value):
+    if value in (None, ""):
+        return 0
+    if isinstance(value, Number):
+        return float(value)
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0
 
 
 company_profile = company_profile
@@ -175,6 +931,9 @@ class CustomLoginView(generics.GenericAPIView):
         user = serializer.validated_data.get('user')
 
         # Log the login time in UserActivityLog
+        if request.session and not request.session.session_key:
+            request.session.save()
+
         UserActivityLog.objects.create(
             user=user,
             last_login_time=now(),
@@ -261,10 +1020,18 @@ class UserActivityLogView(APIView):
         # Fetch the most recent login entry (latest login without logout)
         current_login_session = (
             UserActivityLog.objects
-            .filter(user=user, last_login_time__isnull=False)
+            .filter(user=user, last_login_time__isnull=False, last_logout_time__isnull=True)
             .order_by('-last_login_time')
             .first()
         )
+
+        if not current_login_session:
+            current_login_session = (
+                UserActivityLog.objects
+                .filter(user=user, last_login_time__isnull=False)
+                .order_by('-last_login_time')
+                .first()
+            )
 
         response_data = {}
 
@@ -279,6 +1046,24 @@ class UserActivityLogView(APIView):
             return Response(response_data, status=status.HTTP_200_OK)
         else:
             return Response({"message": "No login/logout data found."}, status=status.HTTP_404_NOT_FOUND)
+
+
+class LoginActivitySummaryView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, user_id=None, *args, **kwargs):
+        target_user = request.user
+
+        if user_id is not None and request.user.id != user_id:
+            if not is_admin_or_superadmin(request.user):
+                return Response(
+                    {"status": "error", "message": "You do not have permission to access this user's activity."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+            target_user = get_object_or_404(UserModel, id=user_id)
+
+        summary = LoginActivityService().build_summary(target_user, request=request)
+        return Response(summary, status=status.HTTP_200_OK)
 
 #verify-otp via email
 class OTPVerifyView(generics.GenericAPIView):
@@ -323,7 +1108,7 @@ class ResendOTPView(APIView):
             user = get_object_or_404(User, email=email)
 
             # Check if the last OTP is still valid and unverified
-            otp_instance = OTP.objects.filter(user=user, is_verified=False).last()
+            otp_instance = OTP.objects.filter(user=user, is_verified=False).order_by('-expires_at', '-id').first()
             if otp_instance and not otp_instance.is_expired():
                 return Response(
                     {"error": "A valid OTP already exists. Please check your email."},
@@ -332,9 +1117,13 @@ class ResendOTPView(APIView):
             # Generate and send a new OTP
             otp = OTP.objects.create(user=user)
             otp.generate_otp()
-            # Send OTP via email
-            # self.send_email_otp(user.email, otp.otp_code)
-            resend_otp_email_async.delay(user.email, otp.otp_code)
+            try:
+                EmailService.send_login_email_otp(user.email, otp.otp_code, user.firstName)
+            except Exception as exc:
+                return Response(
+                    {"error": f"Unable to send OTP email. Please verify SMTP settings. {exc}"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
             return Response(
                 {"success": "A new OTP has been sent to your email."},
                 status=status.HTTP_200_OK
@@ -497,7 +1286,7 @@ class GetUser(APIView):
     
 # All sub-admins list     
 class SubadminsView(APIView):
-    permission_classes = [permissions.IsAuthenticated,  ]
+    permission_classes = [IsAdminOrSuperadmin]
     def get(self, request, *args, **kwargs):
         user = request.user 
         try:
@@ -510,10 +1299,26 @@ class SubadminsView(APIView):
     
 #user crud api for admin
 class UserManagementView(APIView):
-    permission_classes = [permissions.IsAuthenticated,  ]
+    permission_classes = [IsAdminOrSuperadmin]
+
+    def _resolve_subadmin_role(self, requested_role_id=None):
+        if requested_role_id:
+            role = Role.objects.filter(id=requested_role_id).first()
+            if role:
+                return role
+
+        role = (
+            Role.objects.filter(name__iexact='Sub-Admin').first()
+            or Role.objects.filter(name__iexact='Admin').first()
+        )
+        if role:
+            return role
+
+        return Role.objects.create(name='Sub-Admin', status='active')
+
     def get(self, request, *args, **kwargs):
         user = request.user 
-        if user.role and user.role.name == 'Super-Admin':
+        if is_superadmin_user(user):
             # Get all Sub-Admins (with role 'Sub-Admin') and prefetch their clients
             users = User.objects.filter(role__name='Sub-Admin').annotate(
                 client_count=Count('assigned_users')
@@ -548,10 +1353,10 @@ class UserManagementView(APIView):
     def post(self, request, *args, **kwargs):
         # Generate a random password
         password = get_random_string(length=12)
-        # Create user with the autogenerated password
-        user = User.objects.get(id=request.user.id)
-        role=Role.objects.get(name='Sub-Admin')
-        serializer = NewUserCreateSerializer(data=request.data)
+        role = self._resolve_subadmin_role(request.data.get('role'))
+        payload = request.data.copy()
+        payload['role'] = role.id
+        serializer = NewUserCreateSerializer(data=payload)
         if serializer.is_valid():
             user = serializer.save(created_by=request.user,role=role) 
             # user.external_user = False
@@ -559,22 +1364,33 @@ class UserManagementView(APIView):
             user.set_password(password)  
             user.save() 
             
-            # Send the password via email
-            send_email_pass_async.delay(
-                    user.email,
-                    password,
-                    user.firstName,
-                    login_link,
-                    support_email,
-                    help_center_link,
-                    company_website,
-                    contact_number
-                )
-            print("sub-admin or client password---",password)
-            # EmailService.send_password_email(user.email, password,user.firstName,login_link,support_email,help_center_link,company_website,contact_number)
+            if user.email:
+                try:
+                    EmailService.send_password_email(
+                        user.email,
+                        password,
+                        user.firstName,
+                        login_link,
+                        support_email,
+                        help_center_link,
+                        company_website,
+                        contact_number,
+                    )
+                except Exception as exc:
+                    logger.warning(
+                        "Subadmin %s created but welcome email failed: %s",
+                        user.id,
+                        exc,
+                    )
             
             return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {
+                "detail": "Failed to add user",
+                "errors": serializer.errors,
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
 
     def put(self, request, *args, **kwargs):
@@ -1525,7 +2341,7 @@ class BrokerView(APIView):
             except Broker.DoesNotExist:
                 return Response({"detail": "Broker not found."}, status=status.HTTP_404_NOT_FOUND)
         else:
-            brokers = Broker.objects.all()
+            brokers = _ensure_default_broker_catalog()
             search_query = request.query_params.get('q', '').strip()
             if search_query:
                 brokers = brokers.filter(Q(broker_name__icontains=search_query))
@@ -1574,7 +2390,7 @@ class ClientFilterView(APIView):
     
     def get(self, request, *args, **kwargs):
         user = request.user 
-        if user.role and user.role.name.lower() == 'super-admin' or user.role.name =='Super-Admin':
+        if is_superadmin_user(user):
             clients = User.objects.filter(type_of_user='is_client', is_client=True).order_by('-id')
         # elif user.role and user.role.name.lower() == 'sub-admin' or user.role.name=='Sub-Admin':
             # print("sub-admin.........")
@@ -1620,7 +2436,7 @@ class ClientCreateView(APIView):
     
     def get(self, request, *args, **kwargs):
         user = request.user 
-        if user.role and user.role.name.lower() == 'super-admin' or user.role.name =='Super-Admin':
+        if is_superadmin_user(user):
             clients = User.objects.filter(type_of_user='is_client', is_client=True).order_by('-id')
         # elif user.role and user.role.name.lower() == 'sub-admin' or user.role.name=='Sub-Admin':
             # print("sub-admin.........")
@@ -1660,47 +2476,47 @@ class ClientCreateView(APIView):
                     # Handle segment and subsegment addition
             segment_id = data.get("segment")
             subsegments = data.get("subsegment", [])
-            
-            if segment_id and subsegments:
-                group_name = client.Group_service.group_name if hasattr(client, "Group_service") else None
-
-                for subsegment_id in subsegments:
-                    trade_settings_data = {
-                        "client": client.id,
-                        "segment": segment_id,
-                        "sub_segment": subsegment_id,
-                        "group_service": group_name,
-                        
-                        # Add any other fields required for ClientTradeSetting
-                    }
-                    trade_setting_serializer = ClientTradeSettingSerializer(data=trade_settings_data)
-                    print("trade_setting_serializer>>>",trade_setting_serializer)
-                    if trade_setting_serializer.is_valid():
-                        trade_setting_serializer.save()
-                    else:
-                        print("Trade Setting Error:", trade_setting_serializer.errors)
+            _sync_client_trade_settings_from_group_service(
+                client,
+                fallback_segment_id=segment_id,
+                fallback_subsegments=subsegments,
+            )
+            _sync_client_multi_leg_settings(client)
         
             end_time = time.time()  # Record the end time
             execution_time = end_time - start_time  # Calculate the total time
             print(f"client create API executed in--------- {execution_time:.4f} seconds") 
             start_time=time.time()
-            # Send the password via email
-            print("client-password---",password)
-            send_email_pass_async.delay(
-                    client.email,
-                    password,
-                    client.firstName,
-                    login_link,
-                    support_email,
-                    help_center_link,
-                    company_website,
-                    contact_number
-                )
+            # Email is optional now, so client creation must not fail if email is
+            # blank or the async email transport is unavailable.
+            if client.email:
+                try:
+                    EmailService.send_password_email(
+                        client.email,
+                        password,
+                        client.firstName,
+                        login_link,
+                        support_email,
+                        help_center_link,
+                        company_website,
+                        contact_number,
+                    )
+                except Exception as exc:
+                    logger.warning(
+                        "Client %s created but welcome email failed: %s",
+                        client.id,
+                        exc,
+                    )
             end_time = time.time()  # Record the end time
             execution_time = end_time - start_time  # Calculate the total time
-            print(f"client mail password API executed in {execution_time:.4f} seconds") 
             return Response(ClientListSerializer(client).data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {
+                "detail": "Failed to add client",
+                "errors": serializer.errors,
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     def put(self, request, *args, **kwargs):
         client_id = kwargs.get('pk')
@@ -1711,71 +2527,14 @@ class ClientCreateView(APIView):
         if serializer.is_valid():
             serializer.save()
 
-            # Handle segment and subsegment update
             segment_id = request.data.get("segment")
-            subsegments = request.data.get("subsegment", [])            
-            # Get the new group service name
-            new_group_service_name = getattr(client.Group_service, "group_name", None)
-            existing_group_service_name=None
-            # new_group_service_name = client.Group_service.group_name if hasattr(client, "Group_service") else None
-            print("new_group_service_name::::", new_group_service_name, "new group service name>>>>***********", new_group_service_name)
-
-            # Get the existing group service name from the last ClientTradeSetting object
-            last_trade_setting = ClientTradeSetting.objects.filter(client=client).last()
-            if last_trade_setting:
-                existing_group_service_name = last_trade_setting.group_service if last_trade_setting else None
-                print("existing_group_service_name>>>>", existing_group_service_name)
-                # If the new group service is different from the existing one
-                if segment_id and subsegments:
-                    if new_group_service_name != existing_group_service_name:
-                    
-                        # Delete old trade settings for the existing group service
-                        trade=ClientTradeSetting.objects.filter(client=client).delete()
-                        print("delted ordersssssssssss",trade)
-                        # Create new trade settings for the new group service
-                        for subsegment_id in subsegments:
-                            trade_setting, created = ClientTradeSetting.objects.update_or_create(
-                                client=client,
-                                segment_id=segment_id,
-                                sub_segment_id=subsegment_id,
-                                defaults={"group_service": new_group_service_name}  # Update or create with new group service
-                            )
-                            print("trade_setting new>>>", trade_setting)
-                            if created:
-                                print(f"Created new trade setting for {client} - {segment_id} - {subsegment_id} with group service {new_group_service_name}")
-                            else:
-                                print(f"Updated existing trade setting for {client} - {segment_id} - {subsegment_id} with group service {new_group_service_name}")
-                    else:
-                        # print(">>>>>>>>>>sdjfsjfjsfisfsifiLLLLLLLLLLLLLLLLL")
-                        # If the group service is the same, update existing trade settings
-                        for subsegment_id in subsegments:
-                            # trade=ClientTradeSetting.objects.filter(client=client).delete()
-                            trade_setting, created = ClientTradeSetting.objects.update_or_create(
-                                client=client,
-                                segment_id=segment_id,
-                                sub_segment_id=subsegment_id,
-                                defaults={"group_service": existing_group_service_name}  # Update existing settings
-                            )
-                            print("trade_setting is updated  >>>", trade_setting)
-                            if created:
-                                print(f"Created new trade setting for {client} : {segment_id} : {subsegment_id} with group service {existing_group_service_name}")
-                            else:
-                                print(f"Updated existing trade setting for {client} : {segment_id} : {subsegment_id} with group service {existing_group_service_name}")
-
-            else:
-                for subsegment_id in subsegments:
-                        
-                    trade_setting, created = ClientTradeSetting.objects.update_or_create(
-                        client=client,
-                        segment_id=segment_id,
-                        sub_segment_id=subsegment_id,
-                        defaults={"group_service": existing_group_service_name}  # Update existing settings
-                    )
-                    print("trade_setting is updated  >>>", trade_setting)
-                    if created:
-                        print(f"Created new trade setting for {client} : {segment_id} : {subsegment_id} with group service {existing_group_service_name}")
-                    else:
-                        print(f"Updated existing trade setting for {client} : {segment_id} : {subsegment_id} with group service {existing_group_service_name}")
+            subsegments = request.data.get("subsegment", [])
+            _sync_client_trade_settings_from_group_service(
+                client,
+                fallback_segment_id=segment_id,
+                fallback_subsegments=subsegments,
+            )
+            _sync_client_multi_leg_settings(client)
 
                 
             return Response(ClientListSerializer(client).data, status=status.HTTP_200_OK)
@@ -1883,10 +2642,10 @@ class ClientTradingStatusCountView(APIView):
         user = request.user
         
         # Determine which clients to include based on user role
-        if user.role and user.role.name.lower() == 'super-admin':
+        if is_superadmin_user(user):
             # Super-admin can see all clients
             clients = User.objects.filter(type_of_user='is_client', is_client=True)
-        elif user.role and user.role.name.lower() == 'sub-admin':
+        elif is_admin_user(user):
             # Sub-admin can see only their assigned clients
             clients = User.objects.filter(assigned_client=user, type_of_user='is_client', is_client=True)
         else:
@@ -1913,7 +2672,9 @@ class AssignClientToStrategyAPIView(APIView):
         serializer = StrategyAssignSerializer(strategy, data=request.data, partial=True)
         
         if serializer.is_valid():
-            serializer.save()
+            strategy = serializer.save()
+            for client in strategy.clients.all():
+                _sync_client_multi_leg_settings(client)
             return Response(serializer.data, status=status.HTTP_200_OK)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -1935,9 +2696,9 @@ class GetStrategyClientView(APIView):
     def get(self, request, *args, **kwargs):
         user = request.user 
         try:
-            if user.role and user.role.name.lower() == 'super-admin' or user.role.name =='Super-Admin':
+            if is_superadmin_user(user):
                 clients = User.objects.filter(type_of_user='is_client', is_client=True).order_by('-id')
-            elif user.role and user.role.name.lower() == 'sub-admin' or user.role.name=='Sub-Admin':
+            elif is_admin_user(user):
                 clients = User.objects.filter(assigned_client=user).order_by('-id')
             else:
                 clients = User.objects.filter(type_of_user='is_client', created_by=user).order_by('-id')
@@ -2093,6 +2854,9 @@ class UpdateClientTradeSettingAPIView(UpdateAPIView):
                 expiry_date = make_aware(expiry_date, timezone=india_tz)
                 trade_setting.expiry_date = expiry_date
 
+            if serializer.validated_data.get("order_type") == "MARKET":
+                serializer.validated_data["buffer_percentage"] = None
+
             # Save the updated trade setting
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -2130,6 +2894,198 @@ class GetTradeSettingAPIView(generics.ListAPIView):
         queryset = self.get_queryset()
         serializer = self.get_serializer(queryset,many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class ClientMultiLegTradeSettingAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        client_id = request.query_params.get('client')
+        strategy_id = request.query_params.get('strategy')
+        include_locked = str(request.query_params.get('include_locked', '')).lower() in {'1', 'true', 'yes'}
+        resolved_client = None
+
+        queryset = ClientMultiLegStrategySetting.objects.select_related(
+            'strategy',
+            'segment',
+            'client',
+        )
+
+        if client_id:
+            if not is_admin_or_superadmin(request.user) and int(client_id) != request.user.id:
+                return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
+            resolved_client_id = int(client_id)
+            resolved_client = User.objects.filter(id=resolved_client_id).first()
+            queryset = queryset.filter(client_id=client_id)
+        else:
+            resolved_client_id = request.user.id
+            resolved_client = request.user
+            queryset = queryset.filter(client=request.user)
+
+        if resolved_client:
+            _sync_client_multi_leg_settings(resolved_client)
+            queryset = ClientMultiLegStrategySetting.objects.select_related(
+                'strategy',
+                'segment',
+                'client',
+            ).filter(client=resolved_client)
+
+        if strategy_id:
+            queryset = queryset.filter(strategy_id=strategy_id)
+
+        if include_locked and not strategy_id:
+            assigned_settings = {
+                setting.strategy_id: setting
+                for setting in queryset
+            }
+            all_multi_leg_strategies = Strategies.objects.filter(
+                execution_mode=Strategies.EXECUTION_MODE_MULTI_LEG,
+                is_active=True,
+            ).select_related('segment').order_by('name')
+            payload = []
+            for strategy in all_multi_leg_strategies:
+                setting = assigned_settings.get(strategy.id)
+                if setting:
+                    item = ClientMultiLegTradeSettingReadSerializer(setting).data
+                    item['is_assigned'] = True
+                    item['is_locked'] = False
+                    payload.append(item)
+                    continue
+
+                payload.append({
+                    'id': None,
+                    'client': resolved_client_id,
+                    'strategy': strategy.id,
+                    'strategy_name': strategy.name,
+                    'strategy_execution_mode': strategy.execution_mode,
+                    'multi_leg_template': strategy.multi_leg_template,
+                    'multi_leg_template_label': strategy.get_multi_leg_template_display() if strategy.multi_leg_template else None,
+                    'segment': SegmentSerializer(strategy.segment).data if strategy.segment else None,
+                    'underlying': 'NIFTY',
+                    'group_service': None,
+                    'broker': None,
+                    'product_type': None,
+                    'order_type': None,
+                    'buffer_percentage': None,
+                    'quantity': None,
+                    'trade_limit': None,
+                    'max_loss_for_day': None,
+                    'max_profit_for_day': None,
+                    'expiry_date': None,
+                    'start_time': None,
+                    'end_time': None,
+                    'is_tread_status': False,
+                    'sl_type': None,
+                    'stop_loss': None,
+                    'target': None,
+                    'legs': [],
+                    'created_at': None,
+                    'updated_at': None,
+                    'is_assigned': False,
+                    'is_locked': True,
+                })
+            return Response(payload, status=status.HTTP_200_OK)
+
+        serializer = ClientMultiLegTradeSettingReadSerializer(queryset.order_by('strategy__name'), many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def put(self, request, *args, **kwargs):
+        user = request.user
+        strategy_id = request.data.get('strategy')
+        if not strategy_id:
+            return Response({"detail": "Strategy is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            setting = ClientMultiLegStrategySetting.objects.select_related('client', 'strategy').get(
+                client=user,
+                strategy_id=strategy_id,
+            )
+        except ClientMultiLegStrategySetting.DoesNotExist:
+            return Response({"detail": "Multi-leg setting not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        request_data = request.data.copy()
+        expiry_date = request_data.get('expiry_date')
+        if expiry_date:
+            parsed_expiry = _parse_multi_leg_expiry_date(expiry_date)
+            if not parsed_expiry:
+                return Response(
+                    {"expiry_date": ["Expiry format is invalid. Please select a valid expiry from the dropdown."]},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            request_data['expiry_date'] = parsed_expiry.isoformat()
+
+        serializer = ClientMultiLegStrategySettingSerializer(setting, data=request_data, partial=True)
+        if serializer.is_valid():
+            if serializer.validated_data.get("order_type") == "MARKET":
+                serializer.validated_data["buffer_percentage"] = None
+
+            serializer.save()
+            return Response(
+                ClientMultiLegTradeSettingReadSerializer(setting).data,
+                status=status.HTTP_200_OK,
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def patch(self, request, *args, **kwargs):
+        user = request.user
+        strategy_id = request.data.get('strategy')
+        is_trade_status = request.data.get('is_trade_status')
+
+        if not strategy_id:
+            return Response({"detail": "Strategy is required."}, status=status.HTTP_400_BAD_REQUEST)
+        if is_trade_status is None or not isinstance(is_trade_status, bool):
+            return Response({"detail": "'is_trade_status' must be a boolean value."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            setting = ClientMultiLegStrategySetting.objects.get(client=user, strategy_id=strategy_id)
+        except ClientMultiLegStrategySetting.DoesNotExist:
+            return Response({"detail": "Multi-leg setting not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        setting.is_tread_status = is_trade_status
+        setting.save(update_fields=['is_tread_status', 'updated_at'])
+        return Response(
+            ClientMultiLegTradeSettingReadSerializer(setting).data,
+            status=status.HTTP_200_OK,
+        )
+
+    def delete(self, request, *args, **kwargs):
+        user = request.user
+        strategy_id = request.query_params.get('strategy') or request.data.get('strategy')
+        if not strategy_id:
+            return Response({"detail": "Strategy is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            setting = ClientMultiLegStrategySetting.objects.select_related('client', 'strategy').get(
+                client=user,
+                strategy_id=strategy_id,
+            )
+        except ClientMultiLegStrategySetting.DoesNotExist:
+            return Response({"detail": "Multi-leg setting not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        setting.product_type = None
+        setting.order_type = "LIMIT"
+        setting.buffer_percentage = None
+        setting.quantity = None
+        setting.trade_limit = None
+        setting.max_loss_for_day = None
+        setting.max_profit_for_day = None
+        setting.expiry_date = None
+        setting.start_time = None
+        setting.end_time = None
+        setting.is_tread_status = False
+        setting.sl_type = None
+        setting.stop_loss = None
+        setting.target = None
+        setting.legs = []
+        setting.save(update_fields=[
+            "product_type", "order_type", "buffer_percentage", "quantity", "trade_limit",
+            "max_loss_for_day", "max_profit_for_day", "expiry_date", "start_time", "end_time",
+            "is_tread_status", "sl_type", "stop_loss", "target", "legs", "updated_at",
+        ])
+        return Response(
+            ClientMultiLegTradeSettingReadSerializer(setting).data,
+            status=status.HTTP_200_OK,
+        )
 class UpdateTradeSettingStatusView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -2145,7 +3101,7 @@ class UpdateTradeSettingStatusView(APIView):
             client_list = ClientTradeSetting.objects.filter(client=client)
             
             # Filter further by segment if the parameter is provided
-            if segment_name:
+            if segment_name and str(segment_name).strip().lower() != 'option':
                 client_list = client_list.filter(segment__name__iexact=segment_name)
             
             # Serialize the data
@@ -2369,7 +3325,7 @@ class ActiveClientsView(APIView):
         user = request.user
         current_date = timezone.now().date()
 
-        if user.role and user.role.name.lower() == 'super-admin':
+        if is_superadmin_user(user):
             clients = User.objects.filter(
                 type_of_user='is_client', is_client=True, client_status=True
             ).order_by('-id')
@@ -2399,7 +3355,7 @@ class InactiveClientsView(APIView):
         user = request.user
         current_date = timezone.now().date()
 
-        if user.role and user.role.name.lower() == 'super-admin':
+        if is_superadmin_user(user):
             clients = User.objects.filter(
                 type_of_user='is_client', is_client=True, client_status=False
             ).order_by('-id')
@@ -2433,7 +3389,7 @@ class ExpiryClientsView(APIView):
         user = request.user
         current_date = timezone.now().date()
 
-        if user.role and user.role.name.lower() == 'super-admin':
+        if is_superadmin_user(user):
             clients = User.objects.filter(
                 type_of_user='is_client', is_client=True, end_date_client__lte=current_date,
             ).order_by('-id')
@@ -2643,362 +3599,273 @@ def place_order_broker(LivePrice,group_service,
     webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice, day, month, year, fullyear,default_price, Type, order_params, history_id):
     try:
         order_id = 0
-        response = {"data": {"status": "Failed", "message": "Unsupported broker or no broker matched"}}
         status = "Failed"
-        res_data = "Unknown response"
-        message = f"Order is placing by place order broker !!"
-        trade_symbol = None
-        save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user, trade_symbol, order_id, status, message, message, strategy,Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,order_params, broker=None, history_id = history_id
+        message = "Order is placing by place order broker !!"
+        save_trade_order_history(
+            LivePrice, group_service, transaction_type, trade_order_status, user, None,
+            order_id, status, message, message, strategy, Entry_type, Exit_type,
+            Entry_price, Exit_price, EntryQty, ExitQty, webhook_signal, Exchange,
+            Segment, Index_Symbol, order_params, broker=None, history_id=history_id
         )
-        if trade.broker.lower() == "fyers":
-            symbol=symbol.upper()
-            trade_symbol = f"{symbol}{year}{month}{day}{default_price}{Type}"
-            logger.info(f"{user} : trading_symbol OF Fyers..:::::: %s ", trade_symbol)
-            client_broker = ClientBrokerdetails.objects.filter(client=trade.client, broker_name__broker_name__iexact=trade.broker).first()
-            if not client_broker:
-                message = f"{user} : No broker details found for client {trade.client} and broker {trade.broker}"
-                save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user, trade_symbol, order_id, status, res_data, message, strategy,Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,order_params, broker="fyers", history_id = history_id
-                )
-                logger.error(message)
-                return {"data": {"status": "Failed", "message": message}}
 
-            access_token=client_broker.access_token
-            Api_key=client_broker.broker_API_KEY
-            print("fyers access token","Api_key.....",Api_key)
-            if not access_token or not Api_key:
-                message = f"API credentials  token not found for client {trade.client} and broker {trade.broker}."
-                save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user, trade_symbol, order_id, status, res_data, message, strategy,
-                    Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal, Exchange, Segment, Index_Symbol,
-                    order_params, broker="fyers", history_id = history_id
-                )
-                logger.error(message)
-                return {"data": {"status": "Failed", "message": message}}
-
-            # logger.info(f"Fetched API credentials for broker {trade.broker}.")
-            logger.info(f"{user} : Placing order for user: {user}, Broker: {trade.broker}, Symbol: {trade.symbol}")
-            if transaction_type == "SELL":
-                response = exit_existing_buy_position_fyers_order(default_price,LivePrice,group_service,Type,day,month,year,access_token,Api_key,trade_symbol, transaction_type, symbol, quantity,strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type,Entry_price,Exit_price,
-                    EntryQty,ExitQty,webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice,trade_order_status, history_id)
-
-                if response.get("data", {}).get("status") == "error" or response.get("data", {}).get("status") == "Failed":
-                    message = response.get("data", {}).get("message", f"Existing BUY position for {symbol} could not be closed.")
-                    save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user, trade_symbol, order_id, status, res_data, message, strategy,
-                        Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal, Exchange, Segment, Index_Symbol,
-                        order_params, broker="fyers", history_id = history_id
-                    )
-                    logger.error(message)
-                    return {"data": {"status": "Failed", "message": message}} 
-            if transaction_type =="BUY":
-                    response = place_fyers_orders(LivePrice,group_service,access_token,Api_key,trade_symbol, transaction_type, symbol, quantity,
-                        strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type,Entry_price,Exit_price,
-                        EntryQty,ExitQty,webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice,trade_order_status, history_id)
-                    
-            logger.info(f"{user} : fyers Order Response: {response}")
-            
-        elif trade.broker.lower() == "dhan":
-            symbol=symbol.upper()
-            """
-                Creates a trading symbol in the format: SYMBOL+MONTH+YEAR+STRIKE+TYPE
-                Example: POWERGRIDMAR2025410PE or NIFTYMAR202522600CE
-            """
-            
-            symbol = symbol.upper()
-            month_number = datetime.strptime(month, "%b").month
-            expiry_date = f"{fullyear}-{month_number:02d}-{day}"
-            trade_symbol = f"{symbol}{month}{fullyear}{default_price}{Type}"
-            client_broker = ClientBrokerdetails.objects.filter(client=trade.client, broker_name__broker_name__iexact=trade.broker).first()
-            if not client_broker:
-                message= f"No broker details found for client {trade.client} and broker {trade.broker}"
-                response= {"data":{"status": "Failed", "message":message }}
-                save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, message, strategy,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal , Exchange, Segment,Index_Symbol, order_params,broker="dhan", history_id = history_id)
-                    
-                logger.error(f"{user} :No broker details found for client {trade.client} and broker {trade.broker}")
-                return response # continue
-
-            client_id = client_broker.broker_API_KEY
-            print("api key",client_id,"<<<<<<<<<<",client_broker)
-            access_token = client_broker.access_token
-            if not access_token or not client_id:
-                message = f"API credentials not found for client {trade.client} and broker {trade.broker}."
-                save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user, trade_symbol, order_id, status, res_data, message, strategy,Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,order_params, broker="dhan", history_id = history_id
-                )
-                logger.error(message)
-                return {"data": {"status": "Failed", "message": message}}
-            logger.info(f"{user} : !!!!Placing order for user: {user} Brocker is: {trade.broker} & trading symbol is: {trade.symbol} and transaction_type is 99  {transaction_type}")
-            logger.info(f'{user} : transaction type is : {transaction_type}')
-            if transaction_type=="SELL":
-                response = exit_existing_buy_position_DhanOrder(expiry_date,LivePrice,group_service,Type,day,month,fullyear,access_token, client_id, trade_symbol, transaction_type, symbol, quantity,strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty, webhook_signal, Exchange, Segment,Index_Symbol, triggerPrice, trade_order_status)
-                # If the exit failed, do not proceed.
-                if response.get("data", {}).get("status") == "error":
-                    message = response.get("data", {}).get("message", f"Existing BUY position for {symbol} could not be closed.")
-
-                    # message = f"before place new BUY order please close existing BUY position  {symbol} could not be closed."
-                    save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message, strategy,Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty, webhook_signal,Exchange, Segment, Index_Symbol, order_params, broker="dhan", history_id = history_id)
-                    logger.error(message)
-                    return {"data": {"status": "Failed", "message": message}} 
-            logger.info(f"{user} : transaction_type ::{transaction_type} use is :{user}")
-            if transaction_type == "BUY":
-                logger.info(f"dhan buy order for user:{user}") 
-                response=place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_id, trade_symbol, transaction_type, symbol, quantity,
-                    strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type, Entry_price, Exit_price, 
-                    EntryQty, ExitQty, webhook_signal, Exchange, Segment,Index_Symbol, triggerPrice, trade_order_status, history_id)
-                logger.info(f"{user} : buy response is this ++++++++++", response)
-            logger.info(f"{user} : dhan api. Response: {response} for user :{user}")
-            
-        elif trade.broker.lower() == "5paisa":
-            symbol=symbol.upper()
-            formated_prc=f"{default_price:.2f}"
-            trade_symbol = f"{symbol}{day}{month}{fullyear}{Type}{formated_prc}" 
-            # Fetch client broker details
-            client_broker = ClientBrokerdetails.objects.filter(client=trade.client, broker_name__broker_name__iexact=trade.broker).first()
-            if not client_broker:
-                message= f"{user} : No broker details found for client {trade.client} and broker {trade.broker}"
-                response= {"data":{"status": "Failed", "message":message }}
-                save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, message, strategy,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal , Exchange, Segment,Index_Symbol, order_params,broker="5paisa", history_id = history_id)
-                logger.error(f"{user} : No broker details found for client {trade.client} and broker {trade.broker}")
-                return response # continue
-
-            api_key = client_broker.broker_API_KEY
-
-            access_token = client_broker.access_token
-            if not access_token or not api_key:
-                message = f"API credentials not found for client {trade.client} and broker {trade.broker}."
-                save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user, trade_symbol, order_id, status, res_data, message, strategy,Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,order_params, broker="5paisa", history_id = history_id
-                )
-                logger.error(message)
-                return {"data": {"status": "Failed", "message": message}}
-
-            logger.info(f"{user} : !!!!Placing order for user: {user} Brocker is: {trade.broker} & trading symbol is: {trade.symbol}")
-            if transaction_type == "SELL": 
-                response = exit_existing_buy_position_5PaisaOrder(LivePrice,group_service,Type,day,month,fullyear,api_key,access_token,trade_symbol,transaction_type, symbol, quantity,strategy,ordertype,
-                product_type, price,user, Lots,trade_order_status,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal ,Exchange, Segment,Index_Symbol,triggerPrice,trade, history_id)
-
-                # If the exit failed, do not proceed.
-                if response.get("data", {}).get("status") == "error":
-                    message = response.get("data", {}).get("message", f"Existing BUY position for {symbol} could not be closed.")
-                    save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message, strategy,Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty, webhook_signal,Exchange, Segment, Index_Symbol, order_params, broker="5paisa", history_id = history_id)
-                    logger.error(message)
-                    return {"data": {"status": "Failed", "message": message}} 
-            if transaction_type == "BUY": 
-                response=place_5paisa_order(LivePrice,group_service,api_key,access_token,trade_symbol,transaction_type, symbol, quantity,strategy,ordertype,
-                    product_type, price,user, Lots,trade_order_status,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal ,Exchange, Segment,Index_Symbol,triggerPrice,trade, history_id)
-
-            logger.info(f"{user} : 5paisa blue. Response: {response}")
-            
-        elif trade.broker.lower() == "zerodha":
-            symbol=symbol.upper()
-            trade_symbol = f"{symbol}{year}{month}{default_price}{Type}"
-            client_broker = ClientBrokerdetails.objects.filter(client=trade.client, broker_name__broker_name__iexact=trade.broker).first()
-            if not client_broker:
-                message = f"No broker details found for client {trade.client} and broker {trade.broker}"
-                save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user, trade_symbol, order_id, status, res_data, message, strategy,Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,order_params, broker="zerodha", history_id = history_id
-                )
-                logger.error(message)
-                return {"data": {"status": "Failed", "message": message}}
-            access_token=client_broker.access_token
-            Api_key=client_broker.broker_API_KEY
-            print("zerodha access token",access_token,"Api_key.....",Api_key)
-            if not access_token or not Api_key:
-                message = f"API credentials  token not found for client {trade.client} and broker {trade.broker}."
-                save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user, trade_symbol, order_id, status, res_data, message, strategy,
-                    Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal, Exchange, Segment, Index_Symbol,
-                    order_params, broker="zerodha", history_id = history_id
-                )
-                logger.error(message)
-                return {"data": {"status": "Failed", "message": message}}
-
-            logger.info(f"{user} : Placing order for user: {user}, Broker: {trade.broker}, Symbol: {trade.symbol}")
-            logger.info(f'{user} : transaction type is : {transaction_type}')
-
-            if transaction_type == "SELL":
-                logger.info(f"{user} : Transanction type Sell and called place_zerodha_orders function")
-                response = exit_existing_buy_position_zerodha_order(LivePrice,group_service,Type,day,month,year,access_token,Api_key,trade_symbol, transaction_type, symbol, quantity,strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type,Entry_price,Exit_price,
-                    EntryQty,ExitQty,webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice,trade_order_status, history_id)
-
-                if response.get("data", {}).get("status") == "error" or response.get("data", {}).get("status") == "Failed":
-                    message = response.get("data", {}).get("message", f"Existing BUY position for {symbol} could not be closed.")
-                    save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user, trade_symbol, order_id, status, res_data, message, strategy,
-                        Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal, Exchange, Segment, Index_Symbol,
-                        order_params, broker="zerodha", history_id = history_id
-                    )
-                    logger.error(message)
-                    logger.info(f"{user}: Existing BUY position could not be closed !! {symbol}")
-                    return {"data": {"status": "Failed", "message": message}}
-            if transaction_type == "BUY":
-                logger.info(f"{user} : Transaction type BUY and called place_zerodha_orders function")
-                
-                response = place_zerodha_orders(
-                    LivePrice, group_service, access_token, Api_key, trade_symbol, transaction_type, symbol, quantity,
-                    strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type, Entry_price, Exit_price,
-                    EntryQty, ExitQty, webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice, trade_order_status, history_id
-                )
-                logger.info(f"{user} : BUY response is: {response}")
-
-                if response.get("data", {}).get("status") == "error" or response.get("data", {}).get("status") == "Failed":
-                    message = response.get("data", {}).get("message", f"BUY order for {symbol} failed.")
-                    save_trade_order_history(
-                        LivePrice, group_service, transaction_type, trade_order_status, user, trade_symbol, order_id, status,
-                        res_data, message, strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
-                        webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="zerodha", history_id = history_id
-                    )
-                    logger.info(f"{user}: BUY order for {symbol} failed.")
-                    logger.error(message)
-                    return {"data": {"status": "Failed", "message": message}}
-                
-            logger.info(f"{user} : Zerodha Order . Response: {response}")
-
-        elif trade.broker.lower() == "upstox":
-            symbol=symbol.upper()
-            trade_symbol = f"{symbol}{default_price}{Type}{day}{month}{year}"
-            logger.info(f"{user} : Trading Symbol (Upstox): {trade_symbol}")
-            broker="upstox"
-            client_broker = ClientBrokerdetails.objects.filter(client=trade.client, broker_name__broker_name__iexact=trade.broker).first()
-            if not client_broker:
-                message = f"No broker details found for client {trade.client} and broker {trade.broker}."
-                save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user, trade_symbol, order_id, status, res_data, message, strategy,Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,order_params, broker="Upstox", history_id = history_id
-                )
-                logger.error(message)
-                return {"data": {"status": "Failed", "message": message}}
-
-            access_token = client_broker.access_token
-    
-            if not access_token: #or not api_skey or not api_uid:
-                message = f"API credentials  token not found for client {trade.client} and broker {trade.broker}."
-                save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user, trade_symbol, order_id, status, res_data, message, strategy,Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal, Exchange, Segment, Index_Symbol,order_params, broker="Upstox", history_id = history_id
-                )
-                logger.error(message)
-                return {"data": {"status": "Failed", "message": message}}
-
-            logger.info(f"{user} : Placing order for user: {user}, Broker: {trade.broker}, Symbol: {symbol}.transaction_type--{transaction_type}")
-
-            if transaction_type.upper() == "SELL":
-                logger.info(f" {user} : SELL transaction type##########")
-                response = exit_existing_buy_position_Upstox(group_service,LivePrice,Type,day,month,year,access_token, trade_symbol, transaction_type,symbol, quantity, strategy, ordertype, product_type, price, user,Lots, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, Segment,Index_Symbol, triggerPrice,trade_order_status)
-                # If the exit failed, do not proceed.
-                if response.get("data", {}).get("status") == "error":
-                    message = response.get("data", {}).get("message", f"Existing BUY position for {symbol} could not be closed.")
-
-                    save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message, strategy,Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty, webhook_signal,Exchange, Segment, Index_Symbol, order_params, broker="Upstox", history_id = history_id)
-                    logger.error(message)
-                    return {"data": {"status": "Failed", "message": message}} 
-            if transaction_type.upper() == "BUY":
-                response = place_upstox_orders(LivePrice,group_service,
-                    access_token, trade_symbol, transaction_type,symbol, quantity, strategy, ordertype, product_type, price, user,
-                    Lots, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, Segment,
-                    Index_Symbol, triggerPrice,trade_order_status, history_id
-                )
-            
-            logger.info(f"{user} : Upstox  Order. Response: {response}")
-    
-        elif trade.broker.lower() == "alice blue":
-            symbol=symbol.upper()
-            trading_symbol_aliceblue = f"{symbol}{day}{month}{year}{Type[0]}{default_price}"
-            logger.info(f"{user} : trading_symbol_aliceblue..:::::: %s ", trading_symbol_aliceblue)
-            trade_symbol=trading_symbol_aliceblue
-            # Fetch client broker details
-            client_broker = ClientBrokerdetails.objects.filter(client=trade.client, broker_name__broker_name__iexact=trade.broker).first()
-            if not client_broker:
-                message= f"No broker details found for client {trade.client} and broker {trade.broker}"
-                save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, message,  strategy, Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal , Exchange, Segment,Index_Symbol,order_params,broker="Alice Blue", history_id = history_id)
-                logger.error(f"{user} : No broker details found for client {trade.client} and broker {trade.broker}")
-                response= {"data":{"status": "Failed", "message":message }}
-                return response
-
-            api_skey = client_broker.broker_API_KEY
-            api_uid = client_broker.broker_API_UID
-            if not api_skey or not api_uid:
-                message = f"API credentials not found for client {trade.client} and broker {trade.broker}."
-                save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user, trade_symbol, order_id, status, res_data, message, strategy,
-                    Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,
-                    order_params, broker="Alice Blue", history_id = history_id
-                )
-                logger.error(message)
-                return {"data": {"status": "Failed", "message": message}}
-            logger.info(f"{user} : Fetched API credentials for {trade.broker}: SKEY={api_skey}, UID={api_uid}")
-
-            logger.info(f"{user} : !!!!Placing order for user: {user} Brocker is: {trade.broker} & trading symbol is: {trade.symbol} and transaction_type is 99  {transaction_type}")
-            if transaction_type.upper() == "SELL":
-                logger.info(f"{user} : ALICE BLUE SELLL ORDER:::")
-                response = exit_existing_buy_position_Aliceblue(LivePrice,group_service,Type,day,month,year,api_skey,api_uid,trade_symbol,transaction_type, symbol, quantity,strategy,ordertype,
-                    product_type, price,user, Lots,trade_order_status,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,
-                    ExitQty,webhook_signal ,Exchange, Segment,Index_Symbol,triggerPrice)
-                # If the exit failed, do not proceed.
-                if response.get("data", {}).get("status") == "error" or response.get("data", {}).get("status") == "Failed":
-                    message = response.get("data", {}).get("message", f"Existing BUY position for {symbol} could not be closed.")
-                    save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message, strategy,
-                                            Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty, webhook_signal,
-                                            Exchange, Segment, Index_Symbol, order_params, broker="Alice Blue", history_id = history_id)
-                    logger.error(message)
-                    return {"data": {"status": "Failed", "message": message}} 
-            if transaction_type.upper() == "BUY":
-                logger.info(f"{user} : alice blue buy order for user:{user}") 
-                response=place_alice_orders(LivePrice,group_service,api_skey,api_uid,trade_symbol,transaction_type, symbol, quantity,strategy,ordertype,
-                product_type, price,user, Lots,trade_order_status,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal ,Exchange, Segment,Index_Symbol, history_id, triggerPrice)
-            logger.info(f"{user} : Alice blue. Response: {response} for user :::{user}")
-
-        elif trade.broker.lower() == "angle one":
-            broker="Angle One"
-            trade_symbol = f"{symbol}{day}{month}{year}{default_price}{Type}" 
-            logger.info(f"{user} : Angle one trading symbol is created:::::{trade_symbol}")
-            # Fetch client broker details
-            client_broker = ClientBrokerdetails.objects.filter(client=trade.client, broker_name__broker_name__iexact=trade.broker).first()
-            if not client_broker:
-                message= f"No broker details found for client {trade.client} and broker {trade.broker}"
-                response= {"data":{"status": "Failed", "message":message }}
-                save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, message, strategy,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal , Exchange, Segment,Index_Symbol, order_params,broker="Angle One", history_id = history_id)
-                    
-                logger.error(f"{user} : No broker details found for client {trade.client} and broker {trade.broker}")
-                return response # continue
-
-            api_key = client_broker.broker_API_KEY
-            demate_user_name = client_broker.broker_Demate_User_Name
-            totp = client_broker.broker_Totp_Authcode
-            angle_pass = client_broker.broker_pass
-            logger.info(f"user of angle one is {user}")
-            if not api_key or not demate_user_name or not totp or not angle_pass:
-                message = f"API credentials not found for client {trade.client} and broker {trade.broker}."
-                save_trade_order_history(LivePrice,group_service,transaction_type,
-                    trade_order_status,user, trade_symbol, order_id, status, res_data, message, strategy,
-                    Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, 
-                    Segment, Index_Symbol,order_params, broker="Angle One", history_id = history_id
-                )
-                logger.error(message)
-                return {"data": {"status": "Failed", "message": message}}
-            logger.info(f"{user} : Fetched API credentials for {trade.broker}: SKEY={api_key}, USER={demate_user_name}")
-
-            logger.info(f"!!!!Placing order for user: {user} Brocker is: {trade.broker} & trading symbol is: {trade.symbol} trtransaction_type: {transaction_type}")
-            logger.info(f"{user} : trade_symbol of angle order is: {trade_symbol}")
-
-            if transaction_type.upper() == "SELL":
-                response = exit_existing_buy_position_angleone(client_broker=client_broker,group_service=group_service,LivePrice=LivePrice,Type=Type,day=day,month=month,year=year,
-                    api_key=api_key,demate_user_name=demate_user_name,totp=totp,angle_pass=angle_pass,
-                    usertrade=trade,tradingsymbol=trade_symbol,quantity=quantity,product_type=product_type, 
-                    transactiontype=transaction_type,price=price,ordertype=ordertype,lot_size=Lots,
-                    Entry_type=Entry_type, Exit_type=Exit_type,Entry_price=Entry_price,Exit_price=Exit_price,EntryQty=EntryQty,ExitQty=ExitQty,
-                    webhook_signal=webhook_signal,Exchange=Exchange,Segment=Segment,trade_order_status=trade_order_status,
-                    Index_Symbol=Index_Symbol , user=user, strategy=strategy, history_id=history_id)                                               
-
-                if response.get("data", {}).get("status") == "error":
-                    message = response.get("data", {}).get("message", f"Existing BUY position for {symbol} could not be closed.")
-                    logger.error(message)
-                    return {"data": {"status": "Failed", "message": message}} 
-            if transaction_type.upper() == "BUY":
-                logger.info(f"{user} : angle one buy order for user: {user}")
-                response =place_Angle_order(history_id, client_broker,LivePrice,group_service,api_key=api_key,demate_user_name=demate_user_name,totp=totp,
-                    angle_pass=angle_pass,usertrade=trade,tradingsymbol=trade_symbol,quantity=quantity,product_type=product_type, 
-                    transactiontype=transaction_type,price=price,ordertype=ordertype,lot_size=Lots,
-                    Entry_type=Entry_type, Exit_type=Exit_type,Entry_price=Entry_price,Exit_price=Exit_price,EntryQty=EntryQty,ExitQty=ExitQty,
-                    webhook_signal=webhook_signal,Exchange=Exchange,Segment=Segment,trade_order_status=trade_order_status,
-                    Index_Symbol=Index_Symbol , user=user, strategy=strategy)#exch_seg=exch_seg expiry=expiry
-
-            logger.info(f"{user} : Angle one. Response: {response} for user: {user}")    
-        return response
+        execution_request = ExecutionRequest(
+            LivePrice=LivePrice,
+            group_service=group_service,
+            trade=trade,
+            user=user,
+            transaction_type=transaction_type,
+            symbol=(symbol or "").upper(),
+            quantity=quantity,
+            strategy=strategy,
+            ordertype=ordertype,
+            product_type=product_type,
+            price=price,
+            Lots=Lots,
+            trade_order_status=trade_order_status,
+            Entry_type=Entry_type,
+            Exit_type=Exit_type,
+            Entry_price=Entry_price,
+            Exit_price=Exit_price,
+            EntryQty=EntryQty,
+            ExitQty=ExitQty,
+            webhook_signal=webhook_signal,
+            Exchange=Exchange,
+            Segment=Segment,
+            Index_Symbol=Index_Symbol,
+            triggerPrice=triggerPrice,
+            day=day,
+            month=month,
+            year=year,
+            fullyear=fullyear,
+            strike=default_price,
+            option_type=Type,
+            order_params=order_params,
+            history_id=history_id,
+        )
+        return get_execution_engine().execute_order(execution_request)
     except Exception as e:
         response = {'data': {'status': 'Failed', "message": str(e)}}
-        logger.error(f"-------------------XXXXXXXXXXXXXX-------------------")
-        logger.error(f"Place Order Broker encountered an error: {e}")
-        logger.error(f"-------------------XXXXXXXXXXXXXX-------------------")
+        logger.error("Place Order Broker encountered an error: %s", e)
         return response
+
+
+OPEN_TRADE_ORDER_STATUSES = {"OPEN", "ENTRY", "BUY", "ACTIVE", "PENDING", ""}
+CLOSED_TRADE_ORDER_STATUSES = {"CLOSE", "CLOSED", "EXIT", "EXITED", "SQUAREOFF", "SQUARED_OFF"}
+FAILED_ORDER_STATUSES = {"FAILED", "REJECTED", "ERRORS", "ERROR", "UNAUTHORIZED", "CANCELLED", "CANCELED"}
+MONTH_ALIASES = {
+    "JAN": "Jan", "FEB": "Feb", "MAR": "Mar", "APR": "Apr", "MAY": "May", "JUN": "Jun",
+    "JUL": "Jul", "AUG": "Aug", "SEP": "Sep", "OCT": "Oct", "NOV": "Nov", "DEC": "Dec",
+}
+
+
+def _normalize_month(value):
+    return MONTH_ALIASES.get(str(value or "").strip().upper()[:3], str(value or "").strip().title()[:3])
+
+
+def _parse_trade_history_contract(trade_history):
+    order_params = trade_history.order_params if isinstance(trade_history.order_params, dict) else {}
+    contract_match = order_params.get("contract_match") if isinstance(order_params.get("contract_match"), dict) else {}
+    candidates = [
+        str(trade_history.trading_symbol or ""),
+        str(order_params.get("tradingsymbol") or ""),
+        str(order_params.get("trading_symbol") or ""),
+        str(contract_match.get("tradingsymbol") or ""),
+    ]
+    trading_symbol = next((candidate.strip().upper() for candidate in candidates if candidate.strip()), "")
+
+    option_type = str(
+        order_params.get("option_type")
+        or order_params.get("optionType")
+        or contract_match.get("option_type")
+        or ""
+    ).strip().upper()
+    if option_type in {"C", "CALL"}:
+        option_type = "CE"
+    if option_type in {"P", "PUT"}:
+        option_type = "PE"
+
+    strike = order_params.get("strike") or order_params.get("strike_price") or contract_match.get("strike")
+    day = order_params.get("day") or ""
+    month = order_params.get("month") or ""
+    year = order_params.get("year") or ""
+    fullyear = order_params.get("fullyear") or order_params.get("full_year") or ""
+    underlying = str(
+        order_params.get("underlying")
+        or order_params.get("symbol")
+        or trade_history.Index_Symbol
+        or ""
+    ).strip().upper()
+
+    symbol_patterns = [
+        r"^([A-Z]+)(\d{2})([A-Z]{3})(\d{2})(\d+)(CE|PE)$",
+        r"^([A-Z]+)([A-Z]{3})(\d{4})(\d+)(CE|PE)$",
+        r"^([A-Z]+)(\d{2})([A-Z]{3})(\d{2})([CP])(\d+)$",
+        r"^([A-Z]+)(\d+)(CE|PE)(\d{2})([A-Z]{3})(\d{2})$",
+        r"^([A-Z]+)(\d{2})([A-Z]{3})(\d+)(CE|PE)$",
+    ]
+    for pattern in symbol_patterns:
+        match = re.match(pattern, trading_symbol)
+        if not match:
+            continue
+        groups = match.groups()
+        if pattern == symbol_patterns[0]:
+            underlying, day, month, year, strike, option_type = groups
+            fullyear = f"20{year}" if len(year) == 2 else year
+        elif pattern == symbol_patterns[1]:
+            underlying, month, fullyear, strike, option_type = groups
+            year = fullyear[-2:]
+            day = day or "01"
+        elif pattern == symbol_patterns[2]:
+            underlying, day, month, year, option_type, strike = groups
+            option_type = "CE" if option_type == "C" else "PE"
+            fullyear = f"20{year}" if len(year) == 2 else year
+        elif pattern == symbol_patterns[3]:
+            underlying, strike, option_type, day, month, year = groups
+            fullyear = f"20{year}" if len(year) == 2 else year
+        elif pattern == symbol_patterns[4]:
+            underlying, year, month, strike, option_type = groups
+            fullyear = f"20{year}" if len(year) == 2 else year
+            day = day or "01"
+        break
+
+    if option_type in {"C", "CALL"}:
+        option_type = "CE"
+    if option_type in {"P", "PUT"}:
+        option_type = "PE"
+
+    expiry = contract_match.get("expiry") or order_params.get("expiry")
+    if expiry and (not day or not month or not fullyear):
+        expiry_text = str(expiry).split("T", 1)[0]
+        for date_format in ("%Y-%m-%d", "%d%b%Y", "%d%b%y"):
+            try:
+                parsed_expiry = datetime.strptime(expiry_text.upper(), date_format)
+                day = f"{parsed_expiry.day:02d}"
+                month = parsed_expiry.strftime("%b")
+                fullyear = str(parsed_expiry.year)
+                year = fullyear[-2:]
+                break
+            except ValueError:
+                continue
+
+    fullyear = str(fullyear or (f"20{year}" if year else timezone.localdate().year))
+    year = str(year or fullyear[-2:])
+    month = _normalize_month(month)
+    day = str(day or "01").zfill(2)
+
+    return {
+        "underlying": underlying,
+        "strike": strike,
+        "option_type": option_type,
+        "day": day,
+        "month": month,
+        "year": year,
+        "fullyear": fullyear,
+        "trading_symbol": trading_symbol,
+    }
+
+
+def _is_regular_trade_open(trade_history):
+    trade_status = str(trade_history.trade_order_status or "").strip().upper()
+    order_status = str(trade_history.order_status or "").strip().upper()
+    if trade_status in CLOSED_TRADE_ORDER_STATUSES or order_status in FAILED_ORDER_STATUSES:
+        return False
+    if trade_history.Exit_type or trade_history.Exit_Price or trade_history.ExitQty:
+        return False
+    return trade_status in OPEN_TRADE_ORDER_STATUSES or order_status in {"OPEN", "COMPLETE", "COMPLETED", "TRANSIT", "PENDING"}
+
+
+def _build_regular_trade_exit_request(trade_history):
+    contract = _parse_trade_history_contract(trade_history)
+    order_params = trade_history.order_params if isinstance(trade_history.order_params, dict) else {}
+    quantity = trade_history.EntryQty or trade_history.ExitQty or order_params.get("quantity") or order_params.get("qty") or 0
+    quantity = int(quantity or 0)
+    if quantity <= 0:
+        raise ValueError("Open trade quantity is missing.")
+    if not contract["underlying"] or not contract["strike"] or contract["option_type"] not in {"CE", "PE"}:
+        raise ValueError("Unable to resolve open trade contract.")
+
+    return ExecutionRequest(
+        LivePrice=trade_history.LivePrice or trade_history.Entry_Price or 0,
+        group_service=trade_history.GroupService,
+        trade=trade_history,
+        user=trade_history.client,
+        transaction_type="SELL",
+        symbol=contract["underlying"],
+        quantity=quantity,
+        strategy=trade_history.strategy or "Kill Switch",
+        ordertype="MARKET",
+        product_type="INTRADAY",
+        price=None,
+        Lots=trade_history.Lot or 1,
+        trade_order_status="CLOSE",
+        Entry_type=trade_history.Entry_type,
+        Exit_type=trade_history.Exit_type or "KILL_SWITCH",
+        Entry_price=trade_history.Entry_Price,
+        Exit_price=trade_history.Exit_Price,
+        EntryQty=trade_history.EntryQty,
+        ExitQty=quantity,
+        webhook_signal={"source": "client_trade_history_kill_switch", "original_history_id": trade_history.history_id or trade_history.id},
+        Exchange=trade_history.Exchange or "NFO",
+        Segment=trade_history.Segment,
+        Index_Symbol=trade_history.Index_Symbol or contract["underlying"],
+        triggerPrice=0,
+        day=contract["day"],
+        month=contract["month"],
+        year=contract["year"],
+        fullyear=contract["fullyear"],
+        strike=contract["strike"],
+        option_type=contract["option_type"],
+        order_params={
+            "order_action": "kill_switch_exit",
+            "source": "trade_history",
+            "original_history_id": trade_history.history_id or trade_history.id,
+            "tradingsymbol": contract["trading_symbol"],
+        },
+        history_id=f"kill_{trade_history.id}_{timezone.now().strftime('%Y%m%d%H%M%S%f')}",
+    )
+
+
+class ClientGlobalKillSwitchAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        user = request.user
+        reason = request.data.get("reason") or "Client global kill switch"
+
+        multi_leg_result = get_multileg_execution_engine().kill_switch(user=user, reason=reason)
+        open_regular_trades = [
+            trade
+            for trade in Tradeorderhistory.objects.filter(client=user).exclude(order_id=0).exclude(order_id__isnull=True).order_by("-id")
+            if _is_regular_trade_open(trade)
+        ]
+
+        exited_regular_ids = []
+        failed_regular = []
+        for trade_history in open_regular_trades:
+            try:
+                exit_request = _build_regular_trade_exit_request(trade_history)
+                response = get_execution_engine().execute_order(exit_request)
+                response_status = str(response.get("status") or response.get("data", {}).get("status") or "").lower()
+                if response_status in {"success", "complete", "completed", "open"}:
+                    exited_regular_ids.append(trade_history.id)
+                else:
+                    failed_regular.append({
+                        "trade_history_id": trade_history.id,
+                        "message": response.get("message") or response.get("data", {}).get("message") or "Exit failed.",
+                    })
+            except Exception as exc:
+                failed_regular.append({"trade_history_id": trade_history.id, "message": str(exc)})
+
+        return Response(
+            {
+                "client_id": user.id,
+                "multi_leg_exited_strategy_ids": multi_leg_result.get("exited_strategy_ids", []),
+                "regular_exit_trade_history_ids": exited_regular_ids,
+                "regular_failed": failed_regular,
+            },
+            status=status.HTTP_200_OK if not failed_regular else status.HTTP_207_MULTI_STATUS,
+        )
+
 
 def serialize_to_json(data):
     """
@@ -3015,670 +3882,228 @@ def serialize_to_json(data):
         return data.isoformat()  # Convert datetime to ISO 8601 string
     return data
 
+
+class WebhookDiagnosticsAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        user = request.user
+        if not is_admin_or_superadmin(user):
+            return Response({"detail": "You do not have permission to view webhook diagnostics."}, status=status.HTTP_403_FORBIDDEN)
+
+        webhook_symbol = str(request.query_params.get("symbol", "") or "").strip()
+        strategy_identifier = str(request.query_params.get("group_service", "") or "").strip()
+        client_id = request.query_params.get("client_id")
+
+        queryset = ClientTradeSetting.objects.select_related("client", "segment", "sub_segment")
+        if is_superadmin_user(user):
+            queryset = queryset.filter(client__type_of_user='is_client', client__is_client=True)
+        elif is_admin_user(user):
+            queryset = queryset.filter(
+                Q(client__assigned_client=user) |
+                Q(client__created_by=user)
+            ).filter(client__type_of_user='is_client', client__is_client=True)
+
+        if client_id:
+            queryset = queryset.filter(client_id=client_id)
+
+        diagnostics = []
+        ready_count = 0
+        blocked_count = 0
+
+        for trade in queryset.order_by("client_id", "id"):
+            reasons = _collect_trade_skip_reasons(
+                trade,
+                webhook_symbol=webhook_symbol,
+                strategy_identifier=strategy_identifier,
+            )
+            trade_limit_reason = _get_trade_limit_skip_reason(trade, (_get_trade_execution_symbol(trade) or "").upper())
+            if trade_limit_reason:
+                reasons.append(trade_limit_reason)
+            is_ready = len(reasons) == 0
+            if is_ready:
+                ready_count += 1
+            else:
+                blocked_count += 1
+
+            diagnostics.append({
+                "trade_setting_id": trade.id,
+                "client_id": trade.client_id,
+                "client_name": getattr(trade.client, "fullName", None) or getattr(trade.client, "userName", None),
+                "client_username": getattr(trade.client, "userName", None),
+                "group_service": trade.group_service,
+                "segment": getattr(getattr(trade, "segment", None), "name", None),
+                "script_name": _get_trade_execution_symbol(trade),
+                "trade_symbol": trade.symbol,
+                "broker": trade.broker,
+                "product_type": trade.product_type,
+                "quantity": trade.quantity,
+                "trade_limit": trade.trade_limit,
+                "expiry_date": trade.expiry_date,
+                "client_trading_enabled": bool(getattr(trade.client, "is_enable", False)),
+                "trade_toggle_enabled": bool(trade.is_tread_status),
+                "status": "ready" if is_ready else "blocked",
+                "skip_reasons": reasons,
+            })
+
+        return Response({
+            "status": "success",
+            "filters": {
+                "symbol": webhook_symbol,
+                "group_service": strategy_identifier,
+                "client_id": client_id,
+            },
+            "summary": {
+                "total": len(diagnostics),
+                "ready": ready_count,
+                "blocked": blocked_count,
+            },
+            "data": diagnostics,
+        }, status=status.HTTP_200_OK)
+
+
+class SLTPWatcherScanAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        user = request.user
+        if not is_admin_or_superadmin(user):
+            return Response(
+                {"detail": "You do not have permission to view the SL/TP watcher."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        client_id = request.query_params.get("client_id")
+        history_id = request.query_params.get("history_id")
+        scan_result = get_sl_tp_watcher_service().scan(
+            client_id=client_id,
+            history_id=history_id,
+            execute_exit=False,
+        )
+        return Response(
+            {
+                "status": "success",
+                **scan_result,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    def post(self, request, *args, **kwargs):
+        user = request.user
+        if not is_admin_or_superadmin(user):
+            return Response(
+                {"detail": "You do not have permission to run the SL/TP watcher."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        client_id = request.data.get("client_id")
+        history_id = request.data.get("history_id")
+        scan_result = get_sl_tp_watcher_service().scan(client_id=client_id, history_id=history_id)
+        return Response(
+            {
+                "status": "success",
+                **scan_result,
+            },
+            status=status.HTTP_200_OK,
+        )
+
 SESSION_ID = None
 SESSION_EXPIRATION = None
 # Webhooks-trade-Alert
 class PlaceOrderWebhookView(APIView):
     def post(self, request):
-        alert_data = request.data
-       
-        # Check if alert_data is None or an empty dictionary
-        if not alert_data:
-            logger.warning("No alert data received or empty payload.")
-            return Response({"status": "error", "message": "No alert data received."}, status=status.HTTP_400_BAD_REQUEST)
-        
-        logger.info(f"Received alert: {alert_data}")
-        # Extract parameters with defaults
-        raw_symbol = request.data.get('text', '').upper()
-        # default_price = round(float(alert_data.get('signalprice', 0)))   "stratergyid": "Sparks Lite",
-        signal_price=alert_data.get('signalprice', 0)
-        default_price = round_price(signal_price)
-        print("Round of price:::::::::::",default_price)
-        strategy_id=alert_data.get('stratergyid', 0)
-        logger.info(f"strategy_id get from alert ::::{strategy_id}")
-        transaction_type = request.data.get('ordertype', 'BUY-O').upper()
-        order_type_mapping = {
-            "BUY-O": "Buy CE",
-            "SELL-C": "Close CE",
-            "SELL-C_O": "Close CE & Buy PE",
-            "SELL-O": "BUY PE",
-            "BUY-C": "Close PE",
-            "BUY-C_O": "Close PE & Buy CE"
-        }
-        # Get the description and split action/type
-        action_description = order_type_mapping.get(transaction_type, "Invalid OrderType")
-        if action_description == "Invalid OrderType":
-            logger.error(f"Invalid OrderType received: {transaction_type}")
-            return Response({"status": "error", "message": "Invalid OrderType received."}, status=status.HTTP_400_BAD_REQUEST)
-        # Split type
-        print("action_description>>",action_description)
-        if action_description=="Close CE & Buy PE":
-            buy_sell="CE PE"
-        elif action_description =="Close PE & Buy CE":
-            buy_sell="PE CE"
-        else:    
-            action_split = action_description.split()
-            transaction_split= transaction_type.split('-')
-            buy_sell =action_split[-1]# transaction_split[0]  #  'BUY' or 'SELL'
-            # Type = action_split[-1]  # CE or PE
-        logger.info(f"buy_sell>>>>{buy_sell}")
-        # Map raw symbol to standardized symbol
-        symbol_mapping = {
-            "NIFTY BANK": "BANKNIFTY",
-            "NIFTY 50": "NIFTY",
-            "NIFTY FIN SERVICE": "FINNIFTY",
-            "MID CAP NIFTY": "MIDCPNIFTY",
-            "NIFTY MID SELECT": "MIDCPNIFTY"
-        }
-        print("raw_symbol")
-        symbols = symbol_mapping.get(raw_symbol, raw_symbol)  # Default to raw_symbol if no matc
-        if symbols.upper()=="SENSEX":
-            exch_seg="BSE"
-        else:
-            exch_seg="NFO" 
-        default_ordertype = request.data.get('orderType', 'MARKET')
-        strategy=request.data.get('strategyTag',"ce entry")
-        limitPrice=request.data.get('limitPrice',0)
-        default_quantity=0
-        Lots=1
-        triggerPrice=0
-        LivePrice=default_price
-        # print("symbols webhook >>>>",symbols)
-        webhook_symbols=symbols.upper()
-        # producttype=None
-        save_webhook_signals_logs(buy_sell, symbols, default_price, strategy, json=alert_data)
-        buy_sell_type=transaction_type
-        #all_enable_users = ClientTradeSetting.objects.filter(is_tread_status=True,client__is_enable=True, broker__gt='',      			#broker__isnull=False,symbol=webhook_symbols,group_service=strategy_id)
-        all_enable_users = ClientTradeSetting.objects.filter(is_tread_status=True,client__is_enable=True,
-    		broker__isnull=False,broker__gt='',symbol=webhook_symbols,
-    		group_service=strategy_id) # Exclude whitespace-only strings
-
-        user_count = all_enable_users.count()
-        logger.info(f"=======================================")
-        logger.info(f"No. of clients count is {user_count}")
-        logger.info(f"=======================================")
-        default_expiry=None 
-        order_status=None 
-
-        for index, trade in enumerate(all_enable_users, start=1):
-            logger.info(f"{index}. Users name is: {trade.client}")
-
         try:
-            for index, trade in enumerate(all_enable_users, start=1):
-                try:
-                    transaction_type=buy_sell_type
-                    default_expiry=trade.expiry_date
-                    group_service=trade.group_service
-                    trade_order_status=None
-                    Entry_price = None
-                    Exit_price = None
-                    Entry_type = None
-                    Exit_type = None
-                    EntryQty=None
-                    ExitQty=None
-                    Type=None
-                    trade_symbol=symbols 
-                    user=trade.client
-                    logger.info('-------------------------------------------------------------------------------------------------------------------------------------')
-                    logger.info(f"({index})-------------------- {trade.client} -------------------- {trade.symbol} ---------------> {trade.client.id}")
-                    logger.info('-------------------------------------------------------------------------------------------------------------------------------------')
-                    Type=None
-                    strategy=trade.strategy
-                    Segment=trade.segment.name if trade.segment else None
-                    Exchange=exch_seg
-                    user=trade.client
-                    webhook_signal=alert_data
-                    order_id=0
-                    status="Failed"
-                    print(" Entry_price, Exit_price,>>>>>>>>>>>>>>", Entry_price, Exit_price,)
-                    Index_Symbol=trade.symbol if trade.symbol else None
-                    res_data="unknown response"
-                    order_params = {"symbol":trade.symbol if trade.symbol else trade_symbol,"Exchange": exch_seg, "quantity": trade.quantity or default_quantity,"product_type": trade.product_type,
-                    "transaction_type":buy_sell,"price": limitPrice or 0 ,"ordertype": default_ordertype,"strategy": trade.strategy}
-                    order_params = serialize_to_json(order_params)
-                    print("symbol of tade>>>",trade.symbol)
-                    if not trade.symbol:
-                        logger.error(f"{trade.client} Symbol is missing for trade by user {trade.client}. Skipping this trade.")
-                        message = f"Trade skipped due to missing symbol for user {trade.client}."
-                        res_data = message
-                        save_trade_order_history(LivePrice,group_service,transaction_type,
-                            trade_order_status, user, trade.symbol, 0, status, res_data, message,
-                            trade.strategy, Entry_type, Exit_type, Entry_price, Exit_price,
-                            EntryQty, ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,
-                            order_params, broker=trade.broker
-                        )
-                        continue
-                    print("trade.symbol.upper()>>>",trade.symbol.upper(), "getting symbol is >>>",symbols.upper())
-                    if trade.symbol.upper() == symbols.upper():
-                        if default_expiry:
-                            # Convert to IST
-                            default_expiry_ist = localtime(default_expiry)
+            context = _resolve_webhook_request_context(request.data)
+        except ValidationError as exc:
+            logger.warning("Webhook request validation failed: %s", exc)
+            return Response({"status": "error", "message": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
-                            # Extract only the date part
-                            default_expiry_date = default_expiry_ist.date()
-                            logger.info(f"{trade.client} :default_expiry (IST)>>>>>>>>>>>>{default_expiry_ist}")
-                            # default_expiry=localtime(trade.expiry_date.date())
-                            # expiry_date = datetime.strptime(default_expiry, "%d-%m-%Y")
-                            expiry_date=default_expiry_ist
-                            default_expiry=default_expiry_ist
-                            day = expiry_date.strftime("%d")
-                            month = expiry_date.strftime("%b").upper()
-                            year = expiry_date.strftime("%y")
-                            fullyear=expiry_date.strftime("%Y")
-                        else:
-                            default_expiry= localtime(default_expiry)
-                            logger.error(f"Expiry date is missing {trade.symbol} for user {trade.client}. Skipping trade.")
-                            order_id=0
-                            message=f"Expiry date is missing {trade.symbol} for user {trade.client}. so can not get trading symbol"
-                            save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, message,  strategy, Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal , Exchange, Segment,Index_Symbol,order_params,broker=trade.broker)
-                            continue 
-                        default_expiry=localtime(default_expiry)
-                        order_params = {"symbol": trade.symbol,"Exchange": exch_seg, "quantity": trade.quantity or default_quantity,"product_type": trade.product_type,
-                        "transaction_type":buy_sell,"price": limitPrice or 0 ,"ordertype": default_ordertype, "expiry": default_expiry,"strategy": trade.strategy}
-                        order_params = serialize_to_json(order_params)
+        alert_data = context["alert_data"]
+        symbols = context["symbols"]
+        save_webhook_signals_logs(context["buy_sell"], symbols, context["default_price"], context["strategy_tag"], json=alert_data)
+        candidate_trades, strategy_id = _get_matching_webhook_trades(alert_data, symbols.upper())
 
-                        logger.info(f"{trade.client} : symbol>>{symbols}>>expiry>{default_expiry} >>Type>>{Type}>>default_price>>{default_price}")
-                        # Concatenate fields to create the trading symbol
-                        # skip the order and move to next user 
-                        broker=trade.broker
-                        logger.info(f"{trade.client} : Action resolved: EntryType={Entry_type}, EntryPrice={Entry_price}, "
-                                    f"ExitType={Exit_type}, ExitPrice={Exit_price}")  
-                        if  not trade.product_type:
-                            message= f"trade details for client {trade.client}: Missing  product type."
-                            save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, message, strategy,  Entry_type,Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol, order_params,broker=trade.broker)      
-                            logger.warning(f"{trade.client} : Skipping trade for client {trade.client}: Missing  product type")
-                            continue
-            
-                        # Extract user-specific configurations
-                        symbol = trade.symbol
-                        if symbol:
-                            symbol = symbol.upper()
-                        user = trade.client
-                        strategy = trade.strategy
-                        quantity = trade.quantity or default_quantity
-                        logger.info(f"{trade.client} : quantity of trade : {quantity}")
-                        product_type = trade.product_type
-                        price = limitPrice
-                        ordertype = default_ordertype
-                        # trade_limit = trade.trade_limit 
-                        trade_limit = (trade.trade_limit or 0) * 2
-                        if not trade_limit or trade_limit==0:                           
-                            message= f"Trade limit not set  for user {user}. No  trades allowed for this user symbol:{symbol}"
-                            res_data = message
-                            save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal , Exchange, Segment,Index_Symbol,order_params,broker=trade.broker)
-                            logger.warning(f"{user} : Trade limit not set  for user {user}. No  trades allowed today.{symbol}")
-                            continue
-                        if trade_limit:
-                            # Count user's trades for the day
-                            today = datetime.today()
-                            print("today>>>",today)
-                            daily_trade_count = TradingLog.objects.filter(client=user, date=today ,symbol=symbol).count()
-                            if daily_trade_count >= trade_limit:
-                                message= f"Trade limit reached for user {user}. No more trades allowed today."
-                                res_data = message
-                                save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal , Exchange, Segment,Index_Symbol,order_params,broker=trade.broker)
-                                
-                                logger.warning(f"{user} : Trade limit reached for user {user}. No more trades allowed today.")
-                                continue
+        results = []
+        for index, trade in enumerate(candidate_trades, start=1):
+            results.append(_process_webhook_trade(trade, index, context))
 
-                            logger.info(f"{user} : Placing order for user {user}. Trade count: {daily_trade_count}/{trade_limit}")
-                        # if is_market_open():
-                        # print("started place order market is open: transaction_type is :::::::", transaction_type ) 
-                        logger.info(f"{user} : Market is open. Proceed with the trade.")
-                        if transaction_type=="SELL-C_O":#Will Close the existing order and Open a new PE order
-                            # print("SELL-C_O = (Close CE)SELL-C & BUY PE")
-                            # First transaction: SELL-C
-                            transaction_type = "SELL-C"
-                            buy_sell, Type = manage_order(transaction_type, buy_sell, Type)
-                            transaction_type=buy_sell
-                            # if buy_sell=="BUY" and Type=="CE":
-                            #     Entry_type="LE"
-                            # elif buy_sell=="SELL" and  Type=="PE":
-                            #     Exit_type="LX" 
-                            # elif buy_sell=="SELL" and  Type=="CE":
-                            #     Entry_type="LE"       
-                            logger.info(f"{user} : Placing first order: Action={buy_sell}, Type={Type}")
-                            trading_Symbol_sum(trade, symbols, day, month, year, Type, default_price)
-                            order_response = place_order_broker(LivePrice,group_service,
-                                trade, user, transaction_type, symbol, quantity, strategy, ordertype,
-                                product_type, price, Lots, trade_order_status, Entry_type, Exit_type,
-                                Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,
-                                triggerPrice, day, month, year,fullyear, default_price, Type, order_params
-                            )
-                            # if order_response:
-                            print("again one order for SELL-O")
-                            # Second transaction: BUY-PE
-                            transaction_type = "SELL-O"
-                            print("")
-                            buy_sell, Type = manage_order(transaction_type, buy_sell, Type)
-                            logger.info(f"{user} : Placing second order: Action={buy_sell}, Type={Type}")
-                            transaction_type=buy_sell
-                            order_response = place_order_broker(LivePrice,group_service,
-                                trade, user, transaction_type, symbol, quantity, strategy, ordertype,
-                                product_type, price, Lots, trade_order_status, Entry_type, Exit_type,
-                                Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,
-                                triggerPrice, day, month, year, fullyear,default_price, Type, order_params
-                            )
-                        elif transaction_type=="BUY-C_O":# - Close PE & Buy CE"  BUY-C=PE CLOSE ,BUY-O = Buy CE
-                            # First transaction: BUY-C
-                            transaction_type = "BUY-C"
-                            buy_sell, Type = manage_order(transaction_type, buy_sell, Type)
-                            transaction_type=buy_sell
-                            logger.info(f"{user} : Placing first order: Action={buy_sell}, Type={Type}")
-                            order_response = place_order_broker(LivePrice,group_service,
-                                trade, user, transaction_type, symbol, quantity, strategy, ordertype,
-                                product_type, price, Lots, trade_order_status, Entry_type, Exit_type,
-                                Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,
-                                triggerPrice, day, month, year,fullyear, default_price, Type, order_params
-                            )
-                            # if order_response:
-                            print("again one order for SELL-O")
-                            # Second transaction: BUY-CE
-                            transaction_type = "BUY-O"
-                            print("")
-                            buy_sell, Type = manage_order(transaction_type, buy_sell, Type)
-                            logger.info(f"{user} : Placing second order: Action={buy_sell}, Type={Type}")
-                            transaction_type=buy_sell
-                            order_response = place_order_broker(LivePrice,group_service,
-                                trade, user, transaction_type, symbol, quantity, strategy, ordertype,
-                                product_type, price, Lots, trade_order_status, Entry_type, Exit_type,
-                                Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,
-                                triggerPrice, day, month, year,fullyear, default_price, Type, order_params
-                            )
-                        else:
-                            print("signal trasaction type................",transaction_type)
-                            buy_sell, Type = manage_order(transaction_type, buy_sell, Type)
-                            print(f"Action: {buy_sell}, Type: {Type}")
-                            transaction_type=buy_sell
-                            order_response=place_order_broker(LivePrice,group_service,trade,user,transaction_type, symbol, quantity,strategy,ordertype,
-                            product_type, price, Lots,trade_order_status,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,
-                            webhook_signal ,Exchange, Segment,Index_Symbol,triggerPrice,day,month,year,fullyear,default_price,Type,order_params)
-                                
-                        # Check order response and log or handle failures
-                        logger.info(f"{user} : final order repsone :::::::::::::::::::::{order_response}\n")
-
-                        print(" order_response['data']['status']:::::::::::", order_response['data']['status'])
-                        if not order_response['data']['status']:
-                            order_status="Failed"
-                            order_status=f"Order response failed for {trade.symbol} with broker {trade.broker}"
-                        elif order_response['data']['status'] == "Unauthorized":
-                            order_status = f"Unauthorized Order placement failed for {trade.symbol} with broker {trade.broker}"
-                            logger.warning(order_status)  # Log the unauthorized order status
-                            continue  # Skip to the next client trade if unauthorized
-                        elif order_response['data']['status'] =="completed" or  order_response['data']['status'] =="complete":
-                            order_status=f"Order placed successfully for {trade.symbol} with broker {trade.broker}"
-                            TradingLog.objects.create(client=user, date=today, symbol=trade.symbol, strategy=strategy,)
-                            logger.info(f"{user} : Order placed successfully for {trade.symbol} with broker {trade.broker}")
-                        elif order_response['data']['status']=="open":   
-                            order_status=f"Order is place pending for {trade.symbol} with broker {trade.broker}"
-                            logger.error(f"{user} : Order place is pending for {trade.symbol} with broker {trade.broker}") 
-                        elif order_response['data']['status']=="rejected":
-                            order_status=f"Order is rejected for {trade.symbol} with broker {trade.broker}"
-                            logger.error(f"{user} : Order is rejected for {trade.symbol} with broker {trade.broker}")
-                        elif order_response['data']['status']=="error":
-                            order_status=f"Error Order placement failed for {trade.symbol} with broker {trade.broker}"
-                        elif order_response['data']['status']=="Failed":
-                            order_status=f"Order placement failed for {trade.symbol} with broker {trade.broker}"
-                        
-                        else:
-                            if not order_response['data']['status']:
-                                order_status="Failed"
-                            order_status=f"Order placement failed for {trade.symbol} with broker {trade.broker}"
-                        # else:
-                        #     logger.info("Market is closed. Do not proceed with the trade.") 
-                        #     order_status=f" can not Trade Order becouse the Market is closed. Do not proceed with the trade"                  
-                    else:
-                        order_status=f"Skipping trade for symbol {trade.symbol} as it doesn't match the specified webhook symbol{symbols} or transaction type."
-                        res_data=order_status
-                        status="Failed"
-                        message=f"{user} : Skipping trade  for {trade.client} : webhook trading symbol {symbols} does not match with the client trade symbol {trade.symbol}"
-                        logger.info(f"{message}")
-                        # save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, message,  strategy, Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal , Exchange, Segment,Index_Symbol,order_params,broker=trade.broker)
-                        # print(f"Skipping trade for symbol {trade.symbol} as it doesn't match the specified symbol and buy_sell.")
-                        continue  # Skip to the next trade if the symbol and buy_sell don't match
-                        
-                    # return Response({"status": order_status})#, status=status.HTTP_200_OK)
-                    # Return success response after all iterations (if no exceptions are raised)
-                except Exception as e:
-                    logger.error(f"-X- ###### -X- This Order is skippe because of error: {e}")
-                    logger.error(f"{trade.client} : This trade is skipped: {trade}")
-            return Response({"status":order_status}, status=200)
-
-        except Exception as e:
-            logger.error(f"Order placement encountered an error: {e}")
-            return Response({"error": e}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        summary = {
+            "total": len(results),
+            "successful": sum(1 for item in results if item["status"] == "success"),
+            "skipped": sum(1 for item in results if item["status"] == "skipped"),
+            "failed": sum(1 for item in results if item["status"] == "failed"),
+            "group_service": strategy_id,
+            "symbol": symbols,
+        }
+        return Response({"status": "success", "summary": summary, "results": results}, status=status.HTTP_200_OK)
 
 class MyPlaceOrderWebhookView(APIView):
 
     def handle_single_trade(self, trade, index, symbols, exch_seg, default_price, strategy_id,
                         alert_data, buy_sell_type, buy_sell, default_ordertype, limitPrice,
                         default_quantity, LivePrice, Lots, triggerPrice, history_id):  # Add it here
-        try:
-            transaction_type=buy_sell_type
-            default_expiry=trade.expiry_date
-            group_service=trade.group_service
-            trade_order_status=None
-            Entry_price = None
-            Exit_price = None
-            Entry_type = None
-            Exit_type = None
-            EntryQty=None
-            ExitQty=None
-            Type=None
-            trade_symbol=symbols 
-            user=trade.client
-            logger.info('-------------------------------------------------------------------------------------------------------------------------------------')
-            logger.info(f"({index})-------------------- {trade.client} -------------------- {trade.symbol} ---------------> {trade.client.id}---------->>>> {history_id}")
-            logger.info('-------------------------------------------------------------------------------------------------------------------------------------')
-            Type=None
-            strategy=trade.strategy
-            Segment=trade.segment.name if trade.segment else None
-            Exchange=exch_seg
-            user=trade.client
-            webhook_signal=alert_data
-            order_id=0
-            status="Failed"
-
-            print(" Entry_price, Exit_price,>>>>>>>>>>>>>>", Entry_price, Exit_price,)
-            Index_Symbol=trade.symbol if trade.symbol else None
-            res_data="unknown response"
-            order_params = {"symbol":trade.symbol if trade.symbol else trade_symbol,"Exchange": exch_seg, "quantity": trade.quantity or default_quantity,"product_type": trade.product_type,
-            "transaction_type":buy_sell,"price": limitPrice or 0 ,"ordertype": default_ordertype,"strategy": trade.strategy}
-            order_params = serialize_to_json(order_params)
-            print("symbol of tade>>>",trade.symbol)
-            
-            message = f"{trade.client} has started Trade."
-            save_trade_order_history(LivePrice,group_service,transaction_type,
-                    trade_order_status, user, trade.symbol, 0, status, message, message,
-                    trade.strategy, Entry_type, Exit_type, Entry_price, Exit_price,
-                    EntryQty, ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,
-                    order_params, broker=trade.broker, history_id = history_id)
-
-            if not trade.symbol:
-                logger.error(f"{trade.client} Symbol is missing for trade by user {trade.client}. Skipping this trade.")
-                message = f"Trade skipped due to missing symbol for user {trade.client}."
-                res_data = message
-                save_trade_order_history(LivePrice,group_service,transaction_type,
-                    trade_order_status, user, trade.symbol, 0, status, res_data, message,
-                    trade.strategy, Entry_type, Exit_type, Entry_price, Exit_price,
-                    EntryQty, ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,
-                    order_params, broker=trade.broker, history_id = history_id
-                )
-                return
-            print("trade.symbol.upper()>>>",trade.symbol.upper(), "getting symbol is >>>",symbols.upper())
-            if trade.symbol.upper() == symbols.upper():
-                if default_expiry:
-                    # Convert to IST
-                    default_expiry_ist = localtime(default_expiry)
-
-                    expiry_date=default_expiry_ist
-                    default_expiry=default_expiry_ist
-                    day = expiry_date.strftime("%d")
-                    month = expiry_date.strftime("%b").upper()
-                    year = expiry_date.strftime("%y")
-                    fullyear=expiry_date.strftime("%Y")
-                else:
-                    default_expiry= localtime(default_expiry)
-                    logger.error(f"Expiry date is missing {trade.symbol} for user {trade.client}. Skipping trade.")
-                    order_id=0
-                    message=f"Expiry date is missing {trade.symbol} for user {trade.client}. so can not get trading symbol"
-                    save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, message,  strategy, Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal , Exchange, Segment,Index_Symbol,order_params,broker=trade.broker, history_id = history_id)
-                    return 
-                default_expiry=localtime(default_expiry)
-                order_params = {"symbol": trade.symbol,"Exchange": exch_seg, "quantity": trade.quantity or default_quantity,"product_type": trade.product_type,
-                "transaction_type":buy_sell,"price": limitPrice or 0 ,"ordertype": default_ordertype, "expiry": default_expiry,"strategy": trade.strategy}
-                order_params = serialize_to_json(order_params)
-
-                logger.info(f"{trade.client} : symbol>>{symbols}>>expiry>{default_expiry} >>Type>>{Type}>>default_price>>{default_price}")
-                logger.info(f"{trade.client} : Action resolved: EntryType={Entry_type}, EntryPrice={Entry_price}, "
-                            f"ExitType={Exit_type}, ExitPrice={Exit_price}")  
-                if  not trade.product_type:
-                    message= f"trade details for client {trade.client}: Missing  product type."
-                    save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, message, strategy,  Entry_type,Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal , Exchange, Segment,Index_Symbol, order_params,broker=trade.broker, history_id = history_id)      
-                    logger.warning(f"{trade.client} : Skipping trade for client {trade.client}: Missing  product type")
-                    return
-    
-                # Extract user-specific configurations
-                symbol = trade.symbol
-                if symbol:
-                    symbol = symbol.upper()
-                user = trade.client
-                strategy = trade.strategy
-                quantity = trade.quantity or default_quantity
-                logger.info(f"{trade.client} : quantity of trade : {quantity}")
-                product_type = trade.product_type
-                price = limitPrice
-                ordertype = default_ordertype
-                trade_limit = (trade.trade_limit or 0) * 2
-                if not trade_limit or trade_limit==0:                           
-                    message= f"Trade limit not set  for user {user}. No  trades allowed for this user symbol:{symbol}"
-                    res_data = message
-                    save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal , Exchange, Segment,Index_Symbol,order_params,broker=trade.broker, history_id = history_id)
-                    logger.warning(f"{user} : Trade limit not set  for user {user}. No  trades allowed today.{symbol}")
-                    return
-                if trade_limit:
-                    # Count user's trades for the day
-                    today = datetime.today()
-                    print("today>>>",today)
-                    daily_trade_count = TradingLog.objects.filter(client=user, date=today ,symbol=symbol).count()
-                    if daily_trade_count >= trade_limit:
-                        message= f"Trade limit reached for user {user}. No more trades allowed today."
-                        res_data = message
-                        save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, message,  strategy,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal , Exchange, Segment,Index_Symbol,order_params,broker=trade.broker, history_id = history_id)
-                        logger.warning(f"{user} : Trade limit reached for user {user}. No more trades allowed today.")
-                        return
-
-                    logger.info(f"{user} : Placing order for user {user}. Trade count: {daily_trade_count}/{trade_limit}")
-
-                logger.info(f"{user} : Market is open. Proceed with the trade.")
-
-                if transaction_type=="SELL-C_O":#Will Close the existing order and Open a new PE order
-                    transaction_type = "SELL-C"
-                    buy_sell, Type = manage_order(transaction_type, buy_sell, Type)
-                    transaction_type=buy_sell   
-                    logger.info(f"{user} : Placing first order: Action={buy_sell}, Type={Type}")
-                    trading_Symbol_sum(trade, symbols, day, month, year, Type, default_price)
-                    order_response = place_order_broker(LivePrice,group_service,
-                        trade, user, transaction_type, symbol, quantity, strategy, ordertype,
-                        product_type, price, Lots, trade_order_status, Entry_type, Exit_type,
-                        Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,
-                        triggerPrice, day, month, year,fullyear, default_price, Type, order_params, history_id
-                    )
-                    # Second transaction: BUY-PE
-                    transaction_type = "SELL-O"
-                    print("")
-                    buy_sell, Type = manage_order(transaction_type, buy_sell, Type)
-                    logger.info(f"{user} : Placing second order: Action={buy_sell}, Type={Type}")
-                    transaction_type=buy_sell
-                    order_response = place_order_broker(LivePrice,group_service,
-                        trade, user, transaction_type, symbol, quantity, strategy, ordertype,
-                        product_type, price, Lots, trade_order_status, Entry_type, Exit_type,
-                        Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,
-                        triggerPrice, day, month, year, fullyear,default_price, Type, order_params, history_id
-                    )
-
-
-                elif transaction_type=="BUY-C_O":# - Close PE & Buy CE"  BUY-C=PE CLOSE ,BUY-O = Buy CE
-                    # First transaction: BUY-C
-                    transaction_type = "BUY-C"
-                    buy_sell, Type = manage_order(transaction_type, buy_sell, Type)
-                    transaction_type=buy_sell
-                    logger.info(f"{user} : Placing first order: Action={buy_sell}, Type={Type}")
-                    order_response = place_order_broker(LivePrice,group_service,
-                        trade, user, transaction_type, symbol, quantity, strategy, ordertype,
-                        product_type, price, Lots, trade_order_status, Entry_type, Exit_type,
-                        Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,
-                        triggerPrice, day, month, year,fullyear, default_price, Type, order_params, history_id
-                    )
-                    # Second transaction: BUY-CE
-                    transaction_type = "BUY-O"
-                    print("")
-                    buy_sell, Type = manage_order(transaction_type, buy_sell, Type)
-                    logger.info(f"{user} : Placing second order: Action={buy_sell}, Type={Type}")
-                    transaction_type=buy_sell
-                    order_response = place_order_broker(LivePrice,group_service,
-                        trade, user, transaction_type, symbol, quantity, strategy, ordertype,
-                        product_type, price, Lots, trade_order_status, Entry_type, Exit_type,
-                        Entry_price,Exit_price,EntryQty,ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,
-                        triggerPrice, day, month, year,fullyear, default_price, Type, order_params, history_id
-                    )
-                else:
-                    print("signal trasaction type................",transaction_type)
-                    buy_sell, Type = manage_order(transaction_type, buy_sell, Type)
-                    print(f"Action: {buy_sell}, Type: {Type}")
-                    transaction_type=buy_sell
-                    logger.info(f"{user} : Now inter in : place_order_broker api function.")
-                    order_response=place_order_broker(LivePrice,group_service,trade,user,transaction_type, symbol, quantity,strategy,ordertype,
-                    product_type, price, Lots,trade_order_status,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,
-                    webhook_signal ,Exchange, Segment,Index_Symbol,triggerPrice,day,month,year,fullyear,default_price,Type,order_params, history_id)
-                        
-                # Check order response and log or handle failures
-                logger.info(f"{user} : final order repsone :::::::::::++::::::::::{order_response}\n")
-
-                print(" order_response['data']['status']:::::::::::", order_response['data']['status'])
-                if not order_response['data']['status']:
-                    order_status="Failed"
-                    order_status=f"Order response failed for {trade.symbol} with broker {trade.broker}"
-                elif order_response['data']['status'] == "Unauthorized":
-                    order_status = f"Unauthorized Order placement failed for {trade.symbol} with broker {trade.broker}"
-                    logger.warning(order_status)  # Log the unauthorized order status
-                    return  # Skip to the next client trade if unauthorized
-                elif order_response['data']['status'] =="completed" or  order_response['data']['status'] =="complete":
-                    order_status=f"Order placed successfully for {trade.symbol} with broker {trade.broker}"
-                    TradingLog.objects.create(client=user, date=today, symbol=trade.symbol, strategy=strategy,)
-                    logger.info(f"{user} : Order placed successfully for {trade.symbol} with broker {trade.broker}")
-                elif order_response['data']['status']=="open":   
-                    order_status=f"Order is place pending for {trade.symbol} with broker {trade.broker}"
-                    logger.error(f"{user} : Order place is pending for {trade.symbol} with broker {trade.broker}") 
-                elif order_response['data']['status']=="rejected":
-                    order_status=f"Order is rejected for {trade.symbol} with broker {trade.broker}"
-                    logger.error(f"{user} : Order is rejected for {trade.symbol} with broker {trade.broker}")
-                elif order_response['data']['status']=="error":
-                    order_status=f"Error Order placement failed for {trade.symbol} with broker {trade.broker}"
-                elif order_response['data']['status']=="Failed":
-                    order_status=f"Order placement failed for {trade.symbol} with broker {trade.broker}"
-                else:
-                    if not order_response['data']['status']:
-                        order_status="Failed"
-                    order_status=f"Order placement failed for {trade.symbol} with broker {trade.broker}"               
-            else:
-                order_status=f"Skipping trade for symbol {trade.symbol} as it doesn't match the specified webhook symbol{symbols} or transaction type."
-                res_data=order_status
-                status="Failed"
-                message=f"{user} : Skipping trade  for {trade.client} : webhook trading symbol {symbols} does not match with the client trade symbol {trade.symbol}"
-                logger.info(f"{message}")
-                return
-        except Exception as e:
-            logger.error(f"Error processing trade for user {trade.client}: {e}")
+        context = {
+            "alert_data": alert_data,
+            "strategy_id": strategy_id,
+            "transaction_type": buy_sell_type,
+            "buy_sell": buy_sell,
+            "symbols": symbols,
+            "exch_seg": exch_seg,
+            "default_price": default_price,
+            "default_ordertype": default_ordertype,
+            "strategy_tag": alert_data.get("strategyTag", "ce entry"),
+            "limit_price": limitPrice,
+            "default_quantity": default_quantity,
+            "lots": Lots,
+            "trigger_price": triggerPrice,
+            "live_price": LivePrice,
+        }
+        return _process_webhook_trade(trade, index, context, history_id=history_id)
 
 
     def post(self, request):
-        alert_data = request.data
-       
-        # Check if alert_data is None or an empty dictionary
-        if not alert_data:
-            logger.warning("No alert data received or empty payload.")
-            return Response({"status": "error", "message": "No alert data received."}, status=status.HTTP_400_BAD_REQUEST)
-        
-        logger.info(f"Received alert: {alert_data}")
-        # Extract parameters with defaults
-        raw_symbol = request.data.get('text', '').upper()
-        signal_price=alert_data.get('signalprice', 0)
-        default_price = round_price(signal_price)
-        print("Round of price:::::::::::",default_price)
-        strategy_id=alert_data.get('stratergyid', 0)
-        logger.info(f"strategy_id get from alert ::::{strategy_id}")
-        transaction_type = request.data.get('ordertype', 'BUY-O').upper()
-        order_type_mapping = {
-            "BUY-O": "Buy CE",
-            "SELL-C": "Close CE",
-            "SELL-C_O": "Close CE & Buy PE",
-            "SELL-O": "BUY PE",
-            "BUY-C": "Close PE",
-            "BUY-C_O": "Close PE & Buy CE"
-        }
-        # Get the description and split action/type
-        action_description = order_type_mapping.get(transaction_type, "Invalid OrderType")
-        if action_description == "Invalid OrderType":
-            logger.error(f"Invalid OrderType received: {transaction_type}")
-            return Response({"status": "error", "message": "Invalid OrderType received."}, status=status.HTTP_400_BAD_REQUEST)
-        # Split type
-        print("action_description>>",action_description)
-        if action_description=="Close CE & Buy PE":
-            buy_sell="CE PE"
-        elif action_description =="Close PE & Buy CE":
-            buy_sell="PE CE"
-        else:    
-            action_split = action_description.split()
-            buy_sell =action_split[-1]
-        logger.info(f"buy_sell>>>>{buy_sell}")
-        # Map raw symbol to standardized symbol
-        symbol_mapping = {
-            "NIFTY BANK": "BANKNIFTY",
-            "NIFTY 50": "NIFTY",
-            "NIFTY FIN SERVICE": "FINNIFTY",
-            "MID CAP NIFTY": "MIDCPNIFTY",
-            "NIFTY MID SELECT": "MIDCPNIFTY"
-        }
-        print("raw_symbol")
-        symbols = symbol_mapping.get(raw_symbol, raw_symbol)  # Default to raw_symbol if no matc
-        if symbols.upper()=="SENSEX":
-            exch_seg="BSE"
-        else:
-            exch_seg="NFO" 
-        default_ordertype = request.data.get('orderType', 'MARKET')
-        strategy=request.data.get('strategyTag',"ce entry")
-        limitPrice=request.data.get('limitPrice',0)
-        default_quantity=0
-        Lots=1
-        triggerPrice=0
-        LivePrice=default_price
-        webhook_symbols=symbols.upper()
-        save_webhook_signals_logs(buy_sell, symbols, default_price, strategy, json=alert_data)
-        buy_sell_type=transaction_type
-        all_enable_users = ClientTradeSetting.objects.filter(is_tread_status=True,client__is_enable=True,
-    		broker__isnull=False,broker__gt='',symbol=webhook_symbols,
-    		group_service=strategy_id) # Exclude whitespace-only strings
-
-        user_count = all_enable_users.count()
-        logger.info(f"=======================================")
-        logger.info(f"No. of clients count is {user_count}")
-        logger.info(f"=======================================")
-        default_expiry=None 
-        order_status=None 
-
-        for index, trade in enumerate(all_enable_users, start=1):
-            logger.info(f"{index}. Users name is: {trade.client}")
-
         try:
-            threads = []
+            context = _resolve_webhook_request_context(request.data)
+        except ValidationError as exc:
+            logger.warning("Webhook request validation failed: %s", exc)
+            return Response({"status": "error", "message": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
-            for index, trade in enumerate(all_enable_users, start=1):
-                try:
-                    history_id = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{trade.client.id}"
-                    t = threading.Thread(
-                        target=self.handle_single_trade,
-                        args=(
-                            trade, index, symbols, exch_seg, default_price,
-                            strategy_id, alert_data, buy_sell_type, buy_sell,
-                            default_ordertype, limitPrice, default_quantity,
-                            LivePrice, Lots, triggerPrice, history_id
-                        )
-                    )
-                    t.start()
-                    threads.append(t)
-                except Exception as e:
-                    logger.error(f"-X- ###### -X- This order is skipped due to error: {e}")
-                    logger.error(f"{trade.client} : This trade is skipped.")
+        alert_data = context["alert_data"]
+        symbols = context["symbols"]
+        save_webhook_signals_logs(context["buy_sell"], symbols, context["default_price"], context["strategy_tag"], json=alert_data)
+        candidate_trades, strategy_id = _get_matching_webhook_trades(alert_data, symbols.upper())
 
-            for t in threads:
-                t.join()
+        results = []
+        for index, trade in enumerate(candidate_trades, start=1):
+            history_id = f"{datetime.now().strftime('%Y%m%d%H%M%S%f')}_{trade.client.id}_{trade.id}"
+            results.append(self.handle_single_trade(
+                trade,
+                index,
+                symbols,
+                context["exch_seg"],
+                context["default_price"],
+                strategy_id,
+                alert_data,
+                context["transaction_type"],
+                context["buy_sell"],
+                context["default_ordertype"],
+                context["limit_price"],
+                context["default_quantity"],
+                context["live_price"],
+                context["lots"],
+                context["trigger_price"],
+                history_id,
+            ))
 
-            return Response({"status": order_status}, status=200)
-
-        except Exception as e:
-            logger.error(f"Order placement encountered an error: {e}")
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        summary = {
+            "total": len(results),
+            "successful": sum(1 for item in results if item["status"] == "success"),
+            "skipped": sum(1 for item in results if item["status"] == "skipped"),
+            "failed": sum(1 for item in results if item["status"] == "failed"),
+            "group_service": strategy_id,
+            "symbol": symbols,
+        }
+        return Response({"status": "success", "summary": summary, "results": results}, status=status.HTTP_200_OK)
 
 #token Sesiion id for alice blue order
 from datetime import datetime, timedelta
@@ -3752,7 +4177,7 @@ class ClientsTradeStatusView(APIView):
         user = request.user
         current_date = timezone.now().date()
 
-        if user.role and user.role.name.lower() == 'super-admin':
+        if is_superadmin_user(user):
             clients = User.objects.filter(
                 type_of_user='is_client', is_client=True).order_by('-id')
         else:
@@ -3786,7 +4211,7 @@ class ClientsTradeStatusView(APIView):
         client = get_object_or_404(User, id=client_id, type_of_user='is_client', is_client=True)
 
         # Check if the current user has the right permissions
-        if not (user.role and user.role.name.lower() == 'super-admin') and client.created_by != user:
+        if not is_superadmin_user(user) and client.created_by != user:
             return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
 
         # Validate the 'is_enable' field in the request body
@@ -3807,6 +4232,13 @@ class ClientsTradeStatusView(APIView):
 #update client demate account details api
 class ClientBrokerDetailsView(APIView):
     permission_classes = [IsAuthenticated]
+
+    def _error_response(self, message, *, errors=None, status_code=status.HTTP_400_BAD_REQUEST):
+        payload = {"status": "error", "message": message}
+        if errors is not None:
+            payload["errors"] = errors
+        return Response(payload, status=status_code)
+
     def get(self, request):
         """
         Retrieve broker details for the authenticated client.
@@ -3814,25 +4246,20 @@ class ClientBrokerDetailsView(APIView):
         try:
             user = request.user
             broker_detail = ClientBrokerdetails.objects.filter(client_id=user.id).first()
-
-            if not broker_detail:
-                return Response(
-                    {"error": "Broker details not found for the client."},
-                    status=status.HTTP_404_NOT_FOUND,
-                )
-
-            serializer = ClientBrokerDetailsSerializer(broker_detail)
-            return Response(
-                {"data": serializer.data},
-                status=status.HTTP_200_OK
+            available_brokers = _ensure_default_broker_catalog()
+            serializer = ClientBrokerDetailsSerializer(
+                broker_detail or ClientBrokerdetails(client=user),
+                context={"available_brokers": available_brokers},
             )
+            return Response({"status": "success", "data": serializer.data}, status=status.HTTP_200_OK)
         except Exception as e:
-            return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return self._error_response(str(e))
+
     def put(self, request):
 
         """
         Create or update broker details for a specific client.
-        Resets fields not provided in the request to null.
+        Omitted fields are preserved to avoid accidental credential loss.
         """
         try:
             user = request.user
@@ -3840,24 +4267,20 @@ class ClientBrokerDetailsView(APIView):
             # Fetch or create broker details for the client
             broker_detail, created = ClientBrokerdetails.objects.get_or_create(client_id=user.id)
 
-            # List of all fields in the model
-            all_fields = [field.name for field in ClientBrokerdetails._meta.get_fields()]
-
-            # Loop through all fields and set them to null if they are not in the request data
-            for field in all_fields:
-                if field != 'id' and field != 'client' and field != 'broker_name':  # Exclude non-updatable fields (like 'id', 'client', 'broker_name')
-                    if field not in request.data:
-                        setattr(broker_detail, field, None)
-
             # Use the serializer with partial=True to update only provided fields
             serializer = ClientBrokerDetailsUpdateSerializer(broker_detail, data=request.data, partial=True)
             if serializer.is_valid():
-                serializer.save()
+                broker_detail = serializer.save()
                 # Update the broker field in ClientTradeSetting
                 client_trade_settings = ClientTradeSetting.objects.filter(client=user)
                 for trade_setting in client_trade_settings:
-                    trade_setting.broker = broker_detail.broker_name.broker_name  # Assuming 'broker_name' is the field that links to the broker model
-                    trade_setting.save()
+                    trade_setting.broker = broker_detail.broker_name.broker_name if broker_detail.broker_name else ""
+                    trade_setting.save(update_fields=["broker"])
+
+                client_multi_leg_settings = ClientMultiLegStrategySetting.objects.filter(client=user)
+                for multi_leg_setting in client_multi_leg_settings:
+                    multi_leg_setting.broker = broker_detail.broker_name.broker_name if broker_detail.broker_name else ""
+                    multi_leg_setting.save(update_fields=["broker", "updated_at"])
 
                 # ⬇️ Add logging block here
                 try:
@@ -3883,11 +4306,22 @@ class ClientBrokerDetailsView(APIView):
                     pass  # Don't disturb the main flow
 
                 message = "Broker details created successfully!" if created else "Broker details updated successfully!"
-                return Response({"message": message, "data": serializer.data}, status=status.HTTP_200_OK)
+                response_serializer = ClientBrokerDetailsSerializer(
+                    broker_detail,
+                    context={"available_brokers": _ensure_default_broker_catalog()},
+                )
+                return Response(
+                    {"status": "success", "message": message, "data": response_serializer.data},
+                    status=status.HTTP_200_OK,
+                )
 
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return self._error_response(
+                "Broker details validation failed.",
+                errors=serializer.errors,
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
         except Exception as e:
-            return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return self._error_response(str(e))
 
 #get broker details by Admin
 class AdminClientBrokerDetailsView(APIView):
@@ -3898,24 +4332,22 @@ class AdminClientBrokerDetailsView(APIView):
         Retrieve broker details for the authenticated client.
         """
         client_id = kwargs.get("pk")  # Fetch client ID from URL params
-        print(f"Client ID: {client_id}, Args: {args}, Kwargs: {kwargs}")
 
         try:
             # Fetch broker details
             broker_detail = ClientBrokerdetails.objects.filter(client_id=client_id).first()
 
-            if not broker_detail:
-                return Response(
-                    {"error": "Broker details not found for the client."},
-                    status=status.HTTP_404_NOT_FOUND,
-                )
+            if broker_detail and not can_access_client_record(request.user, broker_detail.client):
+                return Response({"status": "error", "message": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
 
-            # Serialize the broker details
-            serializer = ClientBrokerDetailsSerializer(broker_detail)
-            return Response({"data": serializer.data}, status=status.HTTP_200_OK)
+            serializer = ClientBrokerDetailsSerializer(
+                broker_detail or ClientBrokerdetails(client_id=client_id),
+                context={"available_brokers": _ensure_default_broker_catalog()},
+            )
+            return Response({"status": "success", "data": serializer.data}, status=status.HTTP_200_OK)
 
         except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"status": "error", "message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         
 #demate status manage api for client trade
@@ -3987,6 +4419,186 @@ class AdminGetClientBrokerStatusView(APIView):
             status=status.HTTP_200_OK
         )
 
+class BrokerRuntimeStatusView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            broker_details = _get_selected_broker_detail_for_user(request.user)
+            setup_spec = get_broker_setup_spec(
+                broker_details.broker_name.broker_name if broker_details and broker_details.broker_name else None
+            )
+            summary = LoginActivityService().build_summary(request.user, request=request)
+            broker_data = (summary.get("data") or {}).get("broker") or {}
+
+            return Response(
+                {
+                    "status": "success",
+                    "data": {
+                        **broker_data,
+                        "auth_mode": setup_spec.get("auth_mode") if setup_spec else None,
+                        "connect_action_label": setup_spec.get("connect_action_label") if setup_spec else None,
+                        "save_action_label": setup_spec.get("save_action_label") if setup_spec else None,
+                        "supports_redirect": bool(setup_spec.get("supports_redirect")) if setup_spec else False,
+                        "supports_callback": bool(setup_spec.get("supports_callback")) if setup_spec else False,
+                        "connect_path": setup_spec.get("connect_path") if setup_spec else None,
+                    },
+                },
+                status=status.HTTP_200_OK,
+            )
+        except Exception as exc:
+            logger.exception("Failed to fetch broker runtime status for user %s", request.user.id)
+            return Response(
+                {"status": "error", "message": str(exc)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+
+class BrokerGenerateTokenView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            broker_details = _get_selected_broker_detail_for_user(request.user)
+            if not broker_details or not broker_details.broker_name:
+                return Response(
+                    {"status": "error", "message": "Please select and save a broker first."},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+
+            setup_spec = get_broker_setup_spec(broker_details.broker_name.broker_name)
+            if not setup_spec:
+                return Response(
+                    {"status": "error", "message": "Selected broker is not supported."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            normalized_broker = normalize_broker_name(broker_details.broker_name.broker_name)
+            auth_mode = setup_spec.get("auth_mode")
+
+            if auth_mode == "redirect_oauth":
+                return Response(
+                    {
+                        "status": "success",
+                        "action": "redirect",
+                        "message": "Broker login redirect is required for this broker.",
+                        "data": {
+                            "broker_name": setup_spec.get("display_name"),
+                            "connect_path": setup_spec.get("connect_path"),
+                            "auth_mode": auth_mode,
+                        },
+                    },
+                    status=status.HTTP_200_OK,
+                )
+
+            if auth_mode == "manual_token":
+                return Response(
+                    {
+                        "status": "success",
+                        "action": "manual",
+                        "message": "This broker uses manual token management. Save the broker credentials or token and log in on the broker side if required.",
+                        "data": {
+                            "broker_name": setup_spec.get("display_name"),
+                            "auth_mode": auth_mode,
+                        },
+                    },
+                    status=status.HTTP_200_OK,
+                )
+
+            if normalized_broker != "angel one":
+                return Response(
+                    {
+                        "status": "error",
+                        "message": "Direct token generation is not implemented for this broker.",
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            from main.angelone.services.auth_service import AuthService
+
+            credentials = broker_details.get_angel_one_login_credentials()
+            client_code = credentials.get("client_code")
+            api_key = credentials.get("api_key")
+
+            missing_fields = []
+            if not api_key:
+                missing_fields.append("API key")
+            if not client_code:
+                missing_fields.append("Client ID")
+            if not credentials.get("password"):
+                missing_fields.append("Password")
+            if not credentials.get("totp_secret"):
+                missing_fields.append("TOTP secret")
+
+            if missing_fields:
+                return Response(
+                    {
+                        "status": "error",
+                        "message": "Saved Angel One credentials are incomplete.",
+                        "missing_fields": missing_fields,
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            result = AuthService().ensure_valid_session(
+                client_id=client_code,
+                api_key=api_key,
+                broker_details=broker_details,
+                verify_remote=True,
+            )
+
+            if result.get("status") != "success":
+                return Response(
+                    {
+                        "status": "error",
+                        "message": result.get("message", "Failed to generate broker token."),
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            runtime_summary = LoginActivityService().build_summary(request.user, request=request)
+            broker_runtime = (runtime_summary.get("data") or {}).get("broker") or {}
+
+            return Response(
+                {
+                    "status": "success",
+                    "action": "token_generated",
+                    "message": "Broker token generated successfully.",
+                    "data": broker_runtime,
+                },
+                status=status.HTTP_200_OK,
+            )
+        except Exception as exc:
+            if normalized_broker == "angel one":
+                try:
+                    from main.angelone_views import build_angelone_redirect_payload
+
+                    redirect_payload = build_angelone_redirect_payload(
+                        request.user,
+                        broker_details=broker_details,
+                        request=request,
+                    )
+                    return Response(
+                        {
+                            "status": "success",
+                            "action": "redirect",
+                            "message": "Direct token generation is unavailable right now. Continuing with the Angel One login flow.",
+                            "redirect_url": redirect_payload.get("redirect_url"),
+                            "data": {
+                                "broker_name": setup_spec.get("display_name"),
+                                "auth_mode": auth_mode,
+                            },
+                        },
+                        status=status.HTTP_200_OK,
+                    )
+                except Exception:
+                    logger.exception("Angel One redirect fallback failed for user %s", request.user.id)
+            logger.exception("Broker token generation failed for user %s", request.user.id)
+            return Response(
+                {"status": "error", "message": str(exc)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
 class SubSegmentsListView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -4032,11 +4644,11 @@ class TradeorderhistoryListView_old(APIView):
     def get(self, request, *args, **kwargs):
         try:
             user = request.user
-            if user.role and user.role.name.lower() == 'super-admin':
+            if is_superadmin_user(user):
                 # Super-admin can see all clients' trade order histories
                 clients = User.objects.filter(type_of_user='is_client', is_client=True)
                 trade_history = Tradeorderhistory.objects.exclude(order_id=0).filter(client__in=clients).order_by('-id')
-            elif user.role and user.role.name.lower() == 'sub-admin':
+            elif is_admin_user(user):
                 # Sub-admin can see trade order histories of their assigned clients
                 clients = User.objects.filter(assigned_client=user,created_by=user,type_of_user='is_client', is_client=True)
                 trade_history = Tradeorderhistory.objects.exclude(order_id=0).filter(client__in=clients).order_by('-id')
@@ -4058,11 +4670,11 @@ class ClientTradeListView_old(APIView):
     def get(self, request, *args, **kwargs):
         try:
             user = request.user
-            if user.role and user.role.name.lower() == 'super-admin':
+            if is_superadmin_user(user):
                 # Super-admin can see all clients' trade order histories
                 clients = User.objects.all()#filter(type_of_user='is_client', is_client=True)
                 trade_history = Tradeorderhistory.objects.filter(client__in=clients).order_by('-id')
-            elif user.role and user.role.name.lower() == 'sub-admin':
+            elif is_admin_user(user):
                 print("Sub-AdminSub-AdminSub-AdminSub-Admin")
                 # Sub-admin can see trade order histories of their assigned clients
                 clients = User.objects.filter(assigned_client=user,created_by=user)#,type_of_user='is_client', is_client=True)
@@ -4086,384 +4698,6 @@ class ClientDashBoardView(APIView):
         serializer.is_valid(raise_exception=True)
         return Response(serializer.validated_data, status=status.HTTP_200_OK)
     
-#auth callback url demate---------------------------
-from django.http import JsonResponse
-from django.shortcuts import redirect
-from datetime import timedelta
-from django.utils.timezone import now
-from .models import ClientBrokerdetails
-from kiteconnect import KiteConnect  # For Zerodha
-# Import other broker-specific SDKs as needed
-    
-#ZERODHA...............
-def zerodha_callback1(request):
-    # Extract the request_token and state from the query parameters
-    request_token = request.GET.get('request_token')
-    state = request.GET.get('state')
-
-    # Extract user ID from the state
-    user_id = state.split('-')[1] if state and '-' in state else None
-
-    try:
-        if not request_token or not user_id:
-            return JsonResponse({"error": "Invalid request. Missing parameters."}, status=400)
-        # Retrieve the broker details for the user
-        broker_details = ClientBrokerdetails.objects.get(client_id=user_id)
-        # Initialize the KiteConnect instance
-        kite = KiteConnect(api_key=broker_details.broker_API_UID)
-
-        # Generate the access token
-        session_data = kite.generate_session(request_token, api_secret=broker_details.broker_API_SKEY)
-        access_token = session_data['access_token']
-
-        # Save tokens in the database
-        broker_details.request_token = request_token
-        broker_details.access_token = access_token
-        broker_details.access_token_expiry = now() + timedelta(days=1)  # Assuming 1-day token validity
-        broker_details.save()
-
-        return JsonResponse({
-            "message": "Callback successful",
-            "access_token": access_token,
-            "state": state,
-        })
-
-    except ClientBrokerdetails.DoesNotExist:
-        return JsonResponse({"error": "Broker details not found for the user"}, status=404)
-
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)
-#place order using zerodha api 
-
-def place_zerodha_order(request):
-    # user = request.user
-
-    # Ensure user is authenticated
-    # if not user.is_authenticated:
-    #     return JsonResponse({"error": "User not authenticated"}, status=403)
-    api_key = "jsdgh8p7k3yvfii8"
-    api_secret = "f6hk1ihfqsc05j22mzjxi5z74zh4qh6h"
-    # Retrieve broker details for the user
-    try:
-        # broker_details = ClientBrokerdetails.objects.get(client=user, broker_name__broker_name__iexact="ZERODHA")
-        kite = KiteConnect(api_key=api_key)
-        # # Check if access token is valid
-        # if not broker_details.access_token or broker_details.access_token_expiry < datetime.now():
-        #     return JsonResponse({"error": "Access token is missing or expired. Please reauthenticate."}, status=401)
-        token="h5HJ47RcoYJDsJGUGqAB7d1LEDm4Nd3F"
-        # Initialize KiteConnect with API key and access token
-        # kite = KiteConnect(api_key=broker_details.broker_API_UID)
-        kite.set_access_token(token)
-        exchange="NFO"
-        symbol="BANKNIFTY25JAN48500PE"
-        trading_symbol = get_trading_symbol(exchange, symbol,kite)
-        # Order details
-        order_params = {
-            "tradingsymbol": trading_symbol,
-            "exchange": "NFO",
-            "transaction_type": "BUY",
-            "quantity": 30,
-            "order_type": "MARKET",
-            "product": "NRML",
-        }
-
-        # Place order
-        try:
-            order_response = kite.place_order(variety=kite.VARIETY_REGULAR, **order_params)
-            order_id=order_response
-            order_history_response = get_order_details(order_id, token)
-            return JsonResponse({"message": "Order placed successfully", "order_response": order_response})
-        except Exception as e:
-            return JsonResponse({"error": f"Failed to place order: {str(e)}"}, status=500)
-
-        return JsonResponse({"error": "Broker details not found for the user"}, status=404)
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)
-import csv
-from kiteconnect import KiteConnect
-from kiteconnect import KiteConnect
-from django.http import JsonResponse
-
-def get_order_details(order_id, access_token):
-    """
-    Retrieve order history for a given order ID from Zerodha Kite Connect.
-    """
-    api_key = "jsdgh8p7k3yvfii8"  # Replace with your API key
-    try:
-        # Initialize KiteConnect
-        kite = KiteConnect(api_key=api_key)
-        kite.set_access_token(access_token)
-        
-        # Fetch order history
-        try:
-            order_history = kite.order_history(order_id)
-            return JsonResponse({"order_history": order_history}, status=200)
-        except Exception as e:
-            return JsonResponse({"error": f"Failed to fetch order history: {str(e)}"}, status=500)
-    except Exception as e:
-        return JsonResponse({"error": f"Failed to initialize KiteConnect: {str(e)}"}, status=500)
-
-def get_trading_symbol(exchange, symbol, kite):
-    try:
-        instruments = kite.instruments(exchange)
-        for instrument in instruments:
-            if instrument['tradingsymbol'] == symbol:
-                print("Trading Symbol Found:", instrument['tradingsymbol'])
-                return instrument['tradingsymbol']
-        
-        return None  # Return None if the symbol is not found
-
-    except Exception as e:
-        print(f"Error: {str(e)}")
-        return None
-
-def generate_checksum(api_key, api_secret, request_token):
-    import hashlib
-    return hashlib.sha256(f"{api_key}{request_token}{api_secret}".encode()).hexdigest()
-from django.shortcuts import redirect
-
-def login_zerodha_redirect(request):
-    # user=request.user
-    # broker_details = ClientBrokerdetails.objects.filter(client=user)
-    # api_key=broker_details.broker_API_UID
-    # Zerodha API credentials
-    api_key = "jsdgh8p7k3yvfii8"  # Replace with your API Key
-    redirect_url ="https://sparks.algoview.in/callback"# "http://127.0.0.1:8000/callback-zerodha/"  # Your callback URL
-    state = "zerodha"  # Optional, to track the request state
-
-    # Construct the URL
-    zerodha_url = (
-            f"https://kite.zerodha.com/connect/login?api_key={api_key}&v=3"
-            f"&redirect_uri={redirect_url}&state={state}"
-        )
-    print("zerodha_url777",zerodha_url)
-    return redirect(zerodha_url)
-
-from django.http import JsonResponse
-import requests
-
-def zerodha_callback(request):
-    # Extract the request_token and state from query parameters
-    request_token = "dD048whQMqDbwOL7ig1BJK21yrIl2M69"
-    state = "success"#request.GET.get('state')
-
-    if not request_token:
-        return JsonResponse({"error": "Request token not provided"}, status=400)
-
-    # Fetch the access token using the request token
-    api_key = "jsdgh8p7k3yvfii8"
-    api_secret = "f6hk1ihfqsc05j22mzjxi5z74zh4qh6h"
-
-    try:
-        AUTH_TOKEN_URL="https://api.kite.trade/session/token"
-        headers={
-                "api_key": api_key,
-                "request_token": request_token,
-                "checksum": generate_checksum(api_key, api_secret, request_token),
-            }
-        # Make a POST request to fetch the access token
-        response = requests.post(AUTH_TOKEN_URL,headers)
-        response_data = response.json()
-        print("response_data>>>",response_data)
-        return JsonResponse({
-            "message": "Callback successful",
-            "access_token": response_data.get("access_token"),
-            "state": state,
-        })
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)
-
-# def generate_checksum(api_key, api_secret, request_token):
-#     import hashlib
-#     return hashlib.sha256(f"{api_key}{request_token}{api_secret}".encode()).hexdigest()
-#5 Paisa -----------------
-
-def oauth_callbacks(request):
-    # Extract the request token and state from the callback URL parameters
-    request_token = request.GET.get('RequestToken')
-    state = request.GET.get('state')
-
-    if not request_token:
-        return JsonResponse({"error": "RequestToken not provided"}, status=400)
-
-    # Handle the token (e.g., save it, or use it to fetch an access token)
-    return JsonResponse({
-        "message": "Callback successful",
-        "request_token": request_token,
-        "state": state,
-    })
-from django.shortcuts import redirect 
-    
-def login_redirect(request):
-    vendor_key = settings.VENDOR_KEY
-    response_url = settings.RESPONSE_URL
-    state = "test_state"  # Optional, for tracking requests
-    
-    redirect_url = f"https://dev-openapi.5paisa.com/WebVendorLogin/VLogin/Index?VendorKey={vendor_key}&ResponseURL={response_url}&State={state}"
-    return redirect(redirect_url)
-
-
-
-from django.shortcuts import redirect
-
-def login_angelone_redirect(request):
-    # Angel One API credentials
-    api_key = "DHKO4GA8"  # Replace with your API Key
-    redirect_url = "https://staging.cricratings.com/user/"  # "http://127.0.0.1:8000/callback-angelone/"#
-    state = "example_state"  # Optional, to track request state
-
-    # Construct the Angel One login URL 
-    angelone_url = (
-        f"https://smartapi.angelbroking.com/publisher-login"
-        f"?api_key={api_key}&redirect_url={redirect_url}&state={state}"
-    )
-    return redirect(angelone_url)
-
-from django.http import JsonResponse
-import requests
-# API_KEY = 'StvD7EVL'  
-# USERNAME = 'AAAB519761'  
-# PASSWORD = '1234' 
-# TOTP_SECRET = "RFFORAS7ASFH7KIZWD7FCSVK2Y" from django.http import JsonResponse
-import requests
-import pyotp
-
-def angelone_callbackaa(request):
-    # Extract the authorization code from the query parameters
-    auth_code = request.GET.get('code')
-
-    if not auth_code:
-        return JsonResponse({"error": "Authorization code not provided"}, status=400)
-# AAAB519761
-    # Angel One credentials
-    api_key = "DHKO4GA8"
-    username = "Algo123"
-    password = "1234"
-    totp_secret = "RFFORAS7ASFH7KIZWD7FCSVK2Y"
-
-    # Generate TOTP
-    totp = pyotp.TOTP(totp_secret).now()
-
-    # Exchange authorization code for access token
-    try:
-        response = requests.post(
-            "https://smartapi.angelbroking.com/rest/auth/login",
-            json={
-                "api_key": api_key,
-                "client_code": username,
-                "password": password,
-                "totp": totp,
-            },
-        )
-        response_data = response.json()
-
-        if response.status_code == 200:
-            return JsonResponse({
-                "message": "Callback successful",
-                "access_token": response_data.get("data", {}).get("jwtToken"),
-                "refresh_token": response_data.get("data", {}).get("refreshToken"),
-            })
-        else:
-            return JsonResponse({"error": response_data.get("message")}, status=400)
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)
-import pyotp
-totp_secret = "RFFORAS7ASFH7KIZWD7FCSVK2Y"
-totp = pyotp.TOTP(totp_secret).now()
-# print(f"TOTP: {totp}")
-from django.http import JsonResponse
-import requests
-
-def angelone_callback(request):
-    # Extract the authorization code and state from the query parameters
-    auth_code = request.GET.get('auth_code')
-    print(">>>>>>>>>>>>",auth_code)
-    state = request.GET.get('state')
-    
-    if not auth_code:
-        return JsonResponse({"error": "Authorization code not provided"}, status=400)
-
-    # Fetch the access token using the authorization code
-    api_key = "DHKO4GA8"
-    client_code = "Algo123"  # Replace with your Angel One client code
-    secret_key = "f85d6a33-b86d-4864-98a5-f61062b7545b"  # Replace with your Angel One secret key
-
-    try:
-        # Make a POST request to fetch the access token
-        response = requests.post(
-            "https://smartapi.angelbroking.com/rest/authentication/v1/login",
-            json={
-                "api_key": api_key,
-                "clientcode": client_code,
-                "authcode": auth_code,
-                "secretkey": secret_key,
-            },
-        )
-        response_data = response.json()
-        return JsonResponse({
-            "message": "Callback successful",
-            "access_token": response_data.get("data", {}).get("jwtToken"),
-            "refresh_token": response_data.get("data", {}).get("refreshToken"),
-            "state": state,
-        })
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)
-from django.http import HttpResponseRedirect
-from django.http import HttpResponseRedirect
-
-def login_aliceblue(request):
-    APP_CODE = "pyZPOPZiZzCMaWQ"  # Your app code
-    CALLBACK_URL = "https://software.alcrafttechnology.com/backend/AliceBlue"  # Your callback URL after successful login
-    
-    # Build the login URL with app code and callback URL
-    LOGIN_URL = f"https://ant.aliceblueonline.com/?appcode={APP_CODE}"#&redirect_uri={CALLBACK_URL}"  # Include the callback URL
-    
-    # Redirect the user to Alice Blue login page
-    return HttpResponseRedirect(LOGIN_URL)
-
-
-# def login_aliceblue(request):
-#     App_Code = "pyZPOPZiZzCMaWQ"  # Replace with your Alice Blue API key
-#     CALLBACK_URL = "http://127.0.0.1:8000/callback/aliceblue/"  # Your callback URL
-#     LOGIN_URL = f"https://ant.aliceblueonline.com/oauth2/auth?response_type=code&client_id={API_KEY}&redirect_uri={CALLBACK_URL}"
-  
-#     # Redirect to Alice Blue login page
-#     return HttpResponseRedirect(LOGIN_URL)import requests
-from django.http import JsonResponse
-
-def aliceblue_callback(request):
-    auth_code = request.GET.get("code")  # Extract the authorization code
-    if not auth_code:
-        return JsonResponse({"error": "auth_code is missing"}, status=400)
-
-    access_token = fetch_aliceblue_access_token(auth_code)
-    if access_token:
-        return JsonResponse({"access_token": access_token})
-    else:
-        return JsonResponse({"error": "Failed to fetch access token"}, status=500)
-
-def fetch_aliceblue_access_token(auth_code):
-    userId = 857984
-    ALICE_API_KEY ="hFSWodPXI0yJXnXcYBZnfFLqJM0YQm6t9mvn5WmtQrkcvXFcZRpq8tK3BKueJQDI4vSOHVYUzi2kLiKdWCnsO0SyfsSMsGFL3US3fikNU8cFGVXVXH8682zjvK7qLulP"
-
-    # SECRET_KEY = "your_secret_key"  # Replace with your Alice Blue API secret key
-    CALLBACK_URL = "http://127.0.0.1:8000/callback/aliceblue/"  # Your callback URL
-    
-    TOKEN_URL = "https://ant.aliceblueonline.com/oauth2/token"
-    
-    payload = {
-        "userId": userId,
-        "ALICE_API_KEY":ALICE_API_KEY,
-        "userData": auth_code
-     } 
-    
-    response = requests.post(TOKEN_URL, data=payload)
-    if response.status_code == 200:
-        data = response.json()
-        return data.get("access_token")  # Return access token
-    return None
-#Search api for client trade
-
 class TradeOrderHistoryFilterView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -4500,12 +4734,12 @@ class TradeOrderHistoryFilterView(APIView):
 
             # User-specific filtering
             user = request.user
-            if user.role and user.role.name.lower() == 'super-admin':
+            if is_superadmin_user(user):
                 # Super-admin sees all clients' trade histories
                 clients = User.objects.filter(type_of_user='is_client', is_client=True)
                 trade_history = Tradeorderhistory.objects.exclude(order_id=0).filter(client__in=clients).filter(filters).order_by('-id')
 
-            elif user.role and user.role.name.lower() == 'sub-admin':
+            elif is_admin_user(user):
                 # Sub-admin sees their assigned clients' histories
                 clients = User.objects.filter(assigned_client=user, created_by=user, type_of_user='is_client', is_client=True)
                 trade_history = Tradeorderhistory.objects.exclude(order_id=0).filter(client__in=clients).filter(filters).order_by('-id')
@@ -4670,10 +4904,10 @@ class TradeorderhistoryListView(APIView):
             print(f"broker: {broker} Index_Symbol: {Index_Symbol} order_status: {order_status}")
             
             # Determine which clients to include based on user role
-            if user.role and user.role.name.lower() == 'super-admin':
+            if is_superadmin_user(user):
                 clients = User.objects.filter(type_of_user='is_client', is_client=True)
                 trade_history = Tradeorderhistory.objects.exclude(order_id=0).exclude(order_id__isnull=True).filter(client__in=clients).order_by('-id')
-            elif user.role and user.role.name.lower() == 'sub-admin':
+            elif is_admin_user(user):
                 clients = User.objects.filter(assigned_client=user, type_of_user='is_client', is_client=True)
                 trade_history = Tradeorderhistory.objects.exclude(order_id=0).exclude(order_id__isnull=True).filter(client__in=clients).order_by('-id')
             else:
@@ -4766,12 +5000,10 @@ class TradeCompleteListView(APIView):
             print(f"broker: {broker} Index_Symbol: {Index_Symbol} order_status: {order_status}")
             
             # Determine which clients to include based on user role
-            if user.role and user.role.name.lower() == 'super-admin':
+            if is_superadmin_user(user):
                 clients = User.objects.filter(type_of_user='is_client', is_client=True)
                 trade_history = Tradeorderhistory.objects.filter(
                     client__in=clients,
-                    Entry_type__isnull=False,
-                    Exit_type__isnull=False,
                     order_status__in=['completed', 'complete'],
                     trade_order_status__iexact='CLOSE',
                 ).filter(Q(Entry_Price__gt=0.0) | Q(Exit_Price__gt=0.0)).exclude(
@@ -4784,12 +5016,10 @@ class TradeCompleteListView(APIView):
                 ).order_by('-id')
 
                
-            elif user.role and user.role.name.lower() == 'sub-admin':
+            elif is_admin_user(user):
                 clients = User.objects.filter(assigned_client=user, type_of_user='is_client', is_client=True)
                 trade_history = Tradeorderhistory.objects.filter(
                     client__in=clients,
-                    Entry_type__isnull=False,
-                    Exit_type__isnull=False,
                     order_status__in=['completed', 'complete'],
                     trade_order_status__iexact='CLOSE',
                 ).filter(Q(Entry_Price__gt=0.0) | Q(Exit_Price__gt=0.0)).exclude(
@@ -4803,8 +5033,6 @@ class TradeCompleteListView(APIView):
             else:
                 trade_history = Tradeorderhistory.objects.filter(
                     client=user,
-                    Entry_type__isnull=False,
-                    Exit_type__isnull=False,
                     order_status__in=['completed', 'complete'],
                     trade_order_status__iexact='CLOSE',
                 ).filter(Q(Entry_Price__gt=0.0) | Q(Exit_Price__gt=0.0)).exclude(
@@ -4900,10 +5128,10 @@ class ClientTradeListView(APIView):
             print(f"client strategy: {strategy} symbol: {Index_Symbol}")
             
             # Determine which clients to include based on user role
-            if user.role and user.role.name.lower() == 'super-admin':
+            if is_superadmin_user(user):
                 clients = User.objects.all()  # Super-admin can see all clients' trade order histories
                 trade_history = Tradeorderhistory.objects.filter(client__in=clients).order_by('-id')
-            elif user.role and user.role.name.lower() == 'sub-admin':
+            elif is_admin_user(user):
                 print("Sub-Admin is called.....")
                 clients = User.objects.filter(assigned_client=user)  # Sub-admin can see trade order histories of their assigned clients
                 trade_history = Tradeorderhistory.objects.filter(client__in=clients).order_by('-id')
@@ -5007,27 +5235,15 @@ class IsSuperAdminOrSubAdmin(permissions.BasePermission):
     """
 
     def has_permission(self, request, view):
-        # Allow if superuser
-        if request.user.is_superuser:
-            return True
-
-        # Allow if role name is 'Sub-Admin'
-        return hasattr(request.user, 'role') and getattr(request.user.role, 'name', '').lower() == 'sub-admin'
+        return bool(request.user and request.user.is_authenticated and is_admin_or_superadmin(request.user))
     
 class BrokerLogActivityView(APIView):
     permission_classes = [IsSuperAdminOrSubAdmin]  # Only superadmin or subadmin can access
 
     def get(self, request, id, *args, **kwargs):
-        broker_details = ClientBrokerdetails.objects.filter(client_id=id)
-
-        if not broker_details.exists():
-            return Response(
-                {"detail": "No broker details found for this client."},
-                status=status.HTTP_404_NOT_FOUND
-            )
-
-        serializer = BrokerLogSerializer(broker_details, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        target_user = get_object_or_404(UserModel, id=id)
+        summary = LoginActivityService().build_summary(target_user, request=request)
+        return Response(summary, status=status.HTTP_200_OK)
     
 class UserBrokerLogActivityView(APIView):
     permission_classes = [IsAuthenticated]  # User must be logged in
@@ -5037,32 +5253,18 @@ class UserBrokerLogActivityView(APIView):
             # Check if requesting user is accessing their own data
             if request.user.id != user_id:
                 # Allow only superadmin or subadmin to access other users' logs
-                if not (request.user.is_superuser or (
-                    hasattr(request.user, 'role') and getattr(request.user.role, 'name', '').lower() == 'sub-admin'
-                )):
+                if not is_admin_or_superadmin(request.user):
                     return Response(
                         {"detail": "You do not have permission to access this user's data."},
                         status=status.HTTP_403_FORBIDDEN
                     )
 
-            broker_details = ClientBrokerdetails.objects.filter(client_id=user_id)
-
-            if not broker_details.exists():
-                return Response(
-                    {"detail": "No broker details found for this client."},
-                    status=status.HTTP_404_NOT_FOUND
-                )
-
-            serializer = BrokerLogSerializer(broker_details, many=True)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            target_user = get_object_or_404(UserModel, id=user_id)
+            summary = LoginActivityService().build_summary(target_user, request=request)
+            return Response(summary, status=status.HTTP_200_OK)
 
         except Exception as e:
-            print(f"An error occurred: {str(e)}")
             return Response(
-                {"detail": "An error occurred while retrieving broker details."},
+                {"status": "error", "message": "An error occurred while retrieving broker activity."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-
-
-
-

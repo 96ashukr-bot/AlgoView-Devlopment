@@ -6,8 +6,55 @@ import 'react-toastify/dist/ReactToastify.css';
 import { getSegmentsList, getSubSegment, getGroupServicesList, fetchSubAdminsList, addClient, getStrategies, getLicence } from '../../../../Services/Authentication';
 import './Clients.css'
 
+const LICENSE_NAMES = ['Demo', 'Live'];
+const MONTH_OPTIONS = Array.from({ length: 12 }, (_, index) => index + 1);
+
+const formatDateInput = (date) => date.toISOString().split('T')[0];
+
+const getLicenseDates = (licenseName, monthsValue) => {
+  if (!licenseName) {
+    return { fromDate: '', toDate: '' };
+  }
+
+  const startDate = new Date();
+  startDate.setHours(0, 0, 0, 0);
+  const endDate = new Date(startDate);
+
+  if (licenseName === 'Demo') {
+    endDate.setDate(endDate.getDate() + 3);
+    return {
+      fromDate: formatDateInput(startDate),
+      toDate: formatDateInput(endDate),
+    };
+  }
+
+  if (licenseName === 'Live') {
+    const months = Number(monthsValue);
+    if (!months) {
+      return {
+        fromDate: formatDateInput(startDate),
+        toDate: '',
+      };
+    }
+    endDate.setMonth(endDate.getMonth() + months);
+    return {
+      fromDate: formatDateInput(startDate),
+      toDate: formatDateInput(endDate),
+    };
+  }
+
+  return { fromDate: '', toDate: '' };
+};
 
 const AddClient = () => {
+  const getStrategyModeState = (strategyIds = [], strategyList = []) => {
+    const selected = strategyList.filter((strategy) => strategyIds.includes(strategy.id));
+    return {
+      indicator: selected.some((strategy) => strategy.execution_mode !== 'MULTI_LEG'),
+      multiLeg: selected.some((strategy) => strategy.execution_mode === 'MULTI_LEG'),
+    };
+  };
+
   const [formData, setFormData] = useState({
     userName: '',
     fullName: '',
@@ -39,7 +86,13 @@ const AddClient = () => {
   const [subsegment, setSubSegment] = useState([]);
   const [selectedSubsegment, setSelectedSubsegment] = useState([]);
   const [selectedStrategies, setSelectedStrategies] = useState([]);
+  const [selectedStrategyModes, setSelectedStrategyModes] = useState({ indicator: false, multiLeg: true });
   const [selectedGroupService, setSelectedGroupService] = useState(null);
+  const availableLicenses = licenses.filter((license) => LICENSE_NAMES.includes(license.name));
+  const isDemoLicense = formData.license === 'Demo';
+  const isLiveLicense = formData.license === 'Live';
+  const indicatorStrategies = strategies.filter((strategy) => strategy.execution_mode !== 'MULTI_LEG');
+  const multiLegStrategies = strategies.filter((strategy) => strategy.execution_mode === 'MULTI_LEG');
 
 
   useEffect(() => {
@@ -58,14 +111,26 @@ const AddClient = () => {
   }, [formData.segment]);
   
   useEffect(() => {
-    if (selectedGroupService) {
-      // Get the strategy IDs from the selected group service
-      const strategyIds = selectedGroupService.Strategy.map(strategy => strategy.id);
-      setSelectedStrategies(strategyIds);
-    } else {
-      setSelectedStrategies([]); // Clear selected strategies if no group service is selected
+    setSelectedStrategyModes(getStrategyModeState(selectedStrategies, strategies));
+  }, [selectedStrategies, strategies]);
+
+  useEffect(() => {
+    if (!formData.license) {
+      return;
     }
-  }, [selectedGroupService]);
+
+    const { fromDate, toDate } = getLicenseDates(formData.license, formData.tomonth);
+    setFormData((prevData) => {
+      if (prevData.fromDate === fromDate && prevData.toDate === toDate) {
+        return prevData;
+      }
+      return {
+        ...prevData,
+        fromDate,
+        toDate,
+      };
+    });
+  }, [formData.license, formData.tomonth]);
   
   // When License is Selected
   const handleChange = (e) => {
@@ -86,7 +151,24 @@ const AddClient = () => {
         newValue = parseInt(value);
       }
 
-      if (name === 'subsegment') {
+      if (name === 'license') {
+        const licenseDates = getLicenseDates(newValue, '');
+        setFormData(prevData => ({
+          ...prevData,
+          license: newValue,
+          tomonth: '',
+          fromDate: licenseDates.fromDate,
+          toDate: licenseDates.toDate,
+        }));
+      } else if (name === 'tomonth') {
+        const licenseDates = getLicenseDates(formData.license, newValue);
+        setFormData(prevData => ({
+          ...prevData,
+          tomonth: newValue,
+          fromDate: licenseDates.fromDate,
+          toDate: licenseDates.toDate,
+        }));
+      } else if (name === 'subsegment') {
         const selectedValues = Array.from(e.target.selectedOptions, option => parseInt(option.value));
         setFormData(prevData => ({
           ...prevData,
@@ -102,12 +184,13 @@ const AddClient = () => {
       if (name === 'groupService') {
         const selectedService = groupServices.find(service => service.id === parseInt(value));
         setSelectedGroupService(selectedService ? selectedService : null);
+        applyGroupServiceStrategies(selectedService);
 
         const test = [];
         if (selectedService && selectedService.json_data) { // Check if selectedService and json_data exist
           Object.entries(subSegments).forEach(([key, value]) => {
             Object.entries(selectedService.json_data).forEach(([key1, value1]) => {
-              if (value.name === value1.ServiceName) {
+              if (value.name === (value1.ScriptName || value1.ServiceName)) {
                 test.push(value.id);
               }
             });
@@ -201,7 +284,7 @@ const AddClient = () => {
       const response = await getLicence();
       console.log('License Response:', response);
       if (response && Array.isArray(response.results)) {
-        setLicenses(response.results);
+        setLicenses(response.results.filter((license) => LICENSE_NAMES.includes(license.name)));
       } else {
         console.error('Fetched licenses are not an array:', response);
         setLicenses([]);
@@ -233,7 +316,7 @@ const AddClient = () => {
 
   const fetchStrategies = async () => {
     try {
-      const response = await getStrategies();
+      const response = await getStrategies(1, 500);
       console.log('Response:', response);
 
       const strategies = response?.results;
@@ -250,6 +333,50 @@ const AddClient = () => {
       console.error('Error fetching strategies:', error);
       toast.error('Failed to load strategies.');
       setStrategies([]);
+    }
+  };
+
+  const applyGroupServiceStrategies = (groupService) => {
+    if (!groupService || !Array.isArray(groupService.Strategy)) {
+      return;
+    }
+
+    const groupStrategyIds = groupService.Strategy.map((strategy) => strategy.id);
+    if (!groupStrategyIds.length) {
+      return;
+    }
+
+    setSelectedStrategies((prev) => {
+      const nonIndicatorStrategies = prev.filter((strategyId) => {
+        const matchingStrategy = strategies.find((strategy) => strategy.id === strategyId);
+        return matchingStrategy?.execution_mode === 'MULTI_LEG';
+      });
+      return Array.from(new Set([...nonIndicatorStrategies, ...groupStrategyIds]));
+    });
+    setSelectedStrategyModes((prev) => ({
+      ...prev,
+      indicator: true,
+    }));
+  };
+
+  const handleStrategyModeToggle = (modeKey) => {
+    const nextEnabled = !selectedStrategyModes[modeKey];
+    setSelectedStrategyModes((prev) => ({
+      ...prev,
+      [modeKey]: nextEnabled,
+    }));
+
+    if (!nextEnabled) {
+      setSelectedStrategies((prev) => prev.filter((strategyId) => {
+        const matchingStrategy = strategies.find((strategy) => strategy.id === strategyId);
+        if (!matchingStrategy) {
+          return false;
+        }
+        if (modeKey === 'indicator') {
+          return matchingStrategy.execution_mode === 'MULTI_LEG';
+        }
+        return matchingStrategy.execution_mode !== 'MULTI_LEG';
+      }));
     }
   };
 
@@ -284,33 +411,28 @@ const AddClient = () => {
 
   const validateForm = () => {
     const errors = {};
-    const requiredFields = ['userName', 'fullName', 'email', 'phoneNumber', 'groupService', 'subadmin', 'license',];
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const mobileRegex = /^[0-9]{10}$/;
 
-    if (!formData.email) {
-      errors.email = 'Email is required';
-    } else if (!emailRegex.test(formData.email)) {
+    if (!formData.userName?.trim()) {
+      errors.userName = 'User Name is required';
+    }
+
+    if (formData.email && !emailRegex.test(formData.email)) {
       errors.email = 'Format of email is incorrect';
     }
 
-    if (!formData.phoneNumber) {
-      errors.phoneNumber = 'Phone Number number is required';
-    } else if (!mobileRegex.test(formData.phoneNumber)) {
+    if (formData.phoneNumber && !mobileRegex.test(formData.phoneNumber)) {
       errors.phoneNumber = 'Number must be 10 digits only';
     }
 
-    if (isDemoLicense) {
-      requiredFields.push('fromDate', 'toDate');
-    } else if (isLiveLicense) {
-      requiredFields.push('tomonth');
+    if (!formData.license) {
+      errors.license = 'License is required';
     }
 
-    requiredFields.forEach(field => {
-      if (!formData[field]) {
-        errors[field] = 'This field is required';
-      }
-    });
+    if (isLiveLicense) {
+      if (!formData.tomonth) errors.tomonth = 'This field is required';
+    }
 
     console.log("Form validation errors: ", errors);
     return errors;
@@ -327,25 +449,23 @@ const AddClient = () => {
     // console.log('Broker before submission:', formData.broker);
     setLoading(true);
 
-    const selectedLicense = licenses.find(license => license.name.toLowerCase() === formData.license.toLowerCase());
+    const selectedLicense = availableLicenses.find(license => license.name.toLowerCase() === formData.license.toLowerCase());
     const licenseId = selectedLicense ? selectedLicense.id : null;
 
     let payload = {
-      email: formData.email,
       userName: formData.userName,
-      fullName: formData.fullName,
-      phoneNumber: formData.phoneNumber,
-      Group_service: formData.groupService,
-      assigned_client: formData.subadmin,
-      // demate_acc_uid: formData.dematuserid,
-      license: licenseId,
       client_status: true,
-      segment: formData.segment,
-      // subsegment: formData.subsegment,
-      subsegment: selectedSubsegment,
-      // Strategy: selectedStrategies,
-      Strategy: selectedStrategies,
     };
+
+    if (formData.email) payload.email = formData.email;
+    if (formData.fullName) payload.fullName = formData.fullName;
+    if (formData.phoneNumber) payload.phoneNumber = formData.phoneNumber;
+    if (formData.groupService) payload.Group_service = formData.groupService;
+    if (formData.subadmin) payload.assigned_client = formData.subadmin;
+    if (licenseId) payload.license = licenseId;
+    if (formData.segment) payload.segment = formData.segment;
+    if (selectedSubsegment.length) payload.subsegment = selectedSubsegment;
+    if (selectedStrategies.length) payload.Strategy = selectedStrategies;
 
     console.log('Payload before sending to API:', payload);
 
@@ -355,12 +475,6 @@ const AddClient = () => {
         payload = {
           ...payload,
           to_month: formData.tomonth,
-        };
-      } else if (licenseName === 'demo') {
-        payload = {
-          ...payload,
-          start_date_client: formData.fromDate,
-          end_date_client: formData.toDate,
         };
       }
     }
@@ -415,11 +529,6 @@ const AddClient = () => {
     navigate('/client/all-clients-list');
   };
 
-  const isDemoLicense = formData.license === 'Demo';
-  console.log("license", formData.license);
-  const isLiveLicense = formData.license === 'Live';
-
-
   return (
     <>
       <ToastContainer />
@@ -443,15 +552,12 @@ const AddClient = () => {
                     placeholder="Enter User Name"
                     value={formData.userName}
                     onChange={handleChange}
-                    required
                   />
                   {errors.userName && <div className="invalid-feedback text-danger">{errors.userName}</div>}
                 </Col>
 
                 <Col md="4 mb-3">
-                  <Label htmlFor="fullName">Full Name
-                    <span style={{ color: 'red', fontSize: '20px' }}>*</span>
-                  </Label>
+                  <Label htmlFor="fullName">Full Name</Label>
                   <Input
                     type="text"
                     className={`form-control ${errors.fullName ? 'is-invalid' : ''} custom-input-style`}
@@ -460,15 +566,12 @@ const AddClient = () => {
                     placeholder="Enter Full Name"
                     value={formData.fullName}
                     onChange={handleChange}
-                    required
                   />
                   {errors.fullName && <div className="invalid-feedback text-danger">{errors.fullName}</div>}
                 </Col>
 
                 <Col md="4" className="mb-3">
-                  <Label htmlFor="email">Email
-                    <span style={{ color: 'red', fontSize: '20px' }}>*</span>
-                  </Label>
+                  <Label htmlFor="email">Email</Label>
                   <Input
                     type="email"
                     className={`form-control ${errors.email ? 'is-invalid' : ''} custom-input-style`}
@@ -477,15 +580,12 @@ const AddClient = () => {
                     placeholder="Enter Email"
                     value={formData.email}
                     onChange={handleChange}
-                    required
                   />
                   {errors.email && <div className="invalid-feedback text-danger">{errors.email}</div>}
                 </Col>
 
                 <Col md="4" className="mb-3">
-                  <Label htmlFor="phoneNumber">Mobile
-                    <span style={{ color: 'red', fontSize: '20px' }}>*</span>
-                  </Label>
+                  <Label htmlFor="phoneNumber">Mobile</Label>
                   <Input
                     type="text"
                     className={`form-control ${errors.phoneNumber ? 'is-invalid' : ''} custom-input-style`}
@@ -494,7 +594,6 @@ const AddClient = () => {
                     placeholder="Enter Mobile No."
                     value={formData.phoneNumber}
                     onChange={handleChange}
-                    required
                   />
                   {errors.phoneNumber && <div className="invalid-feedback text-danger">{errors.phoneNumber}</div>}
                 </Col>
@@ -502,9 +601,7 @@ const AddClient = () => {
 
                 {/* License Field */}
                 <Col md="4 mb-3">
-                  <Label htmlFor="license">License
-                    <span style={{ color: 'red', fontSize: '20px' }}>*</span>
-                  </Label>
+                  <Label htmlFor="license">License</Label>
                   <Input
                     type="select"
                     className={`form-control ${errors.license ? 'is-invalid' : ''} custom-input-style`}
@@ -512,12 +609,11 @@ const AddClient = () => {
                     id="license"
                     value={formData.license}
                     onChange={handleChange}
-                    required
                   >
 
                     {/* Handle License Based on Selected Option */}
                     <option value="">Select License</option>
-                    {licenses.map((license, index) => (
+                    {availableLicenses.map((license, index) => (
                       <option key={index} value={license.name}>
                         {license.name}
                       </option>
@@ -527,9 +623,7 @@ const AddClient = () => {
                 </Col>
 
                 <Col md="4 mb-3">
-                  <Label htmlFor="groupService">Group Service
-                    <span style={{ color: 'red', fontSize: '20px' }}>*</span>
-                  </Label>
+                  <Label htmlFor="groupService">Group Service</Label>
                   <Input
                     type="select"
                     name="groupService"
@@ -537,7 +631,6 @@ const AddClient = () => {
                     className='custom-input-style'
                     value={formData.groupService}
                     onChange={handleChange}
-                    required
                   >
                     <option value="">Select Group Service</option>
                     {groupServices.map((service, index) => (
@@ -550,9 +643,7 @@ const AddClient = () => {
                 </Col>
 
                 <Col md="4 mb-3">
-                  <Label htmlFor="subadmin">Sub Admin
-                    <span style={{ color: 'red', fontSize: '20px' }}>*</span>
-                  </Label>
+                  <Label htmlFor="subadmin">Sub Admin</Label>
                   <Input
                     type="select"
                     className={`form-control ${errors.subadmin ? 'is-invalid' : ''} custom-input-style`}
@@ -560,7 +651,6 @@ const AddClient = () => {
                     id="subadmin"
                     value={formData.subadmin}
                     onChange={handleChange}
-                    required
                   >
                     <option value="">Select Sub-Admin</option>
                     {subAdmins.map((user, index) => (
@@ -589,20 +679,37 @@ const AddClient = () => {
                         required
                       >
                         <option value="">Select Month</option>
-                        <option value="1">1</option>
-                        <option value="2">2 </option>
-                        <option value="3">3 </option>
-                        <option value="4">4 </option>
-                        <option value="5">5 </option>
-                        <option value="6">6 </option>
-                        <option value="7">7 </option>
-                        <option value="8">8 </option>
-                        <option value="9">9 </option>
-                        <option value="10">10 </option>
-                        <option value="11">11 </option>
-                        <option value="12">12 </option>
+                        {MONTH_OPTIONS.map((month) => (
+                          <option key={month} value={month}>
+                            {month}
+                          </option>
+                        ))}
                       </Input>
                       {errors.tomonth && <div className="invalid-feedback text-danger">{errors.tomonth}</div>}
+                    </Col>
+
+                    <Col md="4 mb-3">
+                      <Label htmlFor="fromDate">Service Start Date</Label>
+                      <Input
+                        type="date"
+                        className="form-control custom-input-style"
+                        name="fromDate"
+                        id="fromDate"
+                        value={formData.fromDate}
+                        readOnly
+                      />
+                    </Col>
+
+                    <Col md="4 mb-3">
+                      <Label htmlFor="toDate">Service End Date</Label>
+                      <Input
+                        type="date"
+                        className="form-control custom-input-style"
+                        name="toDate"
+                        id="toDate"
+                        value={formData.toDate}
+                        readOnly
+                      />
                     </Col>
                   </>
                 )}
@@ -611,35 +718,27 @@ const AddClient = () => {
                 {formData.license === 'Demo' && (
                   <>
                     <Col md="4 mb-3">
-                      <Label htmlFor="fromDate">From Date
-                        <span style={{ color: 'red', fontSize: '20px' }}>*</span>
-                      </Label>
+                      <Label htmlFor="fromDate">Service Start Date</Label>
                       <Input
                         type="date"
-                        className={`form-control ${errors.fromDate ? 'is-invalid' : ''} custom-input-style`}
+                        className="form-control custom-input-style"
                         name="fromDate"
                         id="fromDate"
                         value={formData.fromDate}
-                        onChange={handleChange}
-                        required
+                        readOnly
                       />
-                      {errors.fromDate && <div className="invalid-feedback text-danger">{errors.fromDate}</div>}
                     </Col>
 
                     <Col md="4 mb-3">
-                      <Label htmlFor="toDate">To Date
-                        <span style={{ color: 'red', fontSize: '20px' }}>*</span>
-                      </Label>
+                      <Label htmlFor="toDate">Service End Date</Label>
                       <Input
                         type="date"
-                        className={`form-control ${errors.toDate ? 'is-invalid' : ''} custom-input-style`}
+                        className="form-control custom-input-style"
                         name="toDate"
                         id="toDate"
                         value={formData.toDate}
-                        onChange={handleChange}
-                        required
+                        readOnly
                       />
-                      {errors.toDate && <div className="invalid-feedback text-danger">{errors.toDate}</div>}
                     </Col>
                   </>
                 )}
@@ -685,7 +784,7 @@ const AddClient = () => {
                               userSelect: 'none'
                             }}
                           >
-                            {service.ServiceName}[O]
+                            {(service.ScriptName || service.ServiceName)}[O]
                           </div>
                         </Col>
                       ))}
@@ -702,7 +801,30 @@ const AddClient = () => {
                 </Col>
 
                 <Col md="12" className="mt-4">
-                  {strategies.map((strategy) => (
+                  <div className="d-flex flex-wrap gap-4 mb-3">
+                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedStrategyModes.indicator}
+                        onChange={() => handleStrategyModeToggle('indicator')}
+                      />
+                      <span>Indicator Based Strategies</span>
+                    </label>
+                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedStrategyModes.multiLeg}
+                        onChange={() => handleStrategyModeToggle('multiLeg')}
+                      />
+                      <span>Multi Leg Option Strategies</span>
+                    </label>
+                  </div>
+                </Col>
+
+                {selectedStrategyModes.indicator && (
+                <Col md="12" className="mt-1">
+                  <h6 className="mb-3">Indicator Based Strategies</h6>
+                  {indicatorStrategies.map((strategy) => (
                     <label key={strategy.id} style={{ width: '30%', paddingBottom: '20px', display: 'inline-flex' }}>
                       <input
                         type="checkbox"
@@ -712,14 +834,37 @@ const AddClient = () => {
                           transformOrigin: 'center',
                         }}
                         checked={selectedStrategies.includes(strategy.id)}
-                        disabled
                         onChange={() => handleCheckboxChange(strategy)}
                       />
                       <span style={{ marginLeft: '5px' }}>{strategy.name}</span>
                     </label>
                   ))}
                 </Col>
-                {/* )} */}
+                )}
+
+                <Col md="12" className="mt-2">
+                  <h6 className="mb-3">Multi Leg Option Strategies</h6>
+                  {multiLegStrategies.length > 0 ? multiLegStrategies.map((strategy) => (
+                    <label key={strategy.id} style={{ width: '30%', paddingBottom: '20px', display: 'inline-flex' }}>
+                      <input
+                        type="checkbox"
+                        style={{
+                          marginLeft: '20px',
+                          transform: 'scale(1.3)',
+                          transformOrigin: 'center',
+                        }}
+                        checked={selectedStrategies.includes(strategy.id)}
+                        onChange={() => handleCheckboxChange(strategy)}
+                      />
+                      <span style={{ marginLeft: '5px' }}>
+                        {strategy.name}
+                        {strategy.multi_leg_template_label ? ` (${strategy.multi_leg_template_label})` : ''}
+                      </span>
+                    </label>
+                  )) : (
+                    <p className="text-muted">No multi leg strategies available.</p>
+                  )}
+                </Col>
 
                 <Col md="12 mb-3">
                   <Button type="submit" color="primary" className="search-btn-clr mt-3" disabled={loading}>

@@ -6,7 +6,6 @@ import {
 import { H3 } from '../../../../AbstractElements';
 import './Clients.css';
 import { FaArrowUp, FaArrowDown } from 'react-icons/fa';
-import { useNavigate } from 'react-router-dom';
 import { getExpiredClients, SearchAllExpiryClients } from '../../../../Services/Authentication';
 import { RotatingLines } from 'react-loader-spinner';
 import { debounce } from 'lodash';
@@ -22,8 +21,6 @@ const ExpiredClient = () => {
     const [sortConfig, setSortConfig] = useState({ key: '', direction: '' });
     const [isMobile, setIsMobile] = useState(false);
     const [pageBatch, setPageBatch] = useState(0);
-    const navigate = useNavigate();
-
     const pagesPerBatch = isMobile ? 2 : 4;
 
     useEffect(() => {

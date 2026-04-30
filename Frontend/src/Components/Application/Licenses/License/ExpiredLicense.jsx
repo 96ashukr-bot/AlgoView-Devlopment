@@ -40,15 +40,6 @@ const ExpiredLicense = () => {
     const currentLicenses = filteredLicenses.slice(indexOfFirstLicense, indexOfLastLicense);
     const totalPages = Math.ceil(filteredLicenses.length / itemsPerPage);
 
-    // Update sorting state
-    const handleSort = (key) => {
-        let direction = 'asc';
-        if (sortConfig.key === key && sortConfig.direction === 'asc') {
-            direction = 'desc';
-        }
-        setSortConfig({ key, direction });
-    };
-
     // Render sort arrow
     const renderSortArrow = (key) => {
         if (sortConfig.key !== key) return null;

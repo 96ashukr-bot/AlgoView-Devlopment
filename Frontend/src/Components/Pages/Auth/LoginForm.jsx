@@ -1,5 +1,5 @@
 import React, { Fragment, useState } from 'react';
-import { Btn, H4, P, H6, Image } from '../../../AbstractElements';
+import { Btn, H4, P, Image } from '../../../AbstractElements';
 import { Form, FormGroup, Input, Label } from 'reactstrap';
 import { Link } from 'react-router-dom';
 // import { Facebook, Linkedin, Twitter } from 'react-feather';

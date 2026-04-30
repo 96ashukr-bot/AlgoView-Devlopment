@@ -1,10 +1,10 @@
 import React, { Fragment, useState, useEffect } from 'react';
 import {
     Col, Card, Table, CardHeader, Pagination, PaginationItem, PaginationLink,
-    Input, Button, Form, FormGroup, Label, Row, Dropdown, DropdownToggle, DropdownMenu, DropdownItem, Badge
+    Input, Button, Form, FormGroup, Label, Row
 } from 'reactstrap';
 import { H3 } from '../../../../AbstractElements';
-import { FaArrowUp, FaArrowDown, FaEdit, FaTrash, FaEye, FaPencilAlt, FaTrashAlt } from 'react-icons/fa';
+import { FaArrowUp, FaArrowDown, FaEye, FaPencilAlt, FaTrashAlt } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import { RotatingLines } from 'react-loader-spinner';
 import Swal from 'sweetalert2';
@@ -16,13 +16,11 @@ const AllClients = () => {
     const [clients, setClients] = useState([]);
     const [itemsPerPage, setItemsPerPage] = useState(10);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
     const [totalPages, setTotalPages] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [licenses, setLicenses] = useState([]);
     const [selectedTradeType, setSelectedTradeType] = useState('');
     const [selectedClientType, setSelectedClientType] = useState('');
-    const [dropdownOpen, setDropdownOpen] = useState(false);
     const [userRole, setUserRole] = useState("");
     const [isMobile, setIsMobile] = useState(false);
     const [pageBatch, setPageBatch] = useState(0);
@@ -32,8 +30,6 @@ const AllClients = () => {
     const [inactiveClients, setInactiveClients] = useState(0);
 
     const navigate = useNavigate();
-
-    const toggleDropdown = () => setDropdownOpen((prevState) => !prevState);
 
     useEffect(() => {
         if (searchQuery) {
@@ -75,7 +71,6 @@ const AllClients = () => {
             }
         } catch (err) {
             console.error("Error fetching data:", err);
-            setError("Failed to load data.");
         } finally {
             setLoading(false);
         }
@@ -92,7 +87,6 @@ const AllClients = () => {
             }
         } catch (error) {
             console.error('Error during search:', error);
-            setError("Search failed.");
         } finally {
             setLoading(false);
         }

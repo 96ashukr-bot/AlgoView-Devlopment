@@ -1,7 +1,7 @@
 import React, { Fragment, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Col, Container, Form, FormGroup, Input, Label, Row, Progress, Spinner } from 'reactstrap';
-import { Btn, H4, P, Image } from '../../../AbstractElements';
+import { Btn, H4, Image } from '../../../AbstractElements';
 import logoWhite from '../../../assets/images/logo/logo (1).png';
 import { changePassword } from '../../../Services/Authentication';
 import './Auths.css';
@@ -15,7 +15,6 @@ const CreatePwd = ({ logoClassMain }) => {
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({
     oldPassword: '',
@@ -92,7 +91,6 @@ const CreatePwd = ({ logoClassMain }) => {
         }, 2000);
       }
     } catch (error) {
-      setMessage(error.message || 'Failed to change password.');
       toast.error(error.message || 'Failed to change password.');
     } finally {
       setIsLoading(false);

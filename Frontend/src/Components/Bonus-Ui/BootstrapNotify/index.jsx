@@ -1,6 +1,5 @@
 import React, { Fragment } from "react";
 import { Container, Row } from "reactstrap";
-import { toast } from "react-toastify";
 import Basic from "./Basic";
 import CustomDirectionsClass from "./CustomDirections";
 import CustomAutocloseClass from "./CustomAutoclose";

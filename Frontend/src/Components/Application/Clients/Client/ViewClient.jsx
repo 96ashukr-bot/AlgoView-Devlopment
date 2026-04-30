@@ -65,12 +65,16 @@ const ClientView = () => {
             if (response) {
                 const subSegments = response.client_trade_settings?.map(setting => ({
                     name: setting.sub_segment?.name || '',
+                    script_name: setting.script_name || setting.sub_segment?.name || '',
                     symbol: setting.symbol || '',
-                    strategy: setting.strategy || '',
                     groupService: setting.group_service || '',
                     broker: setting.broker || '',
                     product_type: setting.product_type || '',
-                    buy_sell: setting.buy_sell || '',
+                    order_type: setting.order_type || '',
+                    buffer_percentage:
+                        setting.buffer_percentage !== null && setting.buffer_percentage !== undefined
+                            ? setting.buffer_percentage
+                            : '',
                     quantity: setting.quantity || '',
                     sl_type: setting.sl_type || '',
                     stop_loss: setting.stop_loss || '',
@@ -78,9 +82,7 @@ const ClientView = () => {
                     trade_limit: setting.trade_limit || '',
                     expiry_date: formatDate(setting.expiry_date) || '',
                     max_loss_for_day: setting.max_loss_for_day || '',
-                    min_loss_for_day: setting.min_loss_for_day || '',
                     max_profit_for_day: setting.max_profit_for_day || '',
-                    min_profit_for_day: setting.min_profit_for_day || '',
                     is_tread_status: setting.is_tread_status ? 'On' : 'Off',
                 })) || [];
 
@@ -142,20 +144,38 @@ const ClientView = () => {
     const fetchBrokerLoginActivity = async (clientId) => {
         try {
             const response = await getBrokerLoginActivity(clientId);
-            if (response && response.length > 0) {
-                const loginActivity = response[0];
-                const formattedLoginActivity = {
-                    last_login: formatDate(loginActivity.last_login),
-                    logout_time: loginActivity.logout_time ? formatDate(loginActivity.logout_time) : 'not found',
-                    isTokenExpired: loginActivity.isTokenExpired,
-                };
-                setBrokerLogin(formattedLoginActivity);
-            } else {
-                setBrokerLogin(null);
-            }
+            setBrokerLogin(response?.data || null);
         } catch (error) {
             console.error('Error fetching broker login activity:', error);
         }
+    };
+
+    const renderStatusBadge = (status) => {
+        const normalized = (status || 'unavailable').toLowerCase();
+        const palette = {
+            active: { background: '#d1fae5', color: '#065f46', label: 'Active' },
+            inactive: { background: '#fee2e2', color: '#991b1b', label: 'Inactive' },
+            expired: { background: '#fee2e2', color: '#991b1b', label: 'Expired' },
+            unavailable: { background: '#e5e7eb', color: '#374151', label: 'Unavailable' },
+        };
+        const styles = palette[normalized] || palette.unavailable;
+        return (
+            <span
+                style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    minWidth: '110px',
+                    padding: '8px 12px',
+                    borderRadius: '999px',
+                    backgroundColor: styles.background,
+                    color: styles.color,
+                    fontWeight: 600,
+                }}
+            >
+                {styles.label}
+            </span>
+        );
     };
 
     const renderBrokerFields = () => {
@@ -163,221 +183,61 @@ const ClientView = () => {
             return <p style={{ color: 'red', fontWeight: 'bold', fontSize: '18px' }}>No broker details available, First select the Broker.</p>;
         }
 
-        const {
-            broker_name,
-            broker_API_SKEY,
-            broker_API_KEY,
-            broker_API_UID,
-            broker_Demate_User_Name,
-            broker_Totp_Authcode,
-            broker_pass,
-            access_token,
-            request_token
-        } = brokerDetails;
+        const setup = brokerDetails.broker_setup;
+        if (!setup) {
+            return <p style={{ color: 'red', fontWeight: 'bold' }}>No broker details available.</p>;
+        }
 
-        const brokerName = broker_name?.broker_name.toLowerCase();
-
-        const commonFields = (
+        return (
             <>
                 <FormGroup className="row">
-                    <Label className="col-sm-4 col-form-label">Access Token</Label>
+                    <Label className="col-sm-4 col-form-label">Broker Name</Label>
                     <Col sm="8">
-                        <Input type="text" value={access_token || 'not found'} readOnly />
+                        <Input type="text" value={brokerDetails.selected_broker_name || brokerDetails.broker_name?.broker_name || 'not found'} readOnly />
                     </Col>
                 </FormGroup>
                 <FormGroup className="row">
-                    <Label className="col-sm-4 col-form-label">Request Token</Label>
+                    <Label className="col-sm-4 col-form-label">Authentication Flow</Label>
                     <Col sm="8">
-                        <Input type="text" value={request_token || 'not found'} readOnly />
+                        <Input type="text" value={(setup.auth_mode || 'unavailable').replace(/_/g, ' ')} readOnly />
+                    </Col>
+                </FormGroup>
+                {(setup.fields || []).map((field) => (
+                    <FormGroup className="row" key={field.key}>
+                        <Label className="col-sm-4 col-form-label">{field.label}</Label>
+                        <Col sm="8">
+                            <Input
+                                type="text"
+                                value={
+                                    field.secret
+                                        ? (field.configured ? 'Saved securely' : 'Not configured')
+                                        : (field.display_value || field.value || 'not found')
+                                }
+                                readOnly
+                            />
+                        </Col>
+                    </FormGroup>
+                ))}
+                <FormGroup className="row">
+                    <Label className="col-sm-4 col-form-label">Access Token</Label>
+                    <Col sm="8">
+                        <Input type="text" value={brokerDetails.has_access_token ? 'Available securely' : 'Unavailable'} readOnly />
+                    </Col>
+                </FormGroup>
+                <FormGroup className="row">
+                    <Label className="col-sm-4 col-form-label">Refresh Token</Label>
+                    <Col sm="8">
+                        <Input type="text" value={brokerDetails.has_refresh_token ? 'Available securely' : 'Unavailable'} readOnly />
+                    </Col>
+                </FormGroup>
+                <FormGroup className="row">
+                    <Label className="col-sm-4 col-form-label">Feed Token</Label>
+                    <Col sm="8">
+                        <Input type="text" value={brokerDetails.has_feed_token ? 'Available securely' : 'Unavailable'} readOnly />
                     </Col>
                 </FormGroup>
             </>
         );
-
-        switch (brokerName) {
-            case 'upstox':
-                return (
-                    <>
-                        <FormGroup className="row">
-                            <Label className="col-sm-4 col-form-label">Broker Name</Label>
-                            <Col sm="8">
-                                <Input type="text" value={broker_name.broker_name || 'not found'} readOnly />
-                            </Col>
-                        </FormGroup>
-                        <FormGroup className="row">
-                            <Label className="col-sm-4 col-form-label">API SKEY</Label>
-                            <Col sm="8">
-                                <Input type="text" value={broker_API_SKEY || 'not found'} readOnly />
-                            </Col>
-                        </FormGroup>
-                        <FormGroup className="row">
-                            <Label className="col-sm-4 col-form-label">API KEY</Label>
-                            <Col sm="8">
-                                <Input type="text" value={broker_API_KEY || 'not found'} readOnly />
-                            </Col>
-                        </FormGroup>
-                        {commonFields}
-                    </>
-                );
-            case 'alice blue':
-                return (
-                    <>
-                        <FormGroup className="row">
-                            <Label className="col-sm-4 col-form-label">Broker Name</Label>
-                            <Col sm="8">
-                                <Input type="text" value={broker_name.broker_name || 'not found'} readOnly />
-                            </Col>
-                        </FormGroup>
-                        <FormGroup className="row">
-                            <Label className="col-sm-4 col-form-label">API KEY</Label>
-                            <Col sm="8">
-                                <Input type="text" value={broker_API_KEY || 'not found'} readOnly />
-                            </Col>
-                        </FormGroup>
-                        <FormGroup className="row">
-                            <Label className="col-sm-4 col-form-label">API UID</Label>
-                            <Col sm="8">
-                                <Input type="text" value={broker_API_UID || 'not found'} readOnly />
-                            </Col>
-                        </FormGroup>
-                        {commonFields}
-                    </>
-                );
-            case 'angle one':
-                return (
-                    <>
-                        <FormGroup className="row">
-                            <Label className="col-sm-4 col-form-label">Broker Name</Label>
-                            <Col sm="8">
-                                <Input type="text" value={broker_name.broker_name || 'not found'} readOnly />
-                            </Col>
-                        </FormGroup>
-                        <FormGroup className="row">
-                            <Label className="col-sm-4 col-form-label">API KEY</Label>
-                            <Col sm="8">
-                                <Input type="text" value={broker_API_KEY || 'not found'} readOnly />
-                            </Col>
-                        </FormGroup>
-                        <FormGroup className="row">
-                            <Label className="col-sm-4 col-form-label">TOTP Authcode</Label>
-                            <Col sm="8">
-                                <Input type="text" value={broker_Totp_Authcode || 'not found'} readOnly />
-                            </Col>
-                        </FormGroup>
-                        <FormGroup className="row">
-                            <Label className="col-sm-4 col-form-label">Password</Label>
-                            <Col sm="8">
-                                <Input type="text" value={broker_pass || 'not found'} readOnly />
-                            </Col>
-                        </FormGroup>
-                        <FormGroup className="row">
-                            <Label className="col-sm-4 col-form-label">Demat User Name</Label>
-                            <Col sm="8">
-                                <Input type="text" value={broker_Demate_User_Name || 'not found'} readOnly />
-                            </Col>
-                        </FormGroup>
-                        {commonFields}
-                    </>
-                );
-            case 'zerodha':
-                return (
-                    <>
-                        <FormGroup className="row">
-                            <Label className="col-sm-4 col-form-label">Broker Name</Label>
-                            <Col sm="8">
-                                <Input type="text" value={broker_name.broker_name || 'not found'} readOnly />
-                            </Col>
-                        </FormGroup>
-                        <FormGroup className="row">
-                            <Label className="col-sm-4 col-form-label">API SKEY</Label>
-                            <Col sm="8">
-                                <Input type="text" value={broker_API_SKEY || 'not found'} readOnly />
-                            </Col>
-                        </FormGroup>
-                        <FormGroup className="row">
-                            <Label className="col-sm-4 col-form-label">API KEY</Label>
-                            <Col sm="8">
-                                <Input type="text" value={broker_API_KEY || 'not found'} readOnly />
-                            </Col>
-                        </FormGroup>
-                        {commonFields}
-                    </>
-                );
-            case '5paisa':
-                return (
-                    <>
-                        <FormGroup className="row">
-                            <Label className="col-sm-4 col-form-label">Broker Name</Label>
-                            <Col sm="8">
-                                <Input type="text" value={broker_name.broker_name || 'not found'} readOnly />
-                            </Col>
-                        </FormGroup>
-                        <FormGroup className="row">
-                            <Label className="col-sm-4 col-form-label">API SKEY</Label>
-                            <Col sm="8">
-                                <Input type="text" value={broker_API_SKEY || 'not found'} readOnly />
-                            </Col>
-                        </FormGroup>
-                        <FormGroup className="row">
-                            <Label className="col-sm-4 col-form-label">API KEY</Label>
-                            <Col sm="8">
-                                <Input type="text" value={broker_API_KEY || 'not found'} readOnly />
-                            </Col>
-                        </FormGroup>
-                        <FormGroup className="row">
-                            <Label className="col-sm-4 col-form-label">API UID</Label>
-                            <Col sm="8">
-                                <Input type="text" value={broker_API_UID || 'not found'} readOnly />
-                            </Col>
-                        </FormGroup>
-                        {commonFields}
-                    </>
-                );
-            case 'dhan':
-                return (
-                    <>
-                        <FormGroup className="row">
-                            <Label className="col-sm-4 col-form-label">Broker Name</Label>
-                            <Col sm="8">
-                                <Input type="text" value={broker_name.broker_name || 'not found'} readOnly />
-                            </Col>
-                        </FormGroup>
-                        <FormGroup className="row">
-                            <Label className="col-sm-4 col-form-label">API KEY</Label>
-                            <Col sm="8">
-                                <Input type="text" value={broker_API_KEY || 'not found'} readOnly />
-                            </Col>
-                        </FormGroup>
-                        {commonFields}
-                    </>
-                );
-            case 'fyers':
-                return (
-                    <>
-                        <FormGroup className="row">
-                            <Label className="col-sm-4 col-form-label">Broker Name</Label>
-                            <Col sm="8">
-                                <Input type="text" value={broker_name.broker_name || 'not found'} readOnly />
-                            </Col>
-                        </FormGroup>
-                        <FormGroup className="row">
-                            <Label className="col-sm-4 col-form-label">API KEY</Label>
-                            <Col sm="8">
-                                <Input type="text" value={broker_API_KEY || 'not found'} readOnly />
-                            </Col>
-                        </FormGroup>
-                        <FormGroup className="row">
-                            <Label className="col-sm-4 col-form-label">API KEY</Label>
-                            <Col sm="8">
-                                <Input type="text" value={broker_API_SKEY || 'not found'} readOnly />
-                            </Col>
-                        </FormGroup>
-                        {commonFields}
-                    </>
-                );
-            default:
-                return <p style={{ color: 'red', fontWeight: 'bold' }}>No broker details available.</p>;
-        }
     };
 
     const handleTabClick = (symbol) => {
@@ -448,9 +308,9 @@ const ClientView = () => {
                                             </Col>
                                         </FormGroup>
                                         <FormGroup className="row">
-                                            <Label className="col-sm-4 col-form-label">Create Date</Label>
+                                            <Label className="col-sm-4 col-form-label">Client Creation Date</Label>
                                             <Col sm="8">
-                                                <Input type="text" value={formData.createdDate} readOnly placeholder="Create Date" />
+                                                <Input type="text" value={formData.createdDate} readOnly placeholder="Client Creation Date" />
                                             </Col>
                                         </FormGroup>
                                     </Form>
@@ -488,15 +348,15 @@ const ClientView = () => {
                                             </Col>
                                         </FormGroup>
                                         <FormGroup className="row">
-                                            <Label className="col-sm-4 col-form-label">Start Date</Label>
+                                            <Label className="col-sm-4 col-form-label">Service Start Date</Label>
                                             <Col sm="8">
-                                                <Input type="date" value={formData.fromDate} placeholder="From Date" readOnly />
+                                                <Input type="date" value={formData.fromDate} placeholder="Service Start Date" readOnly />
                                             </Col>
                                         </FormGroup>
                                         <FormGroup className="row">
-                                            <Label className="col-sm-4 col-form-label">End Date</Label>
+                                            <Label className="col-sm-4 col-form-label">Service End Date</Label>
                                             <Col sm="8">
-                                                <Input type="date" value={formData.toDate} placeholder="To Date" readOnly />
+                                                <Input type="date" value={formData.toDate} placeholder="Service End Date" readOnly />
                                             </Col>
                                         </FormGroup>
                                         <FormGroup className="row">
@@ -523,59 +383,69 @@ const ClientView = () => {
                                 </Col>
 
                                 <Col md="6" className="mb-4">
-                                    <h4 className="mt-4 mb-4 text-left">Broker Login Activity</h4>
+                                    <h4 className="mt-4 mb-4 text-left">Login Activity</h4>
                                     <Form className="theme-form mt-3">
                                         <FormGroup className="row">
-                                            <Label className="col-sm-4 col-form-label" for="lastLogin">Last Login</Label>
+                                            <Label className="col-sm-4 col-form-label">Panel Login Time</Label>
                                             <Col sm="8">
                                                 <Input
                                                     type="text"
-                                                    id="lastLogin"
-                                                    value={brokerLogin ? brokerLogin.last_login : 'not found'}
+                                                    value={brokerLogin?.panel?.current_panel_login_time
+                                                        ? formatDate(brokerLogin.panel.current_panel_login_time)
+                                                        : (brokerLogin?.panel?.panel_login_time ? formatDate(brokerLogin.panel.panel_login_time) : 'Unavailable')}
                                                     readOnly
-                                                    placeholder="Last Login Time"
                                                 />
                                             </Col>
                                         </FormGroup>
                                         <FormGroup className="row">
-                                            <Label className="col-sm-4 col-form-label" for="logoutTime">Logout Time</Label>
+                                            <Label className="col-sm-4 col-form-label">Panel Logout Time</Label>
                                             <Col sm="8">
                                                 <Input
                                                     type="text"
-                                                    id="logoutTime"
-                                                    value={brokerLogin ? brokerLogin.logout_time : 'not found'}
+                                                    value={brokerLogin?.panel?.panel_logout_time ? formatDate(brokerLogin.panel.panel_logout_time) : 'Unavailable'}
                                                     readOnly
-                                                    placeholder="Logout Time"
                                                 />
                                             </Col>
                                         </FormGroup>
                                         <FormGroup className="row">
-                                            <Label className="col-sm-4 col-form-label" for="tokenExpired">Token Expired</Label>
+                                            <Label className="col-sm-4 col-form-label">Broker Session</Label>
+                                            <Col sm="8">
+                                                <div>{renderStatusBadge(brokerLogin?.broker?.session?.status)}</div>
+                                            </Col>
+                                        </FormGroup>
+                                        <FormGroup className="row">
+                                            <Label className="col-sm-4 col-form-label">Broker Token</Label>
+                                            <Col sm="8">
+                                                <div>{renderStatusBadge(brokerLogin?.broker?.token?.status)}</div>
+                                            </Col>
+                                        </FormGroup>
+                                        <FormGroup className="row">
+                                            <Label className="col-sm-4 col-form-label">Token Expiry</Label>
                                             <Col sm="8">
                                                 <Input
                                                     type="text"
+                                                    value={brokerLogin?.broker?.token?.expires_at ? formatDate(brokerLogin.broker.token.expires_at) : 'Unavailable'}
                                                     readOnly
-                                                    value={
-                                                        brokerLogin === null
-                                                            ? 'Not found'
-                                                            : brokerLogin.isTokenExpired === null
-                                                                ? 'Not Logged In'
-                                                                : brokerLogin.isTokenExpired
-                                                                    ? 'Token Expired'
-                                                                    : 'Not Expired'
-                                                    }
-                                                    style={{
-                                                        color:
-                                                            brokerLogin === null
-                                                                ? 'gray'
-                                                                : brokerLogin.isTokenExpired === null
-                                                                    ? 'orange'
-                                                                    : brokerLogin.isTokenExpired
-                                                                        ? 'red'
-                                                                        : 'green',
-                                                        fontWeight: 'bold',
-                                                        backgroundColor: 'transparent',
-                                                    }}
+                                                />
+                                            </Col>
+                                        </FormGroup>
+                                        <FormGroup className="row">
+                                            <Label className="col-sm-4 col-form-label">Broker Last Login</Label>
+                                            <Col sm="8">
+                                                <Input
+                                                    type="text"
+                                                    value={brokerLogin?.broker?.last_login_at ? formatDate(brokerLogin.broker.last_login_at) : 'Unavailable'}
+                                                    readOnly
+                                                />
+                                            </Col>
+                                        </FormGroup>
+                                        <FormGroup className="row">
+                                            <Label className="col-sm-4 col-form-label">Broker Last Logout</Label>
+                                            <Col sm="8">
+                                                <Input
+                                                    type="text"
+                                                    value={brokerLogin?.broker?.last_logout_at ? formatDate(brokerLogin.broker.last_logout_at) : 'Unavailable'}
+                                                    readOnly
                                                 />
                                             </Col>
                                         </FormGroup>
@@ -627,13 +497,12 @@ const ClientView = () => {
                                             <div key={index}>
                                                 <h5 className='mb-3'>Trade Settings for {selectedTab}</h5>
                                                 <Form className="theme-form mt-3">
-                                                    {/* Left Section - First 5 Input Fields */}
                                                     <Row>
                                                         <Col md="6">
                                                             <FormGroup className="row">
-                                                                <Label className="col-sm-4 col-form-label">Name</Label>
+                                                                <Label className="col-sm-4 col-form-label">Script</Label>
                                                                 <Col sm="8">
-                                                                    <Input type="text" value={trade.name || 'not found'} readOnly />
+                                                                    <Input type="text" value={trade.script_name || trade.name || 'not found'} readOnly />
                                                                 </Col>
                                                             </FormGroup>
                                                             <FormGroup className="row">
@@ -642,12 +511,6 @@ const ClientView = () => {
                                                                     <Input type="text" value={trade.groupService || 'not found'} readOnly />
                                                                 </Col>
                                                             </FormGroup>
-                                                            {/* <FormGroup className="row">
-                                                                <Label className="col-sm-4 col-form-label">Strategy</Label>
-                                                                <Col sm="8">
-                                                                    <Input type="text" value={trade.strategy || ''} readOnly />
-                                                                </Col>
-                                                            </FormGroup> */}
                                                             <FormGroup className="row">
                                                                 <Label className="col-sm-4 col-form-label">Broker</Label>
                                                                 <Col sm="8">
@@ -661,9 +524,15 @@ const ClientView = () => {
                                                                 </Col>
                                                             </FormGroup>
                                                             <FormGroup className="row">
-                                                                <Label className="col-sm-4 col-form-label">Buy/Sell</Label>
+                                                                <Label className="col-sm-4 col-form-label">Order Type</Label>
                                                                 <Col sm="8">
-                                                                    <Input type="text" value={trade.buy_sell || 'not found'} readOnly />
+                                                                    <Input type="text" value={trade.order_type || 'not found'} readOnly />
+                                                                </Col>
+                                                            </FormGroup>
+                                                            <FormGroup className="row">
+                                                                <Label className="col-sm-4 col-form-label">Buffer %</Label>
+                                                                <Col sm="8">
+                                                                    <Input type="text" value={trade.buffer_percentage || 'not found'} readOnly />
                                                                 </Col>
                                                             </FormGroup>
                                                             <FormGroup className="row">
@@ -672,21 +541,8 @@ const ClientView = () => {
                                                                     <Input type="text" value={trade.expiry_date || 'not found'} readOnly />
                                                                 </Col>
                                                             </FormGroup>
-                                                            <FormGroup className="row">
-                                                                <Label className="col-sm-4 col-form-label">Max Profit For Day</Label>
-                                                                <Col sm="8">
-                                                                    <Input type="text" value={trade.max_profit_for_day || 'not found'} readOnly />
-                                                                </Col>
-                                                            </FormGroup>
-                                                            <FormGroup className="row">
-                                                                <Label className="col-sm-4 col-form-label">Min Profit For Day</Label>
-                                                                <Col sm="8">
-                                                                    <Input type="text" value={trade.min_profit_for_day || 'not found'} readOnly />
-                                                                </Col>
-                                                            </FormGroup>
                                                         </Col>
 
-                                                        {/* Right Section - Last 5 Input Fields */}
                                                         <Col md="6">
                                                             <FormGroup className="row">
                                                                 <Label className="col-sm-4 col-form-label">Trade Status</Label>
@@ -713,7 +569,7 @@ const ClientView = () => {
                                                                 </Col>
                                                             </FormGroup>
                                                             <FormGroup className="row">
-                                                                <Label className="col-sm-4 col-form-label">SL Type</Label>
+                                                                <Label className="col-sm-4 col-form-label">SL-TP Type</Label>
                                                                 <Col sm="8">
                                                                     <Input type="text" value={trade.sl_type || 'not found'} readOnly />
                                                                 </Col>
@@ -731,15 +587,15 @@ const ClientView = () => {
                                                                 </Col>
                                                             </FormGroup>
                                                             <FormGroup className="row">
-                                                                <Label className="col-sm-4 col-form-label">Max Loss For Day</Label>
+                                                                <Label className="col-sm-4 col-form-label">Max Profit For Day</Label>
                                                                 <Col sm="8">
-                                                                    <Input type="text" value={trade.max_loss_for_day || 'not found'} readOnly />
+                                                                    <Input type="text" value={trade.max_profit_for_day || 'not found'} readOnly />
                                                                 </Col>
                                                             </FormGroup>
                                                             <FormGroup className="row">
-                                                                <Label className="col-sm-4 col-form-label">Min Loss For Day</Label>
+                                                                <Label className="col-sm-4 col-form-label">Max Loss For Day</Label>
                                                                 <Col sm="8">
-                                                                    <Input type="text" value={trade.min_loss_for_day || 'not found'} readOnly />
+                                                                    <Input type="text" value={trade.max_loss_for_day || 'not found'} readOnly />
                                                                 </Col>
                                                             </FormGroup>
                                                         </Col>

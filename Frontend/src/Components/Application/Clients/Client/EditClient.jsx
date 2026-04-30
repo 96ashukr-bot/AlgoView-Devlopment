@@ -6,7 +6,55 @@ import 'react-toastify/dist/ReactToastify.css';
 import './Clients.css'
 import { getSegmentsList, getSubSegment, getBroker, getGroupServicesList, fetchSubAdminsList, getClientById, updateClient, getStrategies, getLicence } from '../../../../Services/Authentication';
 
+const LICENSE_NAMES = ['Demo', 'Live'];
+const MONTH_OPTIONS = Array.from({ length: 12 }, (_, index) => index + 1);
+
+const formatDateInput = (date) => date.toISOString().split('T')[0];
+
+const getLicenseDates = (licenseName, monthsValue) => {
+  if (!licenseName) {
+    return { fromDate: '', toDate: '' };
+  }
+
+  const startDate = new Date();
+  startDate.setHours(0, 0, 0, 0);
+  const endDate = new Date(startDate);
+
+  if (licenseName === 'Demo') {
+    endDate.setDate(endDate.getDate() + 3);
+    return {
+      fromDate: formatDateInput(startDate),
+      toDate: formatDateInput(endDate),
+    };
+  }
+
+  if (licenseName === 'Live') {
+    const months = Number(monthsValue);
+    if (!months) {
+      return {
+        fromDate: formatDateInput(startDate),
+        toDate: '',
+      };
+    }
+    endDate.setMonth(endDate.getMonth() + months);
+    return {
+      fromDate: formatDateInput(startDate),
+      toDate: formatDateInput(endDate),
+    };
+  }
+
+  return { fromDate: '', toDate: '' };
+};
+
 const EditClient = () => {
+  const getStrategyModeState = (strategyIds = [], strategyList = []) => {
+    const selected = strategyList.filter((strategy) => strategyIds.includes(strategy.id));
+    return {
+      indicator: selected.some((strategy) => strategy.execution_mode !== 'MULTI_LEG'),
+      multiLeg: selected.some((strategy) => strategy.execution_mode === 'MULTI_LEG'),
+    };
+  };
+
   const { id } = useParams();
   const [formData, setFormData] = useState({
     userName: '',
@@ -38,8 +86,12 @@ const EditClient = () => {
   const [strategies, setStrategies] = useState([]);
   const [selectedSubsegment, setSelectedSubsegment] = useState([]);
   const [selectedStrategies, setSelectedStrategies] = useState([]);
+  const [selectedStrategyModes, setSelectedStrategyModes] = useState({ indicator: false, multiLeg: true });
   const [licensecond, setLicensesCond] = useState('');
   const [selectedGroupService, setSelectedGroupService] = useState(null);
+  const availableLicenses = licenses.filter((license) => LICENSE_NAMES.includes(license.name));
+  const indicatorStrategies = strategies.filter((strategy) => strategy.execution_mode !== 'MULTI_LEG');
+  const multiLegStrategies = strategies.filter((strategy) => strategy.execution_mode === 'MULTI_LEG');
 
   useEffect(() => {
     fetchSegments();
@@ -56,14 +108,8 @@ const EditClient = () => {
   }, [id]);
 
   useEffect(() => {
-    if (selectedGroupService) {
-      // Get the strategy IDs from the selected group service
-      const strategyIds = selectedGroupService.Strategy.map(strategy => strategy.id);
-      setSelectedStrategies(strategyIds);
-    } else {
-      setSelectedStrategies([]); // Clear selected strategies if no group service is selected
-    }
-  }, [selectedGroupService]);
+    setSelectedStrategyModes(getStrategyModeState(selectedStrategies, strategies));
+  }, [selectedStrategies, strategies]);
 
   const fetchClientData = async (clientId) => {
     try {
@@ -71,21 +117,14 @@ const EditClient = () => {
       console.log('client data responseeeeee', response);
 
       if (response) {
-
-        var segment = ''
-        // If the user is created by Super Admin & the else user is created by own.
-        const customSegment = response.client_trade_settings.find(seg => seg.segment === 'Option')
-        if (customSegment) {
-          segment = customSegment
-        } else {
-          console.log("My Segment");
-
-          fetchSegments();
-        }
+        const primaryTradeSetting = response.client_trade_settings?.[0] || null;
+        const resolvedSegmentId =
+          primaryTradeSetting?.sub_segment?.segment ||
+          response.Group_service?.segment?.id ||
+          '';
 
         console.log('response.client_trade_settings', response.client_trade_settings);
-
-        console.log('segmenttttttttt', segment);
+        console.log('resolvedSegmentId', resolvedSegmentId);
 
 
         setFormData({
@@ -100,12 +139,13 @@ const EditClient = () => {
           subadmin: response.assigned_client ? response.assigned_client.id : '',
           fromDate: response.start_date_client || '',
           toDate: response.end_date_client || '',
-          segment: segment ? segment.sub_segment.segment : Number.isInteger(segment) ? segment : '',
-          subsegment: segment ? [segment.sub_segment.id] : [],
+          segment: resolvedSegmentId,
+          subsegment: primaryTradeSetting?.sub_segment?.id ? [primaryTradeSetting.sub_segment.id] : [],
           switchOption: true,
           switchOptionSeg: true,
           // segment: '',
         });
+        setLicensesCond(response.license?.name || '');
 
 
         setSelectedGroupService(response.Group_service || null);
@@ -123,14 +163,18 @@ const EditClient = () => {
             setSelectedSubsegment(selectedSubsegment);
           }
 
-          fetchSubSegments();
+          if (resolvedSegmentId) {
+            fetchSubSegments(resolvedSegmentId);
+          }
         } else {
           console.log("Subsegment Reponse ###################");
 
           if (response.client_trade_settings && Array.isArray(response.client_trade_settings)) {
             const selectedSubsegment = response.client_trade_settings.map(setting => setting.sub_segment.id);
             console.log('hhhhhhhhhhhhhhhh', selectedSubsegment);
-            fetchSubSegments();
+            if (resolvedSegmentId) {
+              fetchSubSegments(resolvedSegmentId);
+            }
           }
         }
 
@@ -151,17 +195,28 @@ const EditClient = () => {
     }
   };
 
-  useEffect(() => {
-    const isInitial = Object.values(formData).every(value => value === '' || value === false);
-    if (!isInitial && formData.license != '') {
-      licenceName(formData.license)
-    }
-  }, [formData]);
-
   const licenceName = (licenseId) => {
-    const licensecondition = licenses.filter(licenseKey => licenseKey.id == licenseId);
-    setLicensesCond(licensecondition[0].name);
-  }
+    const licensecondition = licenses.find((licenseKey) => licenseKey.id === Number(licenseId));
+    setLicensesCond(licensecondition?.name || '');
+  };
+
+  useEffect(() => {
+    if (!licensecond) {
+      return;
+    }
+
+    const { fromDate, toDate } = getLicenseDates(licensecond, formData.tomonth);
+    setFormData((prevData) => {
+      if (prevData.fromDate === fromDate && prevData.toDate === toDate) {
+        return prevData;
+      }
+      return {
+        ...prevData,
+        fromDate,
+        toDate,
+      };
+    });
+  }, [licensecond, formData.tomonth]);
 
   const fetchSegments = async () => {
     try {
@@ -171,26 +226,6 @@ const EditClient = () => {
       // Check if response is an array
       if (response && Array.isArray(response)) {
         setSegments(response);
-
-        // Desired segment name
-        const desiredSegmentName = 'Option';
-
-        // Find the desired segment by name
-        const foundSegment = response.find(
-          segment => segment.name.toUpperCase() === desiredSegmentName.toUpperCase()
-        );
-
-        // Handle found segment
-        if (foundSegment) {
-          setFormData(prevData => ({
-            ...prevData,
-            segment: foundSegment.id,
-          }));
-          console.log(`Segment ID for ${desiredSegmentName}:`, foundSegment.id);
-        } else {
-          console.error(`Segment with name ${desiredSegmentName} not found.`);
-          toast.error(`Segment with name ${desiredSegmentName} not found.`);
-        }
       } else {
         console.error('Fetched Segments are not an array or invalid:', response);
         setSegments([]);
@@ -202,29 +237,14 @@ const EditClient = () => {
     }
   };
 
-  const fetchSubSegments = async () => {
+  const fetchSubSegments = async (segmentId = formData.segment) => {
     try {
-      const desiredSegmentName = 'Option';
-
-      // Fetch all segments first
-      const segments = await getSegmentsList();
-      console.log('Segments List Response:', segments);
-
-      // Find the desired segment by name
-      const foundSegment = Array.isArray(segments)
-        ? segments.find(
-          segment => segment.name.toUpperCase() === desiredSegmentName.toUpperCase()
-        )
-        : null;
-
-      if (!foundSegment) {
-        console.error('Segment with specified name not found or segments list invalid.');
-        toast.error('Segment ID is required to fetch sub-segments.');
+      if (!segmentId) {
+        setSubSegments([]);
         return;
       }
 
-      // Fetch sub-segments for the found segment ID
-      const response = await getSubSegment(foundSegment.id);
+      const response = await getSubSegment(segmentId);
       console.log('SubSegments API Response:', response);
 
       // Validate and set the sub-segments
@@ -270,7 +290,9 @@ const EditClient = () => {
   const fetchLicenses = async () => {
     try {
       const response = await getLicence();
-      const fetchedLicenses = response && Array.isArray(response.results) ? response.results : [];
+      const fetchedLicenses = response && Array.isArray(response.results)
+        ? response.results.filter((license) => LICENSE_NAMES.includes(license.name))
+        : [];
       // Set licenses in state
       setLicenses(fetchedLicenses);
     } catch (error) {
@@ -280,7 +302,7 @@ const EditClient = () => {
 
   const fetchStrategies = async () => {
     try {
-      const response = await getStrategies();
+      const response = await getStrategies(1, 500);
       console.log('Response:', response);
 
       const strategies = response?.results;
@@ -317,24 +339,53 @@ const EditClient = () => {
     }
   };
 
+  const applyGroupServiceStrategies = (groupService) => {
+    if (!groupService || !Array.isArray(groupService.Strategy)) {
+      return;
+    }
+
+    const groupStrategyIds = groupService.Strategy.map((strategy) => strategy.id);
+    if (!groupStrategyIds.length) {
+      return;
+    }
+
+    setSelectedStrategies((prev) => {
+      const nonIndicatorStrategies = prev.filter((strategyId) => {
+        const matchingStrategy = strategies.find((strategy) => strategy.id === strategyId);
+        return matchingStrategy?.execution_mode === 'MULTI_LEG';
+      });
+      return Array.from(new Set([...nonIndicatorStrategies, ...groupStrategyIds]));
+    });
+    setSelectedStrategyModes((prev) => ({
+      ...prev,
+      indicator: true,
+    }));
+  };
+
+  const handleStrategyModeToggle = (modeKey) => {
+    const nextEnabled = !selectedStrategyModes[modeKey];
+    setSelectedStrategyModes((prev) => ({
+      ...prev,
+      [modeKey]: nextEnabled,
+    }));
+
+    if (!nextEnabled) {
+      setSelectedStrategies((prev) => prev.filter((strategyId) => {
+        const matchingStrategy = strategies.find((strategy) => strategy.id === strategyId);
+        if (!matchingStrategy) {
+          return false;
+        }
+        if (modeKey === 'indicator') {
+          return matchingStrategy.execution_mode === 'MULTI_LEG';
+        }
+        return matchingStrategy.execution_mode !== 'MULTI_LEG';
+      }));
+    }
+  };
+
   // When License is Selected
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    //console.log('ssssssssss', name, value, licenses);
-    if (name == 'license') {
-      licenceName(value);
-    }
-    if (name === 'fromDate' || name === 'toDate') {
-      setFormData((prevData) => ({
-        ...prevData,
-        [name]: value,
-      }));
-    } else {
-      setFormData((prevData) => ({
-        ...prevData,
-        [name]: value,
-      }));
-    }
 
     if (type === 'checkbox') {
       setFormData(prevData => ({
@@ -347,7 +398,7 @@ const EditClient = () => {
       // Convert segment to integer
       if (name === 'segment') {
         newValue = parseInt(value);
-        fetchSubSegments(); // Fetch subsegments when segment changes
+        fetchSubSegments(newValue);
       } else if (name === 'groupService') {
         newValue = parseInt(value);
       }
@@ -360,6 +411,34 @@ const EditClient = () => {
         }));
         fetchSubSegments();
       } else {
+        if (name === 'license') {
+          const nextLicense = licenses.find((license) => license.id === Number(value));
+          const nextLicenseName = nextLicense?.name || '';
+          const licenseDates = getLicenseDates(nextLicenseName, '');
+          setLicensesCond(nextLicenseName);
+          setFormData((prevData) => ({
+            ...prevData,
+            license: value,
+            tomonth: '',
+            fromDate: licenseDates.fromDate,
+            toDate: licenseDates.toDate,
+          }));
+          setErrors((prevErrors) => ({ ...prevErrors, [name]: '' }));
+          return;
+        }
+
+        if (name === 'tomonth') {
+          const licenseDates = getLicenseDates(licensecond, value);
+          setFormData((prevData) => ({
+            ...prevData,
+            tomonth: value,
+            fromDate: licenseDates.fromDate,
+            toDate: licenseDates.toDate,
+          }));
+          setErrors((prevErrors) => ({ ...prevErrors, [name]: '' }));
+          return;
+        }
+
         setFormData(prevData => ({
           ...prevData,
           [name]: newValue,
@@ -370,12 +449,13 @@ const EditClient = () => {
       if (name === 'groupService') {
         const selectedService = groupServices.find(service => service.id === parseInt(value));
         setSelectedGroupService(selectedService ? selectedService : null);
+        applyGroupServiceStrategies(selectedService);
 
         const test = [];
         if (selectedService && selectedService.json_data) { // Check if selectedService and json_data exist
           Object.entries(subSegments).forEach(([key, value]) => {
             Object.entries(selectedService.json_data).forEach(([key1, value1]) => {
-              if (value.name === value1.ServiceName) {
+              if (value.name === (value1.ScriptName || value1.ServiceName)) {
                 test.push(value.id);
               }
             });
@@ -391,18 +471,16 @@ const EditClient = () => {
 
   const validateForm = () => {
     const newErrors = {};
-    Object.keys(formData).forEach((key) => {
-      // Check if the field is required and not filled
-      if (key !== 'dematuserid' && !formData[key]) {
-        newErrors[key] = 'This field is required';
-      }
-      if (licensecond == 'Live') {
-        delete newErrors.fromDate;
-        delete newErrors.toDate;
-      } else {
-        delete newErrors.tomonth;
+    ['userName', 'fullName', 'email', 'mobile', 'license', 'groupService', 'subadmin'].forEach((field) => {
+      if (!formData[field]) {
+        newErrors[field] = 'This field is required';
       }
     });
+
+    if (licensecond === 'Live' && !formData.tomonth) {
+      newErrors.tomonth = 'This field is required';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -446,10 +524,9 @@ const EditClient = () => {
       delete payload.start_date_client;
       delete payload.end_date_client;
     } else {
-      // delete payload.givenservices_to_month;
       delete payload.to_month;
-      // delete payload.demate_acc_uid;
-      // delete payload.assigned_client;
+      delete payload.start_date_client;
+      delete payload.end_date_client;
     }
     try {
       console.log(payload, "------------------------------------>>>>")
@@ -611,7 +688,7 @@ const EditClient = () => {
                     required
                   >
                     <option value="">Select License</option>
-                    {licenses.map((license) => (
+                    {availableLicenses.map((license) => (
                       <option key={license.id} value={license.id}>
                         {license.name}
                       </option>
@@ -682,13 +759,37 @@ const EditClient = () => {
                         required
                       >
                         <option value="">Select Month</option>
-                        {Array.from({ length: 12 }, (_, i) => (
-                          <option key={i + 1} value={i + 1}>
-                            {i + 1}
+                        {MONTH_OPTIONS.map((month) => (
+                          <option key={month} value={month}>
+                            {month}
                           </option>
                         ))}
                       </Input>
                       {errors.tomonth && <div className="invalid-feedback text-danger">{errors.tomonth}</div>}
+                    </Col>
+
+                    <Col md="4 mb-3">
+                      <Label htmlFor="fromDate">Service Start Date</Label>
+                      <Input
+                        type="date"
+                        className="form-control custom-input-style"
+                        name="fromDate"
+                        id="fromDate"
+                        value={formData.fromDate}
+                        readOnly
+                      />
+                    </Col>
+
+                    <Col md="4 mb-3">
+                      <Label htmlFor="toDate">Service End Date</Label>
+                      <Input
+                        type="date"
+                        className="form-control custom-input-style"
+                        name="toDate"
+                        id="toDate"
+                        value={formData.toDate}
+                        readOnly
+                      />
                     </Col>
 
                   </>
@@ -698,35 +799,27 @@ const EditClient = () => {
                 {licensecond === 'Demo' && (
                   <>
                     <Col md="4 mb-3">
-                      <Label htmlFor="fromDate">From Date
-                        <span style={{ color: 'red', fontSize: '20px' }}>*</span>
-                      </Label>
+                      <Label htmlFor="fromDate">Service Start Date</Label>
                       <Input
                         type="date"
-                        className={`form-control ${errors.fromDate ? 'is-invalid' : ''} custom-input-style`}
+                        className="form-control custom-input-style"
                         name="fromDate"
                         id="fromDate"
                         value={formData.fromDate}
-                        onChange={handleChange}
-                        required
+                        readOnly
                       />
-                      {errors.fromDate && <div className="invalid-feedback text-danger">{errors.fromDate}</div>}
                     </Col>
 
                     <Col md="4 mb-3">
-                      <Label htmlFor="toDate">To Date
-                        <span style={{ color: 'red', fontSize: '20px' }}>*</span>
-                      </Label>
+                      <Label htmlFor="toDate">Service End Date</Label>
                       <Input
                         type="date"
-                        className={`form-control ${errors.toDate ? 'is-invalid' : ''} custom-input-style`}
+                        className="form-control custom-input-style"
                         name="toDate"
                         id="toDate"
                         value={formData.toDate}
-                        onChange={handleChange}
-                        required
+                        readOnly
                       />
-                      {errors.toDate && <div className="invalid-feedback text-danger">{errors.toDate}</div>}
                     </Col>
                   </>
                 )}
@@ -771,7 +864,7 @@ const EditClient = () => {
                               userSelect: 'none'
                             }}
                           >
-                            {service.ServiceName}[O]
+                            {(service.ScriptName || service.ServiceName)}[O]
                           </div>
                         </Col>
                       ))}
@@ -788,7 +881,30 @@ const EditClient = () => {
                 </Col>
 
                 <Col md="12" className="mt-4">
-                  {strategies.map((strategy) => (
+                  <div className="d-flex flex-wrap gap-4 mb-3">
+                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedStrategyModes.indicator}
+                        onChange={() => handleStrategyModeToggle('indicator')}
+                      />
+                      <span>Indicator Based Strategies</span>
+                    </label>
+                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedStrategyModes.multiLeg}
+                        onChange={() => handleStrategyModeToggle('multiLeg')}
+                      />
+                      <span>Multi Leg Option Strategies</span>
+                    </label>
+                  </div>
+                </Col>
+
+                {selectedStrategyModes.indicator && (
+                <Col md="12" className="mt-1">
+                  <h6 className="mb-3">Indicator Based Strategies</h6>
+                  {indicatorStrategies.map((strategy) => (
                     <label key={strategy.id} style={{ width: '30%', paddingBottom: '20px', display: 'inline-flex' }}>
                       <input
                         type="checkbox"
@@ -798,12 +914,36 @@ const EditClient = () => {
                           transformOrigin: 'center',
                         }}
                         checked={selectedStrategies.includes(strategy.id)}
-                        disabled
                         onChange={() => handleCheckboxChange(strategy)}
                       />
                       <span style={{ marginLeft: '5px' }}>{strategy.name}</span>
                     </label>
                   ))}
+                </Col>
+                )}
+
+                <Col md="12" className="mt-2">
+                  <h6 className="mb-3">Multi Leg Option Strategies</h6>
+                  {multiLegStrategies.length > 0 ? multiLegStrategies.map((strategy) => (
+                    <label key={strategy.id} style={{ width: '30%', paddingBottom: '20px', display: 'inline-flex' }}>
+                      <input
+                        type="checkbox"
+                        style={{
+                          marginLeft: '20px',
+                          transform: 'scale(1.3)',
+                          transformOrigin: 'center',
+                        }}
+                        checked={selectedStrategies.includes(strategy.id)}
+                        onChange={() => handleCheckboxChange(strategy)}
+                      />
+                      <span style={{ marginLeft: '5px' }}>
+                        {strategy.name}
+                        {strategy.multi_leg_template_label ? ` (${strategy.multi_leg_template_label})` : ''}
+                      </span>
+                    </label>
+                  )) : (
+                    <p className="text-muted">No multi leg strategies available.</p>
+                  )}
                 </Col>
 
                 <Col md="12 mb-3">

@@ -1,7 +1,8 @@
 from django.http import JsonResponse
 from kiteconnect import KiteConnect
-from main.Alice_Blue_Api import save_trade_order_history
 from main.models import ClientBrokerdetails, CompanySmtpDetails
+from main.broker_order_utils import normalize_order_type, resolve_limit_price
+from main.trade_history_service import save_trade_order_history
 import logging
 logger = logging.getLogger('main')
 
@@ -108,6 +109,27 @@ def place_zerodha_orders(
             return response
 
         order_params["tradingsymbol"] = trading_symbol
+        requested_order_type = normalize_order_type(ordertype)
+        ltp = None
+        try:
+            ltp_response = kite.ltp(f"{Exchange}:{trading_symbol}")
+            ltp = ltp_response.get(f"{Exchange}:{trading_symbol}", {}).get("last_price")
+        except Exception as e:
+            logger.warning(f"[{user}] Zerodha LTP fetch failed for {trading_symbol}: {str(e)}")
+
+        if requested_order_type == "LIMIT":
+            price = resolve_limit_price(price, ltp, transaction_type)
+            if not price:
+                message = "Unable to calculate Zerodha limit price because live price is unavailable."
+                response = {"data": {"status": "Failed", "message": message}}
+                save_trade_order_history(LivePrice, group_service, transaction_type, trade_order_status, user, symbol, order_id, "Failed", None, message,
+                                         strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
+                                         webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="zerodha", history_id=history_id)
+                return response
+            order_params["price"] = price
+        elif requested_order_type == "MARKET":
+            order_params["price"] = 0
+        order_params["order_type"] = requested_order_type
         logger.info(f"[{user}] Placing order with params: {order_params}")
 
         try:
@@ -182,7 +204,17 @@ def place_zerodha_orders(
                     save_trade_order_history(LivePrice, group_service, transaction_type, trade_order_status, user, trade_symbol, order_id, status, res_data, message,
                                              strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
                                              webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="zerodha", history_id=history_id)
-                    return {"data": {"status": status.lower(), "message": message}}
+                    return {
+                        "data": {
+                            "status": status.lower(),
+                            "message": message,
+                            "order_id": order_id,
+                            "order_type": requested_order_type,
+                            "price": res_data.get("average_price") or order_params.get("price"),
+                            "ltp": ltp,
+                            "reference_price": ltp,
+                        }
+                    }
 
                 elif status in PENDING_STATUSES:
                     message = f"{user} : Order is in pending state: {status}"

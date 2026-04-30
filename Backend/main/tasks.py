@@ -42,7 +42,15 @@ else:
 smtp_details=smtp_details if smtp_details else None
 # smtp_details=CompanySmtpDetails.objects.first()
 default_from_email=smtp_details.email_host_user if smtp_details else   "no-reply@example.com"
-print("default_from_email>>>>>>",default_from_email)
+
+def _get_default_from_email():
+    smtp_details = get_smtp_details()
+    return (
+        getattr(smtp_details, "default_from_email", None)
+        or getattr(smtp_details, "email_host_user", None)
+        or settings.DEFAULT_FROM_EMAIL
+    )
+
 #client inactive and license expir ations
 @shared_task
 def send_client_acc_email_async(subject,messages,username,useremail):
@@ -51,7 +59,7 @@ def send_client_acc_email_async(subject,messages,username,useremail):
             print(f"SMTP connection could not be established!")
             return
         subject=subject
-        from_email =default_from_email
+        from_email = _get_default_from_email()
         context = {
             'user_name': username,          
             'support_email': support_email, 
@@ -74,7 +82,7 @@ def send_email_async(user_name, otp_code, email):
         print(f"SMTP connection could not be established!")
         return
     subject=f"Your OTP for {company_name} Login"
-    from_email = default_from_email
+    from_email = _get_default_from_email()
     # Define the context for the email template
     print("logo_url**************",logo_url)
     context = {
@@ -110,7 +118,7 @@ def send_email_pass_async(email, password, user_name, login_link, support_email,
         subject = f'Welcome to {company_name}! Your Registration is Complete'
         # subject = "Welcome to AlgoView Technologies"
         print("email sentdd")
-        from_email = default_from_email
+        from_email = _get_default_from_email()
         # Render the HTML template with context data
         context = {
             'user_name': user_name,
@@ -125,7 +133,7 @@ def send_email_pass_async(email, password, user_name, login_link, support_email,
         }
         html_message = render_to_string('welcome_email.html', context)
         # print("html msg:::::::",html_message)
-        from_email = default_from_email
+        from_email = _get_default_from_email()
         
         # Create the email
         email_message = EmailMultiAlternatives(subject, "", f"{company_sender_name} <{from_email}>", [email],connection=smtp_connection)
@@ -219,7 +227,7 @@ def resend_otp_email_async(user_email, otp_code):
     html_message = render_to_string('resend_email.html', context)
     
     subject = 'Your OTP Code for Login'
-    from_email = default_from_email  # Or whatever the default is for your project
+    from_email = _get_default_from_email()
     
     try:
         email_message = EmailMultiAlternatives(subject, "", f"{company_sender_name} <{from_email}>", [user_email],connection=smtp_connection)
@@ -235,7 +243,7 @@ def send_login_success_email(username, email, browser, ip_address, login_time):
         print("SMTP connection could not be established!")
         return
     subject = f"Login Alert for your {company_name} account!"
-    from_email = default_from_email  # Ensure it's defined in settings.py
+    from_email = _get_default_from_email()
     recipient_email = email  # FIXED: Use actual email, not username
 
     # Email context
@@ -268,7 +276,6 @@ def send_login_success_email(username, email, browser, ip_address, login_time):
 
 @shared_task
 def send_password_reset_email(uid, email, username, token):
-    print("reset passfunction calling")
     smtp_connection = get_smtp_connection()
     if not smtp_connection:
         print("SMTP connection could not be established!")
@@ -288,7 +295,7 @@ def send_password_reset_email(uid, email, username, token):
     }
     
     html_message = render_to_string('password_reset_email.html', context)
-    from_email = default_from_email
+    from_email = _get_default_from_email()
     try:
         email_message = EmailMultiAlternatives(subject, "", f"{company_sender_name} <{from_email}>", [email],connection=smtp_connection)
       
@@ -296,4 +303,4 @@ def send_password_reset_email(uid, email, username, token):
         email_message.send()
         print(f"Password reset email sent to {email}")
     except Exception as e:
-        print(f"Failed to send password reset email: {e}")
+        logger.error("Password reset email failed", extra={"error": str(e)})

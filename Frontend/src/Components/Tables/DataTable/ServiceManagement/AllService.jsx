@@ -7,18 +7,16 @@ import { H3 } from '../../../../AbstractElements';
 import { RotatingLines } from 'react-loader-spinner';
 import Swal from 'sweetalert2';
 import './ServiceManagement.css'
-import { getServices, getSegmentsList, getCategoriesList, createServices, updateServices, deleteServices } from '../../../../Services/Authentication'; // Import the update and delete functions
-import { FaArrowUp, FaArrowDown, FaEdit, FaPencilAlt, FaTrashAlt } from 'react-icons/fa';
+import { getServices, getSegmentsList, createServices, updateServices, deleteServices } from '../../../../Services/Authentication';
+import { FaArrowUp, FaArrowDown, FaPencilAlt, FaTrashAlt } from 'react-icons/fa';
 
 const AllService = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
     const [totalPages, setTotalPages] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
-    const [selectedCategory, setSelectedCategory] = useState('');
     const [sortConfig, setSortConfig] = useState({ key: '', direction: '' });
     const [services, setServices] = useState([]);
-    const [categories, setCategories] = useState([]);
     const [segments, setSegments] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -29,8 +27,7 @@ const AllService = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [currentService, setCurrentService] = useState(null);
     const [newService, setNewService] = useState({
-        serviceName: '',
-        category: '',
+        script: '',
         segment: ''
     });
 
@@ -49,7 +46,6 @@ const AllService = () => {
     }, [currentPage, itemsPerPage, searchQuery]);
 
     useEffect(() => {
-        fetchCategories();
         fetchSegments();
     }, []);
 
@@ -84,27 +80,10 @@ const AllService = () => {
         }
     };
 
-    const fetchCategories = async () => {
-        try {
-            const data = await getCategoriesList();
-            if (Array.isArray(data)) {
-                setCategories(data);
-            } else if (data.results) {
-                setCategories(data.results);
-            } else {
-                throw new Error('Unexpected response structure');
-            }
-        } catch (err) {
-            setError(err.message);
-        } finally {
-            setLoading(false);
-        }
-    };
-
     const toggleModal = () => {
         setModalOpen(!modalOpen);
         if (modalOpen) {
-            setNewService({ serviceName: '', category: '', segment: '' });
+            setNewService({ script: '', segment: '' });
             setIsEditing(false);
             setCurrentService(null);
         }
@@ -116,10 +95,14 @@ const AllService = () => {
     };
 
     const handleAddService = async () => {
+        if (!newService.script.trim() || !newService.segment) {
+            Swal.fire('Error!', 'Script and Segment are required.', 'error');
+            return;
+        }
+
         const serviceData = {
-            service_name: newService.serviceName,
-            category: parseInt(newService.category),
-            segment: parseInt(newService.segment),
+            service_name: newService.script.trim(),
+            segment: parseInt(newService.segment, 10),
         };
 
         try {
@@ -140,9 +123,8 @@ const AllService = () => {
     const handleEditService = (service) => {
         setCurrentService(service);
         setNewService({
-            serviceName: service.service_name,
-            category: service.category.id,
-            segment: service.segment.id
+            script: service.service_name || '',
+            segment: service.segment?.id || ''
         });
         setIsEditing(true);
         toggleModal();
@@ -185,12 +167,18 @@ const AllService = () => {
         setServices(sortedServices);
     };
 
-    const filteredServices = services.filter(service =>
-        ((service.category?.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
-            service.service_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            (service.segment?.short_name.toLowerCase().includes(searchQuery.toLowerCase()))) &&
-        (selectedCategory === '' || service.category?.name === selectedCategory)
-    );
+    const filteredServices = services.filter((service) => {
+        const query = searchQuery.toLowerCase();
+        const scriptName = service.service_name?.toLowerCase() || '';
+        const segmentName = service.segment?.name?.toLowerCase() || '';
+        const segmentShortName = service.segment?.short_name?.toLowerCase() || '';
+
+        return (
+            scriptName.includes(query) ||
+            segmentName.includes(query) ||
+            segmentShortName.includes(query)
+        );
+    });
 
     const indexOfLastService = currentPage * itemsPerPage;
     const indexOfFirstService = indexOfLastService - itemsPerPage;
@@ -270,11 +258,8 @@ const AllService = () => {
                                     <thead>
                                         <tr>
                                             <th className='custom-col-design'>S.NO</th>
-                                            <th onClick={() => handleSort('category')} className='custom-col-design'>
-                                                Category <FaArrowUp className="arrow-icon" /> <FaArrowDown className="arrow-icon" />
-                                            </th>
                                             <th onClick={() => handleSort('service_name')} className='custom-col-design'>
-                                                Service Name <FaArrowUp className="arrow-icon" /> <FaArrowDown className="arrow-icon" />
+                                                Script <FaArrowUp className="arrow-icon" /> <FaArrowDown className="arrow-icon" />
                                             </th>
                                             <th onClick={() => handleSort('segment')} className='custom-col-design'>
                                                 Segment <FaArrowUp className="arrow-icon" /> <FaArrowDown className="arrow-icon" />
@@ -285,7 +270,7 @@ const AllService = () => {
                                     <tbody>
                                         {loading ? (
                                             <tr>
-                                                <td colSpan="6" style={{ textAlign: 'center', height: '100px' }}>
+                                                <td colSpan="4" style={{ textAlign: 'center', height: '100px' }}>
                                                     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
                                                         <RotatingLines
                                                             strokeColor="#283F7B"
@@ -299,7 +284,7 @@ const AllService = () => {
                                             </tr>
                                         ) : currentServices.length === 0 ? (
                                             <tr>
-                                                <td colSpan="5" style={{ textAlign: 'center' }}>
+                                                <td colSpan="4" style={{ textAlign: 'center' }}>
                                                     No Services Found
                                                 </td>
                                             </tr>
@@ -307,9 +292,8 @@ const AllService = () => {
                                             currentServices.map((service, index) => (
                                                 <tr key={service.id}>
                                                     <td>{indexOfFirstService + index + 1}</td>
-                                                    <td>{service.category.name}</td>
                                                     <td>{service.service_name}</td>
-                                                    <td>{service.segment.short_name}</td>
+                                                    <td>{service.segment?.short_name || service.segment?.name || '-'}</td>
                                                     <td>
                                                         <FaPencilAlt
                                                             style={{ cursor: 'pointer', marginRight: '10px', color: '#6d62e7' }}
@@ -388,36 +372,18 @@ const AllService = () => {
                 <ModalHeader toggle={toggleModal}>{isEditing ? 'Edit Service' : 'Add New Service'}</ModalHeader>
                 <ModalBody>
                     <FormGroup>
-                        <Label for="serviceName">Service Name
+                        <Label for="script">Script
                             <span style={{ color: 'red', fontSize: '20px' }}>*</span>
                         </Label>
                         <Input
                             type="text"
-                            name="serviceName"
-                            id="serviceName"
+                            name="script"
+                            id="script"
                             className='custom-input-style'
-                            placeholder="Enter Service Name"
-                            value={newService.serviceName}
+                            placeholder="Enter Script"
                             onChange={handleInputChange}
+                            value={newService.script}
                         />
-                    </FormGroup>
-                    <FormGroup>
-                        <Label for="category">Category
-                            <span style={{ color: 'red', fontSize: '20px' }}>*</span>
-                        </Label>
-                        <Input
-                            type="select"
-                            name="category"
-                            id="category"
-                            className='custom-input-style'
-                            value={newService.category}
-                            onChange={handleInputChange}
-                        >
-                            <option value="">Select Category</option>
-                            {categories.map((category) => (
-                                <option key={category.id} value={category.id}>{category.name}</option>
-                            ))}
-                        </Input>
                     </FormGroup>
                     <FormGroup>
                         <Label for="segment">Segment
@@ -433,7 +399,9 @@ const AllService = () => {
                         >
                             <option value="">Select Segment</option>
                             {segments.map((segment) => (
-                                <option key={segment.id} value={segment.id}>{segment.short_name}</option>
+                                <option key={segment.id} value={segment.id}>
+                                    {segment.name || segment.short_name}
+                                </option>
                             ))}
                         </Input>
                     </FormGroup>

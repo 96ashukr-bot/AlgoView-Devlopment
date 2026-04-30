@@ -144,7 +144,6 @@ import OptionChain from "../Components/Application/Position/OpenPosition/OptionC
 import OpenPosition from "../Components/Application/Position/OpenPosition/OpenPosition";
 import TransactionLicense from "../Components/Application/Licenses/License/TransactionLicense";
 import ExpiredLicense from "../Components/Application/Licenses/License/ExpiredLicense";
-import TradeView from "../Components/Tables/DataTable/TradeDetails/TradeView";
 import EditStrategies from "../Components/Tables/DataTable/ServiceManagement/EditStrategies";
 import ClientStrategies from "../Components/Tables/DataTable/ServiceManagement/ClientStrategies";
 import UpdateStrategies from "../Components/Tables/DataTable/ServiceManagement/UpdateStrategies";
@@ -161,6 +160,8 @@ import EditClient from "../Components/Application/Clients/Client/EditClient";
 import KycDetailView from "../Components/Application/Users/UsersProfile/Kyc/KycDetailView";
 import HelpCenter from "../Components/Application/Help/HelpCenter/HelpCenter";
 import EditPage from "../Components/Dashboard/Default/EditPage";
+import MultiLegEditPage from "../Components/Dashboard/Default/MultiLegEditPage";
+import MultiLegExecutionPage from "../Components/Dashboard/Default/MultiLegExecutionPage";
 import Options from "../Components/Dashboard/Default/Options";
 import ExpiredClient from "../Components/Application/Clients/Client/ExpiredClient";
 import ViewClient from "../Components/Application/Clients/Client/ViewClient";
@@ -178,11 +179,15 @@ import LicensePaymentList from "../Components/Application/Licenses/License/Licen
 import Payment from "../Components/Application/Licenses/License/Payment";
 import WebSocket from "../Components/Tables/DataTable/MasterSettings/WebSocket";
 import CompleteTradeHistory from "../Components/Tables/DataTable/TradeDetails/CompleteTrade";
+import WebhookDiagnostics from "../Components/Tables/DataTable/TradeDetails/WebhookDiagnostics";
+import SLTPWatcher from "../Components/Tables/DataTable/TradeDetails/SLTPWatcher";
 
 export const routes = [
   { path: `/dashboard/algoviewtech/user`, Component: <Default /> },
   { path: `/dashboard/algoviewtech/admin`, Component: <Dashboard /> },
   { path: `/dashboard/segments/update-segment/:clientId/:segmentId/:subSegmentId`, Component: <EditPage /> },
+  { path: `/dashboard/strategies/update-multi-leg/:strategyId`, Component: <MultiLegEditPage /> },
+  { path: `/dashboard/strategies/multileg-execution`, Component: <MultiLegExecutionPage /> },
   { path: `/dashboard/optionchain/:id`, Component: <Options /> },
   { path: `/subadmin/userlist`, Component: <UserList />},
   { path: `/subadmin/inactive-list`, Component: <InActiveClient />},
@@ -203,9 +208,10 @@ export const routes = [
   { path: `/tradedetails/signals`, Component: <Signals />},
   { path: `/tradedetails/trade-history`, Component: <TradeHistory />},
   { path: `/tradedetails/complete-trade-history`, Component: <CompleteTradeHistory />},
-  { path: `/tradedetails/trade-view`, Component: <TradeView />},
   { path: `/tradedetails/client-trade-history`, Component: <TradeHistoryClient />},
   { path: `/tradedetails/trading-status`, Component: <TradingStatus />},
+  { path: `/tradedetails/webhook-diagnostics`, Component: <WebhookDiagnostics />},
+  { path: `/tradedetails/sl-tp-watcher`, Component: <SLTPWatcher />},
   { path: `/service-manage/all-service-list`, Component: <AllService />},
   { path: `/service-manage/group-services-list`, Component: <GroupService />},
   { path: `/service-manage/add-groupservice`, Component: <AddGroupService />},
@@ -225,6 +231,7 @@ export const routes = [
   { path: `/service-manage/strategies/assigned-strategies/:id`, Component: <ClientStrategies />},
   { path: `/service-manage/strategies/updatestrategies/:id`, Component: <UpdateStrategies />},
   { path: `/service-manage/clientstrategies`, Component: <StrategiesClient />},
+  { path: `/service-manage/client-group-service`, Component: <StrategiesClient />},
   { path: `/service-manage/client-strategies/view-strategies/:id`, Component: <StrategiesClientView />},
   { path: `/dashboard/optionchain`, Component: <OptionChain />},
   { path: `/openposition/optionchainlist`, Component: <OpenPosition />},

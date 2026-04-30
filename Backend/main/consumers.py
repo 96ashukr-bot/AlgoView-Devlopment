@@ -4,28 +4,16 @@ import csv
 from datetime import datetime
 import json
 import logging
-import requests
 from channels.generic.websocket import AsyncWebsocketConsumer
-from SmartApi.smartWebSocketV2 import SmartWebSocketV2
-# from SmartApi import SmartConnect
-import pyotp
 from urllib.parse import parse_qs
 
 logger = logging.getLogger('main')
-API_KEY = 'MYRms9xx'  
-USERNAME = 'AAAB519761'  
-PASSWORD = '1234' 
-TOTP_SECRET = "RFFORAS7ASFH7KIZWD7FCSVK2Y" 
-correlation_id = "abc123"
-mode = 3  # Subscription mode
-import json
 import ssl
 import upstox_client
 import websockets
 from google.protobuf.json_format import MessageToDict
 from main import MarketDataFeed_pb2 as pb
 from asgiref.sync import sync_to_async
-import os
 
 class UpstoxChainLiveSymbolConsumer(AsyncWebsocketConsumer):
     async def connect(self):

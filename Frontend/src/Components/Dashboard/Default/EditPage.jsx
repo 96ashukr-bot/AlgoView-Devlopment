@@ -5,6 +5,9 @@ import { getClientTradeSetting, getSpecificDetails, updateTradeClient, getExpiry
 import Swal from 'sweetalert2';
 
 const EditPage = () => {
+  const DEFAULT_BUFFER_PERCENTAGE = 2.5;
+  const MIN_BUFFER_PERCENTAGE = 0.1;
+  const MAX_BUFFER_PERCENTAGE = 10;
   const { clientId, segmentId, subSegmentId } = useParams();
   // console.log('ididididdidi', clientId, segmentId, subSegmentId);
   const [formData, setFormData] = useState({
@@ -13,19 +16,19 @@ const EditPage = () => {
     groupService: "",
     broker: "",
     productType: "",
+    orderType: "LIMIT",
+    bufferPercentage: "2.5",
     quantity: "",
     stopLoss: "",
     slType: "",
     target: "",
     tradeLimit: "",
     maxLoss: "",
-    minLoss: "",
     maxProfit: "",
-    minProfit: "",
   });
 
   const [apiData, setApiData] = useState([]);
-  const [serviceNameToQty, setServiceNameToQty] = useState({});
+  const [serviceNameToLimits, setServiceNameToLimits] = useState({});
   const [expiryDates, setExpiryDates] = useState([]);
   const navigate = useNavigate();
   // const [broker, setBroker] = useState([]);
@@ -40,6 +43,17 @@ const EditPage = () => {
 
     }
   }, [clientId, segmentId, subSegmentId]);
+
+  const normalizeSlTpType = (value) => {
+    const normalized = String(value || "").trim().toUpperCase();
+    if (["%", "PERCENT", "PERCENTAGE"].includes(normalized)) {
+      return "PERCENTAGE";
+    }
+    if (["POINT", "POINTS"].includes(normalized)) {
+      return "POINTS";
+    }
+    return "";
+  };
 
 
   const fetchExpiryDates = async (short_name) => {
@@ -78,11 +92,14 @@ const EditPage = () => {
         }
 
         if (response?.Group_service?.json_data) {
-          const qtyMap = response.Group_service.json_data.reduce((map, item) => {
-            map[item.ServiceName] = parseInt(item.Qty, 10);
+          const limitsMap = response.Group_service.json_data.reduce((map, item) => {
+            map[item.ServiceName] = {
+              maxQty: Number.parseInt(item.Qty, 10) || null,
+              lotSize: Number.parseInt(item.LotSize, 10) || null,
+            };
             return map;
           }, {});
-          setServiceNameToQty(qtyMap);
+          setServiceNameToLimits(limitsMap);
         }
 
         if (response.Group_service) {
@@ -123,15 +140,18 @@ const EditPage = () => {
           groupService: firstItem.group_service,
           broker: firstItem.broker,
           productType: firstItem.product_type,
+          orderType: firstItem.order_type || "LIMIT",
+          bufferPercentage:
+            firstItem.buffer_percentage !== null && firstItem.buffer_percentage !== undefined
+              ? String(firstItem.buffer_percentage)
+              : String(DEFAULT_BUFFER_PERCENTAGE),
           quantity: firstItem.quantity,
           stopLoss: firstItem.stop_loss,
-          slType: firstItem.sl_type,
+          slType: normalizeSlTpType(firstItem.sl_type),
           target: firstItem.target,
           tradeLimit: firstItem.trade_limit,
           maxLoss: firstItem.max_loss_for_day,
-          minLoss: firstItem.min_loss_for_day,
           maxProfit: firstItem.max_profit_for_day,
-          minProfit: firstItem.min_profit_for_day,
         });
 
         const uniqueGroupServices = Array.from(new Set(data.map(item => item.group_service)));
@@ -147,11 +167,11 @@ const EditPage = () => {
     const { value, name } = e.target;
     const updatedData = [...apiData];
 
-    const serviceName = updatedData[index]?.sub_segment?.name;
-    const maxQty = serviceNameToQty[serviceName] || Infinity;
+    const serviceName = updatedData[index]?.script_name || updatedData[index]?.sub_segment?.name;
+    const serviceLimits = serviceNameToLimits[serviceName] || {};
+    const maxQty = serviceLimits.maxQty || Infinity;
 
     if (field === "quantity" && value > maxQty) {
-      // alert(`Quantity for ${serviceName} cannot exceed ${maxQty}`);
       Swal.fire({
         icon: "warning",
         title: "Quantity Exceeded",
@@ -174,7 +194,16 @@ const EditPage = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => {
-      const updatedFormData = { ...prev, [name]: value };
+      const updatedFormData = {
+        ...prev,
+        [name]: name === "orderType" ? value.toUpperCase() : value,
+      };
+      if (name === "orderType" && value.toUpperCase() === "MARKET") {
+        updatedFormData.bufferPercentage = "";
+      }
+      if (name === "orderType" && value.toUpperCase() === "LIMIT" && !updatedFormData.bufferPercentage) {
+        updatedFormData.bufferPercentage = String(DEFAULT_BUFFER_PERCENTAGE);
+      }
       console.log("Updated formData:", updatedFormData);
       return updatedFormData;
     });
@@ -257,6 +286,26 @@ const EditPage = () => {
     });
 
     if (result.isConfirmed) {
+      if (!formData.orderType) {
+        Swal.fire(
+          'Validation Error',
+          'Order type is required.',
+          'warning'
+        );
+        return;
+      }
+
+      if (formData.orderType === "LIMIT") {
+        const bufferValue = parseFloat(formData.bufferPercentage);
+        if (Number.isNaN(bufferValue) || bufferValue < MIN_BUFFER_PERCENTAGE || bufferValue > MAX_BUFFER_PERCENTAGE) {
+          Swal.fire(
+            'Validation Error',
+            `Buffer percentage must be between ${MIN_BUFFER_PERCENTAGE} and ${MAX_BUFFER_PERCENTAGE}.`,
+            'warning'
+          );
+          return;
+        }
+      }
 
       const payload = {
         segment: parseInt(segmentId, 10),
@@ -265,6 +314,8 @@ const EditPage = () => {
         group_service: formData.groupService,
         broker: formData.broker,
         product_type: formData.productType,
+        order_type: formData.orderType,
+        buffer_percentage: formData.orderType === "LIMIT" ? parseFloat(formData.bufferPercentage) : null,
         sl_type: (formData.slType),
         buy_sell: apiData[0]?.buy_sell || "Buy",
         quantity: formData.quantity || 0,
@@ -272,9 +323,7 @@ const EditPage = () => {
         target: formData.target || 0,
         trade_limit: formData.tradeLimit || 0,
         max_loss_for_day: formData.maxLoss || 0,
-        min_loss_for_day: formData.minLoss || 0,
         max_profit_for_day: formData.maxProfit || 0,
-        min_profit_for_day: formData.minProfit || 0,
         expiry_date: formatExpiryDate(formData.expiry),
         is_trade_status: true,
       };
@@ -295,7 +344,7 @@ const EditPage = () => {
         console.error("Error updating trade client:", error);
         Swal.fire(
           'Error!',
-          'There was an error saving your changes.',
+          error.message || 'There was an error saving your changes.',
           'error'
         );
       }
@@ -419,6 +468,44 @@ const EditPage = () => {
                   <option value="NRML">NRML</option>
                 </Input>
               </Col>
+
+              <Col md={2}>
+                <Label htmlFor="orderType">Order Type</Label>
+                <Input
+                  type="select"
+                  name="orderType"
+                  id="orderType"
+                  value={formData.orderType}
+                  onChange={handleChange}
+                >
+                  <option value="MARKET">MARKET</option>
+                  <option value="LIMIT">LIMIT</option>
+                </Input>
+                {formData.orderType === "MARKET" && (
+                  <small className="text-warning d-block mt-1">
+                    Market orders may execute at volatile prices.
+                  </small>
+                )}
+              </Col>
+
+              {formData.orderType === "LIMIT" && (
+                <Col md={2}>
+                  <Label htmlFor="bufferPercentage">Buffer %</Label>
+                  <Input
+                    type="number"
+                    name="bufferPercentage"
+                    id="bufferPercentage"
+                    min={MIN_BUFFER_PERCENTAGE}
+                    max={MAX_BUFFER_PERCENTAGE}
+                    step="0.1"
+                    value={formData.bufferPercentage}
+                    onChange={handleChange}
+                  />
+                  <small className="text-muted d-block mt-1">
+                    Limit order uses buffer to improve execution probability.
+                  </small>
+                </Col>
+              )}
             </Row>
 
             {/* Section C: Table */}
@@ -428,13 +515,11 @@ const EditPage = () => {
                   <tr>
                     <th className="custom-col-design">Quantity</th>
                     <th className="custom-col-design">Stop-Loss</th>
-                    <th className="custom-col-design">S/L Type</th>
+                    <th className="custom-col-design">SL-TP Type</th>
                     <th className="custom-col-design">Target</th>
                     <th className="custom-col-design">Trade Limit</th>
                     <th className="custom-col-design">Max Loss For Day</th>
-                    <th className="custom-col-design">Min Loss For Day</th>
                     <th className="custom-col-design">Max Profit For Day</th>
-                    <th className="custom-col-design">Min Profit For Day</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -442,6 +527,14 @@ const EditPage = () => {
                     ? apiData.map((item, index) => (
                       <tr key={index}>
                         <td>
+                          {(() => {
+                            const serviceKey = item.script_name || item.sub_segment?.name;
+                            const serviceLimits = serviceNameToLimits[serviceKey] || {};
+                            const maxQty = serviceLimits.maxQty || undefined;
+                            const lotSize = serviceLimits.lotSize || null;
+
+                            return (
+                              <>
                           <Input
                             style={{ width: '100px' }}
                             type="number"
@@ -449,7 +542,18 @@ const EditPage = () => {
                             value={item.quantity || ""}
                             onChange={(e) => handleInputChange(e, index, "quantity")}
                             min="1"
+                            max={maxQty}
                           />
+                          {(maxQty || lotSize) && (
+                            <small className="text-muted d-block mt-1">
+                              {maxQty ? `Max Qty: ${maxQty}` : null}
+                              {maxQty && lotSize ? ' | ' : null}
+                              {lotSize ? `Lot Size: ${lotSize}` : null}
+                            </small>
+                          )}
+                              </>
+                            );
+                          })()}
                         </td>
                         <td>
                           <Input
@@ -471,9 +575,12 @@ const EditPage = () => {
                             onChange={handleChange}
                           >
                             <option value="">--</option>
-                            <option value="Points">Points</option>
-                            <option value="Percentage">Percentage</option>
+                            <option value="POINTS">Points</option>
+                            <option value="PERCENTAGE">%</option>
                           </Input>
+                          <small className="text-muted d-block mt-1">
+                            Applies to both Stop-Loss and Target.
+                          </small>
                         </td>
                         <td>
                           <Input
@@ -484,6 +591,11 @@ const EditPage = () => {
                             onChange={(e) => handleInputChange(e, index, "target")}
                             min="1"
                           />
+                          {formData.slType === "PERCENTAGE" && (
+                            <small className="text-muted d-block mt-1">
+                              Target will be calculated from live entry price.
+                            </small>
+                          )}
                         </td>
                         <td>
                           <Input
@@ -505,25 +617,9 @@ const EditPage = () => {
                         <td>
                           <Input
                             type="number"
-                            name={`minLoss`}
-                            value={item.min_loss_for_day || ""}
-                            onChange={(e) => handleInputChange(e, index, "min_loss_for_day")}
-                          />
-                        </td>
-                        <td>
-                          <Input
-                            type="number"
                             name={`maxProfit`}
                             value={item.max_profit_for_day || ""}
                             onChange={(e) => handleInputChange(e, index, "max_profit_for_day")}
-                          />
-                        </td>
-                        <td>
-                          <Input
-                            type="number"
-                            name={`minProfit`}
-                            value={item.min_profit_for_day || ""}
-                            onChange={(e) => handleInputChange(e, index, "min_profit_for_day")}
                           />
                         </td>
                       </tr>

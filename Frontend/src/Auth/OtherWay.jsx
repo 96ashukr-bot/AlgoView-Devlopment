@@ -1,7 +1,7 @@
 import React from "react";
 // import { Facebook, Linkedin, Twitter } from "react-feather";
 import { Link } from "react-router-dom";
-import { H6, P } from "../AbstractElements";
+import { P } from "../AbstractElements";
 
 const OtherWay = () => {
   return (
