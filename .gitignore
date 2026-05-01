@@ -5,6 +5,8 @@ venv/
 .venv/
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
 db.sqlite3
 
 # Environment variables
@@ -13,10 +15,6 @@ db.sqlite3
 # Django static/media
 staticfiles/
 media/
-
-# Migrations (keep structure but ignore files)
-Backend/main/migrations/*
-!Backend/main/migrations/__init__.py
 
 # ========================
 # Node / React
