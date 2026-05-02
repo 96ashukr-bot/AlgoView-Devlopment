@@ -34,6 +34,19 @@ class _LocalSessionLock:
         return None
 
 
+class _UnavailableRedisClient:
+    def _raise(self, *args, **kwargs):
+        raise redis.ConnectionError("Redis is not configured")
+
+    get = _raise
+    set = _raise
+    delete = _raise
+    ping = _raise
+
+    def lock(self, *args, **kwargs):
+        return _LocalSessionLock()
+
+
 class SessionStatus(Enum):
     ACTIVE = "active"
     EXPIRED = "expired"
@@ -124,7 +137,11 @@ class SessionManager:
     _fallback_store_lock = threading.RLock()
 
     def __init__(self):
-        self._redis = redis.Redis.from_url(settings.REDIS_URL, decode_responses=True)
+        redis_url = (getattr(settings, "REDIS_URL", "") or "").strip()
+        try:
+            self._redis = redis.Redis.from_url(redis_url, decode_responses=True) if redis_url else _UnavailableRedisClient()
+        except Exception:
+            self._redis = _UnavailableRedisClient()
         self._breaker = BrokerAuthCircuitBreaker("angelone")
         self._remote_validation_ttl = settings.ANGELONE_REMOTE_VALIDATION_TTL_SECONDS
         self._session_ttl = settings.ANGELONE_SESSION_TTL_SECONDS

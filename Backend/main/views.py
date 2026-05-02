@@ -1242,7 +1242,6 @@ class PasswordResetRequestView(generics.GenericAPIView):
             # reset_link = f'https://sparks.algoview.in/pages/authentication/reset-password/:{uid}/:{token}/:layout'
             # reset_link = f'https://www.admin.algoview.in/pages/authentication/reset-password/:{uid}/:{token}/:layout'
             # reset_link = f'http://103.120.178.54:4000/pages/authentication/reset-password/:{uid}/:{token}/:layout'
-            # reset_link = f'http://localhost:3000/pages/authentication/reset-password/:{uid}/:{token}/:layout'
             # subject = "Password Reset Request"
             # print("reset_link",reset_link)
             # message = (
@@ -3905,6 +3904,8 @@ class WebhookDiagnosticsAPIView(APIView):
             ).filter(client__type_of_user='is_client', client__is_client=True)
 
         if client_id:
+            if not can_access_client_record(user, client_id):
+                return Response({"detail": "You do not have permission to access this client."}, status=status.HTTP_403_FORBIDDEN)
             queryset = queryset.filter(client_id=client_id)
 
         diagnostics = []
@@ -3975,6 +3976,11 @@ class SLTPWatcherScanAPIView(APIView):
 
         client_id = request.query_params.get("client_id")
         history_id = request.query_params.get("history_id")
+        if client_id and not can_access_client_record(user, client_id):
+            return Response(
+                {"detail": "You do not have permission to access this client."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
         scan_result = get_sl_tp_watcher_service().scan(
             client_id=client_id,
             history_id=history_id,
@@ -3998,6 +4004,11 @@ class SLTPWatcherScanAPIView(APIView):
 
         client_id = request.data.get("client_id")
         history_id = request.data.get("history_id")
+        if client_id and not can_access_client_record(user, client_id):
+            return Response(
+                {"detail": "You do not have permission to access this client."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
         scan_result = get_sl_tp_watcher_service().scan(client_id=client_id, history_id=history_id)
         return Response(
             {

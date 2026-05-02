@@ -73,7 +73,7 @@ if IS_PRODUCTION and DEBUG:
     raise ImproperlyConfigured("DEBUG must be disabled in production/staging")
 ALLOWED_HOSTS = config(
     'ALLOWED_HOSTS',
-    default='localhost,127.0.0.1',
+    default='',
     cast=lambda value: [item.strip() for item in value.split(',') if item.strip()],
 )
 if IS_PRODUCTION and (not ALLOWED_HOSTS or "*" in ALLOWED_HOSTS):
@@ -97,7 +97,6 @@ for origin in _csv_config("CSRF_TRUSTED_ORIGINS"):
     _append_unique(CSRF_TRUSTED_ORIGINS, origin)
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
     "http://103.120.178.54:4000",
     "https://www.admin.algoview.in",
     "https://client.algoview.in",
@@ -106,7 +105,7 @@ CORS_ALLOWED_ORIGINS = [
 for origin in _csv_config("CORS_ALLOWED_ORIGINS"):
     _append_unique(CORS_ALLOWED_ORIGINS, origin)
 
-FRONTEND_APP_URL = config("FRONTEND_APP_URL", default="http://localhost:3000").rstrip("/")
+FRONTEND_APP_URL = config("FRONTEND_APP_URL", default="").rstrip("/")
 UPSTOX_REDIRECT_URL = config("UPSTOX_REDIRECT_URL", default="").strip()
 
 if UPSTOX_REDIRECT_URL:
@@ -313,9 +312,12 @@ AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',  # Default backend
 )
 
-REDIS_URL = config('REDIS_URL', default='redis://localhost:6379/1')
-CELERY_BROKER_URL = config('CELERY_BROKER_URL', default='redis://localhost:6379/0')
-CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND', default=CELERY_BROKER_URL)
+REDIS_URL = config('REDIS_URL', default='').strip()
+if IS_PRODUCTION:
+    _require("REDIS_URL", REDIS_URL)
+
+CELERY_BROKER_URL = config('CELERY_BROKER_URL', default=REDIS_URL or 'memory://')
+CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND', default=REDIS_URL or 'cache+memory://')
 
 BROKER_ENCRYPTION_KEYS = config(
     'BROKER_ENCRYPTION_KEYS',
@@ -335,18 +337,32 @@ ANGELONE_STATE_CACHE_PREFIX = config('ANGELONE_STATE_CACHE_PREFIX', default='ang
 ANGELONE_LOCK_CACHE_PREFIX = config('ANGELONE_LOCK_CACHE_PREFIX', default='angelone:lock')
 ANGELONE_CIRCUIT_CACHE_PREFIX = config('ANGELONE_CIRCUIT_CACHE_PREFIX', default='angelone:circuit')
 
-CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-        'LOCATION': REDIS_URL,
-        'TIMEOUT': 300,
-    },
-    'circuit_breaker': {
-        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-        'LOCATION': REDIS_URL,
-        'TIMEOUT': 300,
-    },
-}
+if REDIS_URL:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+            'LOCATION': REDIS_URL,
+            'TIMEOUT': 300,
+        },
+        'circuit_breaker': {
+            'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+            'LOCATION': REDIS_URL,
+            'TIMEOUT': 300,
+        },
+    }
+else:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'algoview-default-cache',
+            'TIMEOUT': 300,
+        },
+        'circuit_breaker': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'algoview-circuit-cache',
+            'TIMEOUT': 300,
+        },
+    }
 
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
@@ -355,9 +371,6 @@ CELERY_TIMEZONE = 'UTC'
 
 CONTACT_NUM="+919988746583"
 REDIRECT_URL=config('BROKER_REDIRECT_URL', default="https://sparks.algoview.in/auth-callback/")
-#LOGIN_LINK="'http://localhost:3000/login"
-#HELP_CENTER_LINK="'http://localhost:3000"
-#COMPANY_WEBSITE="'http://localhost:3000"
 LOGIN_LINK="https://www.admin.algoview.in/login"
 HELP_CENTER_LINK="https://www.admin.algoview.in/"
 COMPANY_WEBSITE="https://www.admin.algoview.in/" 

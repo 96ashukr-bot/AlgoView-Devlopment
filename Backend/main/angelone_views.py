@@ -67,7 +67,7 @@ def _is_public_browser_origin(origin):
         hostname = (parsed.hostname or "").strip().lower()
         if not hostname:
             return False
-        if hostname in {"localhost", "127.0.0.1", "0.0.0.0"}:
+        if hostname == "0.0.0.0":
             return False
         if hostname.startswith("192.168.") or hostname.startswith("10."):
             return False

@@ -511,7 +511,7 @@ class PanelLoginTrackingTests(TestCase):
             context={"request": request},
         )
 
-        with mock.patch("main.serializers.get_client_ip", return_value="127.0.0.1"), \
+        with mock.patch("main.serializers.get_client_ip", return_value="203.0.113.10"), \
              mock.patch("main.serializers.send_login_success_email.delay"):
             self.assertTrue(serializer.is_valid(), serializer.errors)
             serializer.validated_data

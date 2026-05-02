@@ -102,7 +102,7 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts --max_old_space_size=8096 build",
+    "build": "GENERATE_SOURCEMAP=false react-scripts --max_old_space_size=8096 build && node scripts/sanitize-production-build.js",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "lint": "eslint --fix --ext .js,.jsx .",

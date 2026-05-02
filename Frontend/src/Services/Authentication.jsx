@@ -3341,8 +3341,6 @@ export const getAngelOneTokenStatus = async () => {
 const getBackendCandidateBaseUrls = ({ preferBrokerBackend = false } = {}) => {
   const browserHost = typeof window !== "undefined" ? window.location.hostname : "";
   const isLocalLikeHost =
-    browserHost === "localhost" ||
-    browserHost === "127.0.0.1" ||
     browserHost === "0.0.0.0" ||
     /^192\.168\./.test(browserHost) ||
     /^10\./.test(browserHost) ||
@@ -3895,8 +3893,6 @@ export const startBrokerConnectFlow = async (connectPath) => {
   try {
     const browserHost = typeof window !== "undefined" ? window.location.hostname : "";
     const isLocalLikeHost =
-      browserHost === "localhost" ||
-      browserHost === "127.0.0.1" ||
       browserHost === "0.0.0.0" ||
       /^192\.168\./.test(browserHost) ||
       /^10\./.test(browserHost) ||

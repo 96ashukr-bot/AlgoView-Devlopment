@@ -280,9 +280,7 @@ def send_password_reset_email(uid, email, username, token):
     if not smtp_connection:
         print("SMTP connection could not be established!")
         return
-    # Build your reset link
-    # reset_link = f'http://localhost:3000/pages/authentication/reset-password/{uid}/{token}'
-    reset_link=f'https://sparks.algoview.in/pages/authentication/reset-password/:{uid}/:{token}/:layout'
+    reset_link = f'{settings.FRONTEND_APP_URL}/pages/authentication/reset-password/:{uid}/:{token}/:layout'
     
     subject = "Password Reset Request"
     context = {

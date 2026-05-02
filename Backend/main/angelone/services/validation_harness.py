@@ -141,9 +141,12 @@ class AngelOneValidationHarness:
         return check
 
     def _safe_redis_target(self) -> str:
-        parsed = urlparse(getattr(settings, "REDIS_URL", "redis://localhost:6379/1"))
+        redis_url = (getattr(settings, "REDIS_URL", "") or "").strip()
+        if not redis_url:
+            return "not-configured"
+        parsed = urlparse(redis_url)
         scheme = parsed.scheme or "redis"
-        host = parsed.hostname or "localhost"
+        host = parsed.hostname or "not-configured"
         port = parsed.port or 6379
         path = parsed.path or "/1"
         return f"{scheme}://{host}:{port}{path}"
@@ -153,7 +156,6 @@ class AngelOneValidationHarness:
             f"Configured Redis target: {self._safe_redis_target()}",
             "Make sure a Redis server is listening on the configured host and port.",
             f"Verify connectivity with: redis-cli -u {self._safe_redis_target()} ping",
-            "If you use local Redis on macOS with Homebrew, start it with: brew services start redis",
             "If Redis runs elsewhere, set REDIS_URL to the correct redis://<host>:<port>/<db> value before rerunning validation.",
         ]
 

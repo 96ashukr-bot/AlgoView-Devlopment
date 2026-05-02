@@ -150,14 +150,14 @@ class AngelOneValidationHarnessTests(TestCase):
     def test_validate_command_reports_redis_hints(self, mock_check_prerequisites):
         mock_check_prerequisites.return_value = {
             "status": "error",
-            "context": {"redis_url": "redis://localhost:6379/1"},
+            "context": {"redis_url": "redis://redis.internal:6379/1"},
             "checks": [
                 {
                     "name": "redis_session_store",
                     "success": False,
-                    "error": "Error 61 connecting to localhost:6379. Connection refused.",
+                    "error": "Error 61 connecting to redis.internal:6379. Connection refused.",
                     "hints": [
-                        "Configured Redis target: redis://localhost:6379/1",
+                        "Configured Redis target: redis://redis.internal:6379/1",
                         "Make sure a Redis server is listening on the configured host and port.",
                     ],
                 }
@@ -175,15 +175,15 @@ class AngelOneValidationHarnessTests(TestCase):
     def test_dependency_check_command_reports_redis_hints(self, mock_check_prerequisites):
         mock_check_prerequisites.return_value = {
             "status": "error",
-            "context": {"redis_url": "redis://localhost:6379/1"},
+            "context": {"redis_url": "redis://redis.internal:6379/1"},
             "checks": [
                 {
                     "name": "redis_session_store",
                     "success": False,
-                    "error": "Error 61 connecting to localhost:6379. Connection refused.",
+                    "error": "Error 61 connecting to redis.internal:6379. Connection refused.",
                     "hints": [
-                        "Configured Redis target: redis://localhost:6379/1",
-                        "Verify connectivity with: redis-cli -u redis://localhost:6379/1 ping",
+                        "Configured Redis target: redis://redis.internal:6379/1",
+                        "Verify connectivity with: redis-cli -u redis://redis.internal:6379/1 ping",
                     ],
                 }
             ],
@@ -195,6 +195,6 @@ class AngelOneValidationHarnessTests(TestCase):
             call_command("check_angelone_dependencies", stdout=stdout)
 
         output = stdout.getvalue()
-        self.assertIn("redis://localhost:6379/1", output)
+        self.assertIn("redis://redis.internal:6379/1", output)
         self.assertIn("Connection refused", str(exc.exception))
-        self.assertIn("redis-cli -u redis://localhost:6379/1 ping", str(exc.exception))
+        self.assertIn("redis-cli -u redis://redis.internal:6379/1 ping", str(exc.exception))
