@@ -3,6 +3,7 @@ from decimal import Decimal
 import json
 import os
 import hashlib
+import hmac
 import re
 from numbers import Number
 from amqp import NotFound
@@ -87,6 +88,28 @@ ALICE_API_KEY=config('ALICE_API_KEY')
 import logging
 logger = logging.getLogger('main')
 UserModel = get_user_model()
+
+
+def _require_webhook_secret(request):
+    configured_secret = str(getattr(settings, "WEBHOOK_SECRET", "") or "").strip()
+    if not configured_secret:
+        if getattr(settings, "IS_PRODUCTION", False):
+            raise ValidationError("Webhook secret is not configured.")
+        return
+
+    request_payload = request.data if hasattr(request.data, "get") else {}
+    provided_secret = (
+        request.headers.get("X-Webhook-Secret")
+        or request.headers.get("X-Algoview-Webhook-Secret")
+        or str(request.query_params.get("webhook_secret", "") or "")
+        or str(request_payload.get("webhook_secret", "") or "")
+    )
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.lower().startswith("bearer "):
+        provided_secret = auth_header.split(" ", 1)[1].strip()
+
+    if not provided_secret or not hmac.compare_digest(str(provided_secret), configured_secret):
+        raise PermissionDenied("Invalid webhook secret.")
 
 
 def _get_selected_broker_detail_for_user(user):
@@ -1002,12 +1025,12 @@ class UserActivityLogView(APIView):
     def get(self, request, *args, **kwargs):
         user_id = request.GET.get('user_id')  # Get user ID from query parameters
 
-        # If user_id is provided, check if the current user is allowed to view it
-        if user_id and not request.user.is_client:
-            return Response({"error": "You are not authorized to view other users' activity."}, status=status.HTTP_403_FORBIDDEN)
-
-        # If no user_id is provided, fetch the logged-in user's data
-        user = UserModel.objects.get(id=user_id) if user_id else request.user
+        if user_id:
+            user = get_object_or_404(UserModel, id=user_id)
+            if not can_access_client_record(request.user, user):
+                return Response({"error": "You are not authorized to view this user's activity."}, status=status.HTTP_403_FORBIDDEN)
+        else:
+            user = request.user
 
         # Fetch the most recent completed session (login + logout recorded)
         last_completed_session = (
@@ -1254,7 +1277,7 @@ class PasswordResetConfirmView(generics.GenericAPIView):
 class UserAssignRoleView(generics.UpdateAPIView):
     pagination_class = None
     queryset = User.objects.all()
-    permission_classes = [permissions.IsAuthenticated,  ] 
+    permission_classes = [IsAdminOrSuperadmin]
     serializer_class = UserAssignRoleSerializer
     def update(self, request, *args, **kwargs):
         try:
@@ -1278,6 +1301,8 @@ class GetUser(APIView):
     def get(self, request, pk, *args, **kwargs): 
         try:
             user = User.objects.get(pk=pk)  
+            if not can_access_client_record(request.user, user):
+                return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
             serializer = UserSerializer(user)  
         except User.DoesNotExist:
             return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
@@ -4012,6 +4037,7 @@ SESSION_EXPIRATION = None
 # Webhooks-trade-Alert
 class PlaceOrderWebhookView(APIView):
     def post(self, request):
+        _require_webhook_secret(request)
         try:
             context = _resolve_webhook_request_context(request.data)
         except ValidationError as exc:
@@ -4062,6 +4088,7 @@ class MyPlaceOrderWebhookView(APIView):
 
 
     def post(self, request):
+        _require_webhook_secret(request)
         try:
             context = _resolve_webhook_request_context(request.data)
         except ValidationError as exc:
@@ -4124,7 +4151,7 @@ def get_or_regenerate_session_id(USER_ID, ALICE_API_KEY):
 
 # Get the strategy using the strategy_id
 class StrategyClientListView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdminOrSuperadmin]
 
     def get(self, request, strategy_id, *args, **kwargs):
         try:

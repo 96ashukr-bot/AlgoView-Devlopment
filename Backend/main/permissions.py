@@ -100,7 +100,7 @@ class IsBrokerOwnerOrAdmin(permissions.BasePermission):
         return bool(request.user and request.user.is_authenticated)
 
 class UpdateRolePermissionsView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAdminOrSuperadmin]
     def post(self, request, role_id):
         try:
             role = Role.objects.get(id=role_id)
@@ -131,8 +131,7 @@ class UpdateRolePermissionsView(APIView):
         return Response({"success": "Permissions updated successfully"}, status=status.HTTP_200_OK)
 class RolePermissionListView(APIView):
     pagination_class = None
-    # permission_classes = [IsAdminUser]
-    permission_classes = [permissions.IsAuthenticated]#IsAdminRole
+    permission_classes = [IsAdminOrSuperadmin]
     def get(self, request, *args, **kwargs):
         from main.serializers import RolePermissionSerializer
 

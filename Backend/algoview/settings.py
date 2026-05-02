@@ -50,6 +50,14 @@ def _append_unique(items, value):
     return items
 
 
+def _csv_config(name, default=""):
+    return [
+        item.strip()
+        for item in config(name, default=default).split(",")
+        if item.strip()
+    ]
+
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
@@ -75,9 +83,8 @@ CORS_ALLOW_CREDENTIALS = True
 CORS_ORIGIN_ALLOW_ALL = CORS_ALLOW_ALL_ORIGINS
 if IS_PRODUCTION and CORS_ALLOW_ALL_ORIGINS:
     raise ImproperlyConfigured("CORS_ALLOW_ALL_ORIGINS must be disabled in production/staging")
-FILE_UPLOAD_PERMISSIONS = 0o644  
-# Optional: Set X-Frame-Options header to allow specific origins for embedding your site in frames
-X_FRAME_OPTIONS = 'SAMEORIGIN'
+FILE_UPLOAD_PERMISSIONS = 0o644
+X_FRAME_OPTIONS = config("X_FRAME_OPTIONS", default="DENY" if IS_PRODUCTION else "SAMEORIGIN")
 
 CSRF_TRUSTED_ORIGINS = [
     "https://sparksadmin.algoview.in",
@@ -86,6 +93,8 @@ CSRF_TRUSTED_ORIGINS = [
     "https://www.admin.algoview.in",
     "http://www.admin.algoview.in"
 ]
+for origin in _csv_config("CSRF_TRUSTED_ORIGINS"):
+    _append_unique(CSRF_TRUSTED_ORIGINS, origin)
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
@@ -94,6 +103,8 @@ CORS_ALLOWED_ORIGINS = [
     "https://client.algoview.in",
     "https://sparksadmin.algoview.in"
 ]
+for origin in _csv_config("CORS_ALLOWED_ORIGINS"):
+    _append_unique(CORS_ALLOWED_ORIGINS, origin)
 
 FRONTEND_APP_URL = config("FRONTEND_APP_URL", default="http://localhost:3000").rstrip("/")
 UPSTOX_REDIRECT_URL = config("UPSTOX_REDIRECT_URL", default="").strip()
@@ -105,6 +116,10 @@ if UPSTOX_REDIRECT_URL:
     _append_unique(CSRF_TRUSTED_ORIGINS, upstox_origin)
     _append_unique(CORS_ALLOWED_ORIGINS, upstox_origin)
     _append_unique(ALLOWED_HOSTS, upstox_host)
+
+WEBHOOK_SECRET = config("WEBHOOK_SECRET", default="")
+if IS_PRODUCTION:
+    _require("WEBHOOK_SECRET", WEBHOOK_SECRET)
 
 # Application definition
 
@@ -139,7 +154,6 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'allauth.account.middleware.AccountMiddleware',  # Add this line
     'corsheaders.middleware.CorsMiddleware',
-    'django.middleware.common.CommonMiddleware',
 ]
 
 
@@ -240,6 +254,11 @@ SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = config('SESSION_COOKIE_SAMESITE', default='Lax')
 CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', default=not DEBUG, cast=_env_bool)
 CSRF_COOKIE_HTTPONLY = False
+SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=IS_PRODUCTION, cast=_env_bool)
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_HSTS_SECONDS = config('SECURE_HSTS_SECONDS', default=31536000 if IS_PRODUCTION else 0, cast=int)
+SECURE_HSTS_INCLUDE_SUBDOMAINS = config('SECURE_HSTS_INCLUDE_SUBDOMAINS', default=IS_PRODUCTION, cast=_env_bool)
+SECURE_HSTS_PRELOAD = config('SECURE_HSTS_PRELOAD', default=IS_PRODUCTION, cast=_env_bool)
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_REFERRER_POLICY = 'same-origin'

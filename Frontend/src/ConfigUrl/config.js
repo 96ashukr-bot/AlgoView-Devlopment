@@ -6,8 +6,8 @@ import {
     getAuthenticatedWsBaseUrl,
 } from "../Services/authStorage";
 
-export const REMOTE_API_BASE_URL = "https://sparksadmin.algoview.in";
-export const REMOTE_WS_BASE_URL = "wss://sparksadmin.algoview.in";
+export const REMOTE_API_BASE_URL = (process.env.REACT_APP_API_BASE_URL || "https://sparksadmin.algoview.in").replace(/\/$/, "");
+export const REMOTE_WS_BASE_URL = (process.env.REACT_APP_WS_BASE_URL || REMOTE_API_BASE_URL.replace(/^http/i, "ws")).replace(/\/$/, "");
 
 const browserHost = typeof window !== "undefined" ? window.location.hostname : "localhost";
 const useLocalBackend = process.env.REACT_APP_USE_LOCAL_BACKEND === "true";
