@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Context from './index';
 import axios from 'axios';
-import { ChatApi, ChatMemberApi } from '../../api';
+import { ChatMemberApi } from '../../api';
 
 const ChatProvider = (props) => {
   const [allMemberss, setAllMembers] = useState([]);
@@ -33,16 +33,7 @@ const ChatProvider = (props) => {
   };
 
   useEffect(() => {
-    const getChatData = async () => {
-      try {
-        await axios.get(ChatApi).then((resp) => {
-          setChats(resp.data);
-        });
-      } catch (error) {
-        console.log('error', error);
-      }
-    };
-    getChatData();
+    setChats([]);
   }, [setChats]);
 
   const getChatsSuccess = (chats, selectedUser, online) => {
@@ -70,11 +61,7 @@ const ChatProvider = (props) => {
   };
 
   const sendMessageToChat = async (currentUserId, chats) => {
-    try {
-      await axios.put(`${ChatApi}/${chats.data[currentUserId].id}`, chats.data[currentUserId]);
-    } catch (error) {
-      console.log('error', error);
-    }
+    setChats(chats);
   };
 
   const sendMessageAsyn = (currentUserId, selectedUserId, messageInput, chats, online) => {

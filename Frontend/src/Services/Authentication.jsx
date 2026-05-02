@@ -5,6 +5,7 @@ import {
   clearPreferredBackend,
   getLocalApiBaseUrl,
   getLocalWsBaseUrl,
+  getWsBaseUrlForApi,
   setPreferredBackend,
 } from "../ConfigUrl/config";
 import { getAuthToken } from "../ConfigUrl/config";
@@ -35,7 +36,7 @@ const persistAuthenticatedBackend = (candidateBaseUrl) => {
   const isLocalCandidate = normalizedCandidateBaseUrl === normalizedLocalApiBaseUrl;
   const nextWsBaseUrl = isLocalCandidate
     ? getLocalWsBaseUrl()
-    : normalizedCandidateBaseUrl.replace(/^http/i, "ws");
+    : getWsBaseUrlForApi(normalizedCandidateBaseUrl);
 
   setPreferredBackend({
     apiBaseUrl: normalizedCandidateBaseUrl,
@@ -58,7 +59,7 @@ const persistBrokerBackend = (candidateBaseUrl) => {
   const isLocalCandidate = normalizedCandidateBaseUrl === normalizedLocalApiBaseUrl;
   const nextWsBaseUrl = isLocalCandidate
     ? getLocalWsBaseUrl()
-    : normalizedCandidateBaseUrl.replace(/^http/i, "ws");
+    : getWsBaseUrlForApi(normalizedCandidateBaseUrl);
 
   setBrokerBackend({
     apiBaseUrl: normalizedCandidateBaseUrl,
@@ -88,18 +89,9 @@ export const login = async (email, password) => {
   };
 
   const localApiBaseUrl = getLocalApiBaseUrl();
-  const browserHost = typeof window !== "undefined" ? window.location.hostname : "";
-  const isLocalLikeHost =
-    browserHost === "localhost" ||
-    browserHost === "127.0.0.1" ||
-    browserHost === "0.0.0.0" ||
-    /^192\.168\./.test(browserHost) ||
-    /^10\./.test(browserHost) ||
-    /^172\.(1[6-9]|2\d|3[0-1])\./.test(browserHost);
-  const primaryBaseUrl = isLocalLikeHost ? localApiBaseUrl : baseUrl;
-  const alternateBaseUrl = isLocalLikeHost
-    ? localApiBaseUrl
-    : (baseUrl.replace(/\/$/, "") === localApiBaseUrl.replace(/\/$/, "") ? REMOTE_API_BASE_URL : localApiBaseUrl);
+  const primaryBaseUrl = baseUrl || localApiBaseUrl;
+  const alternateBaseUrl =
+    baseUrl.replace(/\/$/, "") === localApiBaseUrl.replace(/\/$/, "") ? REMOTE_API_BASE_URL : localApiBaseUrl;
 
   try {
     let response;

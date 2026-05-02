@@ -27,6 +27,7 @@ from main.broker_instrument_cache import ensure_dhan_instruments_file, ensure_fi
 from main.broker_registry import normalize_broker_name
 from main.execution_engine import ContractInfo, ExecutionRequest, OrderConfig, get_execution_engine
 from main.models import ClientBrokerdetails, ClientMultiLegStrategySetting, Strategies, StrategyExecution, StrategyExecutionLog, StrategyLeg, User
+from main.permissions import can_access_client_record, is_admin_or_superadmin
 from main.fivepaisa import MARKET_FEED_URL
 
 try:
@@ -1969,8 +1970,10 @@ class MultiLegExecutionEngine:
     def list_active(self, *, user: User, client_id: Optional[int] = None) -> List[Dict[str, Any]]:
         queryset = StrategyExecution.objects.select_related("client").prefetch_related("legs").filter(status__in=ACTIVE_STRATEGY_STATUSES)
         if client_id:
+            if not can_access_client_record(user, client_id):
+                raise MultiLegExecutionError("You do not have access to this client's executions.", error_code="PERMISSION_DENIED")
             queryset = queryset.filter(client_id=client_id)
-        elif not getattr(user, "is_superuser", False):
+        elif not self._is_admin(user):
             queryset = queryset.filter(client=user)
         return [self._serialize_execution(execution, refresh_pnl=True) for execution in queryset.order_by("-id")]
 
@@ -1993,7 +1996,9 @@ class MultiLegExecutionEngine:
         return self._serialize_execution(execution, broker_details=broker_details, refresh_pnl=False)
 
     def kill_switch(self, *, user: User, client_id: Optional[int] = None, reason: str = "Kill switch") -> Dict[str, Any]:
-        if client_id and self._is_admin(user):
+        if client_id:
+            if not can_access_client_record(user, client_id):
+                raise MultiLegExecutionError("You do not have access to this client.", error_code="PERMISSION_DENIED")
             client = User.objects.get(id=client_id)
         else:
             client = user
@@ -2015,8 +2020,10 @@ class MultiLegExecutionEngine:
         if strategy_execution_id:
             queryset = queryset.filter(id=strategy_execution_id)
         if client_id:
+            if user and not can_access_client_record(user, client_id):
+                raise MultiLegExecutionError("You do not have access to this client.", error_code="PERMISSION_DENIED")
             queryset = queryset.filter(client_id=client_id)
-        if user and not self._is_admin(user):
+        if user and not self._is_admin(user) and not client_id:
             queryset = queryset.filter(client=user)
 
         results = []
@@ -2127,7 +2134,7 @@ class MultiLegExecutionEngine:
                     error_code="CLIENT_NOT_FOUND",
                     metadata={"client_id": client_id},
                 )
-            if not self._is_admin(user) and client.id != user.id:
+            if not can_access_client_record(user, client):
                 raise MultiLegExecutionError("You do not have permission to execute for this client.", error_code="PERMISSION_DENIED")
             return client
         return user
@@ -2239,9 +2246,7 @@ class MultiLegExecutionEngine:
         )
 
     def _assert_access(self, execution: StrategyExecution, user: User) -> None:
-        if self._is_admin(user):
-            return
-        if execution.client_id != user.id:
+        if not can_access_client_record(user, execution.client):
             raise MultiLegExecutionError("You do not have access to this strategy execution.", error_code="PERMISSION_DENIED")
 
     def _log(self, execution: StrategyExecution, event_type: str, message: str, metadata: Optional[Dict[str, Any]] = None) -> None:
@@ -2264,7 +2269,7 @@ class MultiLegExecutionEngine:
 
     @staticmethod
     def _is_admin(user: User) -> bool:
-        return bool(getattr(user, "is_superuser", False) or getattr(user, "is_staff", False) or getattr(getattr(user, "role", None), "name", "").lower() in {"admin", "superadmin", "super-admin", "sub-admin"})
+        return is_admin_or_superadmin(user) or bool(getattr(user, "is_staff", False))
 
 
 _multileg_execution_engine: Optional[MultiLegExecutionEngine] = None

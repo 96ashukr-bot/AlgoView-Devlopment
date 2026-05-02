@@ -8,7 +8,7 @@ from unittest import mock
 from django.test import TestCase, override_settings
 from django.utils import timezone
 
-from main.models import Broker, ClientBrokerdetails, ClientMultiLegStrategySetting, Strategies, StrategyExecution, StrategyLeg, User
+from main.models import Broker, ClientBrokerdetails, ClientMultiLegStrategySetting, Role, Strategies, StrategyExecution, StrategyLeg, User
 from main.services.multileg_execution import (
     LegExecutionManager,
     MultiLegExecutionEngine,
@@ -53,6 +53,27 @@ class MultiLegExecutionTests(TestCase):
             password="Pass@1234",
             is_staff=True,
         )
+        self.subadmin_role, _ = Role.objects.get_or_create(name="Sub-Admin", defaults={"status": "active"})
+        self.subadmin_user = User.objects.create_user(
+            email="multileg-subadmin@example.com",
+            firstName="Sub",
+            lastName="Admin",
+            phoneNumber="9000000003",
+            password="Pass@1234",
+            role=self.subadmin_role,
+        )
+        self.other_client_user = User.objects.create_user(
+            email="multileg-other-client@example.com",
+            firstName="Other",
+            lastName="Client",
+            phoneNumber="9000000004",
+            password="Pass@1234",
+            type_of_user="is_client",
+            is_client=True,
+            is_enable=True,
+            client_status=True,
+        )
+        self.other_client_user.save(update_fields=["type_of_user", "is_client", "is_enable", "client_status"])
 
         self.broker = Broker.objects.create(broker_name="Angel One", is_active=True)
         self.broker_details = ClientBrokerdetails.objects.create(
@@ -94,6 +115,56 @@ class MultiLegExecutionTests(TestCase):
             "exit_time": "15:15",
             "allow_reentry": False,
         }
+
+    def test_subadmin_cannot_list_unassigned_client_active_executions(self):
+        StrategyExecution.objects.create(
+            client=self.client_user,
+            broker="Angel One",
+            strategy_name="BULL_CALL_SPREAD",
+            underlying="NIFTY",
+            expiry=timezone.now() + timezone.timedelta(days=1),
+            status=StrategyExecution.STATUS_PENDING,
+            total_quantity=50,
+            idempotency_key="unassigned-client-active",
+            config_snapshot={},
+        )
+
+        engine = MultiLegExecutionEngine()
+
+        with self.assertRaises(MultiLegExecutionError) as exc:
+            engine.list_active(user=self.subadmin_user, client_id=self.client_user.id)
+
+        self.assertEqual(exc.exception.error_code, "PERMISSION_DENIED")
+
+    def test_subadmin_can_list_assigned_client_active_executions(self):
+        self.client_user.assigned_client = self.subadmin_user
+        self.client_user.save(update_fields=["assigned_client"])
+        StrategyExecution.objects.create(
+            client=self.client_user,
+            broker="Angel One",
+            strategy_name="BULL_CALL_SPREAD",
+            underlying="NIFTY",
+            expiry=timezone.now() + timezone.timedelta(days=1),
+            status=StrategyExecution.STATUS_PENDING,
+            total_quantity=50,
+            idempotency_key="assigned-client-active",
+            config_snapshot={},
+        )
+
+        engine = MultiLegExecutionEngine()
+        payload = engine.list_active(user=self.subadmin_user, client_id=self.client_user.id)
+
+        self.assertEqual(len(payload), 1)
+        self.assertEqual(payload[0]["client_id"], self.client_user.id)
+
+    def test_client_cannot_execute_for_another_client_id(self):
+        engine = MultiLegExecutionEngine()
+        config = dict(self.base_config, client_id=self.other_client_user.id)
+
+        with self.assertRaises(MultiLegExecutionError) as exc:
+            engine.execute(config=config, user=self.client_user)
+
+        self.assertEqual(exc.exception.error_code, "PERMISSION_DENIED")
 
     def _contract(self, strike: float, option_type: str, *, symbol_suffix: str) -> ResolvedContract:
         expiry = timezone.now() + timezone.timedelta(days=1)

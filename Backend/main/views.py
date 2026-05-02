@@ -35,8 +35,10 @@ from main.permissions import (
     IsAdminOrSuperadmin,
     IsAdminRole,
     can_access_client_record,
+    get_accessible_clients_queryset,
     is_admin_or_superadmin,
     is_admin_user,
+    is_subadmin_user,
     is_superadmin_user,
 )
 from main.services.login_activity_service import LoginActivityService
@@ -88,6 +90,21 @@ ALICE_API_KEY=config('ALICE_API_KEY')
 import logging
 logger = logging.getLogger('main')
 UserModel = get_user_model()
+
+
+def _accessible_clients_for_user(user):
+    return get_accessible_clients_queryset(user).order_by("-id")
+
+
+def _get_accessible_client_or_403(user, client_id):
+    client = get_object_or_404(UserModel, id=client_id)
+    if not can_access_client_record(user, client):
+        raise PermissionDenied("You do not have access to this client.")
+    return client
+
+
+def _client_scope_filter(user):
+    return Q(client__in=get_accessible_clients_queryset(user))
 
 
 def _require_webhook_secret(request):
@@ -1078,12 +1095,12 @@ class LoginActivitySummaryView(APIView):
         target_user = request.user
 
         if user_id is not None and request.user.id != user_id:
-            if not is_admin_or_superadmin(request.user):
+            target_user = get_object_or_404(UserModel, id=user_id)
+            if not can_access_client_record(request.user, target_user):
                 return Response(
                     {"status": "error", "message": "You do not have permission to access this user's activity."},
                     status=status.HTTP_403_FORBIDDEN,
                 )
-            target_user = get_object_or_404(UserModel, id=user_id)
 
         summary = LoginActivityService().build_summary(target_user, request=request)
         return Response(summary, status=status.HTTP_200_OK)
@@ -1527,11 +1544,13 @@ class GetKYCView(APIView):
             return Response({'message': 'KYC not found for this user.'}, status=status.HTTP_404_NOT_FOUND)  
 
 class GetKYCByIdView(APIView):
-    # permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
     pagination_class = None
     def get(self, request,pk, *args, **kwargs):
         try:
             kyc = KYC.objects.get(pk=pk)
+            if not can_access_client_record(request.user, kyc.user):
+                return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
             serializer = KYCSerializer(kyc)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except KYC.DoesNotExist:
@@ -1611,7 +1630,7 @@ class PendingKYCListView(APIView):
     def get(self, request, *args, **kwargs):
         try:
             # Fetch all KYC records (filter for pending ones if needed)
-            pending_kycs = KYC.objects.all().order_by('-id')
+            pending_kycs = KYC.objects.filter(user__in=get_accessible_clients_queryset(request.user)).order_by('-id')
 
             # Get the search query from the request
             search_query = request.GET.get('q', '').strip()
@@ -1674,12 +1693,14 @@ class PendingKYCListView(APIView):
 
 #kyc verification by admin
 class KYCVerificationView(APIView):
-    permission_classes = [permissions.IsAuthenticated, ]  # Only admins can access KYC requests
+    permission_classes = [permissions.IsAuthenticated, ]
     def post(self, request, kyc_id, *args, **kwargs):
         try:
             kyc = KYC.objects.get(id=kyc_id)
         except KYC.DoesNotExist:
             return Response({"detail": "KYC request not found."}, status=status.HTTP_404_NOT_FOUND)
+        if not can_access_client_record(request.user, kyc.user):
+            return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
         
         action = request.data.get('action')
         if not action:
@@ -2415,15 +2436,7 @@ class ClientFilterView(APIView):
     
     def get(self, request, *args, **kwargs):
         user = request.user 
-        if is_superadmin_user(user):
-            clients = User.objects.filter(type_of_user='is_client', is_client=True).order_by('-id')
-        # elif user.role and user.role.name.lower() == 'sub-admin' or user.role.name=='Sub-Admin':
-            # print("sub-admin.........")
-            # clients = User.objects.filter(assigned_client=user).order_by('-id')
-        else:
-            clients = User.objects.filter(Q(type_of_user='is_client') & (Q(created_by=user) 
-            | Q(assigned_client=user))).order_by('-id')
-            # clients = User.objects.filter(type_of_user='is_client',is_client=True, created_by=user).order_by('-id')
+        clients = _accessible_clients_for_user(user)
                 # Apply additional filters based on query parameters
                 # Get the search query from request params
         search_query = request.query_params.get('q', '').strip()
@@ -2461,15 +2474,7 @@ class ClientCreateView(APIView):
     
     def get(self, request, *args, **kwargs):
         user = request.user 
-        if is_superadmin_user(user):
-            clients = User.objects.filter(type_of_user='is_client', is_client=True).order_by('-id')
-        # elif user.role and user.role.name.lower() == 'sub-admin' or user.role.name=='Sub-Admin':
-            # print("sub-admin.........")
-            # clients = User.objects.filter(assigned_client=user).order_by('-id')
-        else:
-            clients = User.objects.filter(Q(type_of_user='is_client') & (Q(created_by=user) 
-            | Q(assigned_client=user))).order_by('-id')
-            # clients = User.objects.filter(type_of_user='is_client',is_client=True, created_by=user).order_by('-id')
+        clients = _accessible_clients_for_user(user)
                 # Apply additional filters based on query parameters
         search_query = request.query_params.get('q', '').strip()
 
@@ -2545,7 +2550,7 @@ class ClientCreateView(APIView):
 
     def put(self, request, *args, **kwargs):
         client_id = kwargs.get('pk')
-        client = get_object_or_404(User, id=client_id)
+        client = _get_accessible_client_or_403(request.user, client_id)
 
         serializer = ClientupdateListSerializer(client, data=request.data, partial=True)
         
@@ -2571,10 +2576,10 @@ class ClientCreateView(APIView):
             return Response({"detail": "client ID is required for deletion."}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            broker = User.objects.get(pk=client_id)
+            broker = _get_accessible_client_or_403(request.user, client_id)
             broker.delete()
             return Response({"detail": "client deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
-        except Broker.DoesNotExist:
+        except User.DoesNotExist:
             return Response({"detail": "client_id not found."}, status=status.HTTP_404_NOT_FOUND)
 
 
@@ -2626,10 +2631,9 @@ class ClientOnboardingStatsView(APIView):
 
             # Query to count clients created within the specified date range
             client_counts = (
-                User.objects
+                get_accessible_clients_queryset(request.user)
                 .filter(
                     created_at__date__range=(start_date, end_date),
-                    type_of_user='is_client'  # Filter to include only clients
                 )
                 .extra({'created_date': 'date(created_at)'})  # Extract the date part
                 .values('created_date')  # Group by the created date
@@ -2667,15 +2671,7 @@ class ClientTradingStatusCountView(APIView):
         user = request.user
         
         # Determine which clients to include based on user role
-        if is_superadmin_user(user):
-            # Super-admin can see all clients
-            clients = User.objects.filter(type_of_user='is_client', is_client=True)
-        elif is_admin_user(user):
-            # Sub-admin can see only their assigned clients
-            clients = User.objects.filter(assigned_client=user, type_of_user='is_client', is_client=True)
-        else:
-            # If the user is neither super-admin nor sub-admin, return an empty response or handle accordingly
-            return Response({"detail": "You do not have permission to view this data."}, status=403)
+        clients = get_accessible_clients_queryset(user)
 
         # Count active and inactive clients based on the is_enable field
         active_count = clients.filter(is_enable=True).count()
@@ -2691,7 +2687,7 @@ class ClientTradingStatusCountView(APIView):
 
 
 class AssignClientToStrategyAPIView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdminOrSuperadmin]
     def put(self, request, pk):
         strategy = get_object_or_404(Strategies, pk=pk)
         serializer = StrategyAssignSerializer(strategy, data=request.data, partial=True)
@@ -2708,9 +2704,9 @@ class GetclientbyidPIView(APIView):
     permission_classes = [IsAuthenticated]
     def get(self,request, pk, *args, **kwargs): 
         try:
-            user = User.objects.get(pk=pk)  
+            user = _get_accessible_client_or_403(request.user, pk)
             serializer = ClientListdetailsSerializer(user)  
-        except Strategies.DoesNotExist:
+        except User.DoesNotExist:
             return Response({"detail": "client id not found."}, status=status.HTTP_404_NOT_FOUND)
 
         return Response(serializer.data, status=status.HTTP_200_OK)        
@@ -2721,12 +2717,12 @@ class GetStrategyClientView(APIView):
     def get(self, request, *args, **kwargs):
         user = request.user 
         try:
-            if is_superadmin_user(user):
+            if is_admin_or_superadmin(user):
                 clients = User.objects.filter(type_of_user='is_client', is_client=True).order_by('-id')
-            elif is_admin_user(user):
+            elif is_subadmin_user(user):
                 clients = User.objects.filter(assigned_client=user).order_by('-id')
             else:
-                clients = User.objects.filter(type_of_user='is_client', created_by=user).order_by('-id')
+                clients = User.objects.filter(id=user.id).order_by('-id')
             serializer = ClientListSerializer(clients, many=True)
 
         except Strategies.DoesNotExist:
@@ -2735,12 +2731,11 @@ class GetStrategyClientView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)    
 #Client penel setting
 class ClientTreadSettingView(APIView):
+    permission_classes = [IsAuthenticated]
    
     def get(self, request, pk, *args, **kwargs):
+        client = _get_accessible_client_or_403(request.user, pk)
         try:
-            # Fetch the client with the specified ID
-            client = User.objects.get(pk=pk)
-            
             # Access Group_service's json_data directly
             group_service = client.Group_service
             if not group_service:
@@ -2758,7 +2753,7 @@ class ClientTreadSettingView(APIView):
             return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     def put(self, request, *args, **kwargs):
         client_id = kwargs.get('pk')
-        client = get_object_or_404(User, id=client_id)
+        client = _get_accessible_client_or_403(request.user, client_id)
 
         serializer = ClientupdateListSerializer(client, data=request.data, partial=True)
         
@@ -2767,13 +2762,15 @@ class ClientTreadSettingView(APIView):
             return Response(ClientListSerializer(client).data, status=status.HTTP_201_CREATED)
 #client expiry list
 class ClientsDataView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def get(self, request, *args, **kwargs):
         try:
             # Get the current date
             current_date = timezone.now().date()
             print(current_date)
             # Fetch clients whose end_date_client has expired and who are of type 'is_client'
-            expiry_client = User.objects.filter(client_expiry_status=True, type_of_user='is_client',is_client=True)
+            expiry_client = _accessible_clients_for_user(request.user).filter(client_expiry_status=True)
 
             # Apply search filter
             search_query = request.query_params.get('q', '').strip()
@@ -2900,10 +2897,12 @@ class GetTradeSettingAPIView(generics.ListAPIView):
         segment = self.request.query_params.get('segment', None)
         sub_segment = self.request.query_params.get('sub_segment', None)
         
-        queryset = ClientTradeSetting.objects.all()
+        queryset = ClientTradeSetting.objects.filter(client__in=get_accessible_clients_queryset(self.request.user))
         
         # Apply filters if present
         if client:
+            if not can_access_client_record(self.request.user, client):
+                raise PermissionDenied("You do not have access to this client.")
             queryset = queryset.filter(client=client)
         if segment:
             queryset = queryset.filter(segment=segment)
@@ -2937,7 +2936,7 @@ class ClientMultiLegTradeSettingAPIView(APIView):
         )
 
         if client_id:
-            if not is_admin_or_superadmin(request.user) and int(client_id) != request.user.id:
+            if not can_access_client_record(request.user, client_id):
                 return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
             resolved_client_id = int(client_id)
             resolved_client = User.objects.filter(id=resolved_client_id).first()
@@ -3249,10 +3248,11 @@ class UpdateTradeStatusView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 #Active Inactive clints for specific sub-Admin
 class clientActiveInactiveView(APIView):
-    # Uncomment this if authentication is required
-    # permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticated]
     
     def get(self, request, id, *args, **kwargs):
+        if not is_admin_or_superadmin(request.user) and request.user.id != id:
+            return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
         try:
             user = User.objects.get(id=id, role__name='Sub-Admin')
         except User.DoesNotExist:
@@ -3320,10 +3320,12 @@ class clientActiveInactiveView(APIView):
 
 # clients which are using the  group service
 class ClientsByGroupServiceView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def get(self, request, group_service_id, *args, **kwargs):
         group_service = get_object_or_404(GroupService, id=group_service_id)
 
-        clients = User.objects.filter(Group_service=group_service, is_client=True)
+        clients = get_accessible_clients_queryset(request.user).filter(Group_service=group_service)
         client_data = [
             {
                 "id": client.id,
@@ -3350,18 +3352,7 @@ class ActiveClientsView(APIView):
         user = request.user
         current_date = timezone.now().date()
 
-        if is_superadmin_user(user):
-            clients = User.objects.filter(
-                type_of_user='is_client', is_client=True, client_status=True
-            ).order_by('-id')
-        else:
-            # clients =User.objects.filter(
-            #     type_of_user='is_client', is_client=True, end_date_client__gt=current_date,created_by=user
-            # ).order_by('-id')
-            clients = User.objects.filter(
-                Q(type_of_user='is_client') & Q(is_client=True) & Q(client_status=True) &
-                (Q(created_by=user) | Q(assigned_client=user))
-            ).order_by('-id')
+        clients = _accessible_clients_for_user(user).filter(client_status=True)
         search_query = request.query_params.get('q', '').strip()    
         clients = clients.filter(
             Q(firstName__icontains=search_query) |
@@ -3376,22 +3367,13 @@ class ActiveClientsView(APIView):
         return paginator.get_paginated_response(serializer.data)
 #all In-active clients for dashboard
 class InactiveClientsView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def get(self, request, *args, **kwargs):
         user = request.user
         current_date = timezone.now().date()
 
-        if is_superadmin_user(user):
-            clients = User.objects.filter(
-                type_of_user='is_client', is_client=True, client_status=False
-            ).order_by('-id')
-        else:
-            # clients = User.objects.filter(
-            #     type_of_user='is_client', is_client=True, end_date_client__lte=current_date,created_by=user
-            # ).order_by('-id')
-            clients = User.objects.filter(
-                Q(type_of_user='is_client') & Q(is_client=True) & Q(client_status=False) &
-                (Q(created_by=user) | Q(assigned_client=user))
-            ).order_by('-id')
+        clients = _accessible_clients_for_user(user).filter(client_status=False)
         search_query = request.query_params.get('q', '').strip()    
         clients = clients.filter(
             Q(firstName__icontains=search_query) |
@@ -3414,18 +3396,7 @@ class ExpiryClientsView(APIView):
         user = request.user
         current_date = timezone.now().date()
 
-        if is_superadmin_user(user):
-            clients = User.objects.filter(
-                type_of_user='is_client', is_client=True, end_date_client__lte=current_date,
-            ).order_by('-id')
-        else:
-            # clients = User.objects.filter(
-            #     type_of_user='is_client', is_client=True, end_date_client__lte=current_date,created_by=user
-            # ).order_by('-id')
-            clients = User.objects.filter(
-                Q(type_of_user='is_client') & Q(is_client=True) & Q(end_date_client__lte=current_date) &
-                (Q(created_by=user) | Q(assigned_client=user))
-            ).order_by('-id')
+        clients = _accessible_clients_for_user(user).filter(end_date_client__lte=current_date)
         
         # Apply pagination and serialize the data
         paginator = CustomPageNumberPagination()
@@ -3435,10 +3406,14 @@ class ExpiryClientsView(APIView):
 
 
 class GetclientdataView(APIView):
-    # permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
+
     def get(self,request, *args, **kwargs): 
         try:
-            client_list = ClientTradeSetting.objects.filter(is_tread_status=True)
+            client_list = ClientTradeSetting.objects.filter(
+                is_tread_status=True,
+                client__in=get_accessible_clients_queryset(request.user),
+            )
             print(client_list)
             serializer = ClientTradeSettingSerializer(client_list,many=True)
             # print(serializer)
@@ -4204,17 +4179,7 @@ class ClientsTradeStatusView(APIView):
         user = request.user
         current_date = timezone.now().date()
 
-        if is_superadmin_user(user):
-            clients = User.objects.filter(
-                type_of_user='is_client', is_client=True).order_by('-id')
-        else:
-            # clients =User.objects.filter(
-            #     type_of_user='is_client', is_client=True, end_date_client__gt=current_date,created_by=user
-            # ).order_by('-id')
-            clients = User.objects.filter(
-                Q(type_of_user='is_client') & Q(is_client=True) &
-                (Q(created_by=user) | Q(assigned_client=user))
-            ).order_by('-id')
+        clients = _accessible_clients_for_user(user)
         # 🔍 **Search Filter (Client name, broker, index symbol, trading symbol)**
         search_query = request.query_params.get('q', '').strip()
         clients = clients.filter(
@@ -4235,10 +4200,10 @@ class ClientsTradeStatusView(APIView):
         user = request.user
 
         # Fetch the client object
-        client = get_object_or_404(User, id=client_id, type_of_user='is_client', is_client=True)
+        client = _get_accessible_client_or_403(user, client_id)
 
         # Check if the current user has the right permissions
-        if not is_superadmin_user(user) and client.created_by != user:
+        if not can_access_client_record(user, client):
             return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
 
         # Validate the 'is_enable' field in the request body
@@ -4361,18 +4326,18 @@ class AdminClientBrokerDetailsView(APIView):
         client_id = kwargs.get("pk")  # Fetch client ID from URL params
 
         try:
+            target_client = _get_accessible_client_or_403(request.user, client_id)
             # Fetch broker details
             broker_detail = ClientBrokerdetails.objects.filter(client_id=client_id).first()
 
-            if broker_detail and not can_access_client_record(request.user, broker_detail.client):
-                return Response({"status": "error", "message": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
-
             serializer = ClientBrokerDetailsSerializer(
-                broker_detail or ClientBrokerdetails(client_id=client_id),
+                broker_detail or ClientBrokerdetails(client=target_client),
                 context={"available_brokers": _ensure_default_broker_catalog()},
             )
             return Response({"status": "success", "data": serializer.data}, status=status.HTTP_200_OK)
 
+        except PermissionDenied:
+            raise
         except Exception as e:
             return Response({"status": "error", "message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -4428,10 +4393,12 @@ class EnableDisableBrokerView(APIView):
         )
 #admin can get client broker status
 class AdminGetClientBrokerStatusView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def get(self, request, *args, **kwargs):
         client_id = kwargs.get("pk")  
         try:
-            client = User.objects.get(id=client_id)
+            client = _get_accessible_client_or_403(request.user, client_id)
         except User.DoesNotExist:
             return Response({"error": "Client not found."}, status=status.HTTP_404_NOT_FOUND)
 
@@ -4671,16 +4638,8 @@ class TradeorderhistoryListView_old(APIView):
     def get(self, request, *args, **kwargs):
         try:
             user = request.user
-            if is_superadmin_user(user):
-                # Super-admin can see all clients' trade order histories
-                clients = User.objects.filter(type_of_user='is_client', is_client=True)
-                trade_history = Tradeorderhistory.objects.exclude(order_id=0).filter(client__in=clients).order_by('-id')
-            elif is_admin_user(user):
-                # Sub-admin can see trade order histories of their assigned clients
-                clients = User.objects.filter(assigned_client=user,created_by=user,type_of_user='is_client', is_client=True)
-                trade_history = Tradeorderhistory.objects.exclude(order_id=0).filter(client__in=clients).order_by('-id')
-            else:
-                trade_history = Tradeorderhistory.objects.exclude(order_id=0).filter(client=user).order_by('-id')
+            clients = get_accessible_clients_queryset(user)
+            trade_history = Tradeorderhistory.objects.exclude(order_id=0).filter(client__in=clients).order_by('-id')
 
             paginator = CustomPageNumberPagination()
             result_page = paginator.paginate_queryset(trade_history, request)
@@ -4697,17 +4656,8 @@ class ClientTradeListView_old(APIView):
     def get(self, request, *args, **kwargs):
         try:
             user = request.user
-            if is_superadmin_user(user):
-                # Super-admin can see all clients' trade order histories
-                clients = User.objects.all()#filter(type_of_user='is_client', is_client=True)
-                trade_history = Tradeorderhistory.objects.filter(client__in=clients).order_by('-id')
-            elif is_admin_user(user):
-                print("Sub-AdminSub-AdminSub-AdminSub-Admin")
-                # Sub-admin can see trade order histories of their assigned clients
-                clients = User.objects.filter(assigned_client=user,created_by=user)#,type_of_user='is_client', is_client=True)
-                trade_history = Tradeorderhistory.objects.filter(client__in=clients).order_by('-id')
-            else:
-                trade_history = Tradeorderhistory.objects.filter(client=user).order_by('-id')
+            clients = get_accessible_clients_queryset(user)
+            trade_history = Tradeorderhistory.objects.filter(client__in=clients).order_by('-id')
 
             paginator = CustomPageNumberPagination()
             result_page = paginator.paginate_queryset(trade_history, request)
@@ -4761,19 +4711,8 @@ class TradeOrderHistoryFilterView(APIView):
 
             # User-specific filtering
             user = request.user
-            if is_superadmin_user(user):
-                # Super-admin sees all clients' trade histories
-                clients = User.objects.filter(type_of_user='is_client', is_client=True)
-                trade_history = Tradeorderhistory.objects.exclude(order_id=0).filter(client__in=clients).filter(filters).order_by('-id')
-
-            elif is_admin_user(user):
-                # Sub-admin sees their assigned clients' histories
-                clients = User.objects.filter(assigned_client=user, created_by=user, type_of_user='is_client', is_client=True)
-                trade_history = Tradeorderhistory.objects.exclude(order_id=0).filter(client__in=clients).filter(filters).order_by('-id')
-
-            else: 
-                # Regular user sees only their trade history
-                trade_history = Tradeorderhistory.objects.exclude(order_id=0).filter(client=user).filter(filters).order_by('-id')
+            clients = get_accessible_clients_queryset(user)
+            trade_history = Tradeorderhistory.objects.exclude(order_id=0).filter(client__in=clients).filter(filters).order_by('-id')
 
             # Pagination
             paginator = CustomPageNumberPagination()
@@ -4931,14 +4870,8 @@ class TradeorderhistoryListView(APIView):
             print(f"broker: {broker} Index_Symbol: {Index_Symbol} order_status: {order_status}")
             
             # Determine which clients to include based on user role
-            if is_superadmin_user(user):
-                clients = User.objects.filter(type_of_user='is_client', is_client=True)
-                trade_history = Tradeorderhistory.objects.exclude(order_id=0).exclude(order_id__isnull=True).filter(client__in=clients).order_by('-id')
-            elif is_admin_user(user):
-                clients = User.objects.filter(assigned_client=user, type_of_user='is_client', is_client=True)
-                trade_history = Tradeorderhistory.objects.exclude(order_id=0).exclude(order_id__isnull=True).filter(client__in=clients).order_by('-id')
-            else:
-                trade_history = Tradeorderhistory.objects.exclude(order_id=0).exclude(order_id__isnull=True).filter(client=user).order_by('-id')
+            clients = get_accessible_clients_queryset(user)
+            trade_history = Tradeorderhistory.objects.exclude(order_id=0).exclude(order_id__isnull=True).filter(client__in=clients).order_by('-id')
 
             # Dynamically apply filters based on the provided parameters
             filters = Q()
@@ -5027,49 +4960,19 @@ class TradeCompleteListView(APIView):
             print(f"broker: {broker} Index_Symbol: {Index_Symbol} order_status: {order_status}")
             
             # Determine which clients to include based on user role
-            if is_superadmin_user(user):
-                clients = User.objects.filter(type_of_user='is_client', is_client=True)
-                trade_history = Tradeorderhistory.objects.filter(
-                    client__in=clients,
-                    order_status__in=['completed', 'complete'],
-                    trade_order_status__iexact='CLOSE',
-                ).filter(Q(Entry_Price__gt=0.0) | Q(Exit_Price__gt=0.0)).exclude(
-                    order_id=0,
-                    order_id__isnull=True,
-                    EntryQty__isnull=True,
-                    ExitQty__isnull=True,
-                    Entry_Price__isnull=True,
-                    Exit_Price__isnull=True,
-                ).order_by('-id')
-
-               
-            elif is_admin_user(user):
-                clients = User.objects.filter(assigned_client=user, type_of_user='is_client', is_client=True)
-                trade_history = Tradeorderhistory.objects.filter(
-                    client__in=clients,
-                    order_status__in=['completed', 'complete'],
-                    trade_order_status__iexact='CLOSE',
-                ).filter(Q(Entry_Price__gt=0.0) | Q(Exit_Price__gt=0.0)).exclude(
-                    order_id=0,
-                    order_id__isnull=True,
-                    EntryQty__isnull=True,
-                    ExitQty__isnull=True,
-                    Entry_Price__isnull=True,
-                    Exit_Price__isnull=True,
-                ).order_by('-id')
-            else:
-                trade_history = Tradeorderhistory.objects.filter(
-                    client=user,
-                    order_status__in=['completed', 'complete'],
-                    trade_order_status__iexact='CLOSE',
-                ).filter(Q(Entry_Price__gt=0.0) | Q(Exit_Price__gt=0.0)).exclude(
-                    order_id=0,
-                    order_id__isnull=True,
-                    EntryQty__isnull=True,
-                    ExitQty__isnull=True,
-                    Entry_Price__isnull=True,
-                    Exit_Price__isnull=True,
-                ).order_by('-id')
+            clients = get_accessible_clients_queryset(user)
+            trade_history = Tradeorderhistory.objects.filter(
+                client__in=clients,
+                order_status__in=['completed', 'complete'],
+                trade_order_status__iexact='CLOSE',
+            ).filter(Q(Entry_Price__gt=0.0) | Q(Exit_Price__gt=0.0)).exclude(
+                order_id=0,
+                order_id__isnull=True,
+                EntryQty__isnull=True,
+                ExitQty__isnull=True,
+                Entry_Price__isnull=True,
+                Exit_Price__isnull=True,
+            ).order_by('-id')
             # Dynamically apply filters based on the provided parameters
             filters = Q()
 
@@ -5155,15 +5058,8 @@ class ClientTradeListView(APIView):
             print(f"client strategy: {strategy} symbol: {Index_Symbol}")
             
             # Determine which clients to include based on user role
-            if is_superadmin_user(user):
-                clients = User.objects.all()  # Super-admin can see all clients' trade order histories
-                trade_history = Tradeorderhistory.objects.filter(client__in=clients).order_by('-id')
-            elif is_admin_user(user):
-                print("Sub-Admin is called.....")
-                clients = User.objects.filter(assigned_client=user)  # Sub-admin can see trade order histories of their assigned clients
-                trade_history = Tradeorderhistory.objects.filter(client__in=clients).order_by('-id')
-            else:
-                trade_history = Tradeorderhistory.objects.filter(client=user).order_by('-id')
+            clients = get_accessible_clients_queryset(user)
+            trade_history = Tradeorderhistory.objects.filter(client__in=clients).order_by('-id')
 
             # Dynamically apply filters based on the provided parameters
             filters = Q()
@@ -5246,6 +5142,8 @@ class TradeOrderResponseDataView(APIView):
         try:
             # Get the trade order by ID
             trade_order = get_object_or_404(Tradeorderhistory, id=trade_id)
+            if not can_access_client_record(request.user, trade_order.client):
+                return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
 
             # Return response data for the specific trade order
             return Response({"response_data": trade_order.response_data}, status=status.HTTP_200_OK)
@@ -5269,6 +5167,8 @@ class BrokerLogActivityView(APIView):
 
     def get(self, request, id, *args, **kwargs):
         target_user = get_object_or_404(UserModel, id=id)
+        if not can_access_client_record(request.user, target_user):
+            return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
         summary = LoginActivityService().build_summary(target_user, request=request)
         return Response(summary, status=status.HTTP_200_OK)
     
@@ -5277,16 +5177,12 @@ class UserBrokerLogActivityView(APIView):
 
     def get(self, request, user_id, *args, **kwargs):
         try:
-            # Check if requesting user is accessing their own data
-            if request.user.id != user_id:
-                # Allow only superadmin or subadmin to access other users' logs
-                if not is_admin_or_superadmin(request.user):
-                    return Response(
-                        {"detail": "You do not have permission to access this user's data."},
-                        status=status.HTTP_403_FORBIDDEN
-                    )
-
             target_user = get_object_or_404(UserModel, id=user_id)
+            if not can_access_client_record(request.user, target_user):
+                return Response(
+                    {"detail": "You do not have permission to access this user's data."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
             summary = LoginActivityService().build_summary(target_user, request=request)
             return Response(summary, status=status.HTTP_200_OK)
 

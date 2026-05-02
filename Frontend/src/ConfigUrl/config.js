@@ -6,18 +6,23 @@ import {
     getAuthenticatedWsBaseUrl,
 } from "../Services/authStorage";
 
-export const REMOTE_API_BASE_URL = (process.env.REACT_APP_API_BASE_URL || "https://sparksadmin.algoview.in").replace(/\/$/, "");
-export const REMOTE_WS_BASE_URL = (process.env.REACT_APP_WS_BASE_URL || REMOTE_API_BASE_URL.replace(/^http/i, "ws")).replace(/\/$/, "");
+export const BASE_URL = "/api";
 
-const browserHost = typeof window !== "undefined" ? window.location.hostname : "localhost";
-const useLocalBackend = process.env.REACT_APP_USE_LOCAL_BACKEND === "true";
-const isLocalLikeHost =
-    browserHost === "localhost" ||
-    browserHost === "127.0.0.1" ||
-    browserHost === "0.0.0.0" ||
-    /^192\.168\./.test(browserHost) ||
-    /^10\./.test(browserHost) ||
-    /^172\.(1[6-9]|2\d|3[0-1])\./.test(browserHost);
+const browserWsOrigin =
+    typeof window !== "undefined"
+        ? `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}`
+        : "";
+
+export const getWsBaseUrlForApi = (apiBaseUrl = BASE_URL) => {
+    const normalizedApiBaseUrl = String(apiBaseUrl || BASE_URL).replace(/\/$/, "");
+    if (/^https?:\/\//i.test(normalizedApiBaseUrl)) {
+        return normalizedApiBaseUrl.replace(/^http/i, "ws").replace(/\/api$/, "");
+    }
+    return browserWsOrigin;
+};
+
+export const REMOTE_API_BASE_URL = (process.env.REACT_APP_API_BASE_URL || BASE_URL).replace(/\/$/, "");
+export const REMOTE_WS_BASE_URL = (process.env.REACT_APP_WS_BASE_URL || getWsBaseUrlForApi(REMOTE_API_BASE_URL)).replace(/\/$/, "");
 
 const configuredApiBaseUrl = process.env.REACT_APP_API_BASE_URL;
 const configuredWsBaseUrl = process.env.REACT_APP_WS_BASE_URL;
@@ -28,37 +33,18 @@ const storedWsBaseUrl =
 const authenticatedApiBaseUrl = typeof window !== "undefined" ? getAuthenticatedApiBaseUrl() : null;
 const authenticatedWsBaseUrl = typeof window !== "undefined" ? getAuthenticatedWsBaseUrl() : null;
 
-const defaultApiBaseUrl = (useLocalBackend || isLocalLikeHost)
-    ? `http://${browserHost}:8000`
-    : REMOTE_API_BASE_URL;
+const defaultApiBaseUrl = process.env.REACT_APP_API_BASE_URL || BASE_URL;
 
-const defaultWsBaseUrl = (useLocalBackend || isLocalLikeHost)
-    ? `ws://${browserHost}:8080`
-    : REMOTE_WS_BASE_URL;
+const defaultWsBaseUrl = process.env.REACT_APP_WS_BASE_URL || getWsBaseUrlForApi(defaultApiBaseUrl);
 
-const resolvedApiBaseUrl = isLocalLikeHost
-    ? (configuredApiBaseUrl || defaultApiBaseUrl)
-    : (configuredApiBaseUrl || authenticatedApiBaseUrl || storedApiBaseUrl || defaultApiBaseUrl);
+const resolvedApiBaseUrl = configuredApiBaseUrl || authenticatedApiBaseUrl || storedApiBaseUrl || defaultApiBaseUrl;
 
-const resolvedWsBaseUrl = isLocalLikeHost
-    ? (configuredWsBaseUrl || defaultWsBaseUrl)
-    : (configuredWsBaseUrl || authenticatedWsBaseUrl || storedWsBaseUrl || defaultWsBaseUrl);
+const resolvedWsBaseUrl = configuredWsBaseUrl || authenticatedWsBaseUrl || storedWsBaseUrl || defaultWsBaseUrl;
 
 export let baseUrl = resolvedApiBaseUrl.replace(/\/$/, "");
 let wsBaseUrl = resolvedWsBaseUrl.replace(/\/$/, "");
 
 export const setPreferredBackend = ({ apiBaseUrl, wsBaseUrl: nextWsBaseUrl, force = false }) => {
-    if (isLocalLikeHost) {
-        const forcedLocalApiBaseUrl = (configuredApiBaseUrl || defaultApiBaseUrl).replace(/\/$/, "");
-        const forcedLocalWsBaseUrl = (configuredWsBaseUrl || defaultWsBaseUrl).replace(/\/$/, "");
-        if (typeof window !== "undefined") {
-            window.localStorage.removeItem("preferred_api_base_url");
-            window.localStorage.removeItem("preferred_ws_base_url");
-        }
-        baseUrl = forcedLocalApiBaseUrl;
-        wsBaseUrl = forcedLocalWsBaseUrl;
-        return;
-    }
     if (typeof window !== "undefined") {
         if (apiBaseUrl) {
             window.localStorage.setItem("preferred_api_base_url", apiBaseUrl);
@@ -84,8 +70,8 @@ export const clearPreferredBackend = () => {
     wsBaseUrl = (configuredWsBaseUrl || defaultWsBaseUrl).replace(/\/$/, "");
 };
 
-export const getLocalApiBaseUrl = () => `http://${browserHost}:8000`;
-export const getLocalWsBaseUrl = () => `ws://${browserHost}:8080`;
+export const getLocalApiBaseUrl = () => BASE_URL;
+export const getLocalWsBaseUrl = () => getWsBaseUrlForApi(BASE_URL);
 
 export const getWebSocketUrl = (Exchange, token) => {
     return `${wsBaseUrl}/ws/stock-live-price/?exchange_type=${Exchange}&symbol_tokens=${token}`;

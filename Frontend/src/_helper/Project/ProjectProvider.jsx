@@ -1,24 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import Context from './index';
-import axios from 'axios';
-import { AllProjectApi } from '../../api';
 
 const ProjectProvider = (props) => {
     const [allData, setAllData] = useState([]);
     const [project, setProject] = useState([]);
 
-    const getAllProjectData = async () => {
-        try {
-            await axios.get(AllProjectApi).then((resp) => {
-                setAllData(resp.data);
-            });
-        } catch (error) {
-            console.log('cancelled', error);
-        }
-    };
-
     useEffect(() => {
-        getAllProjectData();
+        setAllData([]);
     }, [setAllData, setProject]);
 
     const addNewProject = (projectData) => {

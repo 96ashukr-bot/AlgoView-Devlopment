@@ -1,10 +1,7 @@
-var chartist = require('./api/chartistData.json');
 var bookmark = require('./api/bookmark.json');
 var chartjs = require('./api/chartjsData.json');
 var googlechart = require('./api/googleChartData.json');
-var allproject = require('./api/allProject.json');
 var chatmemberapp = require('./api/chatMember.json');
-var chatapp = require('./api/chat.chats.json');
 var contacts = require('./api/contacts.json');
 var task = require('./api/task.json');
 var todo = require('./api/todo.json');
@@ -23,13 +20,10 @@ var faq = require('./api/Faq.json');
 
 module.exports = function () {
   return {
-    chartist,
     bookmark,
     chartjs,
     googlechart,
-    allproject,
     chatmemberapp,
-    chatapp,
     contacts,
     task,
     todo,

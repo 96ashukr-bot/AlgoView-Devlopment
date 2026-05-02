@@ -3,6 +3,7 @@ from typing import Optional
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from django.db.models import Q
 
 from .models import Role, Permission, RolePermission
 
@@ -12,7 +13,8 @@ from rest_framework import permissions
 
 
 SUPERADMIN_ROLE_ALIASES = {"super-admin", "superadmin"}
-ADMIN_ROLE_ALIASES = {"admin", "sub-admin", "subadmin"}
+ADMIN_ROLE_ALIASES = {"admin"}
+SUBADMIN_ROLE_ALIASES = {"sub-admin", "subadmin"}
 USER_ROLE_ALIASES = {"user", "client"}
 
 
@@ -31,6 +33,8 @@ def get_canonical_role(user) -> Optional[str]:
         return "superadmin"
     if role_name in ADMIN_ROLE_ALIASES:
         return "admin"
+    if role_name in SUBADMIN_ROLE_ALIASES:
+        return "subadmin"
     if (
         role_name in USER_ROLE_ALIASES
         or getattr(user, "type_of_user", None) == "is_client"
@@ -49,6 +53,10 @@ def is_admin_user(user) -> bool:
     return get_canonical_role(user) == "admin"
 
 
+def is_subadmin_user(user) -> bool:
+    return get_canonical_role(user) == "subadmin"
+
+
 def is_admin_or_superadmin(user) -> bool:
     return get_canonical_role(user) in {"superadmin", "admin"}
 
@@ -64,11 +72,34 @@ def is_platform_admin(user) -> bool:
 def can_access_client_record(actor, client) -> bool:
     if not actor or not getattr(actor, "is_authenticated", False) or not client:
         return False
+    if isinstance(client, int) or str(client).isdigit():
+        from .models import User
+
+        client = User.objects.filter(id=int(client)).only("id", "assigned_client_id").first()
+        if not client:
+            return False
     if actor.id == client.id:
         return True
     if is_platform_admin(actor):
         return True
-    return getattr(client, "created_by_id", None) == getattr(actor, "id", None)
+    if is_subadmin_user(actor):
+        return getattr(client, "assigned_client_id", None) == getattr(actor, "id", None)
+    return False
+
+
+def get_accessible_clients_queryset(actor):
+    from .models import User
+
+    queryset = User.objects.filter(type_of_user="is_client").filter(
+        Q(is_client=True) | Q(is_client="True") | Q(is_client="true")
+    )
+    if not actor or not getattr(actor, "is_authenticated", False):
+        return queryset.none()
+    if is_platform_admin(actor):
+        return queryset
+    if is_subadmin_user(actor):
+        return queryset.filter(assigned_client=actor)
+    return queryset.filter(id=actor.id)
 
 class IsAdminRole(permissions.BasePermission):
     """
