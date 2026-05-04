@@ -17,6 +17,7 @@ from main.upstock import place_upstox_orders
 from main.zerodha import place_zerodha_orders
 from main.broker_registry import get_broker_setup_spec, broker_field_is_configured
 from main.angelone.services.state_service import CallbackStateService
+from main.angelone.utils.redaction import redact_secrets
 from main.services.login_activity_service import LoginActivityService
 from main.trade_history_service import save_trade_order_history
 logger = logging.getLogger('main')
@@ -624,8 +625,8 @@ def _broker_callback_url():
         return configured_url
 
     parsed = urlparse(configured_url)
-    if parsed.path.rstrip("/") == "/callback":
-        parsed = parsed._replace(path="/auth-callback/")
+    if parsed.path.rstrip("/") in {"/callback", "/auth-callback", "/callback-angelone"}:
+        parsed = parsed._replace(path="/api/broker/callback/")
         return urlunparse(parsed)
     return configured_url
 
@@ -896,6 +897,67 @@ class BrokerLoginRedirectView(APIView):
             if missing_fields:
                 payload["missing_fields"] = missing_fields
             return Response(payload, status=400)
+
+BROKER_CALLBACK_PARAM_NAMES = (
+    "request_token",
+    "RequestToken",
+    "auth_code",
+    "authCode",
+    "code",
+    "state",
+    "redirect_params",
+    "client_id",
+    "broker",
+    "tokenId",
+    "token_id",
+)
+
+
+def _safe_broker_callback_payload(query_params):
+    present_params = [name for name in BROKER_CALLBACK_PARAM_NAMES if query_params.get(name)]
+    broker_name = query_params.get("broker") or ""
+    client_id = query_params.get("client_id") or ""
+    return {
+        "present_params": present_params,
+        "broker": broker_name,
+        "client_id": client_id,
+        "state_present": bool(query_params.get("state") or query_params.get("redirect_params")),
+        "token_exchange": "not_attempted",
+    }
+
+
+class BrokerRedirectCallbackView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def get(self, request, *args, **kwargs):
+        callback_info = _safe_broker_callback_payload(request.GET)
+        logger.info("Broker callback received: %s", redact_secrets(callback_info))
+
+        if request.GET.get("auth_token") or request.GET.get("access_token") or request.GET.get("jwtToken"):
+            return BrokerCallbackView.as_view()(request._request)
+
+        broker_name = _normalize_broker_name_for_redirect(callback_info.get("broker"))
+        if broker_name == "alice blue":
+            callback_info["token_exchange"] = "manual_session"
+            callback_info["todo"] = "Alice Blue uses saved API key/API UID credentials; no OAuth token exchange is required here."
+        elif callback_info["state_present"]:
+            callback_info["token_exchange"] = "available_via_existing_broker_callback"
+            callback_info["todo"] = "Token exchange requires broker state and credentials; use the existing BrokerCallbackView flow when broker-specific state is present."
+        elif callback_info["present_params"]:
+            callback_info["todo"] = "Token exchange was not attempted because broker-specific state/credentials were not provided."
+        else:
+            callback_info["todo"] = "No broker callback query parameters were provided."
+
+        return JsonResponse(
+            {
+                "status": "success",
+                "message": "Broker callback received.",
+                "callback": callback_info,
+            },
+            status=200,
+        )
+
 
 class BrokerCallbackView(APIView):
     permission_classes = [AllowAny]  

@@ -42,9 +42,14 @@ SENSITIVE_QUERY_PARAMS = (
     "feedToken",
     "code",
     "auth_code",
+    "authCode",
     "api_key",
     "app_id",
     "app_secret",
+    "request_token",
+    "RequestToken",
+    "tokenId",
+    "token_id",
 )
 
 
@@ -76,7 +81,7 @@ def sanitize_text(value: Any) -> Any:
         sanitized = re.sub(rf"([?&]{re.escape(key)}=)[^&\\s]+", rf"\1***REDACTED***", sanitized)
 
     sanitized = re.sub(
-        r"(access_token|auth_token|jwtToken|refresh_token|refreshToken|feed_token|feedToken|auth_code|code|api_key|app_id|app_secret)=([^&\s]+)",
+        r"(access_token|auth_token|jwtToken|refresh_token|refreshToken|feed_token|feedToken|auth_code|authCode|code|api_key|app_id|app_secret|request_token|RequestToken|tokenId|token_id)=([^&\s]+)",
         r"\1=***REDACTED***",
         sanitized,
     )

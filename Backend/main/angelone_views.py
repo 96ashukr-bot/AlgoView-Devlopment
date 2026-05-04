@@ -105,16 +105,16 @@ def _broker_callback_url(request):
     if configured_redirect:
         parsed = urlparse(configured_redirect)
         if parsed.scheme and parsed.netloc:
-            if parsed.path.rstrip("/") in {"/callback", "/callback-angelone"}:
-                return f"{parsed.scheme}://{parsed.netloc}/auth-callback/"
+            if parsed.path.rstrip("/") in {"/callback", "/auth-callback", "/callback-angelone"}:
+                return f"{parsed.scheme}://{parsed.netloc}/api/broker/callback/"
             return configured_redirect
 
     if request is not None:
-        candidate = request.build_absolute_uri("/auth-callback/")
+        candidate = request.build_absolute_uri("/api/broker/callback/")
         if _is_public_browser_origin(candidate):
             return candidate
 
-    return "/auth-callback/"
+    return "/api/broker/callback/"
 
 
 def build_angelone_redirect_payload(user, broker_details=None, request=None):

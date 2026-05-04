@@ -13,7 +13,7 @@ from main.fivepaisa import *
 from .views import *
 from django.conf.urls.static import static
 from main import views
-from main.dematemodule import BrokerCallbackView, CheckTokenValidityView, GetClientBrokerDetailsSettingView, LoginDematAPIView,BrokerLoginRedirectView
+from main.dematemodule import BrokerCallbackView, BrokerRedirectCallbackView, CheckTokenValidityView, GetClientBrokerDetailsSettingView, LoginDematAPIView,BrokerLoginRedirectView
 from main.angelone_views import (
     AngelOneSettingsView,
     AngelOneTokenStatusView,
@@ -164,6 +164,7 @@ urlpatterns = [
     path("broker_auth_login/",BrokerLoginRedirectView.as_view(), name="login_broker"),#AUTH2.0
    
     path("auth-callback/", BrokerCallbackView.as_view(), name="broker_callback"),
+    path("broker/callback/", BrokerRedirectCallbackView.as_view(), name="broker-callback"),
     
     path('get-company-profile/', CompanyProfileDetailView.as_view(), name='get-company_profile_detail'),
     path('update-company-profile/', CompanyProfileUpdateView.as_view(), name='put-company_profile_detail'),
