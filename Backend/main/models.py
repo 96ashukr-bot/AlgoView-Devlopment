@@ -166,7 +166,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         elif license_type == "demo":
             self.to_month = None
             self.start_date_client = today
-            self.end_date_client = today + timedelta(days=3)
+            self.end_date_client = today + timedelta(days=5)
         else:
             self.to_month = None
             self.start_date_client = None

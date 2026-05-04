@@ -7,6 +7,8 @@ import './Clients.css'
 import { getSegmentsList, getSubSegment, getBroker, getGroupServicesList, fetchSubAdminsList, getClientById, updateClient, getStrategies, getLicence } from '../../../../Services/Authentication';
 
 const LICENSE_NAMES = ['Demo', 'Live'];
+const LICENSE_NAME_SET = new Set(LICENSE_NAMES.map((name) => name.toLowerCase()));
+const DEMO_LICENSE_DAYS = 5;
 const MONTH_OPTIONS = Array.from({ length: 12 }, (_, index) => index + 1);
 
 const formatDateInput = (date) => date.toISOString().split('T')[0];
@@ -21,7 +23,7 @@ const getLicenseDates = (licenseName, monthsValue) => {
   const endDate = new Date(startDate);
 
   if (licenseName === 'Demo') {
-    endDate.setDate(endDate.getDate() + 3);
+    endDate.setDate(endDate.getDate() + DEMO_LICENSE_DAYS);
     return {
       fromDate: formatDateInput(startDate),
       toDate: formatDateInput(endDate),
@@ -89,7 +91,7 @@ const EditClient = () => {
   const [selectedStrategyModes, setSelectedStrategyModes] = useState({ indicator: false, multiLeg: true });
   const [licensecond, setLicensesCond] = useState('');
   const [selectedGroupService, setSelectedGroupService] = useState(null);
-  const availableLicenses = licenses.filter((license) => LICENSE_NAMES.includes(license.name));
+  const availableLicenses = licenses.filter((license) => LICENSE_NAME_SET.has(String(license.name || '').trim().toLowerCase()));
   const indicatorStrategies = strategies.filter((strategy) => strategy.execution_mode !== 'MULTI_LEG');
   const multiLegStrategies = strategies.filter((strategy) => strategy.execution_mode === 'MULTI_LEG');
 
@@ -290,10 +292,8 @@ const EditClient = () => {
   const fetchLicenses = async () => {
     try {
       const response = await getLicence();
-      const fetchedLicenses = response && Array.isArray(response.results)
-        ? response.results.filter((license) => LICENSE_NAMES.includes(license.name))
-        : [];
-      // Set licenses in state
+      const licenseRows = Array.isArray(response?.results) ? response.results : Array.isArray(response) ? response : [];
+      const fetchedLicenses = licenseRows.filter((license) => LICENSE_NAME_SET.has(String(license.name || '').trim().toLowerCase()));
       setLicenses(fetchedLicenses);
     } catch (error) {
       toast.error('Failed to load licenses.');
@@ -688,11 +688,13 @@ const EditClient = () => {
                     required
                   >
                     <option value="">Select License</option>
-                    {availableLicenses.map((license) => (
-                      <option key={license.id} value={license.id}>
-                        {license.name}
+                    {availableLicenses.map((license) => {
+                      const normalizedName = LICENSE_NAMES.find((name) => name.toLowerCase() === String(license.name || '').trim().toLowerCase());
+                      return (
+                      <option key={license.id || normalizedName} value={license.id}>
+                        {normalizedName}
                       </option>
-                    ))}
+                    )})}
                   </Input>
                   {errors.license && <div className="invalid-feedback text-danger">{errors.license}</div>}
                 </Col>

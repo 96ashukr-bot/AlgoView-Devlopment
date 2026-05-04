@@ -2009,8 +2009,35 @@ class CategoryAPIView(APIView):
 class LicenseAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
+    def _ensure_default_licenses(self):
+        defaults = [
+            {"name": "Demo", "no_of_days_month": 5, "period": "days"},
+            {"name": "Live", "no_of_days_month": None, "period": "months"},
+        ]
+        for default in defaults:
+            license_obj = License.objects.filter(name__iexact=default["name"]).first()
+            if license_obj:
+                changed = False
+                if license_obj.name != default["name"]:
+                    license_obj.name = default["name"]
+                    changed = True
+                if license_obj.status is not True:
+                    license_obj.status = True
+                    changed = True
+                if default["no_of_days_month"] is not None and license_obj.no_of_days_month != default["no_of_days_month"]:
+                    license_obj.no_of_days_month = default["no_of_days_month"]
+                    changed = True
+                if default["period"] and license_obj.period != default["period"]:
+                    license_obj.period = default["period"]
+                    changed = True
+                if changed:
+                    license_obj.save(update_fields=["name", "status", "no_of_days_month", "period", "updated_at"])
+            else:
+                License.objects.create(**default, status=True)
+
     def get(self, request, *args, **kwargs):
         try:
+            self._ensure_default_licenses()
             license_list = License.objects.all().order_by('-id')
             paginator = CustomPageNumberPagination()
             result_page = paginator.paginate_queryset(license_list, request)
