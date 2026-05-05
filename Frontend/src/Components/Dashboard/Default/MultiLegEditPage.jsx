@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
 import {
   clearClientMultiLegSetting,
+  executeMultiLegStrategy,
   getActiveMultiLegStrategies,
   getClientMultiLegSettings,
   getExpiryDate,
@@ -95,6 +96,7 @@ const MultiLegEditPage = () => {
   const [expiryDates, setExpiryDates] = useState([]);
   const [activeStrategies, setActiveStrategies] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [executing, setExecuting] = useState(false);
   const [killSwitchLoading, setKillSwitchLoading] = useState(false);
   const [formData, setFormData] = useState({
     productType: "",
@@ -382,6 +384,91 @@ const MultiLegEditPage = () => {
     }
   };
 
+  const handleExecute = async () => {
+    if (!setting) {
+      return;
+    }
+
+    if (!formData.expiry) {
+      Swal.fire("Validation Error", "Expiry is required.", "warning");
+      return;
+    }
+
+    if (!formData.quantity || Number(formData.quantity) <= 0) {
+      Swal.fire("Validation Error", "Quantity must be greater than 0.", "warning");
+      return;
+    }
+
+    if (!formData.startTime || !formData.endTime) {
+      Swal.fire("Validation Error", "Start time and end time are required.", "warning");
+      return;
+    }
+
+    if (formData.startTime >= formData.endTime) {
+      Swal.fire("Validation Error", "End time must be after start time.", "warning");
+      return;
+    }
+
+    const invalidLeg = formData.legs.find((leg) => !leg.strike || Number(leg.strike) <= 0);
+    if (invalidLeg) {
+      Swal.fire("Validation Error", "Each leg strike must be greater than 0.", "warning");
+      return;
+    }
+
+    if (formData.orderType === "LIMIT") {
+      const bufferValue = parseFloat(formData.bufferPercentage);
+      if (Number.isNaN(bufferValue) || bufferValue < MIN_BUFFER_PERCENTAGE || bufferValue > MAX_BUFFER_PERCENTAGE) {
+        Swal.fire(
+          "Validation Error",
+          `Buffer percentage must be between ${MIN_BUFFER_PERCENTAGE} and ${MAX_BUFFER_PERCENTAGE}.`,
+          "warning",
+        );
+        return;
+      }
+    }
+
+    const legs = formData.legs.map((leg, index) => ({
+      leg_name: leg.leg_name || `LEG_${index + 1}`,
+      option_type: leg.option_type,
+      transaction_type: leg.action,
+      action: leg.action,
+      ratio: Number(leg.ratio) || 1,
+      strike: Number(leg.strike),
+    }));
+    const strikes = legs.map((leg) => Number(leg.strike)).filter((strike) => strike > 0).sort((a, b) => a - b);
+
+    const payload = {
+      strategy_name: setting.multi_leg_template,
+      broker: setting.broker,
+      underlying: formData.underlying,
+      expiry: formData.expiry,
+      group_service: setting.group_service || "",
+      product_type: formData.productType || setting.product_type || "INTRADAY",
+      order_type: formData.orderType,
+      buffer_percentage: formData.orderType === "LIMIT" ? parseFloat(formData.bufferPercentage) : undefined,
+      quantity_lots: Number(formData.quantity),
+      sell_leg_stop_loss_percentage: formData.stopLoss ? Number(formData.stopLoss) : undefined,
+      combined_trailing_start: formData.maxProfit ? Number(formData.maxProfit) : undefined,
+      combined_trailing_gap: formData.target ? Number(formData.target) : undefined,
+      entry_time: formData.startTime,
+      exit_time: formData.endTime,
+      legs,
+      lower_strike: strikes[0],
+      higher_strike: strikes[strikes.length - 1],
+    };
+
+    setExecuting(true);
+    try {
+      await executeMultiLegStrategy(payload);
+      await loadActiveStrategies();
+      Swal.fire("Executed", "Multi-leg strategy order execution has been initiated.", "success");
+    } catch (error) {
+      Swal.fire("Error!", error.message || "There was an error executing the strategy.", "error");
+    } finally {
+      setExecuting(false);
+    }
+  };
+
   return (
     <div style={{ paddingTop: "20px" }}>
       <Card>
@@ -546,8 +633,8 @@ const MultiLegEditPage = () => {
               <Button color="warning" className="me-3" onClick={handleKillSwitch} disabled={!setting || killSwitchLoading}>
                 {killSwitchLoading ? "Processing..." : "Kill Switch"}
               </Button>
-              <Button className="btn btn-primary search-btn-clr" onClick={handleSave} disabled={saving}>
-                {saving ? "Saving..." : "Save"}
+              <Button className="btn btn-primary search-btn-clr" onClick={handleExecute} disabled={!setting || executing}>
+                {executing ? "Executing..." : "Execute"}
               </Button>
             </div>
 

@@ -47,8 +47,8 @@ class MultiLegExecuteSerializer(serializers.Serializer):
         if strategy_name in two_strike_strategies:
             if attrs.get("lower_strike") is None or attrs.get("higher_strike") is None:
                 raise serializers.ValidationError("This strategy requires lower_strike and higher_strike.")
-        if strategy_name == "SHORT_STRADDLE" and attrs.get("lower_strike") is None:
-            raise serializers.ValidationError("Short Straddle requires lower_strike as the ATM strike.")
+        if strategy_name == "SHORT_STRADDLE" and attrs.get("lower_strike") is None and not attrs.get("legs"):
+            raise serializers.ValidationError("Short Straddle requires lower_strike as the ATM strike or configured legs.")
         four_leg_strategies = {
             "LONG_CALL_BUTTERFLY",
             "SHORT_CALL_BUTTERFLY",

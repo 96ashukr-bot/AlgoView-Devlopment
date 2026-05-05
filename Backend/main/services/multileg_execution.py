@@ -1069,6 +1069,18 @@ class StrategyPlanBuilder:
             )
 
         if strategy_name == "SHORT_STRADDLE":
+            template_legs = config.get("legs") or []
+            if template_legs:
+                return self._build_custom_leg_plans(
+                    raw_legs=template_legs,
+                    broker_name=broker_name,
+                    underlying=underlying,
+                    expiry=expiry,
+                    quantity_lots=quantity_lots,
+                    order_type=order_type,
+                    product_type=product_type,
+                    broker_details=broker_details,
+                )
             atm_strike = self._required_float(config.get("lower_strike"), field_name="lower_strike")
             return self._build_custom_leg_plans(
                 raw_legs=[
