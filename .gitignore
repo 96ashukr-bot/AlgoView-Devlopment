@@ -11,6 +11,7 @@ db.sqlite3
 
 # Environment variables
 .env
+*.pem
 
 # Django static/media
 staticfiles/
