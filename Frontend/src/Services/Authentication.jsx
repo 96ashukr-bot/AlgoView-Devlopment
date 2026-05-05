@@ -3830,6 +3830,7 @@ export const startBrokerConnectFlow = async (connectPath) => {
   };
 
   const requestConnect = async (targetBaseUrl, authToken) => {
+    const requestedUrl = new URL(`${targetBaseUrl}${connectPath}`, window.location.origin).href;
     authDebug("broker-connect:attempt", {
       backend: targetBaseUrl,
       connectPath,
@@ -3845,16 +3846,16 @@ export const startBrokerConnectFlow = async (connectPath) => {
       validateStatus: (statusCode) => statusCode >= 200 && statusCode < 400,
     });
 
-    if (response.request?.responseURL && response.request.responseURL !== `${targetBaseUrl}${connectPath}`) {
-      return response.request.responseURL;
-    }
-
     if (response.data?.redirect_url) {
       return response.data.redirect_url;
     }
 
     if (typeof response.headers?.location === 'string') {
       return response.headers.location;
+    }
+
+    if (response.request?.responseURL && response.request.responseURL !== requestedUrl) {
+      return response.request.responseURL;
     }
 
     return null;
@@ -3941,6 +3942,10 @@ export const startBrokerConnectFlow = async (connectPath) => {
           }
         }
         if (!nextRedirectUrl) {
+          continue;
+        }
+        if (nextRedirectUrl.includes("/broker_auth_login/")) {
+          lastError = new Error("Broker login did not return the broker redirect URL. Please try again after refreshing the page.");
           continue;
         }
         if (isAngelOneBrokerConnect && isLegacyAngelOneRedirect(nextRedirectUrl)) {
