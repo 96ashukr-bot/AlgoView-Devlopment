@@ -26,8 +26,30 @@ export const REMOTE_WS_BASE_URL = (process.env.REACT_APP_WS_BASE_URL || getWsBas
 
 const configuredApiBaseUrl = process.env.REACT_APP_API_BASE_URL;
 const configuredWsBaseUrl = process.env.REACT_APP_WS_BASE_URL;
+const normalizeStoredApiBaseUrl = (value) => {
+    if (!value || typeof window === "undefined") {
+        return value;
+    }
+    if (!/^https?:\/\//i.test(value)) {
+        return value;
+    }
+    try {
+        const parsed = new URL(value);
+        if (parsed.origin !== window.location.origin) {
+            window.localStorage.removeItem("preferred_api_base_url");
+            window.localStorage.removeItem("preferred_ws_base_url");
+            return null;
+        }
+    } catch (_error) {
+        window.localStorage.removeItem("preferred_api_base_url");
+        window.localStorage.removeItem("preferred_ws_base_url");
+        return null;
+    }
+    return value;
+};
+
 const storedApiBaseUrl =
-    typeof window !== "undefined" ? window.localStorage.getItem("preferred_api_base_url") : null;
+    typeof window !== "undefined" ? normalizeStoredApiBaseUrl(window.localStorage.getItem("preferred_api_base_url")) : null;
 const storedWsBaseUrl =
     typeof window !== "undefined" ? window.localStorage.getItem("preferred_ws_base_url") : null;
 const authenticatedApiBaseUrl = typeof window !== "undefined" ? getAuthenticatedApiBaseUrl() : null;

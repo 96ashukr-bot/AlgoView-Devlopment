@@ -85,7 +85,10 @@ const Signin = ({ selected }) => {
 
     try {
       const response = await login(email, password);
-      const { message } = response;
+      if (!response) {
+        return;
+      }
+      const message = response.message || "";
 
       localStorage.setItem("login", JSON.stringify(true));
 
@@ -103,6 +106,8 @@ const Signin = ({ selected }) => {
         toast.error("You Entered The Wrong Email!");
       } else if (error.message.includes("password")) {
         toast.error("You Entered The Wrong Password!");
+      } else {
+        toast.error(error.message || "Login failed. Please try again.");
       }
     } finally {
       setLoading(false);

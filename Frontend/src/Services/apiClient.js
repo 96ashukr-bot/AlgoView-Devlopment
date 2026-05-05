@@ -19,9 +19,7 @@ const PUBLIC_ENDPOINTS = [
   "/token/refresh/",
 ];
 
-const apiClient = axios.create({
-  baseURL: baseUrl,
-});
+const apiClient = axios.create();
 
 let refreshPromise = null;
 
