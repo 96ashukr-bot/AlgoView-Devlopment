@@ -2,7 +2,7 @@
   "name": "algo-react",
   "version": "0.1.0",
   "private": true,
-  "homepage": ".",
+  "homepage": "/",
   "dependencies": {
     "@auth0/auth0-react": "^2.0.1",
     "@fullcalendar/core": "^6.1.4",
