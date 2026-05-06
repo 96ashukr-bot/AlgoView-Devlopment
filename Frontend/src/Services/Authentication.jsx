@@ -3824,7 +3824,6 @@ export const startBrokerConnectFlow = async (connectPath) => {
     }
     return (
       redirectUrl.includes("smartapi.angelbroking.com/publisher-login") ||
-      redirectUrl.includes("redirect_url=") ||
       redirectUrl.includes("state=example_state")
     );
   };
