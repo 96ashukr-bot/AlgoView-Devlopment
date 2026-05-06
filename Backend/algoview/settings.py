@@ -370,7 +370,7 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC' 
 
 CONTACT_NUM="+919988746583"
-REDIRECT_URL=config('BROKER_REDIRECT_URL', default="https://3-109-40-137.sslip.io/api/broker/callback/")
+REDIRECT_URL=config('BROKER_REDIRECT_URL', default="https://app.sparkstechnologies.co.in/api/broker/callback/")
 LOGIN_LINK="https://www.admin.algoview.in/login"
 HELP_CENTER_LINK="https://www.admin.algoview.in/"
 COMPANY_WEBSITE="https://www.admin.algoview.in/" 
