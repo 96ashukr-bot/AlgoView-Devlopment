@@ -1,7 +1,24 @@
-from django.test import TestCase
+from types import SimpleNamespace
+from unittest import mock
+
+from django.test import TestCase, override_settings
 from django.urls import Resolver404, resolve
 
+from main.angelone.services.state_service import CallbackStateService
+from main.models import Broker, ClientBrokerdetails, User
 
+
+TEST_CACHES = {
+    "default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache", "LOCATION": "broker-callback-tests"},
+    "circuit_breaker": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache", "LOCATION": "broker-callback-circuit"},
+}
+
+
+@override_settings(
+    CACHES=TEST_CACHES,
+    ANGELONE_STATE_CACHE_PREFIX="test:broker-callback:state",
+    ANGELONE_CALLBACK_STATE_TTL_SECONDS=60,
+)
 class BrokerCallbackRoutingTests(TestCase):
     def test_broker_callback_accepts_request_token(self):
         response = self.client.get("/api/broker/callback/", {"request_token": "test123"})
@@ -28,3 +45,43 @@ class BrokerCallbackRoutingTests(TestCase):
         self.assertEqual(payload["status"], "success")
         self.assertEqual(payload["callback"]["present_params"], [])
         self.assertEqual(payload["callback"]["token_exchange"], "not_attempted")
+
+    @mock.patch("main.dematemodule.requests.post")
+    def test_broker_callback_with_state_exchanges_upstox_token(self, mock_post):
+        user = User.objects.create_user(
+            email="upstox-owner@example.com",
+            firstName="Upstox",
+            lastName="Owner",
+            phoneNumber="9999999998",
+            password="Pass@1234",
+        )
+        broker = Broker.objects.create(broker_name="Upstox", is_active=True)
+        broker_details = ClientBrokerdetails.objects.create(
+            client=user,
+            broker_name=broker,
+            broker_API_KEY="upstox-key",
+            broker_API_SKEY="upstox-secret",
+        )
+        CallbackStateService().create(
+            state="upstox-state",
+            user_id=user.id,
+            broker_details_id=broker_details.id,
+            client_code="upstox-client",
+        )
+        mock_post.return_value = SimpleNamespace(
+            status_code=200,
+            content=b"{}",
+            json=lambda: {
+                "access_token": "upstox-access",
+                "refresh_token": "upstox-refresh",
+                "expires_in": 3600,
+            },
+        )
+
+        response = self.client.get("/api/broker/callback/", {"code": "upstox-code", "state": "upstox-state"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["message"], "success")
+        mock_post.assert_called_once()
+        broker_details.refresh_from_db()
+        self.assertEqual(broker_details.access_token, "upstox-access")

@@ -934,7 +934,13 @@ class BrokerRedirectCallbackView(APIView):
         callback_info = _safe_broker_callback_payload(request.GET)
         logger.info("Broker callback received: %s", redact_secrets(callback_info))
 
-        if request.GET.get("auth_token") or request.GET.get("access_token") or request.GET.get("jwtToken"):
+        if (
+            request.GET.get("auth_token")
+            or request.GET.get("access_token")
+            or request.GET.get("jwtToken")
+            or request.GET.get("state")
+            or request.GET.get("redirect_params")
+        ):
             return BrokerCallbackView.as_view()(request._request)
 
         broker_name = _normalize_broker_name_for_redirect(callback_info.get("broker"))
