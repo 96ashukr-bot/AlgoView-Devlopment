@@ -1103,7 +1103,7 @@ class BrokerCallbackView(APIView):
                 expiry_time = _next_session_cutoff(3, 30)
                 _save_session_tokens_compat(broker_details, request_token, access_token, expiry=expiry_time)
 
-                return JsonResponse({"message": "success", "access_token": access_token})
+                return JsonResponse({"message": "success", "token_saved": True})
             else:
                 return JsonResponse({"message": "Failed to get access token", "response": token_data}, status=400)
 
@@ -1121,9 +1121,9 @@ class BrokerCallbackView(APIView):
                 expiry_time = _next_session_cutoff(6, 0)
                 _save_session_tokens_compat(broker_details, request_token, access_token, expiry=expiry_time)
          
-                return JsonResponse({"message": "success", "access_token": access_token})
+                return JsonResponse({"message": "success", "token_saved": True})
             else:
-                return JsonResponse({"message": "success", "access_token": access_token})
+                return JsonResponse({"message": "success", "token_saved": False})
         except Exception as e:
             return JsonResponse({"message":"Failed","error": str(e)}, status=500)
 
@@ -1135,7 +1135,7 @@ class BrokerCallbackView(APIView):
             if access_token:
                 expiry_time = _next_session_cutoff(23, 59)
                 _save_session_tokens_compat(broker_details, request_token, access_token, expiry=expiry_time)
-                return JsonResponse({"message": "success", "access_token": access_token})
+                return JsonResponse({"message": "success", "token_saved": True})
             else:
                 return JsonResponse({"message": "Failed"}, status=400)
         except Exception as e:
@@ -1186,7 +1186,7 @@ class BrokerCallbackView(APIView):
                     expiry_time = _next_session_cutoff(3, 30)
                 _save_session_tokens_compat(broker_details, request_token, access_token, refresh_token=refresh_token, expiry=expiry_time)
                 logger.info(f"Upstox callback processed successfully")
-                return JsonResponse({"message": "success", "access_token": access_token})
+                return JsonResponse({"message": "success", "token_saved": True})
             else:
                 try:
                     error_payload = response.json() if response.content else {}
@@ -1247,7 +1247,7 @@ class BrokerCallbackView(APIView):
             return JsonResponse(
                 {
                     "message": "success",
-                    "access_token": access_token,
+                    "token_saved": True,
                     "dhanClientId": dhan_client_id,
                     "expiryTime": expiry_time.isoformat() if expiry_time else None,
                 }
