@@ -85,3 +85,43 @@ class BrokerCallbackRoutingTests(TestCase):
         mock_post.assert_called_once()
         broker_details.refresh_from_db()
         self.assertEqual(broker_details.access_token, "upstox-access")
+
+    @mock.patch("main.dematemodule.requests.post")
+    def test_browser_broker_callback_redirects_without_token_json(self, mock_post):
+        user = User.objects.create_user(
+            email="upstox-browser@example.com",
+            firstName="Browser",
+            lastName="Owner",
+            phoneNumber="9999999997",
+            password="Pass@1234",
+        )
+        broker = Broker.objects.create(broker_name="Upstox", is_active=True)
+        broker_details = ClientBrokerdetails.objects.create(
+            client=user,
+            broker_name=broker,
+            broker_API_KEY="upstox-key",
+            broker_API_SKEY="upstox-secret",
+        )
+        CallbackStateService().create(
+            state="browser-state",
+            user_id=user.id,
+            broker_details_id=broker_details.id,
+            client_code="upstox-client",
+            frontend_redirect_url="https://app.sparkstechnologies.co.in/dashboard/algoviewtech/user",
+        )
+        mock_post.return_value = SimpleNamespace(
+            status_code=200,
+            content=b"{}",
+            json=lambda: {"access_token": "browser-access", "refresh_token": "browser-refresh"},
+        )
+
+        response = self.client.get(
+            "/api/broker/callback/",
+            {"code": "upstox-code", "state": "browser-state"},
+            HTTP_ACCEPT="text/html,application/xhtml+xml",
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/dashboard/algoviewtech/user", response["Location"])
+        self.assertIn("broker_login=success", response["Location"])
+        self.assertNotIn("browser-access", response["Location"])

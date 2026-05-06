@@ -70,7 +70,7 @@ def trading_Symbol_sum(trade, symbols, day, month, year, Type, default_price):
     
     # Return the generated trading symbol
     return trade_symbol
-from django.http import JsonResponse
+from django.http import HttpResponseRedirect, JsonResponse
 
 
 def _normalize_broker_name_for_redirect(name):
@@ -968,6 +968,25 @@ class BrokerRedirectCallbackView(APIView):
 class BrokerCallbackView(APIView):
     permission_classes = [AllowAny]  
 
+    def _should_redirect_browser_callback(self, request, response):
+        if response.status_code < 200 or response.status_code >= 300:
+            return False
+        accept_header = request.headers.get("Accept", "")
+        return "text/html" in accept_header
+
+    def _browser_callback_redirect(self, request, state_record, broker_name):
+        return_url = state_record.frontend_redirect_url if state_record else None
+        if not return_url:
+            return_url = request.build_absolute_uri("/dashboard/algoviewtech/user")
+        separator = "&" if "?" in return_url else "?"
+        params = urlencode({"broker_login": "success", "broker": broker_name})
+        return HttpResponseRedirect(f"{return_url}{separator}{params}")
+
+    def _finalize_callback_response(self, request, response, state_record, broker_name):
+        if self._should_redirect_browser_callback(request, response):
+            return self._browser_callback_redirect(request, state_record, broker_name)
+        return response
+
     def get(self, request, *args, **kwargs):
         if request.GET.get("auth_token") or request.GET.get("access_token") or request.GET.get("jwtToken"):
             from main.angelone_views import angelone_callback as secure_angelone_callback
@@ -1010,34 +1029,36 @@ class BrokerCallbackView(APIView):
 
             if broker_name == "zerodha":
                 request_token = request.GET.get('request_token') or request.GET.get('code')
-                return self.handle_zerodha(request_token, broker_details)
+                response = self.handle_zerodha(request_token, broker_details)
 
             elif broker_name == "5paisa":
                 request_token = request.GET.get('RequestToken') or request.GET.get('request_token') or request.GET.get('code')
-                return self.handle_5paisa(request_token, broker_details)
+                response = self.handle_5paisa(request_token, broker_details)
 
             elif broker_name == "alice blue":
                 request_token = request.GET.get('authCode') or request.GET.get('code')
-                return self.handle_alice_blue(request_token, broker_details)
+                response = self.handle_alice_blue(request_token, broker_details)
 
             elif broker_name == "upstox":
                 request_token = request.GET.get('code')
-                return self.handle_upstox(request_token, broker_details)
+                response = self.handle_upstox(request_token, broker_details)
             
             elif broker_name == "fyers":
                 request_token =request.GET.get('code')
                 
-                return self.handle_fyers(request_token, broker_details)
+                response = self.handle_fyers(request_token, broker_details)
 
             elif broker_name == "dhan":
                 token_id = request.GET.get("tokenId") or request.GET.get("token_id") or request.GET.get("code")
-                return self.handle_dhan(token_id, broker_details)
+                response = self.handle_dhan(token_id, broker_details)
 
             elif broker_name == "angel one":
-                return self.handle_angle_one(request, broker_details)
+                response = self.handle_angle_one(request, broker_details)
 
             else:
                 raise ValidationError("Unsupported broker")
+
+            return self._finalize_callback_response(request, response, state_record, broker_name)
 
         except Exception as e:
             logger.exception("Broker callback failed")
