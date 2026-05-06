@@ -149,7 +149,7 @@ def build_angelone_redirect_payload(user, broker_details=None, request=None):
     params = urlencode(
         {
             "api_key": broker_details.broker_API_KEY,
-            "redirect_uri": _broker_callback_url(request),
+            "redirect_url": _broker_callback_url(request),
             "state": state,
         }
     )
