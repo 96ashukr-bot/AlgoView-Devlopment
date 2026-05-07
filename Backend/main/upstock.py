@@ -1,6 +1,7 @@
 
 import requests
 import json
+import re
 from django.shortcuts import redirect
 from django.http import JsonResponse
 from main.models import CompanySmtpDetails
@@ -48,6 +49,8 @@ def place_upstox_orders(LivePrice,group_service,
         result = fetch_instrument_details(trade_symbol, upstox_exchange, user)
         
         logger.info(f"{user} : The exchange result is : {result}")
+        if result.get("trading_symbol"):
+            trade_symbol = result["trading_symbol"]
         status="Failed"
         order_id=0
         message=""
@@ -361,16 +364,24 @@ def handle_successful_order(LivePrice,group_service,transaction_type,
             }
         }
 
+def _normalize_upstox_symbol(value):
+    normalized = str(value or "").replace(" ", "").replace("-", "").upper()
+    return re.sub(r"(\d+)\.0(?=(CE|PE|FUT|CALL|PUT|[A-Z]))", r"\1", normalized)
+
+
 def fetch_instrument_details(symbol_name, exchange="NSE", user = None):
     try:
         logger.info(f"{user} : instrument details fetching for the upstox api calling !!")
-        normalized_symbol_name = str(symbol_name or "").replace(" ", "").replace("-", "").upper()
+        normalized_symbol_name = _normalize_upstox_symbol(symbol_name)
         instruments_data = load_upstox_instruments(exchange)
         for instrument in instruments_data:
-            instrument_symbol = str(instrument.get("trading_symbol", "")).replace(" ", "").replace("-", "").upper()
+            instrument_symbol = _normalize_upstox_symbol(instrument.get("trading_symbol", ""))
             if instrument_symbol == normalized_symbol_name:
                 logger.info(f"{user} : instrument_key is get it ?????????????========>>>>>>>")
-                return {"instrument_key": instrument.get("instrument_key")}
+                return {
+                    "instrument_key": instrument.get("instrument_key"),
+                    "trading_symbol": instrument.get("trading_symbol"),
+                }
 
         logger.info(f"{user} : No instruments found for symbol {symbol_name} on exchange {exchange}.")
         return {"error": f"No instruments found for symbol {symbol_name} on exchange {exchange}."}
