@@ -267,6 +267,107 @@ class MultiLegExecutionTests(TestCase):
 
     @mock.patch("main.services.multileg_execution.MultiLegContractResolver.resolve_option_contract")
     @mock.patch("main.services.multileg_execution.MultiLegContractResolver.resolve_expiry")
+    def test_bear_call_spread_plan_generation(self, mock_resolve_expiry, mock_resolve_contract):
+        expiry = timezone.now() + timezone.timedelta(days=1)
+        mock_resolve_expiry.return_value = expiry
+        mock_resolve_contract.side_effect = [
+            self._contract(22500, "CE", symbol_suffix="22500CE"),
+            self._contract(22600, "CE", symbol_suffix="22600CE"),
+        ]
+        config = {
+            **self.base_config,
+            "strategy_name": "BEAR_CALL_SPREAD",
+            "legs": [
+                {"option_type": "CE", "action": "SELL", "strike": 22500, "ratio": 1},
+                {"option_type": "CE", "action": "BUY", "strike": 22600, "ratio": 1},
+            ],
+        }
+
+        plan = StrategyPlanBuilder().build(
+            config,
+            client=self.client_user,
+            broker_details=self.broker_details,
+        )
+
+        self.assertEqual(plan.strategy_name, "BEAR_CALL_SPREAD")
+        self.assertEqual(len(plan.legs), 2)
+        self.assertEqual(plan.legs[0].transaction_type, "SELL")
+        self.assertEqual(plan.legs[0].option_type, "CE")
+        self.assertEqual(plan.legs[0].strike_price, 22500)
+        self.assertEqual(plan.legs[1].transaction_type, "BUY")
+        self.assertEqual(plan.legs[1].strike_price, 22600)
+
+    @mock.patch("main.services.multileg_execution.MultiLegContractResolver.resolve_option_contract")
+    @mock.patch("main.services.multileg_execution.MultiLegContractResolver.resolve_expiry")
+    def test_template_strategies_accept_configured_legs(self, mock_resolve_expiry, mock_resolve_contract):
+        expiry = timezone.now() + timezone.timedelta(days=1)
+        mock_resolve_expiry.return_value = expiry
+        template_legs = {
+            "SHORT_STRADDLE": [
+                {"option_type": "CE", "action": "SELL", "strike": 22500, "ratio": 1},
+                {"option_type": "PE", "action": "SELL", "strike": 22500, "ratio": 1},
+            ],
+            "BEAR_PUT_SPREAD": [
+                {"option_type": "PE", "action": "SELL", "strike": 22400, "ratio": 1},
+                {"option_type": "PE", "action": "BUY", "strike": 22500, "ratio": 1},
+            ],
+            "LONG_CALL_BUTTERFLY": [
+                {"option_type": "CE", "action": "BUY", "strike": 22400, "ratio": 1},
+                {"option_type": "CE", "action": "SELL", "strike": 22500, "ratio": 2},
+                {"option_type": "CE", "action": "BUY", "strike": 22600, "ratio": 1},
+            ],
+            "SHORT_CALL_BUTTERFLY": [
+                {"option_type": "CE", "action": "SELL", "strike": 22400, "ratio": 1},
+                {"option_type": "CE", "action": "BUY", "strike": 22500, "ratio": 2},
+                {"option_type": "CE", "action": "SELL", "strike": 22600, "ratio": 1},
+            ],
+            "LONG_CALL_CONDOR": [
+                {"option_type": "CE", "action": "BUY", "strike": 22300, "ratio": 1},
+                {"option_type": "CE", "action": "SELL", "strike": 22400, "ratio": 1},
+                {"option_type": "CE", "action": "SELL", "strike": 22500, "ratio": 1},
+                {"option_type": "CE", "action": "BUY", "strike": 22600, "ratio": 1},
+            ],
+            "SHORT_CALL_CONDOR": [
+                {"option_type": "CE", "action": "SELL", "strike": 22300, "ratio": 1},
+                {"option_type": "CE", "action": "BUY", "strike": 22400, "ratio": 1},
+                {"option_type": "CE", "action": "BUY", "strike": 22500, "ratio": 1},
+                {"option_type": "CE", "action": "SELL", "strike": 22600, "ratio": 1},
+            ],
+            "LONG_IRON_CONDOR": [
+                {"option_type": "PE", "action": "BUY", "strike": 22300, "ratio": 1},
+                {"option_type": "PE", "action": "SELL", "strike": 22400, "ratio": 1},
+                {"option_type": "CE", "action": "SELL", "strike": 22500, "ratio": 1},
+                {"option_type": "CE", "action": "BUY", "strike": 22600, "ratio": 1},
+            ],
+            "SHORT_IRON_BUTTERFLY": [
+                {"option_type": "PE", "action": "BUY", "strike": 22400, "ratio": 1},
+                {"option_type": "PE", "action": "SELL", "strike": 22500, "ratio": 1},
+                {"option_type": "CE", "action": "SELL", "strike": 22500, "ratio": 1},
+                {"option_type": "CE", "action": "BUY", "strike": 22600, "ratio": 1},
+            ],
+        }
+        mock_resolve_contract.side_effect = [
+            self._contract(leg["strike"], leg["option_type"], symbol_suffix=f"{leg['strike']}{leg['option_type']}")
+            for legs in template_legs.values()
+            for leg in legs
+        ]
+
+        for strategy_name, legs in template_legs.items():
+            with self.subTest(strategy_name=strategy_name):
+                plan = StrategyPlanBuilder().build(
+                    {**self.base_config, "strategy_name": strategy_name, "legs": legs},
+                    client=self.client_user,
+                    broker_details=self.broker_details,
+                )
+                self.assertEqual(plan.strategy_name, strategy_name)
+                self.assertEqual(len(plan.legs), len(legs))
+                self.assertEqual(
+                    [leg.transaction_type for leg in plan.legs],
+                    [leg["action"] for leg in legs],
+                )
+
+    @mock.patch("main.services.multileg_execution.MultiLegContractResolver.resolve_option_contract")
+    @mock.patch("main.services.multileg_execution.MultiLegContractResolver.resolve_expiry")
     def test_contract_resolution_keeps_same_expiry_and_lot_size(self, mock_resolve_expiry, mock_resolve_contract):
         expiry = timezone.now() + timezone.timedelta(days=2)
         first = self._contract(22500, "CE", symbol_suffix="22500CE")

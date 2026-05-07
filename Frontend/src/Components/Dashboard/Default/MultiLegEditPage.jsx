@@ -48,9 +48,13 @@ const TEMPLATE_DEFAULTS = {
     { option_type: "CE", action: "BUY", ratio: 1 },
     { option_type: "CE", action: "SELL", ratio: 1 },
   ],
+  BEAR_CALL_SPREAD: [
+    { option_type: "CE", action: "SELL", ratio: 1 },
+    { option_type: "CE", action: "BUY", ratio: 1 },
+  ],
   BEAR_PUT_SPREAD: [
-    { option_type: "PE", action: "BUY", ratio: 1 },
     { option_type: "PE", action: "SELL", ratio: 1 },
+    { option_type: "PE", action: "BUY", ratio: 1 },
   ],
   LONG_CALL_BUTTERFLY: [
     { option_type: "CE", action: "BUY", ratio: 1 },
