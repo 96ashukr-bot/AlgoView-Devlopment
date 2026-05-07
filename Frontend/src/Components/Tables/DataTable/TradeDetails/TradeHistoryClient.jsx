@@ -7,7 +7,7 @@ import { saveAs } from 'file-saver';
 import { RotatingLines } from 'react-loader-spinner';
 import { H3 } from '../../../../AbstractElements';
 import { FaArrowUp, FaArrowDown } from 'react-icons/fa';
-import { getTradeHistory, getTradeStrategy, getBroker, getTradeResponse, killSwitchAllClientTrades } from '../../../../Services/Authentication';
+import { getClientTradeHistory, getTradeStrategy, getBroker, getTradeResponse, killSwitchAllClientTrades } from '../../../../Services/Authentication';
 import './TradeDetails.css';
 import { Modal, ModalHeader, ModalBody, ModalFooter } from 'reactstrap';
 import { getStockSymbolLivePriceSocketUrl } from '../../../../ConfigUrl/config';
@@ -306,7 +306,7 @@ const TradeHistoryClient = () => {
             const toDate = formData.toDate || today; // Use toDate if provided, otherwise default to today
 
             // Fetch data for the specified date range
-            let response = await getTradeHistory(currentPage, itemsPerPage, fromDate, toDate, formData.broker, formData.orderStatus, formData.indexSymbol, formData.strategy, searchQuery);
+            let response = await getClientTradeHistory(currentPage, itemsPerPage, fromDate, toDate, formData.broker, formData.orderStatus, formData.indexSymbol, formData.strategy, searchQuery);
 
             if (response.results && response.results.length > 0) {
                 setTradeHistory(response.results); // Directly store the paginated data.
