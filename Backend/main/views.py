@@ -92,6 +92,14 @@ logger = logging.getLogger('main')
 UserModel = get_user_model()
 
 
+def _safe_positive_int(value):
+    try:
+        parsed_value = int(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed_value if parsed_value > 0 else None
+
+
 def _accessible_clients_for_user(user):
     return get_accessible_clients_queryset(user).order_by("-id")
 
