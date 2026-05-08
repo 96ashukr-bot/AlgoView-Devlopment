@@ -1,9 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { Container, Row, Col, Card, CardBody, Form, FormGroup, Label, Input, Button } from 'reactstrap';
+import { Container, Row, Col, Card, CardBody, Form, FormGroup, Label, Input, Button, Modal, ModalHeader, ModalBody, ModalFooter } from 'reactstrap';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { getClientById, getClientApiStatusById, getClientBrokerDetailsById, getBrokerLoginActivity } from '../../../../Services/Authentication';
+import {
+    getClientById,
+    getClientApiStatusById,
+    getClientBrokerDetailsById,
+    getBrokerLoginActivity,
+    getExecutionNodes,
+    createExecutionNode,
+    assignExecutionNodeToClient,
+    releaseExecutionNodeFromClient,
+} from '../../../../Services/Authentication';
 
 const ClientView = () => {
     const [formData, setformData] = useState({
@@ -37,6 +46,22 @@ const ClientView = () => {
     });
     const [brokerDetails, setBrokerDetails] = useState(null);
     const [brokerLogin, setBrokerLogin] = useState(null);
+    const [executionNodes, setExecutionNodes] = useState([]);
+    const [selectedExecutionNodeId, setSelectedExecutionNodeId] = useState('');
+    const [isNodeModalOpen, setIsNodeModalOpen] = useState(false);
+    const [isNodeSaving, setIsNodeSaving] = useState(false);
+    const [nodeForm, setNodeForm] = useState({
+        name: '',
+        ip_address: '',
+        provider: '',
+        server_url: '',
+        node_id: '',
+        node_secret: '',
+        status: 'assigned',
+        is_active: true,
+        is_verified_with_broker: true,
+        assign_now: true,
+    });
 
     useEffect(() => {
         if (clientId) {
@@ -44,6 +69,7 @@ const ClientView = () => {
             fetchClientApiStatus(clientId);
             fetchBrokerDetails(clientId);
             fetchBrokerLoginActivity(clientId)
+            fetchExecutionNodes();
         }
     }, [clientId]);
 
@@ -147,6 +173,108 @@ const ClientView = () => {
             setBrokerLogin(response?.data || null);
         } catch (error) {
             console.error('Error fetching broker login activity:', error);
+        }
+    };
+
+    const fetchExecutionNodes = async () => {
+        try {
+            const response = await getExecutionNodes();
+            const nodes = response?.results || [];
+            setExecutionNodes(nodes);
+            const freeNode = nodes.find((node) => !node.assigned_client);
+            setSelectedExecutionNodeId(freeNode ? String(freeNode.id) : '');
+        } catch (error) {
+            console.error('Error fetching execution nodes:', error);
+        }
+    };
+
+    const assignedExecutionNode = executionNodes.find(
+        (node) => Number(node.assigned_client) === Number(clientId)
+    );
+
+    const assignableExecutionNodes = executionNodes.filter(
+        (node) => !node.assigned_client || Number(node.assigned_client) === Number(clientId)
+    );
+
+    const resetNodeForm = () => {
+        setNodeForm({
+            name: '',
+            ip_address: '',
+            provider: '',
+            server_url: '',
+            node_id: '',
+            node_secret: '',
+            status: 'assigned',
+            is_active: true,
+            is_verified_with_broker: true,
+            assign_now: true,
+        });
+    };
+
+    const handleNodeFormChange = (event) => {
+        const { name, value, type, checked } = event.target;
+        setNodeForm((previous) => ({
+            ...previous,
+            [name]: type === 'checkbox' ? checked : value,
+        }));
+    };
+
+    const handleAssignExistingNode = async () => {
+        if (!selectedExecutionNodeId) {
+            toast.error('Please select a free execution IP first.');
+            return;
+        }
+        try {
+            await assignExecutionNodeToClient(clientId, selectedExecutionNodeId);
+            toast.success('Execution IP assigned to client.');
+            fetchExecutionNodes();
+        } catch (error) {
+            toast.error(error.message || 'Failed to assign execution IP.');
+        }
+    };
+
+    const handleReleaseNode = async () => {
+        try {
+            await releaseExecutionNodeFromClient(clientId);
+            toast.success('Execution IP released from client.');
+            fetchExecutionNodes();
+        } catch (error) {
+            toast.error(error.message || 'Failed to release execution IP.');
+        }
+    };
+
+    const handleCreateNode = async () => {
+        const requiredFields = ['name', 'ip_address', 'server_url', 'node_id', 'node_secret'];
+        const missingField = requiredFields.find((field) => !String(nodeForm[field] || '').trim());
+        if (missingField) {
+            toast.error('Please fill all required execution node fields.');
+            return;
+        }
+
+        setIsNodeSaving(true);
+        try {
+            const createdNode = await createExecutionNode({
+                name: nodeForm.name.trim(),
+                ip_address: nodeForm.ip_address.trim(),
+                provider: nodeForm.provider.trim(),
+                server_url: nodeForm.server_url.trim(),
+                node_id: nodeForm.node_id.trim(),
+                node_secret: nodeForm.node_secret,
+                status: nodeForm.status,
+                is_active: nodeForm.is_active,
+                is_verified_with_broker: nodeForm.is_verified_with_broker,
+            });
+            if (nodeForm.assign_now) {
+                await assignExecutionNodeToClient(clientId, createdNode.id);
+            }
+            toast.success(nodeForm.assign_now ? 'Execution IP added and assigned.' : 'Execution IP added.');
+            setIsNodeModalOpen(false);
+            resetNodeForm();
+            fetchExecutionNodes();
+        } catch (error) {
+            toast.error(error.message || 'Failed to add execution IP.');
+        } finally {
+            setIsNodeSaving(false);
         }
     };
 
@@ -453,6 +581,96 @@ const ClientView = () => {
                                 </Col>
                             </Row>
                             <Row className='mt-4'>
+                                <Col md="12" className="mb-4">
+                                    <div
+                                        style={{
+                                            border: '1px solid #e5e7eb',
+                                            borderRadius: '8px',
+                                            padding: '20px',
+                                            backgroundColor: '#ffffff',
+                                        }}
+                                    >
+                                        <div className="d-flex justify-content-between align-items-center mb-3">
+                                            <div>
+                                                <h4 className="mb-1">Static Execution IP</h4>
+                                                <p className="mb-0" style={{ color: '#6b7280' }}>
+                                                    Assign the client to the VPS/IP that will place broker orders.
+                                                </p>
+                                            </div>
+                                            <Button
+                                                className="btn btn-primary search-btn-clr"
+                                                onClick={() => setIsNodeModalOpen(true)}
+                                            >
+                                                Add IP
+                                            </Button>
+                                        </div>
+
+                                        {assignedExecutionNode ? (
+                                            <Row>
+                                                <Col md="3">
+                                                    <Label>Node Name</Label>
+                                                    <Input type="text" value={assignedExecutionNode.name || 'Unavailable'} readOnly />
+                                                </Col>
+                                                <Col md="2">
+                                                    <Label>Static IP</Label>
+                                                    <Input type="text" value={assignedExecutionNode.ip_address || 'Unavailable'} readOnly />
+                                                </Col>
+                                                <Col md="3">
+                                                    <Label>Server URL</Label>
+                                                    <Input type="text" value={assignedExecutionNode.server_url || 'Unavailable'} readOnly />
+                                                </Col>
+                                                <Col md="2">
+                                                    <Label>Status</Label>
+                                                    <Input
+                                                        type="text"
+                                                        value={`${assignedExecutionNode.status || 'unavailable'}${assignedExecutionNode.is_verified_with_broker ? ' / verified' : ' / not verified'}`}
+                                                        readOnly
+                                                    />
+                                                </Col>
+                                                <Col md="2" className="d-flex align-items-end">
+                                                    <Button color="danger" outline onClick={handleReleaseNode} style={{ width: '100%' }}>
+                                                        Release
+                                                    </Button>
+                                                </Col>
+                                            </Row>
+                                        ) : (
+                                            <Row className="align-items-end">
+                                                <Col md="8">
+                                                    <Label>Assign Existing Free IP</Label>
+                                                    <Input
+                                                        type="select"
+                                                        value={selectedExecutionNodeId}
+                                                        onChange={(event) => setSelectedExecutionNodeId(event.target.value)}
+                                                    >
+                                                        <option value="">Select execution IP</option>
+                                                        {assignableExecutionNodes.map((node) => (
+                                                            <option key={node.id} value={node.id}>
+                                                                {node.name} - {node.ip_address} ({node.status})
+                                                            </option>
+                                                        ))}
+                                                    </Input>
+                                                </Col>
+                                                <Col md="4">
+                                                    <Button
+                                                        className="btn btn-primary search-btn-clr"
+                                                        onClick={handleAssignExistingNode}
+                                                        disabled={!selectedExecutionNodeId}
+                                                        style={{ width: '100%' }}
+                                                    >
+                                                        Assign IP to Client
+                                                    </Button>
+                                                </Col>
+                                                <Col md="12" className="mt-3">
+                                                    <p className="mb-0" style={{ color: '#991b1b', fontWeight: 600 }}>
+                                                        No static execution IP is assigned to this client. Live routed orders will be blocked until one verified node is assigned.
+                                                    </p>
+                                                </Col>
+                                            </Row>
+                                        )}
+                                    </div>
+                                </Col>
+                            </Row>
+                            <Row className='mt-4'>
                                 {/* Left Column - Tabs */}
                                 <Col xs="12" sm="6" md="5" style={{ paddingRight: '30px' }}>
                                     <h5 className='mb-3'>Trade Symbols</h5>
@@ -622,6 +840,123 @@ const ClientView = () => {
                     </Card>
                 </Col>
             </Row>
+            <Modal isOpen={isNodeModalOpen} toggle={() => setIsNodeModalOpen(false)} size="lg">
+                <ModalHeader toggle={() => setIsNodeModalOpen(false)}>Add Static Execution IP</ModalHeader>
+                <ModalBody>
+                    <Form>
+                        <Row>
+                            <Col md="6">
+                                <FormGroup>
+                                    <Label>Node Name *</Label>
+                                    <Input
+                                        name="name"
+                                        value={nodeForm.name}
+                                        onChange={handleNodeFormChange}
+                                        placeholder="Client VPS Mumbai 1"
+                                    />
+                                </FormGroup>
+                            </Col>
+                            <Col md="6">
+                                <FormGroup>
+                                    <Label>Static IP *</Label>
+                                    <Input
+                                        name="ip_address"
+                                        value={nodeForm.ip_address}
+                                        onChange={handleNodeFormChange}
+                                        placeholder="3.109.40.137"
+                                    />
+                                </FormGroup>
+                            </Col>
+                        </Row>
+                        <Row>
+                            <Col md="6">
+                                <FormGroup>
+                                    <Label>Provider</Label>
+                                    <Input
+                                        name="provider"
+                                        value={nodeForm.provider}
+                                        onChange={handleNodeFormChange}
+                                        placeholder="AWS"
+                                    />
+                                </FormGroup>
+                            </Col>
+                            <Col md="6">
+                                <FormGroup>
+                                    <Label>Node ID *</Label>
+                                    <Input
+                                        name="node_id"
+                                        value={nodeForm.node_id}
+                                        onChange={handleNodeFormChange}
+                                        placeholder="client-ashutosh-node-1"
+                                    />
+                                </FormGroup>
+                            </Col>
+                        </Row>
+                        <FormGroup>
+                            <Label>Server URL *</Label>
+                            <Input
+                                name="server_url"
+                                value={nodeForm.server_url}
+                                onChange={handleNodeFormChange}
+                                placeholder="https://node1.example.com"
+                            />
+                        </FormGroup>
+                        <FormGroup>
+                            <Label>Node Secret *</Label>
+                            <Input
+                                type="password"
+                                name="node_secret"
+                                value={nodeForm.node_secret}
+                                onChange={handleNodeFormChange}
+                                placeholder="Shared HMAC secret for this execution node"
+                            />
+                        </FormGroup>
+                        <Row>
+                            <Col md="4">
+                                <FormGroup check>
+                                    <Input
+                                        type="checkbox"
+                                        name="is_active"
+                                        checked={nodeForm.is_active}
+                                        onChange={handleNodeFormChange}
+                                    />
+                                    <Label check>Active</Label>
+                                </FormGroup>
+                            </Col>
+                            <Col md="4">
+                                <FormGroup check>
+                                    <Input
+                                        type="checkbox"
+                                        name="is_verified_with_broker"
+                                        checked={nodeForm.is_verified_with_broker}
+                                        onChange={handleNodeFormChange}
+                                    />
+                                    <Label check>Broker IP verified</Label>
+                                </FormGroup>
+                            </Col>
+                            <Col md="4">
+                                <FormGroup check>
+                                    <Input
+                                        type="checkbox"
+                                        name="assign_now"
+                                        checked={nodeForm.assign_now}
+                                        onChange={handleNodeFormChange}
+                                    />
+                                    <Label check>Assign to this client</Label>
+                                </FormGroup>
+                            </Col>
+                        </Row>
+                    </Form>
+                </ModalBody>
+                <ModalFooter>
+                    <Button color="secondary" outline onClick={() => setIsNodeModalOpen(false)} disabled={isNodeSaving}>
+                        Cancel
+                    </Button>
+                    <Button className="btn btn-primary search-btn-clr" onClick={handleCreateNode} disabled={isNodeSaving}>
+                        {isNodeSaving ? 'Saving...' : 'Add IP'}
+                    </Button>
+                </ModalFooter>
+            </Modal>
         </Container>
     );
 };

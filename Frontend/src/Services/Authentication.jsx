@@ -4563,6 +4563,91 @@ export const fetchClientLoginActivity = async (userId) => {
   }
 };
 
+export const getExecutionNodes = async () => {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error("No authentication token found.");
+  }
+
+  try {
+    const response = await axios.get(`${baseUrl}/execution-nodes/`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching execution nodes:', error);
+    throw new Error(error.response?.data?.message || error.response?.data?.detail || "Failed to fetch execution nodes.");
+  }
+};
+
+export const createExecutionNode = async (payload) => {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error("No authentication token found.");
+  }
+
+  try {
+    const response = await axios.post(`${baseUrl}/execution-nodes/`, payload, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error creating execution node:', error);
+    throw new Error(error.response?.data?.message || error.response?.data?.detail || "Failed to create execution node.");
+  }
+};
+
+export const assignExecutionNodeToClient = async (clientId, nodeId) => {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error("No authentication token found.");
+  }
+
+  try {
+    const response = await axios.post(`${baseUrl}/execution-nodes/assign/`, {
+      client_id: clientId,
+      node_id: nodeId,
+    }, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error assigning execution node:', error);
+    throw new Error(error.response?.data?.message || error.response?.data?.detail || "Failed to assign execution node.");
+  }
+};
+
+export const releaseExecutionNodeFromClient = async (clientId) => {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error("No authentication token found.");
+  }
+
+  try {
+    const response = await axios.post(`${baseUrl}/execution-nodes/release/`, {
+      client_id: clientId,
+    }, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error releasing execution node:', error);
+    throw new Error(error.response?.data?.message || error.response?.data?.detail || "Failed to release execution node.");
+  }
+};
+
 export const getTradeResponse = async (id) => {
   console.log("Inside getTradeResponse with clientId:", id);
 
