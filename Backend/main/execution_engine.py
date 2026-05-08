@@ -64,6 +64,7 @@ from main.fyersapi import place_fyers_orders
 from main.models import ClientBrokerdetails
 from main.broker_registry import normalize_broker_name
 from main.risk_manager import get_risk_manager
+from main.services.execution_router import route_order_to_execution_node
 from main.upstock import place_upstox_orders
 from main.zerodha import place_zerodha_orders
 from main.trade_history_service import save_trade_order_history
@@ -852,6 +853,9 @@ class ExecutionEngine:
 
     def _dispatch(self, request: ExecutionRequest, validation_context: Dict[str, Any]) -> Dict[str, Any]:
         broker = request.broker_name
+        routed_response = self._route_to_execution_node_if_configured(request)
+        if routed_response is not None:
+            return routed_response
         if broker == "fyers":
             return self._execute_fyers(request)
         if broker == "dhan":
@@ -867,6 +871,58 @@ class ExecutionEngine:
         if broker in {"angel one", "angle one"}:
             return self._execute_angel_one(request, validation_context)
         return self._failed_response("Unsupported broker or no broker matched")
+
+    def _route_to_execution_node_if_configured(self, request: ExecutionRequest) -> Optional[Dict[str, Any]]:
+        if request.is_position_exit_order:
+            return None
+        client_broker = self._get_client_broker(request)
+        if not client_broker or not client_broker.execution_node_id:
+            return None
+        order_payload = {
+            "idempotency_key": request.history_id or request.request_id,
+            "history_id": request.history_id,
+            "broker": request.broker_name,
+            "LivePrice": request.LivePrice,
+            "trade_symbol": self._resolved_trade_symbol(request, ""),
+            "symbol": request.underlying_symbol,
+            "strike": request.strike_value,
+            "option_type": request.option_type_value,
+            "exchange": request.exchange_name,
+            "Exchange": request.exchange_name,
+            "Segment": request.Segment,
+            "Index_Symbol": request.Index_Symbol,
+            "product_type": request.product_type_name,
+            "product": request.product_type_name,
+            "order_type": request.order_type_name,
+            "ordertype": request.order_type_name,
+            "transaction_type": request.transaction_type.upper(),
+            "quantity": request.quantity_int,
+            "price": request.limit_price,
+            "trigger_price": request.trigger_price_value,
+            "triggerPrice": request.trigger_price_value,
+            "strategy": request.strategy,
+            "group_service": request.group_service,
+            "Lots": request.Lots,
+            "trade_order_status": request.trade_order_status,
+            "Entry_type": request.Entry_type,
+            "Exit_type": request.Exit_type,
+            "Entry_price": request.Entry_price,
+            "Exit_price": request.Exit_price,
+            "EntryQty": request.EntryQty,
+            "ExitQty": request.ExitQty,
+            "webhook_signal": request.webhook_signal,
+            "day": request.day,
+            "month": request.month,
+            "year": request.year,
+            "fullyear": request.fullyear,
+            "request_id": request.request_id,
+            "order_params": request.order_params if isinstance(request.order_params, dict) else {},
+        }
+        result = route_order_to_execution_node(request.user, client_broker, order_payload)
+        status_value = str(result.get("status") or "").lower()
+        if status_value in {"placed", "accepted_by_node", "sent_to_node", "duplicate"}:
+            return {"data": {"status": "open", "message": "Order routed to execution node.", "job_id": result.get("job_id")}}
+        return {"data": {"status": "Failed", "message": result.get("message") or "Execution node routing failed.", "job_id": result.get("job_id")}}
 
     def _execute_fyers(self, request: ExecutionRequest) -> Dict[str, Any]:
         trade_symbol = self._resolved_trade_symbol(

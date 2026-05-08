@@ -624,6 +624,13 @@ class ClientTradeSetting(models.Model):
 class ClientBrokerdetails(models.Model):
     client = models.ForeignKey('User', on_delete=models.CASCADE,null=True, blank=True)
     broker_name =models.ForeignKey(Broker, on_delete=models.CASCADE,null=True, blank=True)
+    execution_node = models.ForeignKey(
+        'ExecutionNode',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='broker_details',
+    )
     broker_API_SKEY = models.CharField(max_length=250,null=True, blank=True)
     broker_API_KEY = models.CharField(max_length=250,null=True, blank=True)
     broker_API_UID = models.CharField(max_length=50,null=True, blank=True)
@@ -826,6 +833,138 @@ class ClientBrokerdetails(models.Model):
         if update_fields is not None and promoted_fields:
             kwargs["update_fields"] = list(set(update_fields).union(promoted_fields))
         super().save(*args, **kwargs)
+
+
+class ExecutionNode(models.Model):
+    STATUS_FREE = "free"
+    STATUS_ASSIGNED = "assigned"
+    STATUS_ONLINE = "online"
+    STATUS_OFFLINE = "offline"
+    STATUS_MAINTENANCE = "maintenance"
+    STATUS_DISABLED = "disabled"
+    STATUS_CHOICES = [
+        (STATUS_FREE, "Free"),
+        (STATUS_ASSIGNED, "Assigned"),
+        (STATUS_ONLINE, "Online"),
+        (STATUS_OFFLINE, "Offline"),
+        (STATUS_MAINTENANCE, "Maintenance"),
+        (STATUS_DISABLED, "Disabled"),
+    ]
+
+    name = models.CharField(max_length=150)
+    ip_address = models.GenericIPAddressField(unique=True)
+    provider = models.CharField(max_length=150, blank=True, null=True)
+    server_url = models.URLField(max_length=500)
+    node_id = models.CharField(max_length=120, unique=True)
+    node_secret = models.TextField(blank=True, null=True)
+    assigned_client = models.OneToOneField(
+        'User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='execution_node',
+    )
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_FREE, db_index=True)
+    is_active = models.BooleanField(default=True)
+    is_verified_with_broker = models.BooleanField(default=False)
+    last_heartbeat = models.DateTimeField(null=True, blank=True)
+    last_seen_ip = models.GenericIPAddressField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["assigned_client"]),
+            models.Index(fields=["status"]),
+            models.Index(fields=["created_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.name} ({self.ip_address})"
+
+    def set_node_secret(self, secret) -> None:
+        self.node_secret = encrypt_value(str(secret or "").strip() or None)
+
+    def get_node_secret(self):
+        return decrypt_value(self.node_secret) or self.node_secret
+
+    def mark_log(self, event_type, message, *, client=None, metadata=None):
+        return ExecutionNodeLog.objects.create(
+            execution_node=self,
+            client=client,
+            event_type=event_type,
+            message=message,
+            metadata=metadata or {},
+        )
+
+
+class ExecutionOrderJob(models.Model):
+    STATUS_PENDING = "pending"
+    STATUS_SENT_TO_NODE = "sent_to_node"
+    STATUS_ACCEPTED_BY_NODE = "accepted_by_node"
+    STATUS_PLACED = "placed"
+    STATUS_REJECTED = "rejected"
+    STATUS_FAILED = "failed"
+    STATUS_CANCELLED = "cancelled"
+    STATUS_CHOICES = [
+        (STATUS_PENDING, "Pending"),
+        (STATUS_SENT_TO_NODE, "Sent to node"),
+        (STATUS_ACCEPTED_BY_NODE, "Accepted by node"),
+        (STATUS_PLACED, "Placed"),
+        (STATUS_REJECTED, "Rejected"),
+        (STATUS_FAILED, "Failed"),
+        (STATUS_CANCELLED, "Cancelled"),
+    ]
+
+    client = models.ForeignKey('User', on_delete=models.CASCADE, related_name='execution_order_jobs')
+    broker_details = models.ForeignKey('ClientBrokerdetails', on_delete=models.SET_NULL, null=True, blank=True, related_name='execution_order_jobs')
+    execution_node = models.ForeignKey(ExecutionNode, on_delete=models.PROTECT, related_name='order_jobs')
+    symbol = models.CharField(max_length=255, null=True, blank=True)
+    token = models.CharField(max_length=255, null=True, blank=True)
+    exchange = models.CharField(max_length=50, null=True, blank=True)
+    product = models.CharField(max_length=50, null=True, blank=True)
+    order_type = models.CharField(max_length=50, null=True, blank=True)
+    transaction_type = models.CharField(max_length=50, null=True, blank=True)
+    quantity = models.IntegerField(null=True, blank=True)
+    price = models.DecimalField(max_digits=15, decimal_places=4, null=True, blank=True)
+    trigger_price = models.DecimalField(max_digits=15, decimal_places=4, null=True, blank=True)
+    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default=STATUS_PENDING, db_index=True)
+    request_payload = models.JSONField(default=dict, blank=True)
+    node_response = models.JSONField(null=True, blank=True)
+    broker_response = models.JSONField(null=True, blank=True)
+    error_message = models.TextField(null=True, blank=True)
+    retry_count = models.PositiveIntegerField(default=0)
+    idempotency_key = models.CharField(max_length=128, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["execution_node"]),
+            models.Index(fields=["status"]),
+            models.Index(fields=["created_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.idempotency_key} - {self.status}"
+
+
+class ExecutionNodeLog(models.Model):
+    execution_node = models.ForeignKey(ExecutionNode, on_delete=models.CASCADE, related_name='logs')
+    client = models.ForeignKey('User', on_delete=models.SET_NULL, null=True, blank=True, related_name='execution_node_logs')
+    event_type = models.CharField(max_length=80, db_index=True)
+    message = models.TextField()
+    metadata = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["execution_node"]),
+            models.Index(fields=["created_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.event_type}: {self.execution_node_id}"
     
 class Tradeorderhistory(models.Model):
     client = models.ForeignKey('User', on_delete=models.CASCADE)

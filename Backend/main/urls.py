@@ -27,6 +27,19 @@ from main.multileg_views import (
     MultiLegStrategyExitAPIView,
     MultiLegStrategyLogsAPIView,
 )
+from main.execution_node_views import (
+    ExecutionNodeAssignAPIView,
+    ExecutionNodeDetailAPIView,
+    ExecutionNodeHealthAPIView,
+    ExecutionNodeListAPIView,
+    ExecutionNodeReleaseAPIView,
+    ExecutionOrderJobListAPIView,
+    ExecutionOrderJobRetryAPIView,
+    NodeHeartbeatAPIView,
+    NodeHealthAPIView,
+    NodePlaceOrderAPIView,
+    NodePublicIPAPIView,
+)
 urlpatterns = [
     path('signup/', UserRegistrationView.as_view(), name='user-registration'),
     path('login/', CustomLoginView.as_view(), name='login'),
@@ -198,6 +211,17 @@ urlpatterns = [
     path('strategies/multileg/<int:execution_id>/logs/', MultiLegStrategyLogsAPIView.as_view(), name='multileg-logs'),
     path('strategies/multileg/kill-switch/', MultiLegKillSwitchAPIView.as_view(), name='multileg-kill-switch'),
     path('client/kill-switch/', ClientGlobalKillSwitchAPIView.as_view(), name='client-global-kill-switch'),
+    path('execution-nodes/', ExecutionNodeListAPIView.as_view(), name='execution-node-list'),
+    path('execution-nodes/<int:node_id>/', ExecutionNodeDetailAPIView.as_view(), name='execution-node-detail'),
+    path('execution-nodes/assign/', ExecutionNodeAssignAPIView.as_view(), name='execution-node-assign'),
+    path('execution-nodes/release/', ExecutionNodeReleaseAPIView.as_view(), name='execution-node-release'),
+    path('execution-nodes/<int:node_id>/health/', ExecutionNodeHealthAPIView.as_view(), name='execution-node-health'),
+    path('execution-order-jobs/', ExecutionOrderJobListAPIView.as_view(), name='execution-order-job-list'),
+    path('execution-order-jobs/<int:job_id>/retry/', ExecutionOrderJobRetryAPIView.as_view(), name='execution-order-job-retry'),
+    path('node/health/', NodeHealthAPIView.as_view(), name='node-health'),
+    path('node/public-ip/', NodePublicIPAPIView.as_view(), name='node-public-ip'),
+    path('node/heartbeat/', NodeHeartbeatAPIView.as_view(), name='node-heartbeat'),
+    path('node/place-order/', NodePlaceOrderAPIView.as_view(), name='node-place-order'),
     
     path('client-broker-details-setting-aleart/', GetClientBrokerDetailsSettingView.as_view(), name='client-broker-details'),
     path('client-complete-trade-history/',TradeCompleteListView.as_view(), name='client-completed-trade-details'),

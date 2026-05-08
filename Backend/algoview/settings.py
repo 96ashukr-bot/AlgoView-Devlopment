@@ -120,6 +120,13 @@ WEBHOOK_SECRET = config("WEBHOOK_SECRET", default="")
 if IS_PRODUCTION:
     _require("WEBHOOK_SECRET", WEBHOOK_SECRET)
 
+ALGOVIEW_MAIN_SERVER_IP = config("ALGOVIEW_MAIN_SERVER_IP", default="").strip()
+ALGOVIEW_NODE_SECRET = config("ALGOVIEW_NODE_SECRET", default="").strip()
+ALGOVIEW_NODE_ID = config("ALGOVIEW_NODE_ID", default="").strip()
+ALGOVIEW_NODE_MODE = config("ALGOVIEW_NODE_MODE", default=False, cast=_env_bool)
+NODE_ALLOWED_CLOCK_SKEW_SECONDS = config("NODE_ALLOWED_CLOCK_SKEW_SECONDS", default=60, cast=int)
+NODE_REQUEST_TIMEOUT = config("NODE_REQUEST_TIMEOUT", default=10, cast=int)
+
 # Application definition
 
 INSTALLED_APPS = [

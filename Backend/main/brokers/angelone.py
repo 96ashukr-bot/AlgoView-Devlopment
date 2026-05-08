@@ -1,0 +1,32 @@
+from __future__ import annotations
+
+from main.angleapi_upgraded import place_angel_one_order
+from main.brokers.base import BaseBroker
+
+
+class AngelOneBroker(BaseBroker):
+    broker_name = "angel one"
+
+    def validate_credentials(self):
+        credentials = self.broker_details.get_angel_one_login_credentials()
+        missing = [key for key, value in credentials.items() if key in {"client_code", "api_key"} and not value]
+        if missing:
+            return {"status": "failed", "message": f"Missing Angel One credentials: {', '.join(missing)}"}
+        return {"status": "success"}
+
+    def place_order(self, payload):
+        order = payload.get("order", payload)
+        return place_angel_one_order(
+            broker_details=self.broker_details,
+            symbol=order.get("symbol") or order.get("underlying") or order.get("Index_Symbol"),
+            strike=str(order.get("strike") or order.get("strike_price") or ""),
+            option_type=order.get("option_type") or order.get("Type"),
+            quantity=int(order.get("quantity") or 0),
+            transaction_type=str(order.get("transaction_type") or "").upper(),
+            buffer_percentage=float(order.get("buffer_percentage") or self.broker_details.buffer_percentage or 2.5),
+            order_type=order.get("order_type") or order.get("ordertype") or "LIMIT",
+            price=order.get("price"),
+            exchange=order.get("exchange") or order.get("Exchange") or "NFO",
+            product_type=order.get("product_type") or order.get("product") or "INTRADAY",
+            request_id=order.get("request_id") or order.get("idempotency_key"),
+        )

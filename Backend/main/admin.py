@@ -112,8 +112,65 @@ class TradeLogAdmin(admin.ModelAdmin):
 
 @admin.register(ClientBrokerdetails)    
 class ClientBrokerDetailgAdmin(admin.ModelAdmin):
-    list_display=("id",'client','broker_name','tokenCreatedAt','access_token_expiry')   
+    list_display=("id",'client','broker_name','execution_node','tokenCreatedAt','access_token_expiry')   
     search_fields = ("id", "client__email", "broker_name__broker_name")    
+
+
+@admin.action(description="Mark selected nodes broker verified")
+def mark_nodes_verified(modeladmin, request, queryset):
+    queryset.update(is_verified_with_broker=True)
+
+
+@admin.action(description="Disable selected nodes")
+def disable_nodes(modeladmin, request, queryset):
+    queryset.update(is_active=False, status=ExecutionNode.STATUS_DISABLED)
+
+
+@admin.action(description="Release selected nodes from clients")
+def release_nodes_from_client(modeladmin, request, queryset):
+    for node in queryset.select_related("assigned_client"):
+        client = node.assigned_client
+        node.assigned_client = None
+        node.status = ExecutionNode.STATUS_FREE if node.is_active else ExecutionNode.STATUS_DISABLED
+        node.save(update_fields=["assigned_client", "status", "updated_at"])
+        ClientBrokerdetails.objects.filter(execution_node=node).update(execution_node=None)
+        node.mark_log("released", "Node released from client via admin.", client=client)
+
+
+@admin.register(ExecutionNode)
+class ExecutionNodeAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "name",
+        "ip_address",
+        "provider",
+        "assigned_client",
+        "status",
+        "last_heartbeat",
+        "is_verified_with_broker",
+        "is_active",
+    )
+    list_filter = ("status", "is_active", "is_verified_with_broker", "provider")
+    search_fields = ("name", "ip_address", "node_id", "assigned_client__email", "assigned_client__fullName")
+    readonly_fields = ("last_heartbeat", "last_seen_ip", "created_at", "updated_at")
+    actions = (mark_nodes_verified, disable_nodes, release_nodes_from_client)
+
+
+@admin.register(ExecutionOrderJob)
+class ExecutionOrderJobAdmin(admin.ModelAdmin):
+    list_display = ("id", "client", "execution_node", "broker_details", "symbol", "transaction_type", "quantity", "status", "retry_count", "created_at")
+    list_filter = ("status", "execution_node", "broker_details__broker_name")
+    search_fields = ("idempotency_key", "client__email", "symbol", "token")
+    readonly_fields = ("idempotency_key", "created_at", "updated_at")
+
+
+@admin.register(ExecutionNodeLog)
+class ExecutionNodeLogAdmin(admin.ModelAdmin):
+    list_display = ("id", "execution_node", "client", "event_type", "message", "created_at")
+    list_filter = ("event_type", "execution_node")
+    search_fields = ("execution_node__node_id", "client__email", "message")
+    readonly_fields = ("created_at",)
+
 @admin.register(Tradeorderhistory)    
 class ClientTradeHistoryAdmin(admin.ModelAdmin):
     list_display = ("id", "client", "history_id", "transaction_type", "trading_symbol", "date", "strategy", "GroupService", "order_id", "broker", "order_status", "SignalEntry_time")     
