@@ -73,6 +73,7 @@ class ClientSession:
     broker_user_id: Optional[str] = None
     source: str = "unknown"
     metadata: Dict[str, Any] = field(default_factory=dict)
+    proxy_config: Optional[Dict[str, str]] = None
     _lock: threading.RLock = field(default_factory=threading.RLock)
     smart_connect: Optional[SmartConnect] = None
 
@@ -104,7 +105,7 @@ class ClientSession:
 
     def attach_smart_connect(self) -> SmartConnect:
         with self._lock:
-            obj = SmartConnect(api_key=self.api_key)
+            obj = SmartConnect(api_key=self.api_key, proxies=self.proxy_config)
             if self.access_token:
                 obj.setAccessToken(self.access_token)
             if self.refresh_token:
@@ -164,8 +165,20 @@ class SessionManager:
     def _lock_key(self, session_key: str) -> str:
         return f"{self._lock_prefix}:{session_key}"
 
-    def _get_session_key(self, client_id: str, api_key: str) -> str:
-        return hashlib.sha256(f"{client_id}:{api_key}".encode("utf-8")).hexdigest()
+    def _proxy_fingerprint(self, proxy_config: Optional[Dict[str, str]] = None) -> str:
+        if not proxy_config:
+            return "direct"
+        redacted = {}
+        for key, value in sorted(proxy_config.items()):
+            if not value:
+                continue
+            redacted[key] = str(value).split("@", 1)[-1]
+        return hashlib.sha256(json.dumps(redacted, sort_keys=True).encode("utf-8")).hexdigest()
+
+    def _get_session_key(self, client_id: str, api_key: str, proxy_config: Optional[Dict[str, str]] = None) -> str:
+        return hashlib.sha256(
+            f"{client_id}:{api_key}:{self._proxy_fingerprint(proxy_config)}".encode("utf-8")
+        ).hexdigest()
 
     def _normalize_access_token(self, token: Optional[str]) -> Optional[str]:
         if not token:
@@ -179,7 +192,7 @@ class SessionManager:
             return None
         return datetime.fromisoformat(value)
 
-    def _session_from_payload(self, payload: Dict[str, Any]) -> ClientSession:
+    def _session_from_payload(self, payload: Dict[str, Any], proxy_config: Optional[Dict[str, str]] = None) -> ClientSession:
         session = ClientSession(
             client_id=payload["client_id"],
             api_key=decrypt_value(payload["api_key"]) or "",
@@ -197,6 +210,7 @@ class SessionManager:
             broker_user_id=payload.get("broker_user_id"),
             source=payload.get("source", "unknown"),
             metadata=payload.get("metadata", {}) or {},
+            proxy_config=proxy_config,
         )
         session.attach_smart_connect()
         return session
@@ -245,10 +259,10 @@ class SessionManager:
             with self._fallback_store_lock:
                 self._fallback_store.pop(cache_key, None)
 
-    def invalidate_local_session(self, client_id: str, api_key: str) -> None:
-        self._delete_session(self._get_session_key(client_id, api_key))
+    def invalidate_local_session(self, client_id: str, api_key: str, proxy_config: Optional[Dict[str, str]] = None) -> None:
+        self._delete_session(self._get_session_key(client_id, api_key, proxy_config))
 
-    def _get_cached_session(self, session_key: str) -> Optional[ClientSession]:
+    def _get_cached_session(self, session_key: str, proxy_config: Optional[Dict[str, str]] = None) -> Optional[ClientSession]:
         cache_key = self._cache_key(session_key)
         payload = None
         try:
@@ -264,7 +278,7 @@ class SessionManager:
         if not payload:
             return None
         try:
-            return self._session_from_payload(json.loads(payload))
+            return self._session_from_payload(json.loads(payload), proxy_config=proxy_config)
         except Exception as exc:
             logger.error("Failed to deserialize cached session", error=str(exc), session_key=session_key)
             self._delete_session(session_key)
@@ -292,12 +306,13 @@ class SessionManager:
         validated: bool = False,
         session_expiry: Optional[datetime] = None,
         refresh_token_expiry: Optional[datetime] = None,
+        proxy_config: Optional[Dict[str, str]] = None,
     ) -> ClientSession:
         now = timezone.now()
         session = ClientSession(
             client_id=client_id,
             api_key=api_key,
-            session_key=self._get_session_key(client_id, api_key),
+            session_key=self._get_session_key(client_id, api_key, proxy_config),
             access_token=self._normalize_access_token(access_token),
             refresh_token=refresh_token,
             feed_token=feed_token,
@@ -312,6 +327,7 @@ class SessionManager:
             login_time=now,
             broker_user_id=broker_user_id,
             source=source,
+            proxy_config=proxy_config,
         )
         session.attach_smart_connect()
         return session
@@ -332,11 +348,16 @@ class SessionManager:
         session.broker_user_id = data.get("clientcode") or session.broker_user_id or session.client_id
         return True
 
-    def get_session(self, client_id: str, api_key: Optional[str] = None) -> Optional[ClientSession]:
+    def get_session(
+        self,
+        client_id: str,
+        api_key: Optional[str] = None,
+        proxy_config: Optional[Dict[str, str]] = None,
+    ) -> Optional[ClientSession]:
         if not api_key:
             return None
-        session_key = self._get_session_key(client_id, api_key)
-        session = self._get_cached_session(session_key)
+        session_key = self._get_session_key(client_id, api_key, proxy_config)
+        session = self._get_cached_session(session_key, proxy_config=proxy_config)
         if session:
             session.update_activity()
             self._persist_session(session)
@@ -353,6 +374,7 @@ class SessionManager:
         refresh_token_expiry: Optional[datetime] = None,
         remote_verified: bool = False,
         persist: bool = True,
+        proxy_config: Optional[Dict[str, str]] = None,
     ) -> Optional[ClientSession]:
         if not access_token:
             return None
@@ -366,6 +388,7 @@ class SessionManager:
             validated=remote_verified,
             session_expiry=session_expiry,
             refresh_token_expiry=refresh_token_expiry,
+            proxy_config=proxy_config,
         )
         if persist:
             self._persist_session(session)
@@ -378,11 +401,12 @@ class SessionManager:
         totp_secret: str,
         api_key: str,
         force_new: bool = False,
+        proxy_config: Optional[Dict[str, str]] = None,
     ) -> Dict[str, Any]:
         if self._breaker.is_open():
             return {"status": "error", "message": "Angel One auth circuit breaker is open. Retry shortly."}
 
-        session_key = self._get_session_key(client_id, api_key)
+        session_key = self._get_session_key(client_id, api_key, proxy_config)
         lock = self._get_lock(session_key)
         try:
             acquired = lock.acquire(blocking=True)
@@ -393,7 +417,7 @@ class SessionManager:
             return {"status": "error", "message": "Could not acquire broker login lock"}
 
         try:
-            return self._perform_login(client_id, password, totp_secret, api_key, force_new=force_new)
+            return self._perform_login(client_id, password, totp_secret, api_key, force_new=force_new, proxy_config=proxy_config)
         except Exception as exc:
             self._breaker.record_failure()
             logger.exception("Login exception", client_id=client_id, error=str(exc))
@@ -404,13 +428,18 @@ class SessionManager:
             except Exception:
                 pass
 
-    def refresh_session(self, client_id: str, api_key: Optional[str] = None) -> Dict[str, Any]:
+    def refresh_session(
+        self,
+        client_id: str,
+        api_key: Optional[str] = None,
+        proxy_config: Optional[Dict[str, str]] = None,
+    ) -> Dict[str, Any]:
         if not api_key:
             return {"status": "error", "message": "API key is required"}
         if self._breaker.is_open():
             return {"status": "error", "message": "Angel One auth circuit breaker is open. Retry shortly."}
 
-        session_key = self._get_session_key(client_id, api_key)
+        session_key = self._get_session_key(client_id, api_key, proxy_config)
         lock = self._get_lock(session_key)
         try:
             acquired = lock.acquire(blocking=True)
@@ -421,7 +450,7 @@ class SessionManager:
             return {"status": "error", "message": "Could not acquire broker refresh lock"}
 
         try:
-            session = self._get_cached_session(session_key)
+            session = self._get_cached_session(session_key, proxy_config=proxy_config)
             return self._perform_refresh(session)
         except Exception as exc:
             self._breaker.record_failure()
@@ -439,10 +468,11 @@ class SessionManager:
         api_key: str,
         broker_details=None,
         verify_remote: bool = True,
+        proxy_config: Optional[Dict[str, str]] = None,
     ) -> Dict[str, Any]:
         if self._breaker.is_open():
             return {"status": "error", "message": "Angel One auth circuit breaker is open. Retry shortly."}
-        session_key = self._get_session_key(client_id, api_key)
+        session_key = self._get_session_key(client_id, api_key, proxy_config)
         lock = self._get_lock(session_key)
         try:
             acquired = lock.acquire(blocking=True)
@@ -453,7 +483,7 @@ class SessionManager:
             return {"status": "error", "message": "Could not acquire broker session lock"}
 
         try:
-            session = self._get_cached_session(session_key)
+            session = self._get_cached_session(session_key, proxy_config=proxy_config)
             if session and session.is_valid():
                 if not verify_remote or not session.requires_remote_validation() or self._remote_validate(session):
                     session.update_activity()
@@ -477,6 +507,7 @@ class SessionManager:
                         source="persisted_tokens",
                         session_expiry=persisted_expiry,
                         validated=False,
+                        proxy_config=proxy_config,
                     )
                     if self._remote_validate(candidate):
                         self._persist_session(candidate)
@@ -492,11 +523,12 @@ class SessionManager:
                         feed_token=persisted_feed_token,
                         source="persisted_refresh",
                         session_expiry=persisted_expiry,
+                        proxy_config=proxy_config,
                     )
                     self._persist_session(refresh_seed)
                     refreshed = self._perform_refresh(refresh_seed)
                     if refreshed.get("status") == "success":
-                        refreshed_session = self._get_cached_session(session_key)
+                        refreshed_session = self._get_cached_session(session_key, proxy_config=proxy_config)
                         return {"status": "success", "session": refreshed_session, "source": "refresh"}
 
                 credentials = broker_details.get_angel_one_login_credentials()
@@ -509,9 +541,10 @@ class SessionManager:
                         totp_secret=totp_secret,
                         api_key=credentials.get("api_key") or api_key,
                         force_new=True,
+                        proxy_config=proxy_config,
                     )
                     if login_result.get("status") == "success":
-                        login_session = self._get_cached_session(session_key)
+                        login_session = self._get_cached_session(session_key, proxy_config=proxy_config)
                         return {"status": "success", "session": login_session, "source": "credential_login"}
 
             self._breaker.record_failure()
@@ -537,8 +570,13 @@ class SessionManager:
         self._delete_session(session_key)
         return {"status": "success", "message": "Logged out"}
 
-    def get_smart_connect(self, client_id: str, api_key: Optional[str] = None) -> Optional[SmartConnect]:
-        session = self.get_session(client_id, api_key)
+    def get_smart_connect(
+        self,
+        client_id: str,
+        api_key: Optional[str] = None,
+        proxy_config: Optional[Dict[str, str]] = None,
+    ) -> Optional[SmartConnect]:
+        session = self.get_session(client_id, api_key, proxy_config=proxy_config)
         if session and session.is_valid():
             return session.smart_connect or session.attach_smart_connect()
         return None
@@ -587,10 +625,11 @@ class SessionManager:
         totp_secret: str,
         api_key: str,
         force_new: bool = False,
+        proxy_config: Optional[Dict[str, str]] = None,
     ) -> Dict[str, Any]:
-        session_key = self._get_session_key(client_id, api_key)
+        session_key = self._get_session_key(client_id, api_key, proxy_config)
         if not force_new:
-            existing = self._get_cached_session(session_key)
+            existing = self._get_cached_session(session_key, proxy_config=proxy_config)
             if existing and existing.is_valid() and not existing.requires_remote_validation():
                 existing.update_activity()
                 self._persist_session(existing)
@@ -604,7 +643,7 @@ class SessionManager:
                 }
 
         totp = pyotp.TOTP(totp_secret).now()
-        obj = SmartConnect(api_key=api_key)
+        obj = SmartConnect(api_key=api_key, proxies=proxy_config)
         data = obj.generateSession(client_id, password, totp)
         if not isinstance(data, dict) or not data.get("status"):
             self._breaker.record_failure()
@@ -620,6 +659,7 @@ class SessionManager:
             source="credential_login",
             broker_user_id=profile_data.get("clientcode") or client_id,
             validated=True,
+            proxy_config=proxy_config,
         )
         self._persist_session(session)
         self._breaker.record_success()

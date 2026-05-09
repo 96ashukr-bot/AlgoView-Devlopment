@@ -71,7 +71,8 @@ class AuthService:
         totp_secret: str,
         api_key: str,
         broker_details=None,
-        force_new: bool = False
+        force_new: bool = False,
+        proxy_config: Optional[Dict[str, str]] = None,
     ) -> Dict[str, Any]:
         """
         Login to Angel One.
@@ -118,13 +119,14 @@ class AuthService:
             password=resolved["password"],
             totp_secret=resolved["totp_secret"],
             api_key=resolved["api_key"],
-            force_new=force_new
+            force_new=force_new,
+            proxy_config=proxy_config,
         )
         
         # Save to broker_details if provided
         if result.get("status") == "success" and broker_details:
             try:
-                session = self._session_manager.get_session(resolved["client_id"], resolved["api_key"])
+                session = self._session_manager.get_session(resolved["client_id"], resolved["api_key"], proxy_config=proxy_config)
                 if session:
                     broker_details.set_session_tokens(
                         access_token=session.access_token,
@@ -180,6 +182,7 @@ class AuthService:
         feed_token: Optional[str] = None,
         broker_details=None,
         verify_remote: bool = True,
+        proxy_config: Optional[Dict[str, str]] = None,
     ) -> Dict[str, Any]:
         """Register callback-provided tokens only after broker-side verification."""
         session = self._session_manager.create_session_from_tokens(
@@ -191,6 +194,7 @@ class AuthService:
             session_expiry=getattr(broker_details, "access_token_expiry", None) if broker_details else None,
             remote_verified=False,
             persist=False,
+            proxy_config=proxy_config,
         )
         if not session:
             return {"status": "error", "message": "Access token is required"}
@@ -205,15 +209,17 @@ class AuthService:
                 session_expiry=getattr(broker_details, "access_token_expiry", None) if broker_details else None,
                 remote_verified=False,
                 persist=True,
+                proxy_config=proxy_config,
             )
             validation = self._session_manager.validate_session(
                 client_id=client_id,
                 api_key=api_key,
                 broker_details=broker_details,
                 verify_remote=True,
+                proxy_config=proxy_config,
             )
             if validation.get("status") != "success":
-                self._session_manager.invalidate_local_session(client_id=client_id, api_key=api_key)
+                self._session_manager.invalidate_local_session(client_id=client_id, api_key=api_key, proxy_config=proxy_config)
                 return validation
             session = validation.get("session")
         else:
@@ -226,6 +232,7 @@ class AuthService:
                 session_expiry=getattr(broker_details, "access_token_expiry", None) if broker_details else None,
                 remote_verified=False,
                 persist=True,
+                proxy_config=proxy_config,
             )
 
         if broker_details:
@@ -264,26 +271,29 @@ class AuthService:
     def refresh_session(
         self,
         client_id: str,
-        api_key: Optional[str] = None
+        api_key: Optional[str] = None,
+        proxy_config: Optional[Dict[str, str]] = None,
     ) -> Dict[str, Any]:
         """Refresh session tokens"""
-        return self._session_manager.refresh_session(client_id, api_key)
+        return self._session_manager.refresh_session(client_id, api_key, proxy_config=proxy_config)
     
     def get_session(
         self,
         client_id: str,
-        api_key: Optional[str] = None
+        api_key: Optional[str] = None,
+        proxy_config: Optional[Dict[str, str]] = None,
     ) -> Optional[ClientSession]:
         """Get client session"""
-        return self._session_manager.get_session(client_id, api_key)
+        return self._session_manager.get_session(client_id, api_key, proxy_config=proxy_config)
     
     def get_smart_connect(
         self,
         client_id: str,
-        api_key: Optional[str] = None
+        api_key: Optional[str] = None,
+        proxy_config: Optional[Dict[str, str]] = None,
     ) -> Optional[SmartConnect]:
         """Get SmartConnect instance"""
-        return self._session_manager.get_smart_connect(client_id, api_key)
+        return self._session_manager.get_smart_connect(client_id, api_key, proxy_config=proxy_config)
     
     def is_session_valid(
         self,
@@ -300,6 +310,7 @@ class AuthService:
         api_key: str,
         broker_details=None,
         verify_remote: bool = True,
+        proxy_config: Optional[Dict[str, str]] = None,
     ) -> Dict[str, Any]:
         """Ensure a usable session exists by validating, refreshing, or rebuilding it."""
         result = self._session_manager.validate_session(
@@ -307,6 +318,7 @@ class AuthService:
             api_key=api_key,
             broker_details=broker_details,
             verify_remote=verify_remote,
+            proxy_config=proxy_config,
         )
         if result.get("status") == "success" and broker_details:
             session = result.get("session")
@@ -344,7 +356,8 @@ class AuthService:
         client_id: str,
         password: str,
         totp_secret: str,
-        api_key: str
+        api_key: str,
+        proxy_config: Optional[Dict[str, str]] = None,
     ) -> Dict[str, Any]:
         """
         Validate credentials without creating session.
@@ -357,7 +370,7 @@ class AuthService:
             totp = pyotp.TOTP(totp_secret).now()
             
             # Try to create session
-            obj = SmartConnect(api_key=api_key)
+            obj = SmartConnect(api_key=api_key, proxies=proxy_config)
             data = obj.generateSession(client_id, password, totp)
             
             if data.get("status"):

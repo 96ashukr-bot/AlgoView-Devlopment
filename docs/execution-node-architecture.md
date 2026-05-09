@@ -53,9 +53,13 @@ Visible static IPv4/IPv6    -> ip_address
 
 For proxy mode, AlgoView verifies the outgoing proxy IP with:
 
+- `https://api64.ipify.org?format=json`
+- `https://api6.ipify.org?format=json`
 - `https://api.ipify.org?format=json`
 - `https://ifconfig.me/ip`
 - `https://checkip.amazonaws.com`
+
+The returned IP is normalized before comparison, so compressed and expanded IPv6 forms such as `2001:db8::10` and `2001:0db8:0000:...:0010` are treated as the same IP. Proxy URLs also bracket IPv6 proxy hosts automatically, for example `http://user:pass@[2001:db8::20]:8080`.
 
 The returned IP must match `ExecutionNode.ip_address`. Proxy-mode live trading is blocked unless:
 
@@ -85,16 +89,13 @@ HTTP-based adapters can support proxy mode by passing `proxy_config` to every `r
 
 Current proxy-enabled adapters:
 
+- Angel One
+- Alice Blue
+- Zerodha
 - Upstox
 - FYERS
 - 5Paisa
-
-Current adapters blocked in proxy mode until direct proxy support is implemented:
-
-- Angel One SmartConnect
-- Alice Blue pya3
-- Zerodha Kite SDK
-- Dhan SDK
+- Dhan
 
 ## Management Commands
 
@@ -155,10 +156,30 @@ python manage.py test_proxy_orderbook --client-id 101
 - HMAC signing protects VPS node requests.
 - Idempotency keys protect node order replay.
 - Firewall VPS nodes to allow HTTPS only from `ALGOVIEW_MAIN_SERVER_IP`.
+- Main-server broker execution fails closed. If a client has no active, broker-verified execution route, no order is placed.
+- Legacy direct helper functions must return a failure if called without `proxy_config`.
+- WebSocket clients must use the client broker token and the assigned proxy URL; TLS verification must stay enabled.
+
+## Production Egress Guard
+
+Application code must not be the only protection against IP leakage. The main
+Django host should have outbound firewall rules that deny direct broker API
+traffic and allow only approved execution-node/proxy endpoints. See
+`deploy/firewall-broker-egress-ufw.md`.
+
+## Current Hardening Checklist
+
+- Broker execution path: `ExecutionEngine -> route_order_to_execution_node`.
+- Proxy HTTP path: `BrokerTransport -> ProxyBoundSessionFactory -> requests.Session`.
+- Proxy WebSocket path: `websockets.connect(..., proxy=client_proxy_url)`.
+- Session cache key: `client_id + broker_id + execution_node_id + proxy_fingerprint`.
+- IPv6 proxy hosts are bracketed and public IP verification normalizes compressed/expanded IPv6.
+- SOCKS5 requires PySocks/`requests[socks]` to be installed before enabling live use.
 
 ## Troubleshooting
 
 - Returned IP mismatch: vendor may have supplied a rotating proxy, wrong port, or IPv4/IPv6 mismatch.
+- IPv6 proxy URL fails: use the raw IPv6 host in `proxy_host`; AlgoView will add brackets automatically.
 - Proxy auth failed: check username/password and whether the vendor expects IP auth instead.
 - Broker rejects IP: whitelist the visible static IP, not the proxy hostname.
 - SDK bypasses proxy: use VPS mode or implement a direct HTTP adapter with proxy support.

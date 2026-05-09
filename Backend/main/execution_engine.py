@@ -852,32 +852,17 @@ class ExecutionEngine:
         }
 
     def _dispatch(self, request: ExecutionRequest, validation_context: Dict[str, Any]) -> Dict[str, Any]:
-        broker = request.broker_name
         routed_response = self._route_to_execution_node_if_configured(request)
-        if routed_response is not None:
-            return routed_response
-        if broker == "fyers":
-            return self._execute_fyers(request)
-        if broker == "dhan":
-            return self._execute_dhan(request)
-        if broker == "5paisa":
-            return self._execute_fivepaisa(request)
-        if broker == "zerodha":
-            return self._execute_zerodha(request)
-        if broker == "upstox":
-            return self._execute_upstox(request)
-        if broker == "alice blue":
-            return self._execute_alice_blue(request)
-        if broker in {"angel one", "angle one"}:
-            return self._execute_angel_one(request, validation_context)
-        return self._failed_response("Unsupported broker or no broker matched")
+        if routed_response is None:
+            return self._failed_response("Execution routing failed closed before broker dispatch.")
+        return routed_response
 
     def _route_to_execution_node_if_configured(self, request: ExecutionRequest) -> Optional[Dict[str, Any]]:
-        if request.is_position_exit_order:
-            return None
         client_broker = self._get_client_broker(request)
-        if not client_broker or not client_broker.execution_node_id:
-            return None
+        if not client_broker:
+            return self._failed_response("No broker details found for this client.")
+        if not client_broker.execution_node_id:
+            return self._failed_response("No verified execution node/proxy is assigned. Direct broker execution is blocked.")
         order_payload = {
             "idempotency_key": request.history_id or request.request_id,
             "history_id": request.history_id,
@@ -918,7 +903,10 @@ class ExecutionEngine:
             "request_id": request.request_id,
             "order_params": request.order_params if isinstance(request.order_params, dict) else {},
         }
-        result = route_order_to_execution_node(request.user, client_broker, order_payload)
+        try:
+            result = route_order_to_execution_node(request.user, client_broker, order_payload)
+        except Exception as exc:
+            return self._failed_response(str(exc) or "Execution routing failed.")
         status_value = str(result.get("status") or "").lower()
         if status_value in {"placed", "accepted_by_node", "sent_to_node", "duplicate"}:
             return {"data": {"status": "open", "message": "Order routed to execution node.", "job_id": result.get("job_id")}}

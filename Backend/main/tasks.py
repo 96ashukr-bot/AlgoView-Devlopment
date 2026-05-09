@@ -25,6 +25,24 @@ from main.companysmtpsetails import get_company_profile,get_smtp_details
 company_profile = get_company_profile()
 smtp_details = get_smtp_details()
 
+
+@shared_task(bind=True, autoretry_for=(), max_retries=0)
+def route_execution_order_task(self, *, client_id, broker_details_id, order_payload, correlation_id=None):
+    """Proxy-safe order execution task; all broker egress stays inside the router."""
+    from main.models import ClientBrokerdetails, User
+    from main.services.execution_router import route_order_to_execution_node
+
+    client = User.objects.get(pk=client_id)
+    broker_details = ClientBrokerdetails.objects.select_related("execution_node", "broker_name").get(
+        pk=broker_details_id,
+        client=client,
+    )
+    payload = dict(order_payload or {})
+    if correlation_id:
+        payload.setdefault("correlation_id", correlation_id)
+        payload.setdefault("idempotency_key", correlation_id)
+    return route_order_to_execution_node(client, broker_details, payload)
+
 company_profile=company_profile if company_profile else None
 
 support_email = company_profile.company_support_email if company_profile else "support@example.com"

@@ -29,6 +29,8 @@ from main.execution_engine import ContractInfo, ExecutionRequest, OrderConfig, g
 from main.models import ClientBrokerdetails, ClientMultiLegStrategySetting, Strategies, StrategyExecution, StrategyExecutionLog, StrategyLeg, User
 from main.permissions import can_access_client_record, is_admin_or_superadmin
 from main.fivepaisa import MARKET_FEED_URL
+from main.services.broker_transport import ProxyRoutingRequiredError
+from main.services.proxy_utils import build_requests_proxy_config
 
 try:
     from dhanhq import dhanhq
@@ -206,6 +208,28 @@ class MultiLegContractResolver:
 
     def __init__(self):
         self._contract_manager = ContractMasterManager.get_instance()
+
+    def _proxy_config_for_broker(self, broker_details: Optional[ClientBrokerdetails]) -> dict[str, str]:
+        node = getattr(broker_details, "execution_node", None)
+        if not node:
+            raise MultiLegExecutionError(
+                "No verified execution node/proxy is assigned. Broker preflight calls are blocked.",
+                error_code="EXECUTION_ROUTE_REQUIRED",
+            )
+        if not node.is_active or not node.is_verified_with_broker:
+            raise MultiLegExecutionError(
+                "Assigned execution node/proxy is not active and broker verified.",
+                error_code="EXECUTION_ROUTE_NOT_VERIFIED",
+            )
+        if getattr(node, "execution_type", None) == node.EXECUTION_TYPE_PROXY and not node.proxy_public_ip_verified:
+            raise MultiLegExecutionError(
+                "Assigned proxy public IP is not verified.",
+                error_code="EXECUTION_PROXY_NOT_VERIFIED",
+            )
+        try:
+            return build_requests_proxy_config(node)
+        except (ValueError, ProxyRoutingRequiredError) as exc:
+            raise MultiLegExecutionError(str(exc), error_code="EXECUTION_ROUTE_INVALID") from exc
 
     def resolve_expiry(self, underlying: str, expiry_value: Any, exchange: str = "NFO") -> datetime:
         self._contract_manager.initialize(blocking=True)
@@ -509,7 +533,8 @@ class MultiLegContractResolver:
 
         api_key = broker_details.broker_API_KEY
         access_token = self._get_broker_access_token(broker_details)
-        kite = KiteConnect(api_key=api_key)
+        proxy_config = self._proxy_config_for_broker(broker_details)
+        kite = KiteConnect(api_key=api_key, proxies=proxy_config)
         if access_token:
             kite.set_access_token(access_token)
 
@@ -552,7 +577,7 @@ class MultiLegContractResolver:
         file_path = self._find_alice_contract_master_file("NFO")
 
         if not file_path and broker_details:
-            alice = get_alice_session(broker_details.broker_API_UID, broker_details.broker_API_KEY)
+            alice = get_alice_session(broker_details.broker_API_UID, broker_details.broker_API_KEY, proxy_config=self._proxy_config_for_broker(broker_details))
             if alice:
                 fetch_instrument_data(alice, "NFO")
                 file_path = self._find_alice_contract_master_file("NFO")
@@ -655,11 +680,13 @@ class MultiLegContractResolver:
             return None
 
         try:
+            proxy_config = self._proxy_config_for_broker(broker_details)
             response = requests.get(
                 self.UPSTOX_MARKET_QUOTE_LTP_URL,
                 headers={"Authorization": f"Bearer {access_token}"},
                 params={"instrument_key": contract.token},
                 timeout=5,
+                proxies=proxy_config,
             )
             payload = response.json() if response.content else {}
             if response.status_code != 200:
@@ -679,7 +706,10 @@ class MultiLegContractResolver:
         if not client_id or not access_token or not contract.token:
             return None
         try:
+            proxy_config = self._proxy_config_for_broker(broker_details)
             dhan_client = dhanhq(client_id, access_token)
+            if hasattr(dhan_client, "session"):
+                dhan_client.session.proxies.update(proxy_config)
             if not hasattr(dhan_client, "get_ltp_data"):
                 return None
             exchange_code = getattr(dhan_client, "NSE_FNO", "NSE_FNO")
@@ -697,11 +727,13 @@ class MultiLegContractResolver:
         if not access_token or not api_key or not contract.symbol:
             return None
         try:
+            proxy_config = self._proxy_config_for_broker(broker_details)
             response = requests.get(
                 "https://api-t1.fyers.in/data/quotes",
                 headers={"Authorization": f"{api_key}:{access_token}", "Content-Type": "application/json"},
                 params={"symbols": contract.symbol},
                 timeout=5,
+                proxies=proxy_config,
             )
             payload = response.json() if response.content else {}
             quotes = payload.get("d") or []
@@ -718,6 +750,7 @@ class MultiLegContractResolver:
         if not access_token or not api_key or not contract.token:
             return None
         try:
+            proxy_config = self._proxy_config_for_broker(broker_details)
             payload = {
                 "head": {"key": api_key},
                 "body": {
@@ -729,6 +762,7 @@ class MultiLegContractResolver:
                 headers={"Content-Type": "application/json", "Authorization": f"Bearer {access_token}"},
                 json=payload,
                 timeout=5,
+                proxies=proxy_config,
             )
             data = response.json() if response.content else {}
             feed_data = data.get("body", {}).get("Data") or data.get("body", {}).get("MarketFeedData") or []
@@ -748,7 +782,7 @@ class MultiLegContractResolver:
         if not access_token or not api_key or not contract.symbol:
             return None
         try:
-            kite = KiteConnect(api_key=api_key)
+            kite = KiteConnect(api_key=api_key, proxies=self._proxy_config_for_broker(broker_details))
             kite.set_access_token(access_token)
             response = kite.ltp(f"{contract.exchange}:{contract.symbol}")
             ltp = response.get(f"{contract.exchange}:{contract.symbol}", {}).get("last_price")
@@ -758,7 +792,7 @@ class MultiLegContractResolver:
 
     def _fetch_alice_blue_ltp(self, broker_details: ClientBrokerdetails, contract: ResolvedContract) -> Optional[float]:
         try:
-            alice = get_alice_session(broker_details.broker_API_UID, broker_details.broker_API_KEY)
+            alice = get_alice_session(broker_details.broker_API_UID, broker_details.broker_API_KEY, proxy_config=self._proxy_config_for_broker(broker_details))
             if not alice:
                 return None
             instrument = alice.get_instrument_by_symbol(contract.exchange, contract.symbol)
@@ -1345,6 +1379,7 @@ class MultiLegRiskManager:
                 client_id=broker_details.broker_Demate_User_Name or broker_details.broker_API_UID,
                 api_key=broker_details.broker_API_KEY,
                 broker_details=broker_details,
+                proxy_config=build_requests_proxy_config(broker_details.execution_node),
             )
             if session_result.get("status") != "success":
                 raise MultiLegExecutionError(
@@ -1862,6 +1897,7 @@ class MultiLegExecutionEngine:
         client = self._resolve_client(config, user)
         config = self._merge_assigned_strategy_defaults(client=client, config=config)
         broker_details = self._resolve_broker_details(client, config.get("broker"))
+        self._assert_execution_route_ready(client=client, broker_details=broker_details)
         plan = self._plan_builder.build(config, client=client, broker_details=broker_details)
         self._assert_strategy_allowed_for_client(client=client, plan=plan)
         existing_execution = StrategyExecution.objects.filter(idempotency_key=plan.idempotency_key).select_related("client").prefetch_related("legs").first()
@@ -1978,6 +2014,33 @@ class MultiLegExecutionEngine:
             raise MultiLegExecutionError(str(exc), error_code="MULTILEG_EXECUTION_ERROR")
         finally:
             self._lock_manager.release(lock_key)
+
+    @staticmethod
+    def _assert_execution_route_ready(*, client: User, broker_details: ClientBrokerdetails) -> None:
+        node = getattr(broker_details, "execution_node", None) or getattr(client, "execution_node", None)
+        if not node:
+            raise MultiLegExecutionError(
+                "No verified execution node/proxy is assigned. Direct broker execution is blocked.",
+                error_code="EXECUTION_ROUTE_REQUIRED",
+            )
+        if node.assigned_client_id and node.assigned_client_id != client.id:
+            raise MultiLegExecutionError(
+                "Assigned execution node does not belong to this client.",
+                error_code="EXECUTION_ROUTE_CLIENT_MISMATCH",
+            )
+        if not node.is_active or not node.is_verified_with_broker:
+            raise MultiLegExecutionError(
+                "Assigned execution node/proxy is not active and broker verified.",
+                error_code="EXECUTION_ROUTE_NOT_VERIFIED",
+            )
+        if node.execution_type == node.EXECUTION_TYPE_PROXY and not node.proxy_public_ip_verified:
+            raise MultiLegExecutionError(
+                "Assigned proxy public IP is not verified.",
+                error_code="EXECUTION_PROXY_NOT_VERIFIED",
+            )
+        if broker_details.execution_node_id != node.id:
+            broker_details.execution_node = node
+            broker_details.save(update_fields=["execution_node"])
 
     def list_active(self, *, user: User, client_id: Optional[int] = None) -> List[Dict[str, Any]]:
         queryset = StrategyExecution.objects.select_related("client").prefetch_related("legs").filter(status__in=ACTIVE_STRATEGY_STATUSES)

@@ -18,7 +18,10 @@ the time of its generation. Token expires every day at 11:59 PM.
 """
 
 ACCESS_TOKEN_URL = "https://Openapi.5paisa.com/VendorsAPI/Service1.svc/GetAccessToken"
-def fetch_access_token_5paisa(request_token,broker_details):
+def fetch_access_token_5paisa(request_token,broker_details, proxy_config=None):
+        if not proxy_config:
+            logger.error("Proxy/static-IP execution route is required for 5Paisa token generation.")
+            return None
         api_key=broker_details.broker_API_KEY
         encreption_key=broker_details.broker_API_SKEY
         user_id=broker_details.broker_API_UID
@@ -39,7 +42,7 @@ def fetch_access_token_5paisa(request_token,broker_details):
         }
 
         try:
-            response = requests.post(ACCESS_TOKEN_URL, json=payload, headers=headers, timeout=10)
+            response = requests.post(ACCESS_TOKEN_URL, json=payload, headers=headers, timeout=10, proxies=proxy_config)
             if response.status_code == 200:
                 response_data = response.json()  
                 if "body" in response_data and "AccessToken" in response_data["body"]:
@@ -111,7 +114,9 @@ def get_symbol_scriptcode(symbol, segment, Exch, csv_dir, user=None):
         logger.info(f"{user}: An error occurred for 5 paisa : {e}")
         return {"status": "error", "message": "An error occurred.", "details": str(e)}
 
-def get_order_details(access_token, ClientCode, api_key, RemoteOrderID, user=None):
+def get_order_details(access_token, ClientCode, api_key, RemoteOrderID, user=None, proxy_config=None):
+    if not proxy_config:
+        return {"status": "error", "message": "Proxy/static-IP execution route is required for 5Paisa order details."}
     logger.info(f"{user} : Get Order Details Api is calling")
     url = "https://Openapi.5paisa.com/VendorsAPI/Service1.svc/V3/OrderBook"
     headers = {
@@ -127,7 +132,7 @@ def get_order_details(access_token, ClientCode, api_key, RemoteOrderID, user=Non
         }
     }
     try:
-        response = requests.post(url, json=order_status_request, headers=headers)
+        response = requests.post(url, json=order_status_request, headers=headers, proxies=proxy_config, timeout=10)
         logger.info(f"{user} : Get Order Details Api has responed : {response}")
         if response.status_code == 200:
             response_data = response.json()
@@ -168,7 +173,9 @@ def convert_int64_to_int(obj):
 def place_5paisa_order(LivePrice,group_service,api_key,access_token,trade_symbol,transaction_type, symbol, quantity,strategy,ordertype,
         product_type, price,user, Lots,trade_order_status,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal
         ,Exchange, Segment,Index_Symbol,triggerPrice,trade, history_id, proxy_config=None):
-    
+    if not proxy_config:
+        return {"data": {"status": "Failed", "message": "Proxy/static-IP execution route is required for 5Paisa orders."}}
+
     try:
         EntryQty=quantity
         smtp_details=CompanySmtpDetails.objects.first()
@@ -285,7 +292,7 @@ def place_5paisa_order(LivePrice,group_service,api_key,access_token,trade_symbol
                     
                 ClientCode=response['body']['ClientCode']
                 RemoteOrderID=response['body']['RemoteOrderID']
-                order_his=get_order_details(access_token, ClientCode, api_key, RemoteOrderID, user)
+                order_his=get_order_details(access_token, ClientCode, api_key, RemoteOrderID, user, proxy_config=proxy_config)
                 if order_his==None:
                     response = {"data": {"status": "Failed"}}
                     logger.info(f"Order details for found for {user}. Order ID: : {order_id}")

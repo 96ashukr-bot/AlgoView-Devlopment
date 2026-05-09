@@ -7,6 +7,7 @@ from main.dhanapi import place_dhan_orders
 
 class DhanBroker(BaseBroker):
     broker_name = "dhan"
+    supports_proxy = True
 
     def validate_credentials(self, proxy_config=None):
         if not get_access_token(self.broker_details):
@@ -48,4 +49,5 @@ class DhanBroker(BaseBroker):
             values["triggerPrice"],
             values["trade_order_status"],
             values["history_id"],
+            proxy_config=proxy_config,
         )

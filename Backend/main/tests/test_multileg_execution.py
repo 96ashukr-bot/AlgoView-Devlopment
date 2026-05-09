@@ -8,7 +8,7 @@ from unittest import mock
 from django.test import TestCase, override_settings
 from django.utils import timezone
 
-from main.models import Broker, ClientBrokerdetails, ClientMultiLegStrategySetting, Role, Strategies, StrategyExecution, StrategyLeg, User
+from main.models import Broker, ClientBrokerdetails, ClientMultiLegStrategySetting, ExecutionNode, Role, Strategies, StrategyExecution, StrategyLeg, User
 from main.services.multileg_execution import (
     LegExecutionManager,
     MultiLegExecutionEngine,
@@ -83,6 +83,20 @@ class MultiLegExecutionTests(TestCase):
             broker_API_UID="A12345",
             broker_Demate_User_Name="A12345",
         )
+        self.execution_node = ExecutionNode.objects.create(
+            name="Multi-leg proxy",
+            ip_address="10.8.0.10",
+            execution_type=ExecutionNode.EXECUTION_TYPE_PROXY,
+            proxy_host="proxy.example.com",
+            proxy_port=8080,
+            proxy_protocol=ExecutionNode.PROXY_PROTOCOL_HTTP,
+            proxy_public_ip_verified=True,
+            is_verified_with_broker=True,
+            assigned_client=self.client_user,
+            status=ExecutionNode.STATUS_ASSIGNED,
+        )
+        self.broker_details.execution_node = self.execution_node
+        self.broker_details.save(update_fields=["execution_node"])
         self.multi_leg_strategy = Strategies.objects.create(
             name="Bull Call Spread",
             execution_mode=Strategies.EXECUTION_MODE_MULTI_LEG,

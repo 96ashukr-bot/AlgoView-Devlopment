@@ -19,6 +19,7 @@ from main.broker_registry import get_broker_setup_spec, broker_field_is_configur
 from main.angelone.services.state_service import CallbackStateService
 from main.angelone.utils.redaction import redact_secrets
 from main.services.login_activity_service import LoginActivityService
+from main.services.proxy_utils import build_requests_proxy_config
 from main.trade_history_service import save_trade_order_history
 logger = logging.getLogger('main')
 from datetime import datetime, timedelta  
@@ -29,6 +30,22 @@ import json
 import secrets
 from rest_framework import permissions, status
 from urllib.parse import urlencode, urlparse, urlunparse
+
+
+def _broker_proxy_config_or_none(broker_details):
+    node = getattr(broker_details, "execution_node", None)
+    if not node or not node.is_active or not node.is_verified_with_broker:
+        return None
+    if node.execution_type == node.EXECUTION_TYPE_PROXY and not node.proxy_public_ip_verified:
+        return None
+    try:
+        return build_requests_proxy_config(node)
+    except Exception:
+        return None
+
+
+def _broker_proxy_required_response():
+    return JsonResponse({"message": "Failed", "error": "Verified execution proxy/static-IP is required for broker login/token flow."}, status=403)
 def get_lot_size(trading_symbol):
     # URL to fetch instrument details (for example, for Angel One)
     url = "https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json"
@@ -850,12 +867,16 @@ class BrokerLoginRedirectView(APIView):
                 {"error": "Dhan credentials are incomplete. App ID/API Key, App Secret/API Secret, and Dhan Client ID are required."},
                 status=400,
             )
+        proxy_config = _broker_proxy_config_or_none(broker_details)
+        if not proxy_config:
+            return Response({"error": "Verified execution proxy/static-IP is required for Dhan consent flow."}, status=403)
 
         try:
             response = requests.post(
                 f"https://auth.dhan.co/app/generate-consent?client_id={dhan_client_id}",
                 headers={"app_id": app_id, "app_secret": app_secret},
                 timeout=10,
+                proxies=proxy_config,
             )
             payload = response.json() if response.content else {}
         except Exception as exc:
@@ -1071,6 +1092,9 @@ class BrokerCallbackView(APIView):
             CLIENT_ID = broker_details.broker_API_KEY
             SECRET_KEY = broker_details.broker_API_SKEY
             redirect_uri = _broker_callback_url()
+            proxy_config = _broker_proxy_config_or_none(broker_details)
+            if not proxy_config:
+                return _broker_proxy_required_response()
             try:
                 from fyers_apiv3 import fyersModel
 
@@ -1094,7 +1118,7 @@ class BrokerCallbackView(APIView):
                         "appIdHash": app_id_hash,
                         "code": request_token
                     }
-                    response = requests.post(token_url, data=json.dumps(payload), headers=headers, timeout=10)
+                    response = requests.post(token_url, data=json.dumps(payload), headers=headers, timeout=10, proxies=proxy_config)
                     token_data = response.json() if response.content else {}
                     if token_data.get("access_token"):
                         break
@@ -1131,7 +1155,10 @@ class BrokerCallbackView(APIView):
         try:
             if not request_token:
                 return JsonResponse({"message": "Failed", "error": "Request token not provided"}, status=400)
-            access_token = fetch_access_token_5paisa(request_token,broker_details)
+            proxy_config = _broker_proxy_config_or_none(broker_details)
+            if not proxy_config:
+                return _broker_proxy_required_response()
+            access_token = fetch_access_token_5paisa(request_token,broker_details, proxy_config=proxy_config)
             if access_token:
                 expiry_time = _next_session_cutoff(23, 59)
                 _save_session_tokens_compat(broker_details, request_token, access_token, expiry=expiry_time)
@@ -1163,6 +1190,9 @@ class BrokerCallbackView(APIView):
             CLIENT_KEY=broker_details.broker_API_KEY
             CLIENT_SECRET=broker_details.broker_API_SKEY
             redirect_uri = _broker_callback_url()
+            proxy_config = _broker_proxy_config_or_none(broker_details)
+            if not proxy_config:
+                return _broker_proxy_required_response()
             data = {
                 'code': auth_code,
                 'client_id': CLIENT_KEY,
@@ -1170,7 +1200,7 @@ class BrokerCallbackView(APIView):
                 'redirect_uri': redirect_uri,
                 'grant_type': 'authorization_code'
             }
-            response = requests.post(TOKEN_URL, data=data, timeout=10)
+            response = requests.post(TOKEN_URL, data=data, timeout=10, proxies=proxy_config)
             if response.status_code == 200:
                 payload = response.json() if response.content else {}
                 access_token = payload.get('access_token')
@@ -1209,11 +1239,15 @@ class BrokerCallbackView(APIView):
                     {"message": "Failed", "error": "Dhan App ID/API Key and App Secret/API Secret are required."},
                     status=400,
                 )
+            proxy_config = _broker_proxy_config_or_none(broker_details)
+            if not proxy_config:
+                return _broker_proxy_required_response()
 
             response = requests.get(
                 f"https://auth.dhan.co/app/consumeApp-consent?tokenId={token_id}",
                 headers={"app_id": app_id, "app_secret": app_secret},
                 timeout=10,
+                proxies=proxy_config,
             )
             payload = response.json() if response.content else {}
             if response.status_code >= 400 or payload.get("accessToken") is None:

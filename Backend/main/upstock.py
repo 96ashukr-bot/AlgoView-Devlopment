@@ -29,6 +29,8 @@ def place_upstox_orders(LivePrice,group_service,
     access_token, trade_symbol, transaction_type, symbol, quantity, strategy, ordertype,
     product_type, price, user, Lots, Entry_type, Exit_type,Entry_price,Exit_price, EntryQty,ExitQty,webhook_signal, Exchange,
     Segment, Index_Symbol, triggerPrice,trade_order_status, history_id, proxy_config=None):
+    if not proxy_config:
+        return {"data": {"status": "Failed", "message": "Proxy/static-IP execution route is required for Upstox orders."}}
     try:
         EntryQty=quantity
         smtp_details=CompanySmtpDetails.objects.first()
@@ -428,26 +430,4 @@ def get_order_details(order_id, access_token, proxy_config=None):
         return {"error": "Unexpected error occurred", "details": str(e)}
 
 def get_order_details2222(order_id, access_token):
-    try:
-        if order_id:
-            url = f"https://api.upstox.com/v2/order/details?order_id={order_id}"
-            
-            headers = {
-                'Accept': 'application/json',
-                'Authorization': f'Bearer {access_token}'
-            }
-            response = requests.get(url, headers=headers)
-            logger.info(f"response details upstox:::::{response}")
-            try:
-                response_dict = response.json()  # Use response.json() instead of json.loads(response)
-                logger.info(f"Response of order details>>{response_dict}")
-                return response_dict
-            except json.JSONDecodeError:
-                logger.info(f"Error: Failed to parse the order details response as JSON.")
-                return {
-                "error": f"Failed to fetch order details. Status code: {response.status_code}",
-                "details": response.text
-            }
-    except Exception as e:
-        logger.info(f"Exception occurred: {str(e)}")
-        return {"error":"None" }
+    return {"error": "Direct Upstox order details lookup is disabled. Use proxy-bound get_order_details()."}

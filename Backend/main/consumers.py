@@ -14,14 +14,45 @@ import websockets
 from google.protobuf.json_format import MessageToDict
 from main import MarketDataFeed_pb2 as pb
 from asgiref.sync import sync_to_async
+from main.models import ClientBrokerdetails
+from main.services.proxy_utils import build_requests_proxy_config
+
+
+async def _upstox_context_for_scope(scope):
+    user = scope.get("user")
+    if not user or not getattr(user, "is_authenticated", False):
+        return None, None
+
+    def load_details():
+        return (
+            ClientBrokerdetails.objects.filter(client=user, broker_name__broker_name__icontains="upstox")
+            .select_related("execution_node", "broker_name")
+            .order_by("-id")
+            .first()
+        )
+
+    broker_details = await sync_to_async(load_details)()
+    node = getattr(broker_details, "execution_node", None)
+    if not broker_details or not node:
+        return None, None
+    if not node.is_active or not node.is_verified_with_broker:
+        return None, None
+    if node.execution_type == node.EXECUTION_TYPE_PROXY and not node.proxy_public_ip_verified:
+        return None, None
+    token_getter = getattr(broker_details, "get_access_token_secure", None)
+    access_token = await sync_to_async(token_getter)() if callable(token_getter) else None
+    access_token = access_token or broker_details.access_token
+    proxy_config = build_requests_proxy_config(node)
+    proxy_url = proxy_config.get("https") or proxy_config.get("http")
+    return access_token, proxy_url
 
 class UpstoxChainLiveSymbolConsumer(AsyncWebsocketConsumer):
     async def connect(self):
-        from main.models import WebsocketDetails
-
-        # Auth token from DB
-        websocket_details = await sync_to_async(WebsocketDetails.objects.latest)('id')
-        access_token = websocket_details.Auth_token
+        access_token, proxy_url = await _upstox_context_for_scope(self.scope)
+        if not access_token or not proxy_url:
+            await self.close()
+            return
+        self._broker_ws_proxy_url = proxy_url
         # Parse query parameters and split by comma.
         query_params = parse_qs(self.scope["query_string"].decode())
         self.symbol_names = query_params.get("name", [None])[0].split(",")
@@ -133,15 +164,13 @@ class UpstoxChainLiveSymbolConsumer(AsyncWebsocketConsumer):
     async def fetch_market_data(self):
         # Setup SSL context (adjust as needed).
         ssl_context = ssl.create_default_context()
-        ssl_context.check_hostname = False
-        ssl_context.verify_mode = ssl.CERT_NONE
 
         # Authorize and get the Upstox feed URI by running blocking code in the thread.
         response = await sync_to_async(self.get_market_data_feed_authorize_sync)()
         uri = response.data.authorized_redirect_uri
         logger.info(f"Upstox feed URI: {uri}")
 
-        async with websockets.connect(uri, ssl=ssl_context, max_size=4 * 1024 * 1024) as websocket:
+        async with websockets.connect(uri, ssl=ssl_context, proxy=self._broker_ws_proxy_url, max_size=4 * 1024 * 1024) as websocket:
             await asyncio.sleep(1)
             # Subscribe to all instrument keys concurrently.
             await self.subscribe_chunks(websocket)
@@ -214,9 +243,11 @@ class UpstoxMarketDataConsumer(AsyncWebsocketConsumer):
         super().__init__(*args, **kwargs)
         self.event_loop = asyncio.get_event_loop()
     async def connect(self):
-        from main.models import WebsocketDetails
-        websocket_details = await sync_to_async(WebsocketDetails.objects.latest)('id')
-        access_token = websocket_details.Auth_token
+        access_token, proxy_url = await _upstox_context_for_scope(self.scope)
+        if not access_token or not proxy_url:
+            await self.close()
+            return
+        self._broker_ws_proxy_url = proxy_url
         """Connect to WebSocket and accept dynamic instruments"""
         query_params = parse_qs(self.scope["query_string"].decode())
         self.tokens = query_params.get("symbol_tokens", [" "])[0].split(",")
@@ -278,12 +309,10 @@ class UpstoxMarketDataConsumer(AsyncWebsocketConsumer):
     async def fetch_market_data(self):
         """Fetch live market data from Upstox WebSocket"""
         ssl_context = ssl.create_default_context()
-        ssl_context.check_hostname = False
-        ssl_context.verify_mode = ssl.CERT_NONE
 
         response = self.get_market_data_feed_authorize()
 
-        async with websockets.connect(response.data.authorized_redirect_uri, ssl=ssl_context) as websocket:
+        async with websockets.connect(response.data.authorized_redirect_uri, ssl=ssl_context, proxy=self._broker_ws_proxy_url) as websocket:
             print(f'Connected to Upstox WebSocket for Instruments: {self.instrument_keys}')
             
             await asyncio.sleep(1)
@@ -372,9 +401,11 @@ class UpstoxChainConsumer(AsyncWebsocketConsumer):
         self.reverse_instrument_map = {}
 
     async def connect(self):
-        from main.models import WebsocketDetails
-        websocket_details = await sync_to_async(WebsocketDetails.objects.latest)('id')
-        access_token = websocket_details.Auth_token
+        access_token, proxy_url = await _upstox_context_for_scope(self.scope)
+        if not access_token or not proxy_url:
+            await self.close()
+            return
+        self._broker_ws_proxy_url = proxy_url
 
         """Connect to WebSocket and accept dynamic instruments"""
         query_params = parse_qs(self.scope["query_string"].decode())
@@ -468,12 +499,10 @@ class UpstoxChainConsumer(AsyncWebsocketConsumer):
     async def fetch_market_data(self):
             
         ssl_context = ssl.create_default_context()
-        ssl_context.check_hostname = False
-        ssl_context.verify_mode = ssl.CERT_NONE
 
         response = self.get_market_data_feed_authorize()
 
-        async with websockets.connect(response.data.authorized_redirect_uri, ssl=ssl_context) as websocket:
+        async with websockets.connect(response.data.authorized_redirect_uri, ssl=ssl_context, proxy=self._broker_ws_proxy_url) as websocket:
            
             
             await asyncio.sleep(1)

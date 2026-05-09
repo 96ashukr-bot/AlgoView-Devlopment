@@ -7,6 +7,7 @@ from main.zerodha import place_zerodha_orders
 
 class ZerodhaBroker(BaseBroker):
     broker_name = "zerodha"
+    supports_proxy = True
 
     def validate_credentials(self, proxy_config=None):
         if not get_access_token(self.broker_details):
@@ -46,4 +47,5 @@ class ZerodhaBroker(BaseBroker):
             values["triggerPrice"],
             values["trade_order_status"],
             values["history_id"],
+            proxy_config=proxy_config,
         )

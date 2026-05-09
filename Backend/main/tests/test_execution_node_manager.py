@@ -12,6 +12,11 @@ from main.services.execution_nodes import assign_execution_node_to_client, relea
 from main.services.execution_router import route_order_to_execution_node
 from main.services.node_security import generate_node_signature, verify_node_signature
 from main.services.proxy_utils import build_requests_proxy_config, mask_proxy_url, verify_proxy_public_ip
+from main.fyersapi import place_fyers_orders
+from main.upstock import place_upstox_orders
+from main.fivepaisa import place_5paisa_order
+from main.dhanapi import place_dhan_orders
+from main.zerodha import place_zerodha_orders
 
 
 TEST_CACHES = {
@@ -143,6 +148,231 @@ class ExecutionNodeManagerTests(TestCase):
         adapter = get_broker_adapter(self.broker_details)
         self.assertEqual(adapter.broker_name, "angel one")
 
+    @mock.patch("main.brokers.angelone.place_angel_one_order")
+    def test_angel_one_adapter_supports_proxy_and_passes_config(self, mock_place_order):
+        adapter = get_broker_adapter(self.broker_details)
+        proxy_config = {"http": "http://proxy.example.com:8080", "https": "http://proxy.example.com:8080"}
+        mock_place_order.return_value = {"status": "success", "order_id": "angel-proxy-1"}
+        self.assertTrue(adapter.supports_proxy)
+        adapter.place_order(
+            {
+                "symbol": "NIFTY",
+                "strike": "24400",
+                "option_type": "CE",
+                "quantity": 65,
+                "transaction_type": "BUY",
+            },
+            proxy_config=proxy_config,
+        )
+        self.assertEqual(mock_place_order.call_args.kwargs["proxy_config"], proxy_config)
+
+    @mock.patch("main.brokers.aliceblue.place_alice_orders")
+    def test_alice_blue_adapter_supports_proxy_and_passes_config(self, mock_place_order):
+        broker = Broker.objects.create(broker_name="Alice Blue", is_active=True)
+        broker_details = ClientBrokerdetails.objects.create(
+            client=self.client_user,
+            broker_name=broker,
+            broker_API_KEY="alice-api",
+            broker_API_UID="alice-user",
+        )
+        adapter = get_broker_adapter(broker_details)
+        proxy_config = {"http": "http://proxy.example.com:8080", "https": "http://proxy.example.com:8080"}
+        mock_place_order.return_value = {"data": {"status": "completed", "order_id": "alice-proxy-1"}}
+        self.assertTrue(adapter.supports_proxy)
+        adapter.place_order(
+            {
+                "symbol": "NIFTY24400CE",
+                "quantity": 65,
+                "transaction_type": "BUY",
+                "order_type": "LIMIT",
+                "Exchange": "NFO",
+            },
+            proxy_config=proxy_config,
+        )
+        self.assertEqual(mock_place_order.call_args.kwargs["proxy_config"], proxy_config)
+
+    @mock.patch("main.Alice_Blue_Api.requests.get")
+    def test_alice_blue_proxy_client_passes_proxies_to_requests(self, mock_get):
+        from main.Alice_Blue_Api import ProxyAwareAliceblue
+
+        proxy_config = {"http": "http://proxy.example.com:8080", "https": "http://proxy.example.com:8080"}
+        mock_get.return_value = SimpleNamespace(status_code=200, text='{"stat":"Ok"}', reason="OK")
+        alice = ProxyAwareAliceblue(user_id="alice-user", api_key="alice-api", proxy_config=proxy_config)
+        alice._sub_urls["test"] = "test"
+        alice._get("test")
+        self.assertEqual(mock_get.call_args.kwargs["proxies"], proxy_config)
+
+    @mock.patch("main.angelone.managers.session_manager.SmartConnect")
+    def test_angel_one_session_builds_smart_connect_with_proxy(self, mock_smart_connect):
+        from main.angelone.managers.session_manager import ClientSession
+
+        proxy_config = {"http": "http://proxy.example.com:8080", "https": "http://proxy.example.com:8080"}
+        session = ClientSession(
+            client_id="A1",
+            api_key="api-key",
+            session_key="session-key",
+            access_token="access-token",
+            proxy_config=proxy_config,
+        )
+        session.attach_smart_connect()
+        mock_smart_connect.assert_called_once_with(api_key="api-key", proxies=proxy_config)
+
+    @mock.patch("main.brokers.zerodha.place_zerodha_orders")
+    def test_zerodha_adapter_supports_proxy_and_passes_config(self, mock_place_order):
+        broker = Broker.objects.create(broker_name="Zerodha", is_active=True)
+        broker_details = ClientBrokerdetails.objects.create(
+            client=self.client_user,
+            broker_name=broker,
+            broker_API_KEY="kite-api",
+            access_token="kite-access",
+        )
+        adapter = get_broker_adapter(broker_details)
+        proxy_config = {"http": "http://proxy.example.com:8080", "https": "http://proxy.example.com:8080"}
+        mock_place_order.return_value = {"data": {"status": "complete", "order_id": "kite-proxy-1"}}
+        self.assertTrue(adapter.supports_proxy)
+        adapter.place_order(
+            {
+                "symbol": "NIFTY",
+                "strike": "24400",
+                "option_type": "CE",
+                "quantity": 65,
+                "transaction_type": "BUY",
+                "order_type": "LIMIT",
+                "Exchange": "NFO",
+            },
+            proxy_config=proxy_config,
+        )
+        self.assertEqual(mock_place_order.call_args.kwargs["proxy_config"], proxy_config)
+
+    @mock.patch("main.zerodha.KiteConnect")
+    def test_zerodha_order_client_receives_proxy_config(self, mock_kite_class):
+        from main.zerodha import place_zerodha_orders
+
+        proxy_config = {"http": "http://proxy.example.com:8080", "https": "http://proxy.example.com:8080"}
+        kite = mock_kite_class.return_value
+        kite.VARIETY_REGULAR = "regular"
+        kite.profile.return_value = {"user_id": "kite-user"}
+        kite.instruments.return_value = [{"tradingsymbol": "NIFTY24400CE"}]
+        kite.ltp.return_value = {"NFO:NIFTY24400CE": {"last_price": 10}}
+        kite.place_order.return_value = "kite-order-1"
+        kite.order_history.return_value = [{"status": "COMPLETE", "transaction_type": "BUY", "average_price": 10, "filled_quantity": 65}]
+        place_zerodha_orders(
+            10,
+            "Lite",
+            "kite-access",
+            "kite-api",
+            "NIFTY24400CE",
+            "BUY",
+            "NIFTY",
+            65,
+            "strategy",
+            "LIMIT",
+            "MIS",
+            10,
+            self.client_user,
+            1,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            "NFO",
+            "FNO",
+            "NIFTY",
+            None,
+            "OPEN",
+            "kite-history-1",
+            proxy_config=proxy_config,
+        )
+        mock_kite_class.assert_called_once_with(api_key="kite-api", proxies=proxy_config)
+
+    @mock.patch("main.brokers.dhan.place_dhan_orders")
+    def test_dhan_adapter_supports_proxy_and_passes_config(self, mock_place_order):
+        broker = Broker.objects.create(broker_name="Dhan", is_active=True)
+        broker_details = ClientBrokerdetails.objects.create(
+            client=self.client_user,
+            broker_name=broker,
+            broker_API_UID="dhan-client",
+            access_token="dhan-access",
+        )
+        adapter = get_broker_adapter(broker_details)
+        proxy_config = {"http": "http://proxy.example.com:8080", "https": "http://proxy.example.com:8080"}
+        mock_place_order.return_value = {"data": {"status": "completed", "order_id": "dhan-proxy-1"}}
+        self.assertTrue(adapter.supports_proxy)
+        adapter.place_order(
+            {
+                "symbol": "NIFTY",
+                "strike": "24400",
+                "option_type": "CE",
+                "quantity": 65,
+                "transaction_type": "BUY",
+                "order_type": "LIMIT",
+                "Exchange": "NFO",
+            },
+            proxy_config=proxy_config,
+        )
+        self.assertEqual(mock_place_order.call_args.kwargs["proxy_config"], proxy_config)
+
+    @mock.patch("main.dhanapi.get_trading_symbol_security_id")
+    @mock.patch("main.dhanapi.dhanhq")
+    def test_dhan_order_client_receives_proxy_config(self, mock_dhan_class, mock_security_lookup):
+        from main.dhanapi import place_dhan_orders
+
+        proxy_config = {"http": "http://proxy.example.com:8080", "https": "http://proxy.example.com:8080"}
+        dhan = mock_dhan_class.return_value
+        dhan.session.proxies = {}
+        dhan.NSE_FNO = "NSE_FNO"
+        dhan.NSE = "NSE"
+        dhan.NORMAL = "NORMAL"
+        dhan.INTRA = "INTRA"
+        dhan.CNC = "CNC"
+        dhan.BUY = "BUY"
+        dhan.SELL = "SELL"
+        dhan.MARKET = "MARKET"
+        dhan.LIMIT = "LIMIT"
+        dhan.SL = "SL"
+        dhan.get_ltp_data.return_value = {"data": {"NSE_FNO": {"12345": {"last_price": 10}}}}
+        dhan.place_order.return_value = {"status": "success", "data": {"orderId": "dhan-order-1"}}
+        dhan.get_order_by_id.return_value = {
+            "status": "success",
+            "data": [{"orderStatus": "TRADED", "transactionType": "BUY", "averageTradedPrice": 10, "quantity": 65}],
+        }
+        mock_security_lookup.return_value = {"status": "success", "SECURITY_ID": 12345}
+        place_dhan_orders(
+            "2026-05-12",
+            10,
+            "Lite",
+            "dhan-access",
+            "dhan-client",
+            "NIFTY24400CE",
+            "BUY",
+            "NIFTY",
+            65,
+            "strategy",
+            "LIMIT",
+            "MIS",
+            10,
+            self.client_user,
+            1,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            "NFO",
+            "FNO",
+            "NIFTY",
+            None,
+            "OPEN",
+            "dhan-history-1",
+            proxy_config=proxy_config,
+        )
+        self.assertEqual(dhan.session.proxies, proxy_config)
+
     def test_all_supported_brokers_have_execution_node_adapters(self):
         broker_names = {
             "Upstox": "upstox",
@@ -199,6 +429,35 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertIn("socks5://user%20name:p%40ss%20word@proxy.example.com:1080", config["https"])
         self.assertNotIn("p@ss word", mask_proxy_url(node))
 
+    def test_proxy_config_formats_ipv6_proxy_host(self):
+        node = ExecutionNode(
+            name="IPv6 Proxy Node",
+            ip_address="2001:db8::10",
+            execution_type=ExecutionNode.EXECUTION_TYPE_PROXY,
+            proxy_host="2001:db8::20",
+            proxy_port=8080,
+            proxy_protocol=ExecutionNode.PROXY_PROTOCOL_HTTP,
+            proxy_username="ipv6 user",
+        )
+        node.set_proxy_password("ipv6 pass")
+        config = build_requests_proxy_config(node)
+        self.assertEqual(
+            config["https"],
+            "http://ipv6%20user:ipv6%20pass@[2001:db8::20]:8080",
+        )
+
+    def test_proxy_config_accepts_bracketed_ipv6_proxy_host(self):
+        node = ExecutionNode(
+            name="Bracketed IPv6 Proxy Node",
+            ip_address="2001:db8::11",
+            execution_type=ExecutionNode.EXECUTION_TYPE_PROXY,
+            proxy_host="[2001:db8::21]",
+            proxy_port=8080,
+            proxy_protocol=ExecutionNode.PROXY_PROTOCOL_HTTPS,
+        )
+        config = build_requests_proxy_config(node)
+        self.assertEqual(config["https"], "https://[2001:db8::21]:8080")
+
     @mock.patch("main.services.proxy_utils.requests.get")
     def test_verify_proxy_public_ip_success(self, mock_get):
         node = ExecutionNode.objects.create(
@@ -219,6 +478,29 @@ class ExecutionNodeManagerTests(TestCase):
         node.refresh_from_db()
         self.assertEqual(result["status"], "success")
         self.assertTrue(node.proxy_public_ip_verified)
+
+    @mock.patch("main.services.proxy_utils.requests.get")
+    def test_verify_proxy_public_ipv6_success_with_normalization(self, mock_get):
+        node = ExecutionNode.objects.create(
+            name="IPv6 Proxy Verify",
+            ip_address="2001:db8::23",
+            execution_type=ExecutionNode.EXECUTION_TYPE_PROXY,
+            proxy_host="2001:db8::24",
+            proxy_port=8080,
+            proxy_protocol=ExecutionNode.PROXY_PROTOCOL_HTTP,
+        )
+        mock_get.return_value = SimpleNamespace(
+            status_code=200,
+            json=lambda: {"ip": "2001:0db8:0000:0000:0000:0000:0000:0023"},
+            text="2001:0db8:0000:0000:0000:0000:0000:0023",
+            raise_for_status=lambda: None,
+        )
+        result = verify_proxy_public_ip(node)
+        node.refresh_from_db()
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["actual_ip"], "2001:db8::23")
+        self.assertTrue(node.proxy_public_ip_verified)
+        self.assertEqual(str(node.proxy_last_seen_ip), "2001:db8::23")
 
     @mock.patch("main.services.execution_router.get_broker_adapter")
     def test_proxy_order_routes_through_adapter(self, adapter_factory):
@@ -288,3 +570,39 @@ class ExecutionNodeManagerTests(TestCase):
             second = self.client.post("/api/node/place-order/", data=payload, content_type="application/json", **headers)
         self.assertEqual(first.status_code, 200)
         self.assertEqual(second.status_code, 409)
+
+    def test_direct_order_helpers_fail_closed_without_proxy(self):
+        common = dict(
+            LivePrice=None,
+            group_service=None,
+            transaction_type="BUY",
+            symbol="NIFTY",
+            quantity=1,
+            strategy="test",
+            ordertype="LIMIT",
+            product_type="INTRADAY",
+            price=1,
+            user=self.client_user,
+            Lots=1,
+            Entry_type=None,
+            Exit_type=None,
+            Entry_price=None,
+            Exit_price=None,
+            EntryQty=None,
+            ExitQty=None,
+            webhook_signal=None,
+            Exchange="NFO",
+            Segment="FNO",
+            Index_Symbol="NIFTY",
+            triggerPrice=None,
+            trade_order_status=None,
+            history_id="no-proxy",
+        )
+        self.assertIn("Proxy/static-IP", place_fyers_orders(access_token="t", Api_key="k", trade_symbol="NIFTY", **common)["data"]["message"])
+        self.assertIn("Proxy/static-IP", place_upstox_orders(access_token="t", trade_symbol="NIFTY", **common)["data"]["message"])
+        self.assertIn("Proxy/static-IP", place_dhan_orders(expiry_date="2026-05-12", access_token="t", client_id="c", trade_symbol="NIFTY", **common)["data"]["message"])
+        self.assertIn("Proxy/static-IP", place_zerodha_orders(access_token="t", Api_key="k", trade_symbol="NIFTY", **common)["data"]["message"])
+        self.assertIn(
+            "Proxy/static-IP",
+            place_5paisa_order(api_key="k", access_token="t", trade_symbol="NIFTY", trade=SimpleNamespace(), **common)["data"]["message"],
+        )

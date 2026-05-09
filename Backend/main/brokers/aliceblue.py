@@ -6,6 +6,7 @@ from main.brokers.base import BaseBroker
 
 class AliceBlueBroker(BaseBroker):
     broker_name = "alice blue"
+    supports_proxy = True
 
     def validate_credentials(self, proxy_config=None):
         if not self.broker_details.broker_API_KEY or not self.broker_details.broker_API_UID:
@@ -42,4 +43,5 @@ class AliceBlueBroker(BaseBroker):
             order.get("Index_Symbol"),
             order.get("history_id"),
             order.get("triggerPrice"),
+            proxy_config=proxy_config,
         )

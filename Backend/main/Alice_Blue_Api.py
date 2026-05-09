@@ -6,6 +6,8 @@ import os
 import logging
 import pytz
 import pandas as pd
+import json
+import requests
 
 from datetime import datetime
 
@@ -64,18 +66,56 @@ GET_TREAD_BOOK_URL = GET_TRADE_BOOK_URL
 alice_sessions = {}
 
 
-def get_alice_session(user_id, api_key):
+class ProxyAwareAliceblue(Aliceblue):
+    def __init__(self, *args, proxy_config=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.proxy_config = proxy_config
+
+    def _request(self, method, req_type, data=None):
+        if not self.proxy_config:
+            return super()._request(method, req_type, data=data)
+
+        headers = {
+            "X-SAS-Version": "2.0",
+            "User-Agent": self._user_agent(),
+            "Authorization": self._user_authorization(),
+        }
+        try:
+            if req_type == "POST":
+                response = requests.post(method, json=data, headers=headers, proxies=self.proxy_config)
+            elif req_type == "GET":
+                response = requests.get(method, json=data, headers=headers, proxies=self.proxy_config)
+            else:
+                return {"stat": "Not_ok", "emsg": f"Unsupported request type: {req_type}", "encKey": None}
+        except (requests.ConnectionError, requests.Timeout) as exception:
+            return {"stat": "Not_ok", "emsg": exception, "encKey": None}
+
+        if response.status_code == 200:
+            return json.loads(response.text)
+        emsg = str(response.status_code) + " - " + response.reason
+        return {"stat": "Not_ok", "emsg": emsg, "encKey": None}
+
+
+def _alice_proxy_cache_key(user_id, proxy_config=None):
+    if not proxy_config:
+        return f"{user_id}:direct"
+    proxy_identity = "|".join(str(proxy_config.get(key, "")).split("@", 1)[-1] for key in sorted(proxy_config))
+    return f"{user_id}:proxy:{proxy_identity}"
+
+
+def get_alice_session(user_id, api_key, proxy_config=None):
     try:
         if not user_id or not api_key:
             logger.error("Missing USER_ID or API_KEY")
             return None
 
-        if user_id in alice_sessions:
-            session_data = alice_sessions[user_id]
+        cache_key = _alice_proxy_cache_key(user_id, proxy_config)
+        if cache_key in alice_sessions:
+            session_data = alice_sessions[cache_key]
             if datetime.now().date() == session_data["time"].date():
                 return session_data["client"]
 
-        alice = Aliceblue(user_id=user_id, api_key=api_key)
+        alice = ProxyAwareAliceblue(user_id=user_id, api_key=api_key, proxy_config=proxy_config)
 
         try:
             session = alice.get_session_id()
@@ -87,7 +127,7 @@ def get_alice_session(user_id, api_key):
             logger.error(f"Login Failed: {session}")
             return None
 
-        alice_sessions[user_id] = {
+        alice_sessions[cache_key] = {
             "client": alice,
             "time": datetime.now()
         }
@@ -162,10 +202,12 @@ def place_alice_orders(
     Lots, trade_order_status, Entry_type, Exit_type,
     Entry_price, Exit_price, EntryQty, ExitQty,
     webhook_signal, Exchange, Segment, Index_Symbol, history_id=None,
-    trigger_price=None
+    trigger_price=None, proxy_config=None
 ):
+    if not proxy_config:
+        return {"data": {"status": "Failed", "message": "Proxy/static-IP execution route is required for Alice Blue orders."}}
     try:
-        alice = get_alice_session(api_uid, api_skey)
+        alice = get_alice_session(api_uid, api_skey, proxy_config=proxy_config)
 
         if not alice:
             return {"data": {"status": "Login Failed or API Disabled"}}

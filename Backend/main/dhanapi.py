@@ -54,8 +54,11 @@ def get_trading_symbol_security_id(symbol, segment, Exch,expiry_date, user=None)
 
 def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_id, trade_symbol, transaction_type, symbol, quantity,
     strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type, Entry_price, Exit_price, 
-    EntryQty, ExitQty, webhook_signal, Exchange, Segment,Index_Symbol, triggerPrice, trade_order_status, history_id):
+    EntryQty, ExitQty, webhook_signal, Exchange, Segment,Index_Symbol, triggerPrice, trade_order_status, history_id,
+    proxy_config=None):
     logger.info(f'{user} : dhan api  Exchange is:: {Exchange} product typweeee {product_type}')
+    if not proxy_config:
+        return {"data": {"status": "Failed", "message": "Proxy/static-IP execution route is required for Dhan orders."}}
     
     try:
         EntryQty=quantity
@@ -79,6 +82,8 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
         }
         try:
             dhan = dhanhq(client_id, access_token)
+            if proxy_config and hasattr(dhan, "session"):
+                dhan.session.proxies.update(proxy_config)
             logger.info(f"{user}: API key and access token are valid.")
         except Exception as e:
             logger.error(f"{user}: Error validating API key or access token: {str(e)}")

@@ -57,8 +57,10 @@ def place_zerodha_orders(
     LivePrice, group_service, access_token, Api_key, trade_symbol, transaction_type,
     symbol, quantity, strategy, ordertype, product_type, price, user, Lots, Entry_type,
     Exit_type, Entry_price, Exit_price, EntryQty, ExitQty, webhook_signal, Exchange,
-    Segment, Index_Symbol, triggerPrice, trade_order_status, history_id):
+    Segment, Index_Symbol, triggerPrice, trade_order_status, history_id, proxy_config=None):
     logger.info(f"[{user}] Starting Zerodha order for symbol: {symbol}, Index: {Index_Symbol}")
+    if not proxy_config:
+        return {"data": {"status": "Failed", "message": "Proxy/static-IP execution route is required for Zerodha orders."}}
 
     try:
         EntryQty = quantity
@@ -81,7 +83,7 @@ def place_zerodha_orders(
         }
 
         try:
-            kite = KiteConnect(api_key=Api_key)
+            kite = KiteConnect(api_key=Api_key, proxies=proxy_config)
             kite.set_access_token(access_token)
             profile = kite.profile()
             logger.info(f"[{user}] API key and access token validated successfully.")

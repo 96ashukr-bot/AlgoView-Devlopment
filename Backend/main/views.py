@@ -3477,87 +3477,20 @@ class OrderLogListView(APIView):
 class GetAliceOrderBook(APIView):
     pagination_class = None
     def get(self, request, *args, **kwargs):
-        # Get or regenerate the session ID
-        session_id_response = get_or_regenerate_session_id(USER_ID, ALICE_API_KEY)
-        # Extract sessionID from the response
-        sessionID = session_id_response.get('sessionID') if isinstance(session_id_response, dict) else None  
-        if not sessionID:
-            return Response({
-                "status": "error",
-                "message": "Failed to obtain a valid session ID."
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        headers = {
-            'Content-Type': 'application/json',
-            'Authorization': f'Bearer {USER_ID} {sessionID}' 
-        }
-        try:
- 
-            response = requests.get(GET_ORDER_BOOK_URL, headers=headers)
-            response.raise_for_status()  
-            return Response({
-                "status": "success",
-                "data": response.json()
-            }, status=status.HTTP_200_OK)
-
-        except requests.RequestException as req_err:
-            return Response({
-                "status": "error",
-                "message": f"Request error: {str(req_err)}"
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-        except Exception as e:
-            # Handle any other exceptions
-            return Response({
-                "status": "error",
-                "message": f"An error occurred: {str(e)}"
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response(
+            {"status": "error", "message": "Direct Alice Blue order book access is disabled. Use proxy-bound broker adapter APIs."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
 
 
 #Get trad history data GET_TREAD_BOOK_URL
 class GetAliceTreadBook(APIView):
     pagination_class = None
     def get(self, request, *args, **kwargs):
-        # Get or regenerate the session ID
-        session_id_response = get_or_regenerate_session_id(USER_ID, ALICE_API_KEY)
-        # Extract sessionID from the response
-        sessionID = session_id_response.get('sessionID') if isinstance(session_id_response, dict) else None  
-        if not sessionID:
-            return Response({
-                "status": "error",
-                "message": "Failed to obtain a valid session ID."
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        # Prepare headers
-        headers = {
-            'Content-Type': 'application/json',
-            'Authorization': f'Bearer {USER_ID} {sessionID}'  # Assuming session ID is used this way
-        }
-        try:
-            # Send a GET request to the order book endpoint
-            response = requests.get(GET_TREAD_BOOK_URL, headers=headers)
-            print("response>>>>>>>>>>>",response)
-            response.raise_for_status()  # Raise an error for bad responses (4xx or 5xx)
-            trade_history = response.json()
-            # Return the successful response data
-            return Response({
-                "status": "success",
-                "data": trade_history
-            }, status=response.status_code)
-
-        except requests.RequestException as req_err:
-            # Handle request exceptions such as timeouts, bad responses, etc.
-            return Response({
-                "status": "error",
-                "message": f"Request error: {str(req_err)}"
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-        except Exception as e:
-            # Handle any other exceptions
-            return Response({
-                "status": "error",
-                "message": f"An error occurred: {str(e)}"
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
+        return Response(
+            {"status": "error", "message": "Direct Alice Blue trade book access is disabled. Use proxy-bound broker adapter APIs."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
 
 # Save the order log to the database
 from django.utils import timezone  

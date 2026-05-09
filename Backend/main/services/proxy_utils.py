@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import ipaddress
 from typing import Any
 from urllib.parse import quote
 
@@ -13,6 +14,8 @@ from main.models import ExecutionNode
 logger = logging.getLogger("main.execution_proxy")
 
 PUBLIC_IP_ENDPOINTS = (
+    "https://api64.ipify.org?format=json",
+    "https://api6.ipify.org?format=json",
     "https://api.ipify.org?format=json",
     "https://ifconfig.me/ip",
     "https://checkip.amazonaws.com",
@@ -24,6 +27,34 @@ def _normalise_protocol(protocol: str | None) -> str:
     if protocol not in {ExecutionNode.PROXY_PROTOCOL_HTTP, ExecutionNode.PROXY_PROTOCOL_HTTPS, ExecutionNode.PROXY_PROTOCOL_SOCKS5}:
         raise ValueError(f"Unsupported proxy protocol: {protocol}")
     return protocol
+
+
+def _strip_ipv6_brackets(host: str) -> str:
+    host = (host or "").strip()
+    if host.startswith("[") and host.endswith("]"):
+        return host[1:-1]
+    return host
+
+
+def _format_proxy_host(host: str) -> str:
+    host = _strip_ipv6_brackets(host)
+    try:
+        parsed = ipaddress.ip_address(host)
+    except ValueError:
+        return host
+    if parsed.version == 6:
+        return f"[{parsed.compressed}]"
+    return parsed.compressed
+
+
+def _normalize_ip(value: str | None) -> str:
+    value = (value or "").strip()
+    if not value:
+        return ""
+    try:
+        return ipaddress.ip_address(_strip_ipv6_brackets(value)).compressed
+    except ValueError:
+        return value
 
 
 def _build_proxy_url(execution_node: ExecutionNode, *, mask_password: bool = False) -> str:
@@ -41,7 +72,7 @@ def _build_proxy_url(execution_node: ExecutionNode, *, mask_password: bool = Fal
         safe_username = quote(username, safe="")
         safe_password = "*****" if mask_password else quote(password, safe="")
         auth = f"{safe_username}:{safe_password}@" if password else f"{safe_username}@"
-    return f"{protocol}://{auth}{host}:{port}"
+    return f"{protocol}://{auth}{_format_proxy_host(host)}:{port}"
 
 
 def build_requests_proxy_config(execution_node: ExecutionNode) -> dict[str, str]:
@@ -57,13 +88,13 @@ def mask_proxy_url(execution_node: ExecutionNode) -> str:
 
 
 def _parse_public_ip_response(url: str, response: requests.Response) -> str:
-    if "api.ipify.org" in url:
+    if "ipify.org" in url:
         return str(response.json().get("ip") or "").strip()
     return response.text.strip()
 
 
 def verify_proxy_public_ip(execution_node: ExecutionNode) -> dict[str, Any]:
-    expected_ip = str(execution_node.ip_address or "").strip()
+    expected_ip = _normalize_ip(str(execution_node.ip_address or ""))
     result: dict[str, Any] = {
         "status": "failed",
         "expected_ip": expected_ip,
@@ -91,7 +122,7 @@ def verify_proxy_public_ip(execution_node: ExecutionNode) -> dict[str, Any]:
         try:
             response = requests.get(url, proxies=proxies, timeout=timeout)
             response.raise_for_status()
-            actual_ip = _parse_public_ip_response(url, response)
+            actual_ip = _normalize_ip(_parse_public_ip_response(url, response))
             if not actual_ip:
                 raise ValueError("Public IP endpoint returned an empty response.")
             matched = actual_ip == expected_ip

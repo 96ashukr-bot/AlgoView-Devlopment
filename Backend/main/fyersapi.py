@@ -14,6 +14,8 @@ def place_fyers_orders(LivePrice,group_service,access_token, Api_key, trade_symb
     strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type, Entry_price, Exit_price, 
     EntryQty, ExitQty, webhook_signal, Exchange, Segment,Index_Symbol, triggerPrice, trade_order_status, history_id, proxy_config=None):
     logger.info(f"{user} : place_fyers_orders started")
+    if not proxy_config:
+        return {"data": {"status": "Failed", "message": "Proxy/static-IP execution route is required for FYERS orders."}}
     try:
         response={"data":{"status": "error", "message": "not return any response"}}
         EntryQty=quantity

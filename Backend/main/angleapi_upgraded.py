@@ -86,7 +86,7 @@ def get_symbol_token(symbol: str, strike: str, option_type: str, exchange: str =
         return None, None
 
 
-def get_ltp(symbol_token: str, exchange: str = "NSE", tradingsymbol: str = "", broker_details=None) -> float:
+def get_ltp(symbol_token: str, exchange: str = "NSE", tradingsymbol: str = "", broker_details=None, proxy_config=None) -> float:
     """Fetch LTP through the shared LTP service using exact tradingsymbol + token."""
     try:
         client_code = None
@@ -106,6 +106,7 @@ def get_ltp(symbol_token: str, exchange: str = "NSE", tradingsymbol: str = "", b
             client_id=client_code,
             api_key=api_key,
             broker_details=broker_details,
+            proxy_config=proxy_config,
         )
         session = ensure.get("session")
         if ensure.get("status") != "success" or not session or not session.smart_connect:
@@ -178,8 +179,11 @@ def place_angel_one_order(
     product_type: str = "INTRADAY",
     duration: str = "DAY",
     request_id: str = None,
+    proxy_config=None,
 ) -> dict:
     """Legacy order facade routed to OrderService."""
+    if not proxy_config:
+        return {"status": "error", "message": "Proxy/static-IP execution route is required for Angel One orders."}
     api_key = getattr(broker_details, "broker_API_KEY", None)
     client_code = getattr(broker_details, "broker_Demate_User_Name", None) or getattr(broker_details, "broker_API_UID", None)
     if not all([broker_details, api_key, client_code]):
@@ -207,10 +211,11 @@ def place_angel_one_order(
         option_type=option_type,
         request_id=request_id,
         broker_details=broker_details,
+        proxy_config=proxy_config,
     )
 
 
-def _ensure_session_for_broker(broker_details, verify_remote: bool = True):
+def _ensure_session_for_broker(broker_details, verify_remote: bool = True, proxy_config=None):
     """Internal helper to obtain a valid SmartConnect-backed session."""
     client_code = getattr(broker_details, "broker_Demate_User_Name", None) or getattr(broker_details, "broker_API_UID", None)
     api_key = getattr(broker_details, "broker_API_KEY", None)
@@ -222,13 +227,14 @@ def _ensure_session_for_broker(broker_details, verify_remote: bool = True):
         api_key=api_key,
         broker_details=broker_details,
         verify_remote=verify_remote,
+        proxy_config=proxy_config,
     )
     return result.get("session"), result
 
 
-def get_angel_one_order_book(broker_details) -> dict:
+def get_angel_one_order_book(broker_details, proxy_config=None) -> dict:
     """Fetch order book through the validated SmartConnect session."""
-    session, ensure = _ensure_session_for_broker(broker_details)
+    session, ensure = _ensure_session_for_broker(broker_details, proxy_config=proxy_config)
     if not session or ensure.get("status") != "success":
         return {"status": "error", "message": ensure.get("message", "Session expired")}
 
@@ -236,9 +242,9 @@ def get_angel_one_order_book(broker_details) -> dict:
     return {"status": "success", "orders": data.get("data", []) if isinstance(data, dict) else []}
 
 
-def get_angel_one_trade_book(broker_details) -> dict:
+def get_angel_one_trade_book(broker_details, proxy_config=None) -> dict:
     """Fetch trade book through the validated SmartConnect session."""
-    session, ensure = _ensure_session_for_broker(broker_details)
+    session, ensure = _ensure_session_for_broker(broker_details, proxy_config=proxy_config)
     if not session or ensure.get("status") != "success":
         return {"status": "error", "message": ensure.get("message", "Session expired")}
 
@@ -246,9 +252,9 @@ def get_angel_one_trade_book(broker_details) -> dict:
     return {"status": "success", "trades": data.get("data", []) if isinstance(data, dict) else []}
 
 
-def cancel_angel_one_order(broker_details, order_id: str, variety: str = "NORMAL") -> dict:
+def cancel_angel_one_order(broker_details, order_id: str, variety: str = "NORMAL", proxy_config=None) -> dict:
     """Cancel an Angel One order through SmartConnect."""
-    session, ensure = _ensure_session_for_broker(broker_details)
+    session, ensure = _ensure_session_for_broker(broker_details, proxy_config=proxy_config)
     if not session or ensure.get("status") != "success":
         return {"status": "error", "message": ensure.get("message", "Session expired")}
 
@@ -258,9 +264,9 @@ def cancel_angel_one_order(broker_details, order_id: str, variety: str = "NORMAL
     return {"status": "error", "message": response.get("message", "Cancel failed") if isinstance(response, dict) else "Cancel failed"}
 
 
-def get_angel_one_holdings(broker_details) -> dict:
+def get_angel_one_holdings(broker_details, proxy_config=None) -> dict:
     """Fetch holdings using the shared authenticated session."""
-    session, ensure = _ensure_session_for_broker(broker_details)
+    session, ensure = _ensure_session_for_broker(broker_details, proxy_config=proxy_config)
     if not session or ensure.get("status") != "success":
         return {"status": "error", "message": ensure.get("message", "Session expired")}
 
@@ -268,9 +274,9 @@ def get_angel_one_holdings(broker_details) -> dict:
     return {"status": "success", "holdings": data.get("data", []) if isinstance(data, dict) else []}
 
 
-def get_angel_one_positions(broker_details) -> dict:
+def get_angel_one_positions(broker_details, proxy_config=None) -> dict:
     """Fetch live positions using the shared authenticated session."""
-    session, ensure = _ensure_session_for_broker(broker_details)
+    session, ensure = _ensure_session_for_broker(broker_details, proxy_config=proxy_config)
     if not session or ensure.get("status") != "success":
         return {"status": "error", "message": ensure.get("message", "Session expired")}
 
@@ -307,14 +313,16 @@ def get_angel_one_margin(broker_details) -> dict:
     return AuthService().get_margin(client_id=client_code, api_key=api_key)
 
 
-def exit_angel_one_position(broker_details, symbol: str, strike: str, option_type: str, exchange: str = "NFO") -> dict:
+def exit_angel_one_position(broker_details, symbol: str, strike: str, option_type: str, exchange: str = "NFO", proxy_config=None) -> dict:
     """Best-effort exit helper kept for backward compatibility."""
+    if not proxy_config:
+        return {"status": "error", "message": "Proxy/static-IP execution route is required for Angel One exits."}
     normalized_symbol = str(symbol or "").upper()
     normalized_option_type = str(option_type or "").upper()
     strike_token = str(strike or "").replace(".0", "")
 
-    positions_result = get_angel_one_positions(broker_details)
-    holdings_result = get_angel_one_holdings(broker_details)
+    positions_result = get_angel_one_positions(broker_details, proxy_config=proxy_config)
+    holdings_result = get_angel_one_holdings(broker_details, proxy_config=proxy_config)
 
     candidate_sources = []
     if positions_result.get("status") == "success":

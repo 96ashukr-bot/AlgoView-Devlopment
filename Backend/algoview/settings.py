@@ -144,7 +144,7 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount',
     'dj_rest_auth.registration',
-    'main',
+    'main.apps.MainConfig',
     'corsheaders',
     'rest_framework_simplejwt.token_blacklist',
      'channels',
@@ -381,6 +381,7 @@ REDIRECT_URL=config('BROKER_REDIRECT_URL', default="https://app.sparkstechnologi
 LOGIN_LINK="https://www.admin.algoview.in/login"
 HELP_CENTER_LINK="https://www.admin.algoview.in/"
 COMPANY_WEBSITE="https://www.admin.algoview.in/" 
+ALGOVIEW_ENFORCE_BROKER_PROXY_GUARD = config('ALGOVIEW_ENFORCE_BROKER_PROXY_GUARD', default=True, cast=bool)
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,

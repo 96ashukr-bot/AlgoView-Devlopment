@@ -102,6 +102,7 @@ class OrderService:
         check_position: bool = True,
         request_id: Optional[str] = None,
         broker_details=None,
+        proxy_config: Optional[Dict[str, str]] = None,
     ) -> Dict[str, Any]:
         """
         Place an order synchronously.
@@ -154,6 +155,7 @@ class OrderService:
                 client_id=client_id,
                 api_key=api_key,
                 broker_details=broker_details,
+                proxy_config=proxy_config,
             )
             if session_result.get("status") != "success":
                 return self._error_response(session_result.get("message", "Invalid or expired session"), request_id)
