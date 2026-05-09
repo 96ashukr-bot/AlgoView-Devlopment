@@ -1,7 +1,17 @@
 import React, { useState, useEffect } from "react";
 import "./Clients.css";
 import {
-  getClientSegmentsList, getBroker, getClientApiStatus, UpdateClientBroker, getClientBrokerDetail, startBrokerConnectFlow, getBrokerRuntimeStatus, generateBrokerToken
+  getClientSegmentsList,
+  getBroker,
+  getClientApiStatus,
+  UpdateClientBroker,
+  getClientBrokerDetail,
+  startBrokerConnectFlow,
+  getBrokerRuntimeStatus,
+  generateBrokerToken,
+  getMyExecutionNode,
+  saveMyExecutionNode,
+  releaseMyExecutionNode,
 } from "../../../../Services/Authentication";
 import Swal from 'sweetalert2';
 import { getWebSocketUrl } from "../../../../ConfigUrl/config";
@@ -154,6 +164,18 @@ const ClientHeader = () => {
     last_logout_at: null,
     auth_mode: null,
   });
+  const [isExecutionModalOpen, setIsExecutionModalOpen] = useState(false);
+  const [executionNode, setExecutionNode] = useState(null);
+  const [executionNodeInput, setExecutionNodeInput] = useState({
+    name: "",
+    ip_address: "",
+    provider: "",
+    server_url: "",
+    node_id: "",
+    node_secret: "",
+    is_active: true,
+  });
+  const [isExecutionSaving, setIsExecutionSaving] = useState(false);
   const { lastMessage } = useWebSocket(webSocketUrl || null, {
     shouldReconnect: () => true,
     onError: (error) => console.error("WebSocket error:", error),
@@ -165,6 +187,7 @@ const ClientHeader = () => {
     fetchApiStatus();
     fetchClientSegments();
     fetchBrokerList();
+    fetchClientExecutionNode();
   }, []);
 
   useEffect(() => {
@@ -274,6 +297,112 @@ const ClientHeader = () => {
       window.dispatchEvent(new CustomEvent("broker-runtime-updated", { detail: runtime }));
     } catch (error) {
       console.error("Error fetching broker runtime status:", error);
+    }
+  };
+
+  const fetchClientExecutionNode = async () => {
+    try {
+      const response = await getMyExecutionNode();
+      const node = response?.node || null;
+      setExecutionNode(node);
+      setExecutionNodeInput({
+        name: node?.name || "",
+        ip_address: node?.ip_address || "",
+        provider: node?.provider || "",
+        server_url: node?.server_url || "",
+        node_id: node?.node_id || "",
+        node_secret: "",
+        is_active: node?.is_active ?? true,
+      });
+    } catch (error) {
+      console.error("Error fetching client execution node:", error);
+    }
+  };
+
+  const openExecutionModal = async () => {
+    setIsExecutionModalOpen(true);
+    await fetchClientExecutionNode();
+  };
+
+  const closeExecutionModal = () => {
+    setIsExecutionModalOpen(false);
+  };
+
+  const handleExecutionInputChange = (event) => {
+    const { name, value, type, checked } = event.target;
+    setExecutionNodeInput((previous) => ({
+      ...previous,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+  };
+
+  const handleSaveExecutionNode = async () => {
+    const requiredFields = ["name", "ip_address", "server_url", "node_id"];
+    const missingField = requiredFields.find((field) => !String(executionNodeInput[field] || "").trim());
+    if (missingField) {
+      Swal.fire("Error", "Please fill node name, static IP, server URL, and node ID.", "error");
+      return;
+    }
+    if (!executionNode && !String(executionNodeInput.node_secret || "").trim()) {
+      Swal.fire("Error", "Please add node secret when creating a new execution IP.", "error");
+      return;
+    }
+
+    setIsExecutionSaving(true);
+    try {
+      const payload = {
+        name: executionNodeInput.name.trim(),
+        ip_address: executionNodeInput.ip_address.trim(),
+        provider: executionNodeInput.provider.trim(),
+        server_url: executionNodeInput.server_url.trim(),
+        node_id: executionNodeInput.node_id.trim(),
+        is_active: executionNodeInput.is_active,
+      };
+      if (executionNodeInput.node_secret) {
+        payload.node_secret = executionNodeInput.node_secret;
+      }
+      const savedNode = await saveMyExecutionNode(payload, Boolean(executionNode));
+      setExecutionNode(savedNode);
+      setExecutionNodeInput((previous) => ({ ...previous, node_secret: "" }));
+      Swal.fire("Success", "Execution IP saved successfully.", "success");
+      await fetchClientExecutionNode();
+    } catch (error) {
+      Swal.fire("Error", error.message || "Failed to save execution IP.", "error");
+    } finally {
+      setIsExecutionSaving(false);
+    }
+  };
+
+  const handleReleaseExecutionNode = async () => {
+    const confirmation = await Swal.fire({
+      title: "Release execution IP?",
+      text: "Live routed orders will be blocked until another verified execution IP is assigned.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Yes, release",
+      cancelButtonText: "Cancel",
+    });
+    if (!confirmation.isConfirmed) {
+      return;
+    }
+    setIsExecutionSaving(true);
+    try {
+      await releaseMyExecutionNode();
+      setExecutionNode(null);
+      setExecutionNodeInput({
+        name: "",
+        ip_address: "",
+        provider: "",
+        server_url: "",
+        node_id: "",
+        node_secret: "",
+        is_active: true,
+      });
+      Swal.fire("Success", "Execution IP released.", "success");
+    } catch (error) {
+      Swal.fire("Error", error.message || "Failed to release execution IP.", "error");
+    } finally {
+      setIsExecutionSaving(false);
     }
   };
 
@@ -660,6 +789,9 @@ const ClientHeader = () => {
           >
             {dashboardConnectLabel}
           </Button>
+          <Button color="secondary" outline onClick={openExecutionModal}>
+            Execution IP
+          </Button>
           <span style={runtimeBadgeStyles}>
             {isRuntimeActive ? "Active" : "Inactive"}
           </span>
@@ -894,6 +1026,120 @@ const ClientHeader = () => {
             disabled={isSubmitting}
           >
             Cancel
+          </Button>
+        </ModalFooter>
+      </Modal>
+      <Modal isOpen={isExecutionModalOpen} toggle={closeExecutionModal} size="lg">
+        <ModalHeader toggle={closeExecutionModal}>Execution IP</ModalHeader>
+        <ModalBody>
+          <div
+            style={{
+              background: executionNode?.is_verified_with_broker ? "#f0fdf4" : "#fffbeb",
+              border: `1px solid ${executionNode?.is_verified_with_broker ? "#bbf7d0" : "#fde68a"}`,
+              borderRadius: "12px",
+              padding: "14px 16px",
+              marginBottom: "16px",
+            }}
+          >
+            <div style={{ fontWeight: 700, marginBottom: "6px" }}>
+              {executionNode ? "Assigned static execution IP" : "No static execution IP added"}
+            </div>
+            <div style={{ color: "#4b5563", fontSize: "14px" }}>
+              {executionNode
+                ? `Broker verification: ${executionNode.is_verified_with_broker ? "Verified" : "Pending admin verification"}`
+                : "Add the VPS/static IP that should place broker orders for your account."}
+            </div>
+          </div>
+
+          <div className="row">
+            <div className="col-md-6">
+              <FormGroup>
+                <Label>Node Name *</Label>
+                <Input
+                  name="name"
+                  value={executionNodeInput.name}
+                  onChange={handleExecutionInputChange}
+                  placeholder="My execution VPS"
+                />
+              </FormGroup>
+            </div>
+            <div className="col-md-6">
+              <FormGroup>
+                <Label>Static IP *</Label>
+                <Input
+                  name="ip_address"
+                  value={executionNodeInput.ip_address}
+                  onChange={handleExecutionInputChange}
+                  placeholder="3.109.40.137"
+                />
+              </FormGroup>
+            </div>
+          </div>
+          <div className="row">
+            <div className="col-md-6">
+              <FormGroup>
+                <Label>Provider</Label>
+                <Input
+                  name="provider"
+                  value={executionNodeInput.provider}
+                  onChange={handleExecutionInputChange}
+                  placeholder="AWS"
+                />
+              </FormGroup>
+            </div>
+            <div className="col-md-6">
+              <FormGroup>
+                <Label>Node ID *</Label>
+                <Input
+                  name="node_id"
+                  value={executionNodeInput.node_id}
+                  onChange={handleExecutionInputChange}
+                  placeholder="my-node-1"
+                />
+              </FormGroup>
+            </div>
+          </div>
+          <FormGroup>
+            <Label>Server URL *</Label>
+            <Input
+              name="server_url"
+              value={executionNodeInput.server_url}
+              onChange={handleExecutionInputChange}
+              placeholder="https://node1.example.com"
+            />
+          </FormGroup>
+          <FormGroup>
+            <Label>{executionNode ? "New Node Secret" : "Node Secret *"}</Label>
+            <Input
+              type="password"
+              name="node_secret"
+              value={executionNodeInput.node_secret}
+              onChange={handleExecutionInputChange}
+              placeholder={executionNode ? "Leave blank to keep existing secret" : "Shared HMAC secret"}
+              autoComplete="off"
+            />
+          </FormGroup>
+          <FormGroup check>
+            <Input
+              type="checkbox"
+              name="is_active"
+              checked={executionNodeInput.is_active}
+              onChange={handleExecutionInputChange}
+            />
+            <Label check>Keep this execution IP active</Label>
+          </FormGroup>
+        </ModalBody>
+        <ModalFooter>
+          {executionNode && (
+            <Button color="danger" outline onClick={handleReleaseExecutionNode} disabled={isExecutionSaving}>
+              Release IP
+            </Button>
+          )}
+          <Button color="secondary" outline onClick={closeExecutionModal} disabled={isExecutionSaving}>
+            Close
+          </Button>
+          <Button className="search-btn-clr" onClick={handleSaveExecutionNode} disabled={isExecutionSaving}>
+            {isExecutionSaving ? "Saving..." : "Save Execution IP"}
           </Button>
         </ModalFooter>
       </Modal>

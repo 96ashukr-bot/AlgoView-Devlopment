@@ -50,6 +50,35 @@ class ExecutionNodeSerializer(serializers.ModelSerializer):
         read_only_fields = ("last_heartbeat", "last_seen_ip", "created_at", "updated_at")
 
 
+class ClientExecutionNodeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ExecutionNode
+        fields = (
+            "id",
+            "name",
+            "ip_address",
+            "provider",
+            "server_url",
+            "node_id",
+            "status",
+            "is_active",
+            "is_verified_with_broker",
+            "last_heartbeat",
+            "last_seen_ip",
+            "created_at",
+            "updated_at",
+        )
+        read_only_fields = (
+            "id",
+            "status",
+            "is_verified_with_broker",
+            "last_heartbeat",
+            "last_seen_ip",
+            "created_at",
+            "updated_at",
+        )
+
+
 class ExecutionOrderJobSerializer(serializers.ModelSerializer):
     class Meta:
         model = ExecutionOrderJob
@@ -160,6 +189,56 @@ class ExecutionNodeHealthAPIView(APIView):
             return Response({"status": "success" if response.ok else "failed", "node": ExecutionNodeSerializer(node).data, "health": payload})
         except requests.RequestException as exc:
             return Response({"status": "failed", "node": ExecutionNodeSerializer(node).data, "message": str(exc)}, status=status.HTTP_200_OK)
+
+
+class ClientExecutionNodeAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        node = ExecutionNode.objects.filter(assigned_client=request.user).first()
+        return Response({"node": ClientExecutionNodeSerializer(node).data if node else None})
+
+    @transaction.atomic
+    def post(self, request):
+        if ExecutionNode.objects.filter(assigned_client=request.user).exists():
+            return Response(
+                {"detail": "This client already has an execution IP. Update the existing IP instead."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        serializer = ClientExecutionNodeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        node = serializer.save(
+            assigned_client=request.user,
+            status=ExecutionNode.STATUS_ASSIGNED,
+            is_verified_with_broker=False,
+        )
+        raw_secret = request.data.get("node_secret")
+        if raw_secret:
+            node.set_node_secret(raw_secret)
+            node.save(update_fields=["node_secret", "updated_at"])
+        ClientBrokerdetails.objects.filter(client=request.user).update(execution_node=node)
+        node.mark_log("client_created", "Execution node created by assigned client.", client=request.user)
+        return Response(ClientExecutionNodeSerializer(node).data, status=status.HTTP_201_CREATED)
+
+    @transaction.atomic
+    def patch(self, request):
+        node = ExecutionNode.objects.select_for_update().filter(assigned_client=request.user).first()
+        if not node:
+            return Response({"detail": "No execution IP is assigned to this client."}, status=status.HTTP_404_NOT_FOUND)
+        serializer = ClientExecutionNodeSerializer(node, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        node = serializer.save()
+        raw_secret = request.data.get("node_secret")
+        if raw_secret:
+            node.set_node_secret(raw_secret)
+            node.save(update_fields=["node_secret", "updated_at"])
+        ClientBrokerdetails.objects.filter(client=request.user).update(execution_node=node)
+        node.mark_log("client_updated", "Execution node updated by assigned client.", client=request.user)
+        return Response(ClientExecutionNodeSerializer(node).data)
+
+    def delete(self, request):
+        node = release_execution_node(request.user)
+        return Response({"status": "released", "node_id": node.id if node else None})
 
 
 class ExecutionOrderJobListAPIView(APIView):

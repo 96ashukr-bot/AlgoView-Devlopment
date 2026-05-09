@@ -29,6 +29,7 @@ from main.multileg_views import (
 )
 from main.execution_node_views import (
     ExecutionNodeAssignAPIView,
+    ClientExecutionNodeAPIView,
     ExecutionNodeDetailAPIView,
     ExecutionNodeHealthAPIView,
     ExecutionNodeListAPIView,
@@ -216,6 +217,7 @@ urlpatterns = [
     path('execution-nodes/assign/', ExecutionNodeAssignAPIView.as_view(), name='execution-node-assign'),
     path('execution-nodes/release/', ExecutionNodeReleaseAPIView.as_view(), name='execution-node-release'),
     path('execution-nodes/<int:node_id>/health/', ExecutionNodeHealthAPIView.as_view(), name='execution-node-health'),
+    path('client/execution-node/', ClientExecutionNodeAPIView.as_view(), name='client-execution-node'),
     path('execution-order-jobs/', ExecutionOrderJobListAPIView.as_view(), name='execution-order-job-list'),
     path('execution-order-jobs/<int:job_id>/retry/', ExecutionOrderJobRetryAPIView.as_view(), name='execution-order-job-retry'),
     path('node/health/', NodeHealthAPIView.as_view(), name='node-health'),

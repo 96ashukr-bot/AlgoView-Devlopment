@@ -4648,6 +4648,67 @@ export const releaseExecutionNodeFromClient = async (clientId) => {
   }
 };
 
+export const getMyExecutionNode = async () => {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error("No authentication token found.");
+  }
+
+  try {
+    const response = await axios.get(`${baseUrl}/client/execution-node/`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching client execution node:', error);
+    throw new Error(error.response?.data?.message || error.response?.data?.detail || "Failed to fetch execution IP.");
+  }
+};
+
+export const saveMyExecutionNode = async (payload, hasExistingNode = false) => {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error("No authentication token found.");
+  }
+
+  try {
+    const request = hasExistingNode ? axios.patch : axios.post;
+    const response = await request(`${baseUrl}/client/execution-node/`, payload, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error saving client execution node:', error);
+    throw new Error(error.response?.data?.message || error.response?.data?.detail || "Failed to save execution IP.");
+  }
+};
+
+export const releaseMyExecutionNode = async () => {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error("No authentication token found.");
+  }
+
+  try {
+    const response = await axios.delete(`${baseUrl}/client/execution-node/`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error releasing client execution node:', error);
+    throw new Error(error.response?.data?.message || error.response?.data?.detail || "Failed to release execution IP.");
+  }
+};
+
 export const getTradeResponse = async (id) => {
   console.log("Inside getTradeResponse with clientId:", id);
 
