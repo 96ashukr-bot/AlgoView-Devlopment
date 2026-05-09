@@ -167,7 +167,7 @@ def convert_int64_to_int(obj):
 
 def place_5paisa_order(LivePrice,group_service,api_key,access_token,trade_symbol,transaction_type, symbol, quantity,strategy,ordertype,
         product_type, price,user, Lots,trade_order_status,  Entry_type,Exit_type ,Entry_price,Exit_price,EntryQty,ExitQty,webhook_signal
-        ,Exchange, Segment,Index_Symbol,triggerPrice,trade, history_id):
+        ,Exchange, Segment,Index_Symbol,triggerPrice,trade, history_id, proxy_config=None):
     
     try:
         EntryQty=quantity
@@ -228,7 +228,7 @@ def place_5paisa_order(LivePrice,group_service,api_key,access_token,trade_symbol
                         "RefreshRate": "H",
                     },
                 }
-                ltp_response = requests.post(MARKET_FEED_URL, headers=headers, json=market_feed_payload, timeout=5)
+                ltp_response = requests.post(MARKET_FEED_URL, headers=headers, json=market_feed_payload, timeout=5, proxies=proxy_config)
                 ltp_data = ltp_response.json() if ltp_response.content else {}
                 feed_data = ltp_data.get("body", {}).get("Data") or ltp_data.get("body", {}).get("MarketFeedData") or []
                 if feed_data:
@@ -267,7 +267,7 @@ def place_5paisa_order(LivePrice,group_service,api_key,access_token,trade_symbol
             # When preparing your order_params, apply the conversion
             order_params = convert_int64_to_int(order_params)
             logger.info(f"{user} :Place order api url is called for the process !!")
-            response = requests.post(PLACE_ORDER_URL, headers=headers, json=order_params)
+            response = requests.post(PLACE_ORDER_URL, headers=headers, json=order_params, proxies=proxy_config)
             logger.info(f"{user} :Place order api has responed : {response}")
 
             if  response.status_code == 200:

@@ -11,6 +11,7 @@ from main.models import Broker, ClientBrokerdetails, ExecutionNode, ExecutionOrd
 from main.services.execution_nodes import assign_execution_node_to_client, release_execution_node
 from main.services.execution_router import route_order_to_execution_node
 from main.services.node_security import generate_node_signature, verify_node_signature
+from main.services.proxy_utils import build_requests_proxy_config, mask_proxy_url, verify_proxy_public_ip
 
 
 TEST_CACHES = {
@@ -163,6 +164,112 @@ class ExecutionNodeManagerTests(TestCase):
                 )
                 adapter = get_broker_adapter(broker_details)
                 self.assertEqual(adapter.broker_name, expected_name)
+
+    def test_proxy_node_without_vps_fields_succeeds(self):
+        node = ExecutionNode.objects.create(
+            name="Proxy Node",
+            ip_address="10.0.0.20",
+            execution_type=ExecutionNode.EXECUTION_TYPE_PROXY,
+            provider="proxy-vendor",
+            proxy_host="proxy.example.com",
+            proxy_port=8080,
+            proxy_protocol=ExecutionNode.PROXY_PROTOCOL_HTTP,
+        )
+        node.set_proxy_password("secret")
+        node.full_clean()
+        self.assertEqual(node.get_proxy_password(), "secret")
+
+    def test_proxy_node_requires_proxy_fields(self):
+        node = ExecutionNode(name="Bad Proxy", ip_address="10.0.0.21", execution_type=ExecutionNode.EXECUTION_TYPE_PROXY)
+        with self.assertRaises(ValidationError):
+            node.full_clean()
+
+    def test_proxy_config_masks_password(self):
+        node = ExecutionNode(
+            name="Proxy Node",
+            ip_address="10.0.0.22",
+            execution_type=ExecutionNode.EXECUTION_TYPE_PROXY,
+            proxy_host="proxy.example.com",
+            proxy_port=1080,
+            proxy_protocol=ExecutionNode.PROXY_PROTOCOL_SOCKS5,
+            proxy_username="user name",
+        )
+        node.set_proxy_password("p@ss word")
+        config = build_requests_proxy_config(node)
+        self.assertIn("socks5://user%20name:p%40ss%20word@proxy.example.com:1080", config["https"])
+        self.assertNotIn("p@ss word", mask_proxy_url(node))
+
+    @mock.patch("main.services.proxy_utils.requests.get")
+    def test_verify_proxy_public_ip_success(self, mock_get):
+        node = ExecutionNode.objects.create(
+            name="Proxy Verify",
+            ip_address="10.0.0.23",
+            execution_type=ExecutionNode.EXECUTION_TYPE_PROXY,
+            proxy_host="proxy.example.com",
+            proxy_port=8080,
+            proxy_protocol=ExecutionNode.PROXY_PROTOCOL_HTTP,
+        )
+        mock_get.return_value = SimpleNamespace(
+            status_code=200,
+            json=lambda: {"ip": "10.0.0.23"},
+            text="10.0.0.23",
+            raise_for_status=lambda: None,
+        )
+        result = verify_proxy_public_ip(node)
+        node.refresh_from_db()
+        self.assertEqual(result["status"], "success")
+        self.assertTrue(node.proxy_public_ip_verified)
+
+    @mock.patch("main.services.execution_router.get_broker_adapter")
+    def test_proxy_order_routes_through_adapter(self, adapter_factory):
+        proxy_node = ExecutionNode.objects.create(
+            name="Proxy Route",
+            ip_address="10.0.0.24",
+            execution_type=ExecutionNode.EXECUTION_TYPE_PROXY,
+            proxy_host="proxy.example.com",
+            proxy_port=8080,
+            proxy_protocol=ExecutionNode.PROXY_PROTOCOL_HTTP,
+            proxy_public_ip_verified=True,
+            is_verified_with_broker=True,
+        )
+        assign_execution_node_to_client(self.client_user, proxy_node)
+        self.broker_details.execution_node = proxy_node
+        self.broker_details.save(update_fields=["execution_node"])
+        adapter = adapter_factory.return_value
+        adapter.supports_proxy = True
+        adapter.validate_credentials.return_value = {"status": "success"}
+        adapter.place_order.return_value = {"status": "success", "order_id": "proxy-1"}
+        result = route_order_to_execution_node(
+            self.client_user,
+            self.broker_details,
+            {"symbol": "NIFTY", "quantity": 1, "idempotency_key": "proxy-route-1"},
+        )
+        self.assertEqual(result["status"], ExecutionOrderJob.STATUS_PLACED)
+        adapter.place_order.assert_called_once()
+        self.assertIn("https", adapter.place_order.call_args.kwargs["proxy_config"])
+
+    @mock.patch("main.services.execution_router.get_broker_adapter")
+    def test_proxy_order_blocks_unsupported_adapter(self, adapter_factory):
+        proxy_node = ExecutionNode.objects.create(
+            name="Proxy Unsupported",
+            ip_address="10.0.0.25",
+            execution_type=ExecutionNode.EXECUTION_TYPE_PROXY,
+            proxy_host="proxy.example.com",
+            proxy_port=8080,
+            proxy_protocol=ExecutionNode.PROXY_PROTOCOL_HTTP,
+            proxy_public_ip_verified=True,
+            is_verified_with_broker=True,
+        )
+        assign_execution_node_to_client(self.client_user, proxy_node)
+        self.broker_details.execution_node = proxy_node
+        self.broker_details.save(update_fields=["execution_node"])
+        adapter_factory.return_value.supports_proxy = False
+        with self.assertRaises(ValidationError):
+            route_order_to_execution_node(
+                self.client_user,
+                self.broker_details,
+                {"symbol": "NIFTY", "quantity": 1, "idempotency_key": "proxy-route-unsupported"},
+            )
 
     def test_node_idempotency_duplicate_rejection(self):
         payload = {"broker_details_id": self.broker_details.id, "order": {"symbol": "NIFTY"}}

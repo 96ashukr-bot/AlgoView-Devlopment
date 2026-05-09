@@ -12,7 +12,7 @@ from fyers_apiv3 import fyersModel
 
 def place_fyers_orders(LivePrice,group_service,access_token, Api_key, trade_symbol, transaction_type, symbol, quantity,
     strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type, Entry_price, Exit_price, 
-    EntryQty, ExitQty, webhook_signal, Exchange, Segment,Index_Symbol, triggerPrice, trade_order_status, history_id):
+    EntryQty, ExitQty, webhook_signal, Exchange, Segment,Index_Symbol, triggerPrice, trade_order_status, history_id, proxy_config=None):
     logger.info(f"{user} : place_fyers_orders started")
     try:
         response={"data":{"status": "error", "message": "not return any response"}}
@@ -75,6 +75,7 @@ def place_fyers_orders(LivePrice,group_service,access_token, Api_key, trade_symb
                 headers=headers,
                 params={"symbols": trading_symbol},
                 timeout=5,
+                proxies=proxy_config,
             )
             quote_data = quote_response.json() if quote_response.content else {}
             if quote_response.status_code == 200:
@@ -109,7 +110,7 @@ def place_fyers_orders(LivePrice,group_service,access_token, Api_key, trade_symb
             order_params["limitPrice"] = float(price)
         logger.info(f"{user} : paylod of order{order_params}")
         try:
-            response = requests.post(order_url, headers=headers, json=order_params, timeout=10)
+            response = requests.post(order_url, headers=headers, json=order_params, timeout=10, proxies=proxy_config)
            
             logger.info(f"{user} : order_response of fyers::::::::::::{response}")
             order_response = response.json()

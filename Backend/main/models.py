@@ -836,6 +836,20 @@ class ClientBrokerdetails(models.Model):
 
 
 class ExecutionNode(models.Model):
+    EXECUTION_TYPE_VPS_NODE = "vps_node"
+    EXECUTION_TYPE_PROXY = "proxy"
+    EXECUTION_TYPE_CHOICES = [
+        (EXECUTION_TYPE_VPS_NODE, "VPS Node"),
+        (EXECUTION_TYPE_PROXY, "Proxy"),
+    ]
+    PROXY_PROTOCOL_HTTP = "http"
+    PROXY_PROTOCOL_HTTPS = "https"
+    PROXY_PROTOCOL_SOCKS5 = "socks5"
+    PROXY_PROTOCOL_CHOICES = [
+        (PROXY_PROTOCOL_HTTP, "HTTP"),
+        (PROXY_PROTOCOL_HTTPS, "HTTPS"),
+        (PROXY_PROTOCOL_SOCKS5, "SOCKS5"),
+    ]
     STATUS_FREE = "free"
     STATUS_ASSIGNED = "assigned"
     STATUS_ONLINE = "online"
@@ -854,9 +868,19 @@ class ExecutionNode(models.Model):
     name = models.CharField(max_length=150)
     ip_address = models.GenericIPAddressField(unique=True)
     provider = models.CharField(max_length=150, blank=True, null=True)
-    server_url = models.URLField(max_length=500)
-    node_id = models.CharField(max_length=120, unique=True)
+    execution_type = models.CharField(max_length=20, choices=EXECUTION_TYPE_CHOICES, default=EXECUTION_TYPE_VPS_NODE, db_index=True)
+    server_url = models.URLField(max_length=500, blank=True, null=True)
+    node_id = models.CharField(max_length=120, unique=True, blank=True, null=True)
     node_secret = models.TextField(blank=True, null=True)
+    proxy_host = models.CharField(max_length=255, blank=True, null=True)
+    proxy_port = models.PositiveIntegerField(blank=True, null=True)
+    proxy_username = models.CharField(max_length=255, blank=True, null=True)
+    proxy_password = models.TextField(blank=True, null=True)
+    proxy_protocol = models.CharField(max_length=20, choices=PROXY_PROTOCOL_CHOICES, blank=True, null=True)
+    proxy_public_ip_verified = models.BooleanField(default=False)
+    proxy_last_verified_at = models.DateTimeField(null=True, blank=True)
+    proxy_last_seen_ip = models.GenericIPAddressField(null=True, blank=True)
+    proxy_last_error = models.TextField(blank=True, null=True)
     assigned_client = models.OneToOneField(
         'User',
         on_delete=models.SET_NULL,
@@ -875,6 +899,7 @@ class ExecutionNode(models.Model):
     class Meta:
         indexes = [
             models.Index(fields=["assigned_client"]),
+            models.Index(fields=["execution_type"]),
             models.Index(fields=["status"]),
             models.Index(fields=["created_at"]),
         ]
@@ -887,6 +912,41 @@ class ExecutionNode(models.Model):
 
     def get_node_secret(self):
         return decrypt_value(self.node_secret) or self.node_secret
+
+    def set_proxy_password(self, password) -> None:
+        self.proxy_password = encrypt_value(str(password or "").strip() or None)
+
+    def get_proxy_password(self):
+        return decrypt_value(self.proxy_password) or self.proxy_password
+
+    def clean(self):
+        super().clean()
+        if self.execution_type == self.EXECUTION_TYPE_PROXY:
+            missing = []
+            if not self.ip_address:
+                missing.append("ip_address")
+            if not self.proxy_host:
+                missing.append("proxy_host")
+            if not self.proxy_port:
+                missing.append("proxy_port")
+            if not self.proxy_protocol:
+                missing.append("proxy_protocol")
+            if missing:
+                from django.core.exceptions import ValidationError
+
+                raise ValidationError({field: "Required for proxy execution nodes." for field in missing})
+        else:
+            missing = []
+            if not self.server_url:
+                missing.append("server_url")
+            if not self.node_id:
+                missing.append("node_id")
+            if not self.node_secret:
+                missing.append("node_secret")
+            if missing:
+                from django.core.exceptions import ValidationError
+
+                raise ValidationError({field: "Required for VPS execution nodes." for field in missing})
 
     def mark_log(self, event_type, message, *, client=None, metadata=None):
         return ExecutionNodeLog.objects.create(
@@ -906,10 +966,12 @@ class ExecutionOrderJob(models.Model):
     STATUS_REJECTED = "rejected"
     STATUS_FAILED = "failed"
     STATUS_CANCELLED = "cancelled"
+    STATUS_PROXY_ROUTING = "proxy_routing"
     STATUS_CHOICES = [
         (STATUS_PENDING, "Pending"),
         (STATUS_SENT_TO_NODE, "Sent to node"),
         (STATUS_ACCEPTED_BY_NODE, "Accepted by node"),
+        (STATUS_PROXY_ROUTING, "Proxy routing"),
         (STATUS_PLACED, "Placed"),
         (STATUS_REJECTED, "Rejected"),
         (STATUS_FAILED, "Failed"),
@@ -919,6 +981,7 @@ class ExecutionOrderJob(models.Model):
     client = models.ForeignKey('User', on_delete=models.CASCADE, related_name='execution_order_jobs')
     broker_details = models.ForeignKey('ClientBrokerdetails', on_delete=models.SET_NULL, null=True, blank=True, related_name='execution_order_jobs')
     execution_node = models.ForeignKey(ExecutionNode, on_delete=models.PROTECT, related_name='order_jobs')
+    execution_type = models.CharField(max_length=20, choices=ExecutionNode.EXECUTION_TYPE_CHOICES, default=ExecutionNode.EXECUTION_TYPE_VPS_NODE, db_index=True)
     symbol = models.CharField(max_length=255, null=True, blank=True)
     token = models.CharField(max_length=255, null=True, blank=True)
     exchange = models.CharField(max_length=50, null=True, blank=True)
@@ -932,6 +995,7 @@ class ExecutionOrderJob(models.Model):
     request_payload = models.JSONField(default=dict, blank=True)
     node_response = models.JSONField(null=True, blank=True)
     broker_response = models.JSONField(null=True, blank=True)
+    proxy_metadata = models.JSONField(default=dict, blank=True)
     error_message = models.TextField(null=True, blank=True)
     retry_count = models.PositiveIntegerField(default=0)
     idempotency_key = models.CharField(max_length=128, unique=True)
@@ -941,7 +1005,9 @@ class ExecutionOrderJob(models.Model):
     class Meta:
         indexes = [
             models.Index(fields=["execution_node"]),
+            models.Index(fields=["client"]),
             models.Index(fields=["status"]),
+            models.Index(fields=["execution_type"]),
             models.Index(fields=["created_at"]),
         ]
 

@@ -12,6 +12,7 @@ import {
   getMyExecutionNode,
   saveMyExecutionNode,
   releaseMyExecutionNode,
+  verifyMyExecutionProxy,
 } from "../../../../Services/Authentication";
 import Swal from 'sweetalert2';
 import { getWebSocketUrl } from "../../../../ConfigUrl/config";
@@ -167,12 +168,18 @@ const ClientHeader = () => {
   const [isExecutionModalOpen, setIsExecutionModalOpen] = useState(false);
   const [executionNode, setExecutionNode] = useState(null);
   const [executionNodeInput, setExecutionNodeInput] = useState({
+    execution_type: "vps_node",
     name: "",
     ip_address: "",
     provider: "",
     server_url: "",
     node_id: "",
     node_secret: "",
+    proxy_protocol: "http",
+    proxy_host: "",
+    proxy_port: "",
+    proxy_username: "",
+    proxy_password: "",
     is_active: true,
   });
   const [isExecutionSaving, setIsExecutionSaving] = useState(false);
@@ -307,11 +314,17 @@ const ClientHeader = () => {
       setExecutionNode(node);
       setExecutionNodeInput({
         name: node?.name || "",
+        execution_type: node?.execution_type || "vps_node",
         ip_address: node?.ip_address || "",
         provider: node?.provider || "",
         server_url: node?.server_url || "",
         node_id: node?.node_id || "",
         node_secret: "",
+        proxy_protocol: node?.proxy_protocol || "http",
+        proxy_host: node?.proxy_host || "",
+        proxy_port: node?.proxy_port || "",
+        proxy_username: node?.proxy_username || "",
+        proxy_password: "",
         is_active: node?.is_active ?? true,
       });
     } catch (error) {
@@ -337,13 +350,16 @@ const ClientHeader = () => {
   };
 
   const handleSaveExecutionNode = async () => {
-    const requiredFields = ["name", "ip_address", "server_url", "node_id"];
+    const isProxy = executionNodeInput.execution_type === "proxy";
+    const requiredFields = isProxy
+      ? ["name", "ip_address", "proxy_protocol", "proxy_host", "proxy_port"]
+      : ["name", "ip_address", "server_url", "node_id"];
     const missingField = requiredFields.find((field) => !String(executionNodeInput[field] || "").trim());
     if (missingField) {
       Swal.fire("Error", "Please fill node name, static IP, server URL, and node ID.", "error");
       return;
     }
-    if (!executionNode && !String(executionNodeInput.node_secret || "").trim()) {
+    if (!isProxy && !executionNode && !String(executionNodeInput.node_secret || "").trim()) {
       Swal.fire("Error", "Please add node secret when creating a new execution IP.", "error");
       return;
     }
@@ -352,14 +368,25 @@ const ClientHeader = () => {
     try {
       const payload = {
         name: executionNodeInput.name.trim(),
+        execution_type: executionNodeInput.execution_type,
         ip_address: executionNodeInput.ip_address.trim(),
         provider: executionNodeInput.provider.trim(),
-        server_url: executionNodeInput.server_url.trim(),
-        node_id: executionNodeInput.node_id.trim(),
         is_active: executionNodeInput.is_active,
       };
-      if (executionNodeInput.node_secret) {
+      if (isProxy) {
+        payload.proxy_protocol = executionNodeInput.proxy_protocol;
+        payload.proxy_host = executionNodeInput.proxy_host.trim();
+        payload.proxy_port = executionNodeInput.proxy_port;
+        payload.proxy_username = executionNodeInput.proxy_username.trim();
+      } else {
+        payload.server_url = executionNodeInput.server_url.trim();
+        payload.node_id = executionNodeInput.node_id.trim();
+      }
+      if (!isProxy && executionNodeInput.node_secret) {
         payload.node_secret = executionNodeInput.node_secret;
+      }
+      if (isProxy && executionNodeInput.proxy_password) {
+        payload.proxy_password = executionNodeInput.proxy_password;
       }
       const savedNode = await saveMyExecutionNode(payload, Boolean(executionNode));
       setExecutionNode(savedNode);
@@ -391,16 +418,36 @@ const ClientHeader = () => {
       setExecutionNode(null);
       setExecutionNodeInput({
         name: "",
+        execution_type: "vps_node",
         ip_address: "",
         provider: "",
         server_url: "",
         node_id: "",
         node_secret: "",
+        proxy_protocol: "http",
+        proxy_host: "",
+        proxy_port: "",
+        proxy_username: "",
+        proxy_password: "",
         is_active: true,
       });
       Swal.fire("Success", "Execution IP released.", "success");
     } catch (error) {
       Swal.fire("Error", error.message || "Failed to release execution IP.", "error");
+    } finally {
+      setIsExecutionSaving(false);
+    }
+  };
+
+  const handleVerifyExecutionProxy = async () => {
+    setIsExecutionSaving(true);
+    try {
+      const response = await verifyMyExecutionProxy();
+      await fetchClientExecutionNode();
+      const result = response?.result || {};
+      Swal.fire(result.status === "success" ? "Success" : "Error", result.message || "Proxy verification completed.", result.status === "success" ? "success" : "error");
+    } catch (error) {
+      Swal.fire("Error", error.message || "Failed to verify proxy IP.", "error");
     } finally {
       setIsExecutionSaving(false);
     }
@@ -1046,11 +1093,23 @@ const ClientHeader = () => {
             </div>
             <div style={{ color: "#4b5563", fontSize: "14px" }}>
               {executionNode
-                ? `Broker verification: ${executionNode.is_verified_with_broker ? "Verified" : "Pending admin verification"}`
+                ? `Broker verification: ${executionNode.is_verified_with_broker ? "Verified" : "Pending admin verification"}${executionNode.execution_type === "proxy" ? ` | Proxy IP: ${executionNode.proxy_public_ip_verified ? "Verified" : "Not verified"}` : ""}`
                 : "Add the VPS/static IP that should place broker orders for your account."}
             </div>
           </div>
 
+          <FormGroup>
+            <Label>Execution Type</Label>
+            <Input
+              type="select"
+              name="execution_type"
+              value={executionNodeInput.execution_type}
+              onChange={handleExecutionInputChange}
+            >
+              <option value="vps_node">VPS Node</option>
+              <option value="proxy">Proxy IP</option>
+            </Input>
+          </FormGroup>
           <div className="row">
             <div className="col-md-6">
               <FormGroup>
@@ -1075,50 +1134,95 @@ const ClientHeader = () => {
               </FormGroup>
             </div>
           </div>
-          <div className="row">
-            <div className="col-md-6">
-              <FormGroup>
-                <Label>Provider</Label>
-                <Input
-                  name="provider"
-                  value={executionNodeInput.provider}
-                  onChange={handleExecutionInputChange}
-                  placeholder="AWS"
-                />
-              </FormGroup>
-            </div>
-            <div className="col-md-6">
-              <FormGroup>
-                <Label>Node ID *</Label>
-                <Input
-                  name="node_id"
-                  value={executionNodeInput.node_id}
-                  onChange={handleExecutionInputChange}
-                  placeholder="my-node-1"
-                />
-              </FormGroup>
-            </div>
-          </div>
           <FormGroup>
-            <Label>Server URL *</Label>
+            <Label>Provider</Label>
             <Input
-              name="server_url"
-              value={executionNodeInput.server_url}
+              name="provider"
+              value={executionNodeInput.provider}
               onChange={handleExecutionInputChange}
-              placeholder="https://node1.example.com"
+              placeholder={executionNodeInput.execution_type === "proxy" ? "Proxy vendor" : "AWS"}
             />
           </FormGroup>
-          <FormGroup>
-            <Label>{executionNode ? "New Node Secret" : "Node Secret *"}</Label>
-            <Input
-              type="password"
-              name="node_secret"
-              value={executionNodeInput.node_secret}
-              onChange={handleExecutionInputChange}
-              placeholder={executionNode ? "Leave blank to keep existing secret" : "Shared HMAC secret"}
-              autoComplete="off"
-            />
-          </FormGroup>
+          {executionNodeInput.execution_type === "vps_node" ? (
+            <>
+              <div className="row">
+                <div className="col-md-6">
+                  <FormGroup>
+                    <Label>Node ID *</Label>
+                    <Input
+                      name="node_id"
+                      value={executionNodeInput.node_id}
+                      onChange={handleExecutionInputChange}
+                      placeholder="my-node-1"
+                    />
+                  </FormGroup>
+                </div>
+                <div className="col-md-6">
+                  <FormGroup>
+                    <Label>Server URL *</Label>
+                    <Input
+                      name="server_url"
+                      value={executionNodeInput.server_url}
+                      onChange={handleExecutionInputChange}
+                      placeholder="https://node1.example.com"
+                    />
+                  </FormGroup>
+                </div>
+              </div>
+              <FormGroup>
+                <Label>{executionNode ? "New Node Secret" : "Node Secret *"}</Label>
+                <Input
+                  type="password"
+                  name="node_secret"
+                  value={executionNodeInput.node_secret}
+                  onChange={handleExecutionInputChange}
+                  placeholder={executionNode ? "Leave blank to keep existing secret" : "Shared HMAC secret"}
+                  autoComplete="off"
+                />
+              </FormGroup>
+            </>
+          ) : (
+            <>
+              <div className="row">
+                <div className="col-md-4">
+                  <FormGroup>
+                    <Label>Proxy Protocol *</Label>
+                    <Input type="select" name="proxy_protocol" value={executionNodeInput.proxy_protocol} onChange={handleExecutionInputChange}>
+                      <option value="http">HTTP</option>
+                      <option value="https">HTTPS</option>
+                      <option value="socks5">SOCKS5</option>
+                    </Input>
+                  </FormGroup>
+                </div>
+                <div className="col-md-5">
+                  <FormGroup>
+                    <Label>Proxy Host / Hostname *</Label>
+                    <Input name="proxy_host" value={executionNodeInput.proxy_host} onChange={handleExecutionInputChange} placeholder="proxy.vendor.com" />
+                  </FormGroup>
+                </div>
+                <div className="col-md-3">
+                  <FormGroup>
+                    <Label>Proxy Port *</Label>
+                    <Input name="proxy_port" value={executionNodeInput.proxy_port} onChange={handleExecutionInputChange} placeholder="8080" />
+                  </FormGroup>
+                </div>
+              </div>
+              <div className="row">
+                <div className="col-md-6">
+                  <FormGroup>
+                    <Label>Proxy Username</Label>
+                    <Input name="proxy_username" value={executionNodeInput.proxy_username} onChange={handleExecutionInputChange} autoComplete="off" />
+                  </FormGroup>
+                </div>
+                <div className="col-md-6">
+                  <FormGroup>
+                    <Label>{executionNode ? "New Proxy Password" : "Proxy Password"}</Label>
+                    <Input type="password" name="proxy_password" value={executionNodeInput.proxy_password} onChange={handleExecutionInputChange} placeholder={executionNode ? "Leave blank to keep existing password" : "Optional"} autoComplete="off" />
+                  </FormGroup>
+                </div>
+              </div>
+            </>
+          )}
           <FormGroup check>
             <Input
               type="checkbox"
@@ -1133,6 +1237,11 @@ const ClientHeader = () => {
           {executionNode && (
             <Button color="danger" outline onClick={handleReleaseExecutionNode} disabled={isExecutionSaving}>
               Release IP
+            </Button>
+          )}
+          {executionNode?.execution_type === "proxy" && (
+            <Button color="info" outline onClick={handleVerifyExecutionProxy} disabled={isExecutionSaving}>
+              Verify Proxy IP
             </Button>
           )}
           <Button color="secondary" outline onClick={closeExecutionModal} disabled={isExecutionSaving}>

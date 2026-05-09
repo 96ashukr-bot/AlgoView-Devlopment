@@ -118,7 +118,11 @@ class ClientBrokerDetailgAdmin(admin.ModelAdmin):
 
 @admin.action(description="Mark selected nodes broker verified")
 def mark_nodes_verified(modeladmin, request, queryset):
-    queryset.update(is_verified_with_broker=True)
+    for node in queryset:
+        if node.execution_type == ExecutionNode.EXECUTION_TYPE_PROXY and not node.proxy_public_ip_verified:
+            continue
+        node.is_verified_with_broker = True
+        node.save(update_fields=["is_verified_with_broker", "updated_at"])
 
 
 @admin.action(description="Disable selected nodes")
@@ -137,23 +141,57 @@ def release_nodes_from_client(modeladmin, request, queryset):
         node.mark_log("released", "Node released from client via admin.", client=client)
 
 
+@admin.action(description="Verify selected proxy IPs")
+def verify_selected_proxy_ips(modeladmin, request, queryset):
+    from main.services.proxy_utils import verify_proxy_public_ip
+
+    for node in queryset:
+        if node.execution_type == ExecutionNode.EXECUTION_TYPE_PROXY:
+            verify_proxy_public_ip(node)
+
+
 @admin.register(ExecutionNode)
 class ExecutionNodeAdmin(admin.ModelAdmin):
     list_display = (
         "id",
         "name",
+        "execution_type",
         "ip_address",
         "provider",
         "assigned_client",
         "status",
+        "proxy_public_ip_verified",
+        "proxy_last_seen_ip",
+        "proxy_last_verified_at",
         "last_heartbeat",
         "is_verified_with_broker",
         "is_active",
     )
-    list_filter = ("status", "is_active", "is_verified_with_broker", "provider")
-    search_fields = ("name", "ip_address", "node_id", "assigned_client__email", "assigned_client__fullName")
-    readonly_fields = ("last_heartbeat", "last_seen_ip", "created_at", "updated_at")
-    actions = (mark_nodes_verified, disable_nodes, release_nodes_from_client)
+    list_filter = ("execution_type", "status", "is_active", "is_verified_with_broker", "proxy_public_ip_verified", "provider")
+    search_fields = ("name", "ip_address", "proxy_host", "node_id", "assigned_client__email", "assigned_client__fullName")
+    readonly_fields = ("masked_node_secret", "masked_proxy_password", "last_heartbeat", "last_seen_ip", "proxy_last_seen_ip", "proxy_last_verified_at", "created_at", "updated_at")
+    actions = (verify_selected_proxy_ips, mark_nodes_verified, disable_nodes, release_nodes_from_client)
+    fieldsets = (
+        ("Basic", {"fields": ("name", "execution_type", "ip_address", "provider", "assigned_client", "status", "is_active")}),
+        ("VPS Node Settings", {"fields": ("server_url", "node_id", "node_secret", "masked_node_secret")}),
+        ("Proxy Settings", {"fields": ("proxy_protocol", "proxy_host", "proxy_port", "proxy_username", "proxy_password", "masked_proxy_password")}),
+        ("Verification / Health", {"fields": ("is_verified_with_broker", "proxy_public_ip_verified", "proxy_last_seen_ip", "proxy_last_verified_at", "proxy_last_error", "last_heartbeat", "last_seen_ip", "created_at", "updated_at")}),
+    )
+
+    def masked_node_secret(self, obj):
+        return "Stored securely" if obj and obj.node_secret else "Not configured"
+
+    def masked_proxy_password(self, obj):
+        return "Stored securely" if obj and obj.proxy_password else "Not configured"
+
+    def save_model(self, request, obj, form, change):
+        raw_node_secret = form.cleaned_data.get("node_secret")
+        raw_proxy_password = form.cleaned_data.get("proxy_password")
+        if "node_secret" in form.changed_data and raw_node_secret:
+            obj.set_node_secret(raw_node_secret)
+        if "proxy_password" in form.changed_data and raw_proxy_password:
+            obj.set_proxy_password(raw_proxy_password)
+        super().save_model(request, obj, form, change)
 
 
 @admin.register(ExecutionOrderJob)

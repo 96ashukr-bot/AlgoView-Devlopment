@@ -8,14 +8,14 @@ from main.dhanapi import place_dhan_orders
 class DhanBroker(BaseBroker):
     broker_name = "dhan"
 
-    def validate_credentials(self):
+    def validate_credentials(self, proxy_config=None):
         if not get_access_token(self.broker_details):
             return {"status": "failed", "message": "Missing Dhan access token."}
         if not (self.broker_details.broker_API_UID or self.broker_details.broker_Demate_User_Name):
             return {"status": "failed", "message": "Missing Dhan client id."}
         return {"status": "success"}
 
-    def place_order(self, payload):
+    def place_order(self, payload, proxy_config=None):
         order = get_order_payload(payload)
         values = common_order_kwargs(order)
         client_id = self.broker_details.broker_API_UID or self.broker_details.broker_Demate_User_Name

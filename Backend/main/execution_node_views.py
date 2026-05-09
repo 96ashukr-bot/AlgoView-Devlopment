@@ -21,12 +21,15 @@ from main.permissions import is_admin_or_superadmin
 from main.services.execution_nodes import assign_execution_node_to_client, release_execution_node
 from main.services.execution_router import route_order_to_execution_node
 from main.services.node_security import verify_node_signature
+from main.services.proxy_utils import verify_proxy_public_ip
 
 logger = logging.getLogger("main.execution_node")
 
 
 class ExecutionNodeSerializer(serializers.ModelSerializer):
     assigned_client_email = serializers.EmailField(source="assigned_client.email", read_only=True)
+    node_secret = serializers.CharField(write_only=True, required=False, allow_blank=True, allow_null=True)
+    proxy_password = serializers.CharField(write_only=True, required=False, allow_blank=True, allow_null=True)
 
     class Meta:
         model = ExecutionNode
@@ -35,8 +38,19 @@ class ExecutionNodeSerializer(serializers.ModelSerializer):
             "name",
             "ip_address",
             "provider",
+            "execution_type",
             "server_url",
             "node_id",
+            "node_secret",
+            "proxy_host",
+            "proxy_port",
+            "proxy_username",
+            "proxy_password",
+            "proxy_protocol",
+            "proxy_public_ip_verified",
+            "proxy_last_verified_at",
+            "proxy_last_seen_ip",
+            "proxy_last_error",
             "assigned_client",
             "assigned_client_email",
             "status",
@@ -49,8 +63,56 @@ class ExecutionNodeSerializer(serializers.ModelSerializer):
         )
         read_only_fields = ("last_heartbeat", "last_seen_ip", "created_at", "updated_at")
 
+    def validate(self, attrs):
+        instance = getattr(self, "instance", None)
+        execution_type = attrs.get("execution_type", getattr(instance, "execution_type", ExecutionNode.EXECUTION_TYPE_VPS_NODE))
+        def current(name):
+            return attrs.get(name, getattr(instance, name, None))
+
+        if execution_type == ExecutionNode.EXECUTION_TYPE_PROXY:
+            missing = [field for field in ("ip_address", "proxy_host", "proxy_port", "proxy_protocol") if not current(field)]
+            if missing:
+                raise serializers.ValidationError({field: "Required for proxy execution nodes." for field in missing})
+        else:
+            missing = [field for field in ("server_url", "node_id") if not current(field)]
+            if not attrs.get("node_secret") and not getattr(instance, "node_secret", None):
+                missing.append("node_secret")
+            if missing:
+                raise serializers.ValidationError({field: "Required for VPS execution nodes." for field in missing})
+        return attrs
+
+    def create(self, validated_data):
+        node_secret = validated_data.pop("node_secret", None)
+        proxy_password = validated_data.pop("proxy_password", None)
+        node = super().create(validated_data)
+        if node_secret:
+            node.set_node_secret(node_secret)
+        if proxy_password:
+            node.set_proxy_password(proxy_password)
+        if node_secret or proxy_password:
+            node.save(update_fields=["node_secret", "proxy_password", "updated_at"])
+        return node
+
+    def update(self, instance, validated_data):
+        node_secret = validated_data.pop("node_secret", None)
+        proxy_password = validated_data.pop("proxy_password", None)
+        node = super().update(instance, validated_data)
+        update_fields = []
+        if node_secret:
+            node.set_node_secret(node_secret)
+            update_fields.append("node_secret")
+        if proxy_password:
+            node.set_proxy_password(proxy_password)
+            update_fields.append("proxy_password")
+        if update_fields:
+            node.save(update_fields=[*update_fields, "updated_at"])
+        return node
+
 
 class ClientExecutionNodeSerializer(serializers.ModelSerializer):
+    node_secret = serializers.CharField(write_only=True, required=False, allow_blank=True, allow_null=True)
+    proxy_password = serializers.CharField(write_only=True, required=False, allow_blank=True, allow_null=True)
+
     class Meta:
         model = ExecutionNode
         fields = (
@@ -58,8 +120,19 @@ class ClientExecutionNodeSerializer(serializers.ModelSerializer):
             "name",
             "ip_address",
             "provider",
+            "execution_type",
             "server_url",
             "node_id",
+            "node_secret",
+            "proxy_host",
+            "proxy_port",
+            "proxy_username",
+            "proxy_password",
+            "proxy_protocol",
+            "proxy_public_ip_verified",
+            "proxy_last_verified_at",
+            "proxy_last_seen_ip",
+            "proxy_last_error",
             "status",
             "is_active",
             "is_verified_with_broker",
@@ -72,11 +145,59 @@ class ClientExecutionNodeSerializer(serializers.ModelSerializer):
             "id",
             "status",
             "is_verified_with_broker",
+            "proxy_public_ip_verified",
+            "proxy_last_verified_at",
+            "proxy_last_seen_ip",
+            "proxy_last_error",
             "last_heartbeat",
             "last_seen_ip",
             "created_at",
             "updated_at",
         )
+
+    def validate(self, attrs):
+        instance = getattr(self, "instance", None)
+        execution_type = attrs.get("execution_type", getattr(instance, "execution_type", ExecutionNode.EXECUTION_TYPE_VPS_NODE))
+        def current(name):
+            return attrs.get(name, getattr(instance, name, None))
+        if execution_type == ExecutionNode.EXECUTION_TYPE_PROXY:
+            missing = [field for field in ("ip_address", "proxy_host", "proxy_port", "proxy_protocol") if not current(field)]
+            if missing:
+                raise serializers.ValidationError({field: "Required for proxy execution nodes." for field in missing})
+        else:
+            missing = [field for field in ("server_url", "node_id") if not current(field)]
+            if not attrs.get("node_secret") and not getattr(instance, "node_secret", None):
+                missing.append("node_secret")
+            if missing:
+                raise serializers.ValidationError({field: "Required for VPS execution nodes." for field in missing})
+        return attrs
+
+    def create(self, validated_data):
+        node_secret = validated_data.pop("node_secret", None)
+        proxy_password = validated_data.pop("proxy_password", None)
+        node = super().create(validated_data)
+        if node_secret:
+            node.set_node_secret(node_secret)
+        if proxy_password:
+            node.set_proxy_password(proxy_password)
+        if node_secret or proxy_password:
+            node.save(update_fields=["node_secret", "proxy_password", "updated_at"])
+        return node
+
+    def update(self, instance, validated_data):
+        node_secret = validated_data.pop("node_secret", None)
+        proxy_password = validated_data.pop("proxy_password", None)
+        node = super().update(instance, validated_data)
+        update_fields = []
+        if node_secret:
+            node.set_node_secret(node_secret)
+            update_fields.append("node_secret")
+        if proxy_password:
+            node.set_proxy_password(proxy_password)
+            update_fields.append("proxy_password")
+        if update_fields:
+            node.save(update_fields=[*update_fields, "updated_at"])
+        return node
 
 
 class ExecutionOrderJobSerializer(serializers.ModelSerializer):
@@ -87,6 +208,7 @@ class ExecutionOrderJobSerializer(serializers.ModelSerializer):
             "client",
             "broker_details",
             "execution_node",
+            "execution_type",
             "symbol",
             "token",
             "exchange",
@@ -100,6 +222,7 @@ class ExecutionOrderJobSerializer(serializers.ModelSerializer):
             "request_payload",
             "node_response",
             "broker_response",
+            "proxy_metadata",
             "error_message",
             "retry_count",
             "idempotency_key",
@@ -146,6 +269,17 @@ class ExecutionNodeAssignAPIView(APIView):
         return Response(ExecutionNodeSerializer(assigned).data)
 
 
+class ExecutionNodeAssignByIdAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, node_id):
+        _require_node_admin(request.user)
+        client = User.objects.get(pk=request.data.get("client_id"))
+        node = ExecutionNode.objects.get(pk=node_id)
+        assigned = assign_execution_node_to_client(client, node)
+        return Response(ExecutionNodeSerializer(assigned).data)
+
+
 class ExecutionNodeDetailAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -177,6 +311,18 @@ class ExecutionNodeReleaseAPIView(APIView):
         return Response({"status": "released", "node_id": node.id if node else None})
 
 
+class ExecutionNodeReleaseByIdAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, node_id):
+        _require_node_admin(request.user)
+        node = ExecutionNode.objects.select_related("assigned_client").get(pk=node_id)
+        client = node.assigned_client
+        if client:
+            release_execution_node(client)
+        return Response({"status": "released", "node_id": node.id})
+
+
 class ExecutionNodeHealthAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -189,6 +335,55 @@ class ExecutionNodeHealthAPIView(APIView):
             return Response({"status": "success" if response.ok else "failed", "node": ExecutionNodeSerializer(node).data, "health": payload})
         except requests.RequestException as exc:
             return Response({"status": "failed", "node": ExecutionNodeSerializer(node).data, "message": str(exc)}, status=status.HTTP_200_OK)
+
+
+class ExecutionNodeVerifyProxyAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, node_id):
+        _require_node_admin(request.user)
+        node = ExecutionNode.objects.get(pk=node_id)
+        result = verify_proxy_public_ip(node)
+        node.refresh_from_db()
+        return Response({"result": result, "node": ExecutionNodeSerializer(node).data})
+
+
+class ExecutionNodeVerifyBrokerAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, node_id):
+        _require_node_admin(request.user)
+        node = ExecutionNode.objects.get(pk=node_id)
+        if node.execution_type == ExecutionNode.EXECUTION_TYPE_PROXY and not node.proxy_public_ip_verified:
+            return Response({"detail": "Proxy public IP must be verified before broker verification."}, status=status.HTTP_400_BAD_REQUEST)
+        node.is_verified_with_broker = True
+        node.save(update_fields=["is_verified_with_broker", "updated_at"])
+        node.mark_log("broker_verified", "Execution node marked broker verified via API.", client=node.assigned_client)
+        return Response(ExecutionNodeSerializer(node).data)
+
+
+class ExecutionNodeTestBrokerLoginAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, node_id):
+        _require_node_admin(request.user)
+        node = ExecutionNode.objects.select_related("assigned_client").get(pk=node_id)
+        if not node.assigned_client_id:
+            return Response({"detail": "Node is not assigned to a client."}, status=status.HTTP_400_BAD_REQUEST)
+        broker_details = ClientBrokerdetails.objects.filter(client=node.assigned_client).select_related("broker_name").order_by("-id").first()
+        if not broker_details:
+            return Response({"detail": "No broker details found for assigned client."}, status=status.HTTP_400_BAD_REQUEST)
+        proxy_config = None
+        if node.execution_type == ExecutionNode.EXECUTION_TYPE_PROXY:
+            if not node.proxy_public_ip_verified:
+                return Response({"detail": "Proxy public IP is not verified."}, status=status.HTTP_400_BAD_REQUEST)
+            from main.services.proxy_utils import build_requests_proxy_config
+
+            proxy_config = build_requests_proxy_config(node)
+        adapter = get_broker_adapter(broker_details)
+        if node.execution_type == ExecutionNode.EXECUTION_TYPE_PROXY and not getattr(adapter, "supports_proxy", False):
+            return Response({"detail": "This broker adapter does not currently support proxy-based execution."}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(adapter.validate_credentials(proxy_config=proxy_config))
 
 
 class ClientExecutionNodeAPIView(APIView):
@@ -239,6 +434,18 @@ class ClientExecutionNodeAPIView(APIView):
     def delete(self, request):
         node = release_execution_node(request.user)
         return Response({"status": "released", "node_id": node.id if node else None})
+
+
+class ClientExecutionNodeVerifyProxyAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        node = ExecutionNode.objects.filter(assigned_client=request.user).first()
+        if not node:
+            return Response({"detail": "No execution IP is assigned to this client."}, status=status.HTTP_404_NOT_FOUND)
+        result = verify_proxy_public_ip(node)
+        node.refresh_from_db()
+        return Response({"result": result, "node": ClientExecutionNodeSerializer(node).data})
 
 
 class ExecutionOrderJobListAPIView(APIView):

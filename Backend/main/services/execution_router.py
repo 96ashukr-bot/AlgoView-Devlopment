@@ -13,8 +13,10 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 
 from main.models import ClientBrokerdetails, ExecutionNode, ExecutionOrderJob, User
+from main.brokers import get_broker_adapter
 from main.services.execution_nodes import get_execution_node_for_client
 from main.services.node_security import generate_node_signature
+from main.services.proxy_utils import build_requests_proxy_config, mask_proxy_url
 
 logger = logging.getLogger("main.execution_router")
 
@@ -60,14 +62,14 @@ def route_order_to_execution_node(client: User, broker_details: ClientBrokerdeta
     node = broker_details.execution_node or get_execution_node_for_client(client)
     if not node:
         raise ValidationError("No execution node assigned to this client.")
+    if node.assigned_client_id and node.assigned_client_id != client.id:
+        raise ValidationError("Execution node is not assigned to this client.")
     if not node.is_active or node.status in {ExecutionNode.STATUS_DISABLED, ExecutionNode.STATUS_MAINTENANCE, ExecutionNode.STATUS_OFFLINE}:
         raise ValidationError("Execution node is not available for trading.")
     if not node.is_verified_with_broker:
         raise ValidationError("Execution node is not verified with broker for this client.")
-
-    node_secret = node.get_node_secret()
-    if not node_secret:
-        raise ValidationError("Execution node secret is not configured.")
+    if node.execution_type == ExecutionNode.EXECUTION_TYPE_PROXY and not node.proxy_public_ip_verified:
+        raise ValidationError("Execution proxy public IP is not verified.")
 
     idempotency_key = str(order_payload.get("idempotency_key") or uuid.uuid4())
     request_payload = _safe_job_payload(order_payload, broker_details)
@@ -80,7 +82,9 @@ def route_order_to_execution_node(client: User, broker_details: ClientBrokerdeta
                     "client": client,
                     "broker_details": broker_details,
                     "execution_node": node,
+                    "execution_type": node.execution_type,
                     "request_payload": request_payload,
+                    "proxy_metadata": {"proxy": mask_proxy_url(node), "static_ip": str(node.ip_address)} if node.execution_type == ExecutionNode.EXECUTION_TYPE_PROXY else {},
                     **job_fields,
                 },
             )
@@ -93,10 +97,53 @@ def route_order_to_execution_node(client: User, broker_details: ClientBrokerdeta
             if not created:
                 job.retry_count += 1
                 job.request_payload = request_payload
-                job.save(update_fields=["retry_count", "request_payload", "updated_at"])
+                job.execution_type = node.execution_type
+                job.proxy_metadata = {"proxy": mask_proxy_url(node), "static_ip": str(node.ip_address)} if node.execution_type == ExecutionNode.EXECUTION_TYPE_PROXY else {}
+                job.save(update_fields=["retry_count", "request_payload", "execution_type", "proxy_metadata", "updated_at"])
     except IntegrityError:
         job = ExecutionOrderJob.objects.get(idempotency_key=idempotency_key)
         return {"status": "duplicate", "job_id": job.id, "job_status": job.status}
+
+    if node.execution_type == ExecutionNode.EXECUTION_TYPE_PROXY:
+        try:
+            adapter = get_broker_adapter(broker_details)
+            if not getattr(adapter, "supports_proxy", False):
+                raise ValidationError(
+                    "This broker adapter does not currently support proxy-based execution. "
+                    "Use VPS node mode or implement direct HTTP/proxy support."
+                )
+            proxy_config = build_requests_proxy_config(node)
+            job.status = ExecutionOrderJob.STATUS_PROXY_ROUTING
+            job.save(update_fields=["status", "updated_at"])
+            validation = adapter.validate_credentials(proxy_config=proxy_config)
+            if validation.get("status") != "success":
+                raise ValidationError(validation.get("message") or "Broker credentials are invalid.")
+            broker_response = adapter.place_order(request_payload, proxy_config=proxy_config)
+            response_status = str(broker_response.get("status", broker_response.get("data", {}).get("status", ""))).lower()
+            job.broker_response = broker_response
+            job.status = ExecutionOrderJob.STATUS_PLACED if response_status in {"success", "complete", "completed", "open", "placed"} else ExecutionOrderJob.STATUS_REJECTED
+            if job.status == ExecutionOrderJob.STATUS_REJECTED:
+                job.error_message = broker_response.get("message") or broker_response.get("data", {}).get("message") or "Broker rejected proxy-routed order."
+            job.save(update_fields=["broker_response", "status", "error_message", "updated_at"])
+            node.mark_log("proxy_order_routed", f"Order job {job.id} routed through assigned proxy.", client=client, metadata={"status": job.status, "proxy": mask_proxy_url(node)})
+            return {"status": job.status, "job_id": job.id, "message": job.error_message}
+        except ValidationError:
+            job.status = ExecutionOrderJob.STATUS_FAILED
+            job.error_message = "Proxy order validation failed."
+            job.save(update_fields=["status", "error_message", "updated_at"])
+            raise
+        except Exception as exc:  # noqa: BLE001
+            job.status = ExecutionOrderJob.STATUS_FAILED
+            job.error_message = str(exc)
+            job.save(update_fields=["status", "error_message", "updated_at"])
+            logger.exception("Proxy-routed broker order failed", extra={"job_id": job.id, "node_id": node.node_id})
+            return {"status": "failed", "job_id": job.id, "message": "Proxy-routed broker order failed."}
+
+    node_secret = node.get_node_secret()
+    if not node_secret:
+        raise ValidationError("Execution node secret is not configured.")
+    if not node.server_url or not node.node_id:
+        raise ValidationError("Execution node server URL or node ID is not configured.")
 
     timestamp = str(int(time.time()))
     signature = generate_node_signature(node_secret, timestamp, request_payload)

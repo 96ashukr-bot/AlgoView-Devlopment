@@ -7,12 +7,12 @@ from main.brokers.base import BaseBroker
 class AliceBlueBroker(BaseBroker):
     broker_name = "alice blue"
 
-    def validate_credentials(self):
+    def validate_credentials(self, proxy_config=None):
         if not self.broker_details.broker_API_KEY or not self.broker_details.broker_API_UID:
             return {"status": "failed", "message": "Missing Alice Blue API key or user id."}
         return {"status": "success"}
 
-    def place_order(self, payload):
+    def place_order(self, payload, proxy_config=None):
         order = payload.get("order", payload)
         return place_alice_orders(
             order.get("LivePrice"),

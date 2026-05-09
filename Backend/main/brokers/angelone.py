@@ -7,14 +7,14 @@ from main.brokers.base import BaseBroker
 class AngelOneBroker(BaseBroker):
     broker_name = "angel one"
 
-    def validate_credentials(self):
+    def validate_credentials(self, proxy_config=None):
         credentials = self.broker_details.get_angel_one_login_credentials()
         missing = [key for key, value in credentials.items() if key in {"client_code", "api_key"} and not value]
         if missing:
             return {"status": "failed", "message": f"Missing Angel One credentials: {', '.join(missing)}"}
         return {"status": "success"}
 
-    def place_order(self, payload):
+    def place_order(self, payload, proxy_config=None):
         order = payload.get("order", payload)
         return place_angel_one_order(
             broker_details=self.broker_details,

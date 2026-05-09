@@ -9,15 +9,16 @@ from main.fivepaisa import place_5paisa_order
 
 class FivePaisaBroker(BaseBroker):
     broker_name = "5paisa"
+    supports_proxy = True
 
-    def validate_credentials(self):
+    def validate_credentials(self, proxy_config=None):
         if not get_access_token(self.broker_details):
             return {"status": "failed", "message": "Missing 5Paisa access token."}
         if not self.broker_details.broker_API_KEY:
             return {"status": "failed", "message": "Missing 5Paisa API key."}
         return {"status": "success"}
 
-    def place_order(self, payload):
+    def place_order(self, payload, proxy_config=None):
         order = get_order_payload(payload)
         values = common_order_kwargs(order)
         trade_context = SimpleNamespace(symbol=values["symbol"], broker=self.broker_name)
@@ -50,4 +51,5 @@ class FivePaisaBroker(BaseBroker):
             values["triggerPrice"],
             trade_context,
             values["history_id"],
+            proxy_config=proxy_config,
         )

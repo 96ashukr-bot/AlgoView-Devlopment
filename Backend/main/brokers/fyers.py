@@ -7,15 +7,16 @@ from main.fyersapi import place_fyers_orders
 
 class FyersBroker(BaseBroker):
     broker_name = "fyers"
+    supports_proxy = True
 
-    def validate_credentials(self):
+    def validate_credentials(self, proxy_config=None):
         if not get_access_token(self.broker_details):
             return {"status": "failed", "message": "Missing FYERS access token."}
         if not self.broker_details.broker_API_KEY:
             return {"status": "failed", "message": "Missing FYERS API key/client id."}
         return {"status": "success"}
 
-    def place_order(self, payload):
+    def place_order(self, payload, proxy_config=None):
         order = get_order_payload(payload)
         values = common_order_kwargs(order)
         return place_fyers_orders(
@@ -46,4 +47,5 @@ class FyersBroker(BaseBroker):
             values["triggerPrice"],
             values["trade_order_status"],
             values["history_id"],
+            proxy_config=proxy_config,
         )

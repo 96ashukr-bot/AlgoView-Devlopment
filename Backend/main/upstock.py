@@ -28,7 +28,7 @@ def callback_upstox(request):
 def place_upstox_orders(LivePrice,group_service,
     access_token, trade_symbol, transaction_type, symbol, quantity, strategy, ordertype,
     product_type, price, user, Lots, Entry_type, Exit_type,Entry_price,Exit_price, EntryQty,ExitQty,webhook_signal, Exchange,
-    Segment, Index_Symbol, triggerPrice,trade_order_status, history_id):
+    Segment, Index_Symbol, triggerPrice,trade_order_status, history_id, proxy_config=None):
     try:
         EntryQty=quantity
         smtp_details=CompanySmtpDetails.objects.first()
@@ -85,6 +85,7 @@ def place_upstox_orders(LivePrice,group_service,
                 headers={"Authorization": f"Bearer {access_token}"},
                 params={"instrument_key": instrument_key},
                 timeout=5,
+                proxies=proxy_config,
             )
             quote_data = quote_response.json() if quote_response.content else {}
             if quote_response.status_code == 200:
@@ -124,7 +125,7 @@ def place_upstox_orders(LivePrice,group_service,
         headers = {"Authorization": f"Bearer {access_token}"}
         # Place the order
         logger.info(f"{user} : Place the order API is calling for the Upstox !!")
-        response = requests.post(PLACE__ORDER_URL, headers=headers, json=order_params)
+        response = requests.post(PLACE__ORDER_URL, headers=headers, json=order_params, proxies=proxy_config)
         response_data = response.json()
 
         logger.info(f"{user} : Order API response: {response_data} status code ::{response.status_code}")
@@ -135,7 +136,7 @@ def place_upstox_orders(LivePrice,group_service,
             logger.info(f"{user} : Order placed successfully get the Order details for Order ID: {order_id}")
             handled_response = handle_successful_order(LivePrice,group_service,transaction_type,
                 order_id, user, trade_symbol, strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty , webhook_signal,
-                Exchange, Segment, Index_Symbol, order_params, access_token,trade_order_status, history_id
+                Exchange, Segment, Index_Symbol, order_params, access_token,trade_order_status, history_id, proxy_config=proxy_config
             )
             handled_response.setdefault("data", {})
             handled_response["data"].update({
@@ -205,10 +206,10 @@ def place_upstox_orders(LivePrice,group_service,
 
 def handle_successful_order(LivePrice,group_service,transaction_type,
     order_id, user, trade_symbol, strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,webhook_signal, Exchange,
-    Segment, Index_Symbol, order_params, access_token,trade_order_status, history_id):
+    Segment, Index_Symbol, order_params, access_token,trade_order_status, history_id, proxy_config=None):
     try:
         EntryQty=order_params['quantity']
-        order_details = get_order_details(order_id, access_token)
+        order_details = get_order_details(order_id, access_token, proxy_config=proxy_config)
         logger.info(f"after order deatis are fetched resp::{order_details}")
         if not isinstance(order_details, dict):
             order_details = {"data": {}, "raw": order_details}
@@ -389,7 +390,7 @@ def fetch_instrument_details(symbol_name, exchange="NSE", user = None):
         logger.info(f"{user} : Exception occurred: {str(e)}")
         return {"error": f"Exception occurred: {str(e)}"}
 
-def get_order_details(order_id, access_token):
+def get_order_details(order_id, access_token, proxy_config=None):
     try:
         if not order_id:
             return {"error": "Invalid order ID"}
@@ -401,7 +402,7 @@ def get_order_details(order_id, access_token):
         }
 
         print(f"Making API request to: {url}")
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=headers, proxies=proxy_config)
 
         logger.info(f"API Response Status Code: {response.status_code}")
 

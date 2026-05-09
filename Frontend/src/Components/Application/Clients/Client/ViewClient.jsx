@@ -12,6 +12,7 @@ import {
     createExecutionNode,
     assignExecutionNodeToClient,
     releaseExecutionNodeFromClient,
+    verifyExecutionNodeProxy,
 } from '../../../../Services/Authentication';
 
 const ClientView = () => {
@@ -52,11 +53,17 @@ const ClientView = () => {
     const [isNodeSaving, setIsNodeSaving] = useState(false);
     const [nodeForm, setNodeForm] = useState({
         name: '',
+        execution_type: 'vps_node',
         ip_address: '',
         provider: '',
         server_url: '',
         node_id: '',
         node_secret: '',
+        proxy_protocol: 'http',
+        proxy_host: '',
+        proxy_port: '',
+        proxy_username: '',
+        proxy_password: '',
         status: 'assigned',
         is_active: true,
         is_verified_with_broker: true,
@@ -199,11 +206,17 @@ const ClientView = () => {
     const resetNodeForm = () => {
         setNodeForm({
             name: '',
+            execution_type: 'vps_node',
             ip_address: '',
             provider: '',
             server_url: '',
             node_id: '',
             node_secret: '',
+            proxy_protocol: 'http',
+            proxy_host: '',
+            proxy_port: '',
+            proxy_username: '',
+            proxy_password: '',
             status: 'assigned',
             is_active: true,
             is_verified_with_broker: true,
@@ -244,7 +257,10 @@ const ClientView = () => {
     };
 
     const handleCreateNode = async () => {
-        const requiredFields = ['name', 'ip_address', 'server_url', 'node_id', 'node_secret'];
+        const isProxy = nodeForm.execution_type === 'proxy';
+        const requiredFields = isProxy
+            ? ['name', 'ip_address', 'proxy_protocol', 'proxy_host', 'proxy_port']
+            : ['name', 'ip_address', 'server_url', 'node_id', 'node_secret'];
         const missingField = requiredFields.find((field) => !String(nodeForm[field] || '').trim());
         if (missingField) {
             toast.error('Please fill all required execution node fields.');
@@ -253,17 +269,29 @@ const ClientView = () => {
 
         setIsNodeSaving(true);
         try {
-            const createdNode = await createExecutionNode({
+            const payload = {
                 name: nodeForm.name.trim(),
+                execution_type: nodeForm.execution_type,
                 ip_address: nodeForm.ip_address.trim(),
                 provider: nodeForm.provider.trim(),
-                server_url: nodeForm.server_url.trim(),
-                node_id: nodeForm.node_id.trim(),
-                node_secret: nodeForm.node_secret,
                 status: nodeForm.status,
                 is_active: nodeForm.is_active,
                 is_verified_with_broker: nodeForm.is_verified_with_broker,
-            });
+            };
+            if (isProxy) {
+                payload.proxy_protocol = nodeForm.proxy_protocol;
+                payload.proxy_host = nodeForm.proxy_host.trim();
+                payload.proxy_port = nodeForm.proxy_port;
+                payload.proxy_username = nodeForm.proxy_username.trim();
+                if (nodeForm.proxy_password) {
+                    payload.proxy_password = nodeForm.proxy_password;
+                }
+            } else {
+                payload.server_url = nodeForm.server_url.trim();
+                payload.node_id = nodeForm.node_id.trim();
+                payload.node_secret = nodeForm.node_secret;
+            }
+            const createdNode = await createExecutionNode(payload);
             if (nodeForm.assign_now) {
                 await assignExecutionNodeToClient(clientId, createdNode.id);
             }
@@ -845,6 +873,15 @@ const ClientView = () => {
                 <ModalBody>
                     <Form>
                         <Row>
+                            <Col md="12">
+                                <FormGroup>
+                                    <Label>Execution Type *</Label>
+                                    <Input type="select" name="execution_type" value={nodeForm.execution_type} onChange={handleNodeFormChange}>
+                                        <option value="vps_node">VPS Node</option>
+                                        <option value="proxy">Proxy IP</option>
+                                    </Input>
+                                </FormGroup>
+                            </Col>
                             <Col md="6">
                                 <FormGroup>
                                     <Label>Node Name *</Label>
@@ -880,37 +917,70 @@ const ClientView = () => {
                                     />
                                 </FormGroup>
                             </Col>
-                            <Col md="6">
-                                <FormGroup>
-                                    <Label>Node ID *</Label>
-                                    <Input
-                                        name="node_id"
-                                        value={nodeForm.node_id}
-                                        onChange={handleNodeFormChange}
-                                        placeholder="client-ashutosh-node-1"
-                                    />
-                                </FormGroup>
-                            </Col>
                         </Row>
-                        <FormGroup>
-                            <Label>Server URL *</Label>
-                            <Input
-                                name="server_url"
-                                value={nodeForm.server_url}
-                                onChange={handleNodeFormChange}
-                                placeholder="https://node1.example.com"
-                            />
-                        </FormGroup>
-                        <FormGroup>
-                            <Label>Node Secret *</Label>
-                            <Input
-                                type="password"
-                                name="node_secret"
-                                value={nodeForm.node_secret}
-                                onChange={handleNodeFormChange}
-                                placeholder="Shared HMAC secret for this execution node"
-                            />
-                        </FormGroup>
+                        {nodeForm.execution_type === 'vps_node' ? (
+                            <>
+                                <Row>
+                                    <Col md="6">
+                                        <FormGroup>
+                                            <Label>Node ID *</Label>
+                                            <Input name="node_id" value={nodeForm.node_id} onChange={handleNodeFormChange} placeholder="client-ashutosh-node-1" />
+                                        </FormGroup>
+                                    </Col>
+                                    <Col md="6">
+                                        <FormGroup>
+                                            <Label>Server URL *</Label>
+                                            <Input name="server_url" value={nodeForm.server_url} onChange={handleNodeFormChange} placeholder="https://node1.example.com" />
+                                        </FormGroup>
+                                    </Col>
+                                </Row>
+                                <FormGroup>
+                                    <Label>Node Secret *</Label>
+                                    <Input type="password" name="node_secret" value={nodeForm.node_secret} onChange={handleNodeFormChange} placeholder="Shared HMAC secret for this execution node" />
+                                </FormGroup>
+                            </>
+                        ) : (
+                            <>
+                                <Row>
+                                    <Col md="4">
+                                        <FormGroup>
+                                            <Label>Proxy Protocol *</Label>
+                                            <Input type="select" name="proxy_protocol" value={nodeForm.proxy_protocol} onChange={handleNodeFormChange}>
+                                                <option value="http">HTTP</option>
+                                                <option value="https">HTTPS</option>
+                                                <option value="socks5">SOCKS5</option>
+                                            </Input>
+                                        </FormGroup>
+                                    </Col>
+                                    <Col md="5">
+                                        <FormGroup>
+                                            <Label>Proxy Host *</Label>
+                                            <Input name="proxy_host" value={nodeForm.proxy_host} onChange={handleNodeFormChange} placeholder="proxy.vendor.com" />
+                                        </FormGroup>
+                                    </Col>
+                                    <Col md="3">
+                                        <FormGroup>
+                                            <Label>Proxy Port *</Label>
+                                            <Input name="proxy_port" value={nodeForm.proxy_port} onChange={handleNodeFormChange} placeholder="8080" />
+                                        </FormGroup>
+                                    </Col>
+                                </Row>
+                                <Row>
+                                    <Col md="6">
+                                        <FormGroup>
+                                            <Label>Proxy Username</Label>
+                                            <Input name="proxy_username" value={nodeForm.proxy_username} onChange={handleNodeFormChange} autoComplete="off" />
+                                        </FormGroup>
+                                    </Col>
+                                    <Col md="6">
+                                        <FormGroup>
+                                            <Label>Proxy Password</Label>
+                                            <Input type="password" name="proxy_password" value={nodeForm.proxy_password} onChange={handleNodeFormChange} autoComplete="off" />
+                                        </FormGroup>
+                                    </Col>
+                                </Row>
+                            </>
+                        )}
                         <Row>
                             <Col md="4">
                                 <FormGroup check>

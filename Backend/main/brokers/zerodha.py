@@ -8,14 +8,14 @@ from main.zerodha import place_zerodha_orders
 class ZerodhaBroker(BaseBroker):
     broker_name = "zerodha"
 
-    def validate_credentials(self):
+    def validate_credentials(self, proxy_config=None):
         if not get_access_token(self.broker_details):
             return {"status": "failed", "message": "Missing Zerodha access token."}
         if not self.broker_details.broker_API_KEY:
             return {"status": "failed", "message": "Missing Zerodha API key."}
         return {"status": "success"}
 
-    def place_order(self, payload):
+    def place_order(self, payload, proxy_config=None):
         order = get_order_payload(payload)
         values = common_order_kwargs(order)
         return place_zerodha_orders(

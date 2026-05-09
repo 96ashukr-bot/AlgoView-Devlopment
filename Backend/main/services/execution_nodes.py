@@ -15,6 +15,9 @@ def verify_node_available(node: ExecutionNode) -> None:
         raise ValidationError("Execution node is in maintenance mode.")
     if node.assigned_client_id:
         raise ValidationError("Execution node is already assigned to another client.")
+    if node.execution_type == ExecutionNode.EXECUTION_TYPE_PROXY:
+        if not (node.proxy_host and node.proxy_port and node.proxy_protocol):
+            raise ValidationError("Proxy execution node is missing proxy host, port, or protocol.")
 
 
 @transaction.atomic
@@ -27,6 +30,8 @@ def assign_execution_node_to_client(client: User, node: ExecutionNode) -> Execut
         raise ValidationError("Execution node is already assigned to another client.")
     if not node.is_active:
         raise ValidationError("Inactive execution node cannot be assigned.")
+    if node.execution_type == ExecutionNode.EXECUTION_TYPE_PROXY and not (node.proxy_host and node.proxy_port and node.proxy_protocol):
+        raise ValidationError("Proxy execution node is missing proxy host, port, or protocol.")
 
     node.assigned_client = client
     node.status = ExecutionNode.STATUS_ASSIGNED

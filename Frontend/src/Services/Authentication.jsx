@@ -4709,6 +4709,46 @@ export const releaseMyExecutionNode = async () => {
   }
 };
 
+export const verifyMyExecutionProxy = async () => {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error("No authentication token found.");
+  }
+
+  try {
+    const response = await axios.post(`${baseUrl}/client/execution-node/verify-proxy/`, {}, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error verifying client execution proxy:', error);
+    throw new Error(error.response?.data?.message || error.response?.data?.detail || "Failed to verify proxy IP.");
+  }
+};
+
+export const verifyExecutionNodeProxy = async (nodeId) => {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error("No authentication token found.");
+  }
+
+  try {
+    const response = await axios.post(`${baseUrl}/execution-nodes/${nodeId}/verify-proxy/`, {}, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error verifying execution proxy:', error);
+    throw new Error(error.response?.data?.message || error.response?.data?.detail || "Failed to verify proxy IP.");
+  }
+};
+
 export const getTradeResponse = async (id) => {
   console.log("Inside getTradeResponse with clientId:", id);
 
