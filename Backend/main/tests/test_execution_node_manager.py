@@ -19,6 +19,8 @@ from main.dhanapi import place_dhan_orders
 from main.zerodha import place_zerodha_orders
 from main.dematemodule import _broker_proxy_config_or_none, _save_session_tokens_compat
 from main.dematemodule import BrokerCallbackView
+from main.broker_registry import get_broker_setup_spec
+from main.serializers import ClientBrokerDetailsUpdateSerializer
 
 
 TEST_CACHES = {
@@ -627,6 +629,30 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertIn("proxies", mock_post.call_args.kwargs)
         proxy_node.refresh_from_db()
         self.assertTrue(proxy_node.is_verified_with_broker)
+
+    def test_dhan_setup_accepts_manual_token_without_api_secret_pair(self):
+        dhan = Broker.objects.create(broker_name="Dhan", is_active=True)
+        broker_details = ClientBrokerdetails.objects.create(client=self.client_user, broker_name=dhan)
+
+        serializer = ClientBrokerDetailsUpdateSerializer(
+            broker_details,
+            data={"access_token": "direct-dhan-token"},
+            partial=True,
+        )
+
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        serializer.save()
+        broker_details.refresh_from_db()
+        self.assertEqual(broker_details.access_token, "direct-dhan-token")
+
+    def test_dhan_setup_schema_documents_either_token_or_consent_credentials(self):
+        spec = get_broker_setup_spec("dhan")
+        fields = {field["key"]: field for field in spec["fields"]}
+        self.assertFalse(fields["broker_API_KEY"]["required"])
+        self.assertFalse(fields["broker_API_SKEY"]["required"])
+        self.assertFalse(fields["broker_API_UID"]["required"])
+        self.assertFalse(fields["access_token"]["required"])
+        self.assertIn("either Access Token", spec["requirement_note"])
 
     def test_node_idempotency_duplicate_rejection(self):
         payload = {"broker_details_id": self.broker_details.id, "order": {"symbol": "NIFTY"}}

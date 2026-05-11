@@ -99,18 +99,19 @@ BROKER_SETUP_SPECS = {
         "display_name": "Dhan",
         "slug": "dhan",
         "auth_mode": "redirect_oauth",
-        "description": "Save Dhan API key credentials and Client ID, then use Dhan's consent flow to generate the daily access token.",
+        "description": "Use either a Dhan Web access token, or save App/API Key + Secret + Client ID and complete Dhan's consent flow to generate an access token.",
         "save_action_label": "Save Dhan API Details",
         "connect_action_label": "Connect to Dhan",
         "connect_path": "/broker_auth_login/?broker=dhan",
         "supports_callback": True,
         "supports_redirect": True,
         "fields": [
-            {"key": "broker_API_KEY", "label": "App ID / API Key", "type": "password", "required": True, "secret": True},
-            {"key": "broker_API_SKEY", "label": "App Secret / API Secret", "type": "password", "required": True, "secret": True},
-            {"key": "broker_API_UID", "label": "Dhan Client ID", "type": "text", "required": True, "secret": False},
+            {"key": "broker_API_KEY", "label": "App ID / API Key", "type": "password", "required": False, "secret": True},
+            {"key": "broker_API_SKEY", "label": "App Secret / API Secret", "type": "password", "required": False, "secret": True},
+            {"key": "broker_API_UID", "label": "Dhan Client ID", "type": "text", "required": False, "secret": False},
             {"key": "access_token", "label": "Access Token", "type": "password", "required": False, "secret": True},
         ],
+        "requirement_note": "Provide either Access Token, or App/API Key + Secret + Dhan Client ID for consent login.",
     },
 }
 

@@ -111,17 +111,20 @@ const brokerSchemaFallbacks = {
   },
   "dhan": {
     display_name: "Dhan",
-    auth_mode: "manual_token",
-    description: "Store Dhan API key and access token. No extra broker redirect is required from this setup screen.",
+    auth_mode: "redirect_oauth",
+    description: "Use either a Dhan Web access token, or save App/API Key + Secret + Client ID and complete Dhan's consent flow.",
     save_action_label: "Save Broker Name API Details",
-    connect_action_label: null,
-    connect_path: null,
-    supports_callback: false,
-    supports_redirect: false,
+    connect_action_label: "Connect to Dhan",
+    connect_path: "/broker_auth_login/?broker=dhan",
+    supports_callback: true,
+    supports_redirect: true,
     fields: [
-      { key: "broker_API_KEY", label: "API Key", type: "password", required: true, secret: true },
-      { key: "access_token", label: "Access Token", type: "password", required: true, secret: true },
+      { key: "broker_API_KEY", label: "App ID / API Key", type: "password", required: false, secret: true },
+      { key: "broker_API_SKEY", label: "App Secret / API Secret", type: "password", required: false, secret: true },
+      { key: "broker_API_UID", label: "Dhan Client ID", type: "text", required: false, secret: false },
+      { key: "access_token", label: "Access Token", type: "password", required: false, secret: true },
     ],
+    requirement_note: "Provide either Access Token, or App/API Key + Secret + Dhan Client ID for consent login.",
   },
 };
 
@@ -595,6 +598,12 @@ const ClientHeader = () => {
     return existingFieldPresence(field.key);
   });
 
+  const getDhanCredentialState = () => {
+    const hasManualToken = existingFieldPresence("access_token");
+    const hasConsentCredentials = ["broker_API_KEY", "broker_API_SKEY", "broker_API_UID"].every(existingFieldPresence);
+    return { hasManualToken, hasConsentCredentials, isReady: hasManualToken || hasConsentCredentials };
+  };
+
   const hasBrokerDetailsToSave = (() => {
     if (!selectedBroker) {
       return false;
@@ -620,6 +629,10 @@ const ClientHeader = () => {
       errors.broker_name = true;
     }
     brokerFields.forEach((field) => {
+      if (!field.required) {
+        errors[field.key] = false;
+        return;
+      }
       const value = typeof brokerInput[field.key] === "string" ? brokerInput[field.key].trim() : brokerInput[field.key];
       errors[field.key] = !value && !existingFieldPresence(field.key);
     });
@@ -743,6 +756,15 @@ const ClientHeader = () => {
       const missingRequiredFields = (activeSchema.fields || [])
         .filter((field) => field.required && !field.configured && !field.persisted && !field.value)
         .map((field) => field.label);
+
+      if (normalizedActiveBroker === "dhan") {
+        const { hasConsentCredentials } = getDhanCredentialState();
+        if (!hasConsentCredentials) {
+          Swal.fire('Error', 'For Dhan consent login, save App/API Key, App Secret/API Secret, and Dhan Client ID first. If you already have a Dhan access token, save it and no Connect to Dhan step is needed.', 'error');
+          setIsModalOpen(true);
+          return;
+        }
+      }
 
       if (missingRequiredFields.length > 0) {
         Swal.fire('Error', `Please save the required broker details first: ${missingRequiredFields.join(', ')}`, 'error');
@@ -978,6 +1000,11 @@ const ClientHeader = () => {
               <div style={{ color: "#6b7280", fontSize: "14px", marginBottom: "14px" }}>
                 Save the broker credentials once. AlgoView will retain them securely until you explicitly change or remove them.
               </div>
+              {brokerSetup?.requirement_note && (
+                <div style={{ color: "#374151", fontSize: "13px", marginBottom: "14px", background: "#f8fafc", border: "1px solid #e5e7eb", borderRadius: "8px", padding: "10px 12px" }}>
+                  {brokerSetup.requirement_note}
+                </div>
+              )}
               {brokerFields.map((field, index) => (
                 <FormGroup key={index}>
                   <Label for={field.key}>{field.label}</Label>
@@ -1021,9 +1048,11 @@ const ClientHeader = () => {
                 </div>
                 {(brokerSetup?.connect_path || brokerSetup?.auth_mode === "direct_credentials") && (
                   <div style={{ marginTop: "10px", fontSize: "13px", color: areRequiredBrokerFieldsReady ? "#166534" : "#b45309" }}>
-                    {areRequiredBrokerFieldsReady
-                      ? "Required broker details are available. You can start broker login after saving."
-                      : "Fill all required broker details before starting broker login."}
+                    {normalizeBrokerName(selectedBroker) === "dhan"
+                      ? "Dhan login needs App/API Key, Secret, and Client ID. If you saved an Access Token directly, no login redirect is required."
+                      : areRequiredBrokerFieldsReady
+                        ? "Required broker details are available. You can start broker login after saving."
+                        : "Fill all required broker details before starting broker login."}
                   </div>
                 )}
                 <div style={{ marginTop: "10px", display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
