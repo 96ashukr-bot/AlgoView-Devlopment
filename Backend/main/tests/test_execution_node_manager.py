@@ -18,6 +18,7 @@ from main.fivepaisa import place_5paisa_order
 from main.dhanapi import place_dhan_orders
 from main.zerodha import place_zerodha_orders
 from main.dematemodule import _broker_proxy_config_or_none, _save_session_tokens_compat
+from main.dematemodule import BrokerCallbackView
 
 
 TEST_CACHES = {
@@ -588,6 +589,42 @@ class ExecutionNodeManagerTests(TestCase):
 
         _save_session_tokens_compat(self.broker_details, "request-token", "access-token")
 
+        proxy_node.refresh_from_db()
+        self.assertTrue(proxy_node.is_verified_with_broker)
+
+    @mock.patch("main.dematemodule.requests.post")
+    def test_upstox_token_flow_uses_verified_proxy_before_broker_verification(self, mock_post):
+        upstox = Broker.objects.create(broker_name="Upstox", is_active=True)
+        broker_details = ClientBrokerdetails.objects.create(
+            client=self.client_user,
+            broker_name=upstox,
+            broker_API_KEY="upstox-key",
+            broker_API_SKEY="upstox-secret",
+            broker_Demate_User_Name="upstox-user",
+        )
+        proxy_node = ExecutionNode.objects.create(
+            name="Upstox Token Proxy",
+            ip_address="10.0.0.33",
+            execution_type=ExecutionNode.EXECUTION_TYPE_PROXY,
+            proxy_host="proxy.example.com",
+            proxy_port=8080,
+            proxy_protocol=ExecutionNode.PROXY_PROTOCOL_HTTP,
+            proxy_public_ip_verified=True,
+            is_verified_with_broker=False,
+        )
+        assign_execution_node_to_client(self.client_user, proxy_node)
+        broker_details.refresh_from_db()
+        mock_post.return_value = SimpleNamespace(
+            status_code=200,
+            content=b"{}",
+            json=lambda: {"access_token": "upstox-access", "refresh_token": "upstox-refresh", "expires_in": 3600},
+        )
+
+        response = BrokerCallbackView().handle_upstox("auth-code", broker_details)
+
+        self.assertEqual(response.status_code, 200)
+        mock_post.assert_called_once()
+        self.assertIn("proxies", mock_post.call_args.kwargs)
         proxy_node.refresh_from_db()
         self.assertTrue(proxy_node.is_verified_with_broker)
 
