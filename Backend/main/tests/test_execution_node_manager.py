@@ -296,6 +296,53 @@ class ExecutionNodeManagerTests(TestCase):
         )
         mock_kite_class.assert_called_once_with(api_key="kite-api", proxies=proxy_config)
 
+    @mock.patch("main.zerodha.KiteConnect")
+    def test_zerodha_limit_order_uses_signal_price_when_ltp_unavailable(self, mock_kite_class):
+        from main.zerodha import place_zerodha_orders
+
+        proxy_config = {"http": "http://proxy.example.com:8080", "https": "http://proxy.example.com:8080"}
+        kite = mock_kite_class.return_value
+        kite.VARIETY_REGULAR = "regular"
+        kite.profile.return_value = {"user_id": "kite-user"}
+        kite.instruments.return_value = [{"tradingsymbol": "NIFTY24400CE"}]
+        kite.ltp.return_value = {}
+        kite.place_order.return_value = "kite-order-2"
+        kite.order_history.return_value = [{"status": "COMPLETE", "transaction_type": "BUY", "average_price": 12.3, "filled_quantity": 65}]
+
+        response = place_zerodha_orders(
+            12,
+            "Lite",
+            "kite-access",
+            "kite-api",
+            "NIFTY24400CE",
+            "BUY",
+            "NIFTY",
+            65,
+            "strategy",
+            "LIMIT",
+            "MIS",
+            None,
+            self.client_user,
+            1,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            "NFO",
+            "FNO",
+            "NIFTY",
+            None,
+            "OPEN",
+            "kite-history-2",
+            proxy_config=proxy_config,
+        )
+
+        self.assertNotEqual(response["data"]["status"], "Failed")
+        self.assertEqual(kite.place_order.call_args.kwargs["price"], 12.3)
+
     @mock.patch("main.brokers.dhan.place_dhan_orders")
     def test_dhan_adapter_supports_proxy_and_passes_config(self, mock_place_order):
         broker = Broker.objects.create(broker_name="Dhan", is_active=True)
@@ -380,6 +427,67 @@ class ExecutionNodeManagerTests(TestCase):
             proxy_config=proxy_config,
         )
         self.assertEqual(dhan.session.proxies, proxy_config)
+
+    @mock.patch("main.dhanapi.get_trading_symbol_security_id")
+    @mock.patch("main.dhanapi.dhanhq")
+    def test_dhan_limit_order_uses_signal_price_when_ltp_unavailable(self, mock_dhan_class, mock_security_lookup):
+        from main.dhanapi import place_dhan_orders
+
+        proxy_config = {"http": "http://proxy.example.com:8080", "https": "http://proxy.example.com:8080"}
+        dhan = mock_dhan_class.return_value
+        dhan.session.proxies = {}
+        dhan.NSE_FNO = "NSE_FNO"
+        dhan.NSE = "NSE"
+        dhan.NORMAL = "NORMAL"
+        dhan.INTRA = "INTRA"
+        dhan.CNC = "CNC"
+        dhan.BUY = "BUY"
+        dhan.SELL = "SELL"
+        dhan.MARKET = "MARKET"
+        dhan.LIMIT = "LIMIT"
+        dhan.SL = "SL"
+        dhan.get_ltp_data.return_value = {"data": {"NSE_FNO": {}}}
+        dhan.place_order.return_value = {"status": "success", "data": {"orderId": "dhan-order-2"}}
+        dhan.get_order_by_id.return_value = {
+            "status": "success",
+            "data": [{"orderStatus": "TRADED", "transactionType": "BUY", "averageTradedPrice": 12.3, "quantity": 65}],
+        }
+        mock_security_lookup.return_value = {"status": "success", "SECURITY_ID": 12345}
+
+        response = place_dhan_orders(
+            "2026-05-12",
+            12,
+            "Lite",
+            "dhan-access",
+            "dhan-client",
+            "NIFTY24400CE",
+            "BUY",
+            "NIFTY",
+            65,
+            "strategy",
+            "LIMIT",
+            "MIS",
+            None,
+            self.client_user,
+            1,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            "NFO",
+            "FNO",
+            "NIFTY",
+            None,
+            "OPEN",
+            "dhan-history-2",
+            proxy_config=proxy_config,
+        )
+
+        self.assertNotEqual(response["data"]["status"], "Failed")
+        self.assertEqual(dhan.place_order.call_args.kwargs["price"], 12.3)
 
     @mock.patch("main.dhanapi.ensure_dhan_instruments_file")
     def test_dhan_security_lookup_ignores_invalid_placeholder_expiry_dates(self, mock_instrument_file):

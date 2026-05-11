@@ -120,15 +120,21 @@ def place_zerodha_orders(
             logger.warning(f"[{user}] Zerodha LTP fetch failed for {trading_symbol}: {str(e)}")
 
         if requested_order_type == "LIMIT":
-            price = resolve_limit_price(price, ltp, transaction_type)
+            reference_price = ltp or LivePrice or Entry_price or Exit_price
+            if ltp is None and reference_price:
+                logger.info(
+                    f"[{user}] Zerodha LTP unavailable for {trading_symbol}; using fallback reference price {reference_price}."
+                )
+            price = resolve_limit_price(price, reference_price, transaction_type)
             if not price:
-                message = "Unable to calculate Zerodha limit price because live price is unavailable."
+                message = "Unable to calculate Zerodha limit price because no live, signal, or reference price is available."
                 response = {"data": {"status": "Failed", "message": message}}
                 save_trade_order_history(LivePrice, group_service, transaction_type, trade_order_status, user, symbol, order_id, "Failed", None, message,
                                          strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
                                          webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="zerodha", history_id=history_id)
                 return response
             order_params["price"] = price
+            order_params["reference_price"] = reference_price
         elif requested_order_type == "MARKET":
             order_params["price"] = 0
         order_params["order_type"] = requested_order_type
