@@ -1,3 +1,5 @@
+import os
+import tempfile
 from types import SimpleNamespace
 from unittest import mock
 
@@ -17,6 +19,7 @@ from main.fyersapi import place_fyers_orders
 from main.upstock import place_upstox_orders
 from main.fivepaisa import place_5paisa_order
 from main.dhanapi import place_dhan_orders
+from main.dhanapi import get_trading_symbol_security_id
 from main.zerodha import place_zerodha_orders
 from main.dematemodule import _broker_proxy_config_or_none, _save_session_tokens_compat
 from main.dematemodule import BrokerCallbackView
@@ -377,6 +380,32 @@ class ExecutionNodeManagerTests(TestCase):
             proxy_config=proxy_config,
         )
         self.assertEqual(dhan.session.proxies, proxy_config)
+
+    @mock.patch("main.dhanapi.ensure_dhan_instruments_file")
+    def test_dhan_security_lookup_ignores_invalid_placeholder_expiry_dates(self, mock_instrument_file):
+        with tempfile.NamedTemporaryFile("w", suffix=".csv", delete=False) as file_obj:
+            file_obj.write(
+                "SEM_EXM_EXCH_ID,SEM_SEGMENT,SEM_SMST_SECURITY_ID,SEM_INSTRUMENT_NAME,SEM_EXPIRY_CODE,"
+                "SEM_TRADING_SYMBOL,SEM_LOT_UNITS,SEM_CUSTOM_SYMBOL,SEM_EXPIRY_DATE,SEM_STRIKE_PRICE,"
+                "SEM_OPTION_TYPE,SEM_TICK_SIZE,SEM_EXPIRY_FLAG,SEM_EXCH_INSTRUMENT_TYPE,SEM_SERIES,SM_SYMBOL_NAME\n"
+            )
+            file_obj.write(
+                "NSE,E,999,INDEX,0,NIFTY,1,NIFTY,0001-01-01,0,XX,0.05,M,INDEX,,NIFTY\n"
+            )
+            file_obj.write(
+                "NSE,D,41746,OPTIDX,0,NIFTY-May2026-23900-CE,65,NIFTY 12 MAY 23900 CALL,"
+                "2026-05-12 14:30:00,23900.0,CE,0.05,W,OPTIDX,,NIFTY\n"
+            )
+            csv_path = file_obj.name
+
+        mock_instrument_file.return_value = csv_path
+        try:
+            result = get_trading_symbol_security_id("NIFTYMAY202623900CE", None, "NFO", "2026-05-12", self.client_user)
+        finally:
+            os.unlink(csv_path)
+
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(int(result["SECURITY_ID"]), 41746)
 
     def test_all_supported_brokers_have_execution_node_adapters(self):
         broker_names = {

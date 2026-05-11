@@ -31,7 +31,8 @@ def get_trading_symbol_security_id(symbol, segment, Exch,expiry_date, user=None)
         normalized_symbol = str(symbol or "").strip().replace(" ", "").replace("-", "").upper()
         
         df['SEM_TRADING_SYMBOL'] = df['SEM_TRADING_SYMBOL'].astype(str).str.strip().str.replace(r"[^\w]", "", regex=True).str.upper()
-        df['SEM_EXPIRY_DATE'] = pd.to_datetime(df['SEM_EXPIRY_DATE']).dt.strftime('%Y-%m-%d')
+        df['SEM_EXPIRY_DATE'] = pd.to_datetime(df['SEM_EXPIRY_DATE'], errors="coerce").dt.strftime('%Y-%m-%d')
+        df = df[df['SEM_EXPIRY_DATE'].notna()]
 
         filtered_df = df[
             (df['SEM_TRADING_SYMBOL'] == normalized_symbol) & 
