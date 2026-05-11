@@ -5,7 +5,7 @@ from django.test import TestCase, override_settings
 from django.urls import Resolver404, resolve
 
 from main.angelone.services.state_service import CallbackStateService
-from main.models import Broker, ClientBrokerdetails, User
+from main.models import Broker, ClientBrokerdetails, ExecutionNode, User
 
 
 TEST_CACHES = {
@@ -20,6 +20,25 @@ TEST_CACHES = {
     ANGELONE_CALLBACK_STATE_TTL_SECONDS=60,
 )
 class BrokerCallbackRoutingTests(TestCase):
+    def _attach_verified_proxy(self, broker_details, *, node_id="callback-node"):
+        node = ExecutionNode.objects.create(
+            name=node_id,
+            ip_address="203.0.113.10",
+            provider="Test",
+            node_id=node_id,
+            execution_type=ExecutionNode.EXECUTION_TYPE_PROXY,
+            proxy_host="proxy.example.com",
+            proxy_port=8080,
+            proxy_protocol=ExecutionNode.PROXY_PROTOCOL_HTTP,
+            proxy_public_ip_verified=True,
+            is_verified_with_broker=False,
+            assigned_client=broker_details.client,
+            status=ExecutionNode.STATUS_ASSIGNED,
+        )
+        broker_details.execution_node = node
+        broker_details.save(update_fields=["execution_node"])
+        return node
+
     def test_broker_callback_accepts_request_token(self):
         response = self.client.get("/api/broker/callback/", {"request_token": "test123"})
 
@@ -62,6 +81,7 @@ class BrokerCallbackRoutingTests(TestCase):
             broker_API_KEY="upstox-key",
             broker_API_SKEY="upstox-secret",
         )
+        self._attach_verified_proxy(broker_details, node_id="upstox-callback-node")
         CallbackStateService().create(
             state="upstox-state",
             user_id=user.id,
@@ -102,6 +122,7 @@ class BrokerCallbackRoutingTests(TestCase):
             broker_API_KEY="upstox-key",
             broker_API_SKEY="upstox-secret",
         )
+        self._attach_verified_proxy(broker_details, node_id="upstox-browser-node")
         CallbackStateService().create(
             state="browser-state",
             user_id=user.id,
@@ -125,3 +146,40 @@ class BrokerCallbackRoutingTests(TestCase):
         self.assertIn("/dashboard/algoviewtech/user", response["Location"])
         self.assertIn("broker_login=success", response["Location"])
         self.assertNotIn("browser-access", response["Location"])
+
+    @mock.patch("main.dematemodule.requests.get")
+    def test_dhan_token_id_callback_is_exchanged_without_state(self, mock_get):
+        user = User.objects.create_user(
+            email="dhan-owner@example.com",
+            firstName="Dhan",
+            lastName="Owner",
+            phoneNumber="9999999996",
+            password="Pass@1234",
+        )
+        broker = Broker.objects.create(broker_name="Dhan", is_active=True)
+        broker_details = ClientBrokerdetails.objects.create(
+            client=user,
+            broker_name=broker,
+            broker_API_KEY="dhan-app-id",
+            broker_API_SKEY="dhan-secret",
+            broker_API_UID="1100000011",
+            request_token="consent-app-id",
+        )
+        self._attach_verified_proxy(broker_details, node_id="dhan-callback-node")
+        mock_get.return_value = SimpleNamespace(
+            status_code=200,
+            content=b"{}",
+            json=lambda: {
+                "accessToken": "dhan-access-token",
+                "dhanClientId": "1100000011",
+                "expiryTime": "2026-05-11T15:30:00+05:30",
+            },
+        )
+
+        response = self.client.get("/api/broker/callback/", {"tokenId": "dhan-token-id"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["message"], "success")
+        mock_get.assert_called_once()
+        broker_details.refresh_from_db()
+        self.assertEqual(broker_details.access_token, "dhan-access-token")

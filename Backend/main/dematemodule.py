@@ -972,6 +972,8 @@ class BrokerRedirectCallbackView(APIView):
             or request.GET.get("jwtToken")
             or request.GET.get("state")
             or request.GET.get("redirect_params")
+            or request.GET.get("tokenId")
+            or request.GET.get("token_id")
         ):
             return BrokerCallbackView.as_view()(request._request)
 
