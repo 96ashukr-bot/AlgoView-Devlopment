@@ -25,6 +25,14 @@ BROKER_HOST_FRAGMENTS = (
     "ant.aliceblueonline.com",
 )
 
+PUBLIC_INSTRUMENT_MASTER_PATHS = (
+    ("margincalculator.angelbroking.com", "/OpenAPI_File/files/OpenAPIScripMaster.json"),
+    ("images.dhan.co", "/api-data/api-scrip-master.csv"),
+    ("assets.upstox.com", "/market-quote/instruments/exchange/"),
+    ("public.fyers.in", "/sym_details/"),
+    ("Openapi.5paisa.com".lower(), "/VendorsAPI/Service1.svc/ScripMaster/segment/"),
+)
+
 _ORIGINAL_REQUEST = None
 _INSTALLED = False
 
@@ -32,6 +40,13 @@ _INSTALLED = False
 def _is_broker_url(url: str) -> bool:
     hostname = (urlparse(str(url)).hostname or "").lower()
     return any(fragment in hostname for fragment in BROKER_HOST_FRAGMENTS)
+
+
+def _is_public_instrument_master_url(url: str) -> bool:
+    parsed = urlparse(str(url))
+    hostname = (parsed.hostname or "").lower()
+    path = parsed.path or ""
+    return any(hostname == allowed_host and path.startswith(allowed_path) for allowed_host, allowed_path in PUBLIC_INSTRUMENT_MASTER_PATHS)
 
 
 def _has_proxy(session: requests.Session, kwargs: dict) -> bool:
@@ -51,7 +66,7 @@ def enforce_broker_proxy_for_requests() -> None:
     _ORIGINAL_REQUEST = requests.sessions.Session.request
 
     def guarded_request(self, method, url, **kwargs):
-        if _is_broker_url(url) and not _has_proxy(self, kwargs):
+        if _is_broker_url(url) and not _is_public_instrument_master_url(url) and not _has_proxy(self, kwargs):
             logger.error("Blocked direct broker egress without proxy", extra={"method": method, "url": urlparse(str(url)).netloc})
             raise ProxyRoutingRequiredError("Direct broker egress without client proxy/static-IP route is blocked.")
         return _ORIGINAL_REQUEST(self, method, url, **kwargs)

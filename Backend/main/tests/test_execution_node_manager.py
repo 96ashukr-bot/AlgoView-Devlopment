@@ -10,6 +10,7 @@ from main.brokers.base import get_broker_adapter
 from main.models import Broker, ClientBrokerdetails, ExecutionNode, ExecutionOrderJob, User
 from main.services.execution_nodes import assign_execution_node_to_client, release_execution_node
 from main.services.execution_router import route_order_to_execution_node
+from main.services.egress_guard import _is_broker_url, _is_public_instrument_master_url
 from main.services.node_security import generate_node_signature, verify_node_signature
 from main.services.proxy_utils import build_requests_proxy_config, mask_proxy_url, verify_proxy_public_ip
 from main.fyersapi import place_fyers_orders
@@ -653,6 +654,14 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertFalse(fields["broker_API_UID"]["required"])
         self.assertFalse(fields["access_token"]["required"])
         self.assertIn("either Access Token", spec["requirement_note"])
+
+    def test_egress_guard_allows_public_instrument_masters_for_expiry_lists(self):
+        angel_master = "https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json"
+        self.assertTrue(_is_broker_url(angel_master))
+        self.assertTrue(_is_public_instrument_master_url(angel_master))
+        self.assertTrue(_is_public_instrument_master_url("https://assets.upstox.com/market-quote/instruments/exchange/NSE.json.gz"))
+        self.assertTrue(_is_public_instrument_master_url("https://images.dhan.co/api-data/api-scrip-master.csv"))
+        self.assertFalse(_is_public_instrument_master_url("https://api.dhan.co/v2/orders"))
 
     def test_node_idempotency_duplicate_rejection(self):
         payload = {"broker_details_id": self.broker_details.id, "order": {"symbol": "NIFTY"}}
