@@ -32,9 +32,11 @@ from rest_framework import permissions, status
 from urllib.parse import urlencode, urlparse, urlunparse
 
 
-def _broker_proxy_config_or_none(broker_details):
+def _broker_proxy_config_or_none(broker_details, *, require_broker_verified=True):
     node = getattr(broker_details, "execution_node", None)
-    if not node or not node.is_active or not node.is_verified_with_broker:
+    if not node or not node.is_active:
+        return None
+    if require_broker_verified and not node.is_verified_with_broker:
         return None
     if node.execution_type == node.EXECUTION_TYPE_PROXY and not node.proxy_public_ip_verified:
         return None
@@ -696,6 +698,15 @@ def _save_session_tokens_compat(broker_details, request_token, access_token, ref
     broker_details.isTokenExpired = not bool(access_token)
     broker_details.tokenCreatedAt = now()
     broker_details.save()
+    node = getattr(broker_details, "execution_node", None)
+    if access_token and node and node.is_active and not node.is_verified_with_broker:
+        if node.execution_type != node.EXECUTION_TYPE_PROXY or node.proxy_public_ip_verified:
+            node.is_verified_with_broker = True
+            node.save(update_fields=["is_verified_with_broker", "updated_at"])
+            try:
+                node.mark_log("broker_verified", "Execution node marked broker verified after successful broker token generation.", client=broker_details.client)
+            except Exception:
+                logger.debug("Unable to write execution node broker verification log", exc_info=True)
 
 
 def _next_session_cutoff(hour, minute):
@@ -867,7 +878,7 @@ class BrokerLoginRedirectView(APIView):
                 {"error": "Dhan credentials are incomplete. App ID/API Key, App Secret/API Secret, and Dhan Client ID are required."},
                 status=400,
             )
-        proxy_config = _broker_proxy_config_or_none(broker_details)
+        proxy_config = _broker_proxy_config_or_none(broker_details, require_broker_verified=False)
         if not proxy_config:
             return Response({"error": "Verified execution proxy/static-IP is required for Dhan consent flow."}, status=403)
 
@@ -1092,7 +1103,7 @@ class BrokerCallbackView(APIView):
             CLIENT_ID = broker_details.broker_API_KEY
             SECRET_KEY = broker_details.broker_API_SKEY
             redirect_uri = _broker_callback_url()
-            proxy_config = _broker_proxy_config_or_none(broker_details)
+            proxy_config = _broker_proxy_config_or_none(broker_details, require_broker_verified=False)
             if not proxy_config:
                 return _broker_proxy_required_response()
             try:
@@ -1155,7 +1166,7 @@ class BrokerCallbackView(APIView):
         try:
             if not request_token:
                 return JsonResponse({"message": "Failed", "error": "Request token not provided"}, status=400)
-            proxy_config = _broker_proxy_config_or_none(broker_details)
+            proxy_config = _broker_proxy_config_or_none(broker_details, require_broker_verified=False)
             if not proxy_config:
                 return _broker_proxy_required_response()
             access_token = fetch_access_token_5paisa(request_token,broker_details, proxy_config=proxy_config)
@@ -1190,7 +1201,7 @@ class BrokerCallbackView(APIView):
             CLIENT_KEY=broker_details.broker_API_KEY
             CLIENT_SECRET=broker_details.broker_API_SKEY
             redirect_uri = _broker_callback_url()
-            proxy_config = _broker_proxy_config_or_none(broker_details)
+            proxy_config = _broker_proxy_config_or_none(broker_details, require_broker_verified=False)
             if not proxy_config:
                 return _broker_proxy_required_response()
             data = {
@@ -1239,7 +1250,7 @@ class BrokerCallbackView(APIView):
                     {"message": "Failed", "error": "Dhan App ID/API Key and App Secret/API Secret are required."},
                     status=400,
                 )
-            proxy_config = _broker_proxy_config_or_none(broker_details)
+            proxy_config = _broker_proxy_config_or_none(broker_details, require_broker_verified=False)
             if not proxy_config:
                 return _broker_proxy_required_response()
 

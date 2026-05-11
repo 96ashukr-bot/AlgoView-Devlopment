@@ -17,6 +17,7 @@ from main.upstock import place_upstox_orders
 from main.fivepaisa import place_5paisa_order
 from main.dhanapi import place_dhan_orders
 from main.zerodha import place_zerodha_orders
+from main.dematemodule import _broker_proxy_config_or_none, _save_session_tokens_compat
 
 
 TEST_CACHES = {
@@ -552,6 +553,43 @@ class ExecutionNodeManagerTests(TestCase):
                 self.broker_details,
                 {"symbol": "NIFTY", "quantity": 1, "idempotency_key": "proxy-route-unsupported"},
             )
+
+    def test_login_token_flow_can_use_verified_proxy_before_broker_verification(self):
+        proxy_node = ExecutionNode.objects.create(
+            name="Dhan Login Proxy",
+            ip_address="10.0.0.31",
+            execution_type=ExecutionNode.EXECUTION_TYPE_PROXY,
+            proxy_host="proxy.example.com",
+            proxy_port=8080,
+            proxy_protocol=ExecutionNode.PROXY_PROTOCOL_HTTP,
+            proxy_public_ip_verified=True,
+            is_verified_with_broker=False,
+        )
+        assign_execution_node_to_client(self.client_user, proxy_node)
+        self.broker_details.refresh_from_db()
+
+        self.assertIsNone(_broker_proxy_config_or_none(self.broker_details))
+        proxy_config = _broker_proxy_config_or_none(self.broker_details, require_broker_verified=False)
+        self.assertIn("https", proxy_config)
+
+    def test_successful_token_generation_marks_execution_node_broker_verified(self):
+        proxy_node = ExecutionNode.objects.create(
+            name="Dhan Token Proxy",
+            ip_address="10.0.0.32",
+            execution_type=ExecutionNode.EXECUTION_TYPE_PROXY,
+            proxy_host="proxy.example.com",
+            proxy_port=8080,
+            proxy_protocol=ExecutionNode.PROXY_PROTOCOL_HTTP,
+            proxy_public_ip_verified=True,
+            is_verified_with_broker=False,
+        )
+        assign_execution_node_to_client(self.client_user, proxy_node)
+        self.broker_details.refresh_from_db()
+
+        _save_session_tokens_compat(self.broker_details, "request-token", "access-token")
+
+        proxy_node.refresh_from_db()
+        self.assertTrue(proxy_node.is_verified_with_broker)
 
     def test_node_idempotency_duplicate_rejection(self):
         payload = {"broker_details_id": self.broker_details.id, "order": {"symbol": "NIFTY"}}
