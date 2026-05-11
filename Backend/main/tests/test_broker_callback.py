@@ -39,14 +39,13 @@ class BrokerCallbackRoutingTests(TestCase):
         broker_details.save(update_fields=["execution_node"])
         return node
 
-    def test_broker_callback_accepts_request_token(self):
+    def test_broker_callback_fails_closed_for_unknown_request_token(self):
         response = self.client.get("/api/broker/callback/", {"request_token": "test123"})
 
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 400)
         payload = response.json()
-        self.assertEqual(payload["status"], "success")
-        self.assertEqual(payload["message"], "Broker callback received.")
-        self.assertIn("request_token", payload["callback"]["present_params"])
+        self.assertEqual(payload["message"], "Failed")
+        self.assertIn("callback state", payload["error"])
         self.assertNotIn("test123", str(payload))
 
     def test_broker_callback_final_url_is_not_double_prefixed(self):
@@ -183,3 +182,47 @@ class BrokerCallbackRoutingTests(TestCase):
         mock_get.assert_called_once()
         broker_details.refresh_from_db()
         self.assertEqual(broker_details.access_token, "dhan-access-token")
+
+    @mock.patch("main.dematemodule.KiteConnect")
+    def test_zerodha_request_token_callback_is_exchanged_without_state(self, mock_kite_class):
+        user = User.objects.create_user(
+            email="zerodha-owner@example.com",
+            firstName="Zerodha",
+            lastName="Owner",
+            phoneNumber="9999999995",
+            password="Pass@1234",
+        )
+        broker = Broker.objects.create(broker_name="Zerodha", is_active=True)
+        broker_details = ClientBrokerdetails.objects.create(
+            client=user,
+            broker_name=broker,
+            broker_API_KEY="kite-api",
+            broker_API_SKEY="kite-secret",
+            request_token="zerodha-login-state",
+        )
+        self._attach_verified_proxy(broker_details, node_id="zerodha-callback-node")
+        kite = mock_kite_class.return_value
+        kite.generate_session.return_value = {"access_token": "kite-access-token"}
+
+        response = self.client.get(
+            "/api/broker/callback/",
+            {
+                "action": "login",
+                "type": "login",
+                "status": "success",
+                "request_token": "kite-request-token",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["message"], "success")
+        mock_kite_class.assert_called_once_with(
+            api_key="kite-api",
+            proxies={
+                "http": "http://proxy.example.com:8080",
+                "https": "http://proxy.example.com:8080",
+            },
+        )
+        kite.generate_session.assert_called_once_with("kite-request-token", api_secret="kite-secret")
+        broker_details.refresh_from_db()
+        self.assertEqual(broker_details.access_token, "kite-access-token")

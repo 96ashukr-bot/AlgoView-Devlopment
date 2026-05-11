@@ -804,6 +804,9 @@ class BrokerLoginRedirectView(APIView):
         if not api_key or not broker_details.broker_API_SKEY:
             return Response({"error": "Zerodha credentials are incomplete."}, status=400)
         state = _create_broker_callback_state(request, broker_details, "zerodha")
+        broker_details.request_token = state
+        broker_details.tokenCreatedAt = now()
+        broker_details.save(update_fields=["request_token", "tokenCreatedAt"])
         params = urlencode({"api_key": api_key, "v": "3", "redirect_params": state})
         zerodha_url = f"https://kite.zerodha.com/connect/login?{params}"
         return Response({"redirect_url": zerodha_url})
@@ -974,6 +977,8 @@ class BrokerRedirectCallbackView(APIView):
             or request.GET.get("redirect_params")
             or request.GET.get("tokenId")
             or request.GET.get("token_id")
+            or request.GET.get("request_token")
+            or request.GET.get("RequestToken")
         ):
             return BrokerCallbackView.as_view()(request._request)
 
@@ -1053,6 +1058,27 @@ class BrokerCallbackView(APIView):
                         broker_name = "dhan"
                     else:
                         raise ValidationError("Invalid or expired Dhan callback state")
+                elif not user and (
+                    request.GET.get("request_token") or request.GET.get("code")
+                ) and (
+                    request.GET.get("action") == "login"
+                    or request.GET.get("type") == "login"
+                    or request.GET.get("status") == "success"
+                ):
+                    broker_details = (
+                        ClientBrokerdetails.objects.select_related("broker_name")
+                        .filter(
+                            broker_name__broker_name__iexact="zerodha",
+                            request_token__isnull=False,
+                            tokenCreatedAt__gte=now() - timedelta(minutes=15),
+                        )
+                        .order_by("-tokenCreatedAt", "-id")
+                        .first()
+                    )
+                    if broker_details:
+                        broker_name = "zerodha"
+                    else:
+                        raise ValidationError("Invalid or expired Zerodha callback state")
                 elif not user:
                     raise ValidationError("Invalid or expired broker callback state")
                 else:
@@ -1151,7 +1177,10 @@ class BrokerCallbackView(APIView):
         try:
             if not request_token:
                 return JsonResponse({"message": "Failed", "error": "Request token not provided"}, status=400)
-            kite = KiteConnect(api_key=broker_details.broker_API_KEY)
+            proxy_config = _broker_proxy_config_or_none(broker_details, require_broker_verified=False)
+            if not proxy_config:
+                return _broker_proxy_required_response()
+            kite = KiteConnect(api_key=broker_details.broker_API_KEY, proxies=proxy_config)
             session_data = kite.generate_session(request_token, api_secret=broker_details.broker_API_SKEY)
             access_token = session_data['access_token']
             if access_token:
