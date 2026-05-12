@@ -3,6 +3,7 @@ import tempfile
 from types import SimpleNamespace
 from unittest import mock
 
+import requests
 from django.core.cache import cache
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.test import TestCase, override_settings
@@ -409,9 +410,58 @@ class ExecutionNodeManagerTests(TestCase):
         )
 
         self.assertNotEqual(response["data"]["status"], "Failed")
+        self.assertEqual(mock_post.call_args.args[0], "https://api.upstox.com/v2/order/place")
         placed_payload = mock_post.call_args.kwargs["json"]
         self.assertEqual(placed_payload["price"], 10.25)
         self.assertNotIn("reference_price", placed_payload)
+
+    @mock.patch("main.upstock.load_upstox_instruments")
+    @mock.patch("main.upstock.requests.get")
+    @mock.patch("main.upstock.requests.post")
+    def test_upstox_order_timeout_returns_clear_failure(self, mock_post, mock_get, mock_load_instruments):
+        proxy_config = {"http": "http://proxy.example.com:8080", "https": "http://proxy.example.com:8080"}
+        mock_load_instruments.return_value = [
+            {"instrument_key": "NSE_FO|12345", "trading_symbol": "NIFTY24400CE"}
+        ]
+        mock_get.return_value = SimpleNamespace(
+            status_code=200,
+            content=b"{}",
+            json=lambda: {"data": {"NSE_FO|12345": {"last_price": 10}}},
+        )
+        mock_post.side_effect = requests.Timeout("read timeout")
+
+        response = place_upstox_orders(
+            24087.5,
+            "Lite",
+            "upstox-access",
+            "NIFTY24400CE",
+            "BUY",
+            "NIFTY",
+            65,
+            "strategy",
+            "LIMIT",
+            "MIS",
+            None,
+            self.client_user,
+            1,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            "NFO",
+            "FNO",
+            "NIFTY",
+            None,
+            "OPEN",
+            "upstox-timeout-history",
+            proxy_config=proxy_config,
+        )
+
+        self.assertEqual(response["data"]["status"], "Failed")
+        self.assertIn("timed out before broker confirmation", response["data"]["message"])
 
     @mock.patch("main.upstock.load_upstox_instruments")
     @mock.patch("main.upstock.requests.get")

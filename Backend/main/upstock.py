@@ -14,8 +14,9 @@ from datetime import datetime
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-PLACE__ORDER_URL="https://api-hft.upstox.com/v2/order/place"
+PLACE__ORDER_URL="https://api.upstox.com/v2/order/place"
 MARKET_QUOTE_LTP_URL = "https://api.upstox.com/v2/market-quote/ltp"
+UPSTOX_PLACE_ORDER_TIMEOUT = (5, 25)
 
 
 def _response_json_or_error(response):
@@ -144,7 +145,34 @@ def place_upstox_orders(LivePrice,group_service,
         # Place the order
         logger.info(f"{user} : Place the order API is calling for the Upstox !!")
         history_order_params = {**order_params, "reference_price": reference_price} if requested_order_type == "LIMIT" else order_params
-        response = requests.post(PLACE__ORDER_URL, headers=headers, json=order_params, timeout=10, proxies=proxy_config)
+        try:
+            response = requests.post(
+                PLACE__ORDER_URL,
+                headers=headers,
+                json=order_params,
+                timeout=UPSTOX_PLACE_ORDER_TIMEOUT,
+                proxies=proxy_config,
+            )
+        except requests.Timeout as e:
+            message = "Upstox order placement timed out before broker confirmation. Please check Upstox orderbook before retrying."
+            logger.exception(f"{user} : {message}: {str(e)}")
+            save_trade_order_history(
+                LivePrice, group_service, transaction_type, trade_order_status, user, trade_symbol, order_id,
+                "Failed", {"error": "timeout", "details": str(e)}, message, strategy, Entry_type, Exit_type,
+                Entry_price, Exit_price, EntryQty, ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,
+                history_order_params, broker="upstox", history_id=history_id
+            )
+            return {"data": {"status": "Failed", "message": message, "error_details": str(e)}}
+        except requests.RequestException as e:
+            message = "Upstox order placement failed due to a network/proxy error."
+            logger.exception(f"{user} : {message}: {str(e)}")
+            save_trade_order_history(
+                LivePrice, group_service, transaction_type, trade_order_status, user, trade_symbol, order_id,
+                "Failed", {"error": "network_error", "details": str(e)}, message, strategy, Entry_type, Exit_type,
+                Entry_price, Exit_price, EntryQty, ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,
+                history_order_params, broker="upstox", history_id=history_id
+            )
+            return {"data": {"status": "Failed", "message": message, "error_details": str(e)}}
         response_data = _response_json_or_error(response)
 
         logger.info(f"{user} : Order API response: {response_data} status code ::{response.status_code}")
