@@ -342,6 +342,72 @@ class ExecutionNodeManagerTests(TestCase):
 
         self.assertNotEqual(response["data"]["status"], "Failed")
         self.assertEqual(kite.place_order.call_args.kwargs["price"], 12.3)
+        self.assertNotIn("reference_price", kite.place_order.call_args.kwargs)
+
+    @mock.patch("main.upstock.load_upstox_instruments")
+    @mock.patch("main.upstock.requests.get")
+    @mock.patch("main.upstock.requests.post")
+    def test_upstox_limit_order_uses_signal_price_when_ltp_unavailable(self, mock_post, mock_get, mock_load_instruments):
+        proxy_config = {"http": "http://proxy.example.com:8080", "https": "http://proxy.example.com:8080"}
+        mock_load_instruments.return_value = [
+            {"instrument_key": "NSE_FO|12345", "trading_symbol": "NIFTY24400CE"}
+        ]
+        mock_get.side_effect = [
+            SimpleNamespace(status_code=200, content=b"{}", json=lambda: {"data": {}}),
+            SimpleNamespace(
+                status_code=200,
+                content=b"{}",
+                json=lambda: {
+                    "data": {
+                        "status": "complete",
+                        "order_id": "upstox-order-1",
+                        "transaction_type": "BUY",
+                        "average_price": 12.3,
+                        "quantity": 65,
+                    }
+                },
+            ),
+        ]
+        mock_post.return_value = SimpleNamespace(
+            status_code=200,
+            content=b"{}",
+            json=lambda: {"status": "success", "data": {"order_id": "upstox-order-1"}},
+        )
+
+        response = place_upstox_orders(
+            12,
+            "Lite",
+            "upstox-access",
+            "NIFTY24400CE",
+            "BUY",
+            "NIFTY",
+            65,
+            "strategy",
+            "LIMIT",
+            "MIS",
+            None,
+            self.client_user,
+            1,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            "NFO",
+            "FNO",
+            "NIFTY",
+            None,
+            "OPEN",
+            "upstox-history-1",
+            proxy_config=proxy_config,
+        )
+
+        self.assertNotEqual(response["data"]["status"], "Failed")
+        placed_payload = mock_post.call_args.kwargs["json"]
+        self.assertEqual(placed_payload["price"], 12.3)
+        self.assertNotIn("reference_price", placed_payload)
 
     @mock.patch("main.brokers.dhan.place_dhan_orders")
     def test_dhan_adapter_supports_proxy_and_passes_config(self, mock_place_order):
