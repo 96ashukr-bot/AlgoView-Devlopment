@@ -1,7 +1,7 @@
 from django.http import JsonResponse
 from kiteconnect import KiteConnect
 from main.models import ClientBrokerdetails, CompanySmtpDetails
-from main.broker_order_utils import normalize_order_type, resolve_limit_price
+from main.broker_order_utils import normalize_order_type, resolve_limit_price, resolve_limit_reference_price
 from main.trade_history_service import save_trade_order_history
 import logging
 logger = logging.getLogger('main')
@@ -120,14 +120,14 @@ def place_zerodha_orders(
             logger.warning(f"[{user}] Zerodha LTP fetch failed for {trading_symbol}: {str(e)}")
 
         if requested_order_type == "LIMIT":
-            reference_price = ltp or LivePrice or Entry_price or Exit_price
+            reference_price = resolve_limit_reference_price(trading_symbol, ltp, LivePrice, Entry_price, Exit_price)
             if ltp is None and reference_price:
                 logger.info(
                     f"[{user}] Zerodha LTP unavailable for {trading_symbol}; using fallback reference price {reference_price}."
                 )
             price = resolve_limit_price(price, reference_price, transaction_type)
             if not price:
-                message = "Unable to calculate Zerodha limit price because no live, signal, or reference price is available."
+                message = "Unable to calculate Zerodha option limit price because option live price is unavailable. Please retry after quotes are available or provide an explicit option limit price."
                 response = {"data": {"status": "Failed", "message": message}}
                 save_trade_order_history(LivePrice, group_service, transaction_type, trade_order_status, user, symbol, order_id, "Failed", None, message,
                                          strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,

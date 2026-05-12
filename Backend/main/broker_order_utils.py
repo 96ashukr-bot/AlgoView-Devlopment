@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any, Optional
 
 from main.angelone.constants import (
@@ -63,3 +64,25 @@ def resolve_limit_price(explicit_price: Any, ltp: Any, side: str, buffer_percent
     if requested_price and requested_price > 0:
         return round_to_tick(requested_price)
     return calculate_buffered_limit_price(ltp, side, buffer_percentage=buffer_percentage)
+
+
+def is_option_symbol(symbol: Any) -> bool:
+    normalized = str(symbol or "").replace(" ", "").replace("-", "").upper()
+    return bool(re.search(r"\d+(?:\.\d+)?(CE|PE)$", normalized) or re.search(r"(CALL|PUT)$", normalized))
+
+
+def resolve_limit_reference_price(symbol: Any, ltp: Any, live_price: Any, entry_price: Any = None, exit_price: Any = None) -> Optional[float]:
+    live_ltp = to_float(ltp)
+    if live_ltp and live_ltp > 0:
+        return live_ltp
+
+    # For option contracts, LivePrice/entry/exit values can be the underlying index price
+    # from the signal, which would create circuit-breaking option limit prices.
+    if is_option_symbol(symbol):
+        return None
+
+    for candidate in (live_price, entry_price, exit_price):
+        value = to_float(candidate)
+        if value and value > 0:
+            return value
+    return None

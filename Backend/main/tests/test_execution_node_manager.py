@@ -295,9 +295,11 @@ class ExecutionNodeManagerTests(TestCase):
             proxy_config=proxy_config,
         )
         mock_kite_class.assert_called_once_with(api_key="kite-api", proxies=proxy_config)
+        self.assertEqual(kite.place_order.call_args.kwargs["price"], 10.0)
+        self.assertNotIn("reference_price", kite.place_order.call_args.kwargs)
 
     @mock.patch("main.zerodha.KiteConnect")
-    def test_zerodha_limit_order_uses_signal_price_when_ltp_unavailable(self, mock_kite_class):
+    def test_zerodha_option_limit_order_rejects_underlying_price_when_ltp_unavailable(self, mock_kite_class):
         from main.zerodha import place_zerodha_orders
 
         proxy_config = {"http": "http://proxy.example.com:8080", "https": "http://proxy.example.com:8080"}
@@ -306,11 +308,9 @@ class ExecutionNodeManagerTests(TestCase):
         kite.profile.return_value = {"user_id": "kite-user"}
         kite.instruments.return_value = [{"tradingsymbol": "NIFTY24400CE"}]
         kite.ltp.return_value = {}
-        kite.place_order.return_value = "kite-order-2"
-        kite.order_history.return_value = [{"status": "COMPLETE", "transaction_type": "BUY", "average_price": 12.3, "filled_quantity": 65}]
 
         response = place_zerodha_orders(
-            12,
+            24087.5,
             "Lite",
             "kite-access",
             "kite-api",
@@ -340,20 +340,24 @@ class ExecutionNodeManagerTests(TestCase):
             proxy_config=proxy_config,
         )
 
-        self.assertNotEqual(response["data"]["status"], "Failed")
-        self.assertEqual(kite.place_order.call_args.kwargs["price"], 12.3)
-        self.assertNotIn("reference_price", kite.place_order.call_args.kwargs)
+        self.assertEqual(response["data"]["status"], "Failed")
+        self.assertIn("option live price is unavailable", response["data"]["message"])
+        kite.place_order.assert_not_called()
 
     @mock.patch("main.upstock.load_upstox_instruments")
     @mock.patch("main.upstock.requests.get")
     @mock.patch("main.upstock.requests.post")
-    def test_upstox_limit_order_uses_signal_price_when_ltp_unavailable(self, mock_post, mock_get, mock_load_instruments):
+    def test_upstox_limit_order_uses_option_ltp_not_underlying_price(self, mock_post, mock_get, mock_load_instruments):
         proxy_config = {"http": "http://proxy.example.com:8080", "https": "http://proxy.example.com:8080"}
         mock_load_instruments.return_value = [
             {"instrument_key": "NSE_FO|12345", "trading_symbol": "NIFTY24400CE"}
         ]
         mock_get.side_effect = [
-            SimpleNamespace(status_code=200, content=b"{}", json=lambda: {"data": {}}),
+            SimpleNamespace(
+                status_code=200,
+                content=b"{}",
+                json=lambda: {"data": {"NSE_FO|12345": {"last_price": 10}}},
+            ),
             SimpleNamespace(
                 status_code=200,
                 content=b"{}",
@@ -375,7 +379,7 @@ class ExecutionNodeManagerTests(TestCase):
         )
 
         response = place_upstox_orders(
-            12,
+            24087.5,
             "Lite",
             "upstox-access",
             "NIFTY24400CE",
@@ -406,8 +410,52 @@ class ExecutionNodeManagerTests(TestCase):
 
         self.assertNotEqual(response["data"]["status"], "Failed")
         placed_payload = mock_post.call_args.kwargs["json"]
-        self.assertEqual(placed_payload["price"], 12.3)
+        self.assertEqual(placed_payload["price"], 10.25)
         self.assertNotIn("reference_price", placed_payload)
+
+    @mock.patch("main.upstock.load_upstox_instruments")
+    @mock.patch("main.upstock.requests.get")
+    @mock.patch("main.upstock.requests.post")
+    def test_upstox_option_limit_order_rejects_underlying_price_when_ltp_unavailable(self, mock_post, mock_get, mock_load_instruments):
+        proxy_config = {"http": "http://proxy.example.com:8080", "https": "http://proxy.example.com:8080"}
+        mock_load_instruments.return_value = [
+            {"instrument_key": "NSE_FO|12345", "trading_symbol": "NIFTY24400CE"}
+        ]
+        mock_get.return_value = SimpleNamespace(status_code=200, content=b"{}", json=lambda: {"data": {}})
+
+        response = place_upstox_orders(
+            24087.5,
+            "Lite",
+            "upstox-access",
+            "NIFTY24400CE",
+            "BUY",
+            "NIFTY",
+            65,
+            "strategy",
+            "LIMIT",
+            "MIS",
+            None,
+            self.client_user,
+            1,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            "NFO",
+            "FNO",
+            "NIFTY",
+            None,
+            "OPEN",
+            "upstox-history-2",
+            proxy_config=proxy_config,
+        )
+
+        self.assertEqual(response["data"]["status"], "Failed")
+        self.assertIn("option live price is unavailable", response["data"]["message"])
+        mock_post.assert_not_called()
 
     @mock.patch("main.brokers.dhan.place_dhan_orders")
     def test_dhan_adapter_supports_proxy_and_passes_config(self, mock_place_order):
@@ -496,7 +544,7 @@ class ExecutionNodeManagerTests(TestCase):
 
     @mock.patch("main.dhanapi.get_trading_symbol_security_id")
     @mock.patch("main.dhanapi.dhanhq")
-    def test_dhan_limit_order_uses_signal_price_when_ltp_unavailable(self, mock_dhan_class, mock_security_lookup):
+    def test_dhan_option_limit_order_rejects_underlying_price_when_ltp_unavailable(self, mock_dhan_class, mock_security_lookup):
         from main.dhanapi import place_dhan_orders
 
         proxy_config = {"http": "http://proxy.example.com:8080", "https": "http://proxy.example.com:8080"}
@@ -513,16 +561,11 @@ class ExecutionNodeManagerTests(TestCase):
         dhan.LIMIT = "LIMIT"
         dhan.SL = "SL"
         dhan.get_ltp_data.return_value = {"data": {"NSE_FNO": {}}}
-        dhan.place_order.return_value = {"status": "success", "data": {"orderId": "dhan-order-2"}}
-        dhan.get_order_by_id.return_value = {
-            "status": "success",
-            "data": [{"orderStatus": "TRADED", "transactionType": "BUY", "averageTradedPrice": 12.3, "quantity": 65}],
-        }
         mock_security_lookup.return_value = {"status": "success", "SECURITY_ID": 12345}
 
         response = place_dhan_orders(
             "2026-05-12",
-            12,
+            24087.5,
             "Lite",
             "dhan-access",
             "dhan-client",
@@ -552,8 +595,9 @@ class ExecutionNodeManagerTests(TestCase):
             proxy_config=proxy_config,
         )
 
-        self.assertNotEqual(response["data"]["status"], "Failed")
-        self.assertEqual(dhan.place_order.call_args.kwargs["price"], 12.3)
+        self.assertEqual(response["data"]["status"], "Failed")
+        self.assertIn("option live price is unavailable", response["data"]["message"])
+        dhan.place_order.assert_not_called()
 
     @mock.patch("main.dhanapi.ensure_dhan_instruments_file")
     def test_dhan_security_lookup_ignores_invalid_placeholder_expiry_dates(self, mock_instrument_file):

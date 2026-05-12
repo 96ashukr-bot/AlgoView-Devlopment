@@ -8,7 +8,7 @@ import pandas as pd
 from main.broker_instrument_cache import ensure_dhan_instruments_file
 from main.models import CompanySmtpDetails
 from main.tasks import send_trade_email_async
-from main.broker_order_utils import normalize_order_type, resolve_limit_price
+from main.broker_order_utils import normalize_order_type, resolve_limit_price, resolve_limit_reference_price
 from main.trade_history_service import save_trade_order_history
 logger = logging.getLogger('main')
 
@@ -147,20 +147,19 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
             logger.warning(f"{user} : Dhan LTP fetch failed for security_id {security_id}: {str(e)}")
 
         if requested_order_type == "LIMIT":
-            reference_price = ltp or LivePrice or Entry_price or Exit_price
+            reference_price = resolve_limit_reference_price(trade_symbol, ltp, LivePrice, Entry_price, Exit_price)
             if ltp is None and reference_price:
                 logger.info(
                     f"{user} : Dhan LTP unavailable for security_id {security_id}; using fallback reference price {reference_price}."
                 )
             price = resolve_limit_price(price, reference_price, transaction_type)
             if not price:
-                message = "Unable to calculate Dhan limit price because no live, signal, or reference price is available."
+                message = "Unable to calculate Dhan option limit price because option live price is unavailable. Please retry after quotes are available or provide an explicit option limit price."
                 response = {"data": {"status": "Failed", "message": message}}
                 save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, trade_symbol, order_id, "Failed", None, message,
                             strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
                             webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan", history_id=history_id)
                 return response
-            order_params["reference_price"] = reference_price
         elif requested_order_type == "MARKET":
             price = 0
 
