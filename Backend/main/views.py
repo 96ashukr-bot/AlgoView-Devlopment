@@ -58,7 +58,8 @@ from rest_framework.views import APIView
 from django.contrib import messages
 from pya3 import *
 from decouple import config
-from main.Alice_Blue_Api import ALICE_ORDER_URL,GET_ORDER_BOOK_URL,GET_TREAD_BOOK_URL, is_market_open, place_alice_orders
+from main.Alice_Blue_Api import ALICE_ORDER_URL,GET_ORDER_BOOK_URL,GET_TREAD_BOOK_URL, get_alice_session, is_market_open, place_alice_orders
+from main.services.proxy_utils import build_requests_proxy_config
 from main.trade_history_service import save_trade_order_history
 from main.sl_tp_watcher_service import get_sl_tp_watcher_service
 from rest_framework.pagination import PageNumberPagination        
@@ -4474,6 +4475,127 @@ class BrokerGenerateTokenView(APIView):
                             "broker_name": setup_spec.get("display_name"),
                             "auth_mode": auth_mode,
                         },
+                    },
+                    status=status.HTTP_200_OK,
+                )
+
+            if normalized_broker == "alice blue":
+                api_key = (broker_details.broker_API_KEY or "").strip()
+                api_secret = (broker_details.broker_API_SKEY or "").strip()
+                auth_code = (broker_details.get_broker_totp_secret() or broker_details.broker_Totp_Authcode or "").strip()
+                user_id = (broker_details.broker_API_UID or broker_details.broker_Demate_User_Name or "").strip()
+
+                missing_fields = []
+                if not user_id:
+                    missing_fields.append("User ID")
+                if not api_key and not (api_secret and auth_code):
+                    missing_fields.append("ANT API key or Developer Portal API Secret + Vendor Auth Code")
+
+                if missing_fields:
+                    return Response(
+                        {
+                            "status": "error",
+                            "message": "Saved Alice Blue credentials are incomplete.",
+                            "missing_fields": missing_fields,
+                        },
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+
+                node = getattr(broker_details, "execution_node", None)
+                if not node or not node.is_active:
+                    return Response(
+                        {
+                            "status": "error",
+                            "message": "Verified execution proxy/static-IP is required for Alice Blue token generation.",
+                        },
+                        status=status.HTTP_403_FORBIDDEN,
+                    )
+                if node.execution_type != node.EXECUTION_TYPE_PROXY:
+                    return Response(
+                        {
+                            "status": "error",
+                            "message": "Alice Blue token generation currently requires proxy execution mode so broker login does not use the main server IP.",
+                        },
+                        status=status.HTTP_403_FORBIDDEN,
+                    )
+                if not node.proxy_public_ip_verified:
+                    return Response(
+                        {
+                            "status": "error",
+                            "message": "Verified execution proxy/static-IP is required for Alice Blue token generation.",
+                        },
+                        status=status.HTTP_403_FORBIDDEN,
+                    )
+
+                try:
+                    proxy_config = build_requests_proxy_config(node)
+                    alice, alice_error = get_alice_session(
+                        user_id,
+                        api_key,
+                        proxy_config=proxy_config,
+                        api_secret=api_secret,
+                        auth_code=auth_code,
+                        return_error=True,
+                    )
+                except Exception as exc:
+                    logger.exception("Alice Blue token generation failed for user %s", request.user.id)
+                    return Response(
+                        {"status": "error", "message": f"Failed to generate Alice Blue token: {exc}"},
+                        status=status.HTTP_502_BAD_GATEWAY,
+                    )
+
+                if not alice:
+                    return Response(
+                        {
+                            "status": "error",
+                            "message": alice_error
+                            or "Alice Blue rejected the saved API Key/User ID/API Secret or the proxy route failed.",
+                        },
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+
+                session_payload = getattr(alice, "alice_session_response", {}) or {}
+                access_token = (
+                    getattr(alice, "alice_session_id", None)
+                    or session_payload.get("sessionID")
+                    or session_payload.get("session_id")
+                    or session_payload.get("susertoken")
+                    or session_payload.get("token")
+                    or f"alice-session-{user_id}-{int(time.time())}"
+                )
+                expiry = timezone.now() + timedelta(hours=24)
+                broker_details.set_session_tokens(
+                    access_token=access_token,
+                    refresh_token=None,
+                    feed_token=None,
+                    expiry=expiry,
+                    mark_token_created=True,
+                )
+                broker_details.access_token = access_token
+                broker_details.isTokenExpired = False
+                broker_details.save()
+
+                if not node.is_verified_with_broker:
+                    node.is_verified_with_broker = True
+                    node.save(update_fields=["is_verified_with_broker", "updated_at"])
+                    try:
+                        node.mark_log(
+                            "broker_verified",
+                            "Execution node marked broker verified after successful Alice Blue token generation.",
+                            client=broker_details.client,
+                        )
+                    except Exception:
+                        logger.debug("Unable to write Alice Blue execution node broker verification log", exc_info=True)
+
+                runtime_summary = LoginActivityService().build_summary(request.user, request=request)
+                broker_runtime = (runtime_summary.get("data") or {}).get("broker") or {}
+
+                return Response(
+                    {
+                        "status": "success",
+                        "action": "token_generated",
+                        "message": "Alice Blue token generated successfully.",
+                        "data": broker_runtime,
                     },
                     status=status.HTTP_200_OK,
                 )

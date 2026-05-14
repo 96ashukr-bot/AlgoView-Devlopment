@@ -823,10 +823,10 @@ class BrokerLoginRedirectView(APIView):
     def redirect_to_alice_blue(self, broker_details):
         return Response(
             {
-                "status": "manual_session",
+                "status": "direct_token",
                 "message": (
-                    "Alice Blue does not use this OAuth redirect flow in this system. "
-                    "Please save Alice Blue API credentials/API UID; the session is generated during order placement."
+                    "Alice Blue does not use an OAuth redirect flow. "
+                    "Use the Generate Alice Blue Token action after saving API Key and User ID."
                 ),
             },
             status=200,

@@ -3,7 +3,7 @@ import requests
 import os
 from main.broker_instrument_cache import ensure_fyers_instruments_file
 from main.models import ClientBrokerdetails, CompanySmtpDetails
-from main.broker_order_utils import normalize_order_type, resolve_limit_price
+from main.broker_order_utils import extract_ltp_from_quote_payload, normalize_order_type, resolve_limit_price
 from main.trade_history_service import save_trade_order_history
 import logging
 logger = logging.getLogger('main')
@@ -81,9 +81,9 @@ def place_fyers_orders(LivePrice,group_service,access_token, Api_key, trade_symb
             )
             quote_data = quote_response.json() if quote_response.content else {}
             if quote_response.status_code == 200:
-                quotes = quote_data.get("d") or []
-                if quotes:
-                    ltp = quotes[0].get("v", {}).get("lp")
+                ltp = extract_ltp_from_quote_payload(quote_data, preferred_keys=(trading_symbol,))
+                if ltp is None:
+                    logger.warning(f"{user} : Fyers LTP response did not contain a usable option premium for {trading_symbol}: {quote_data}")
         except Exception as e:
             logger.warning(f"{user} : Fyers LTP fetch failed for {trading_symbol}: {str(e)}")
 

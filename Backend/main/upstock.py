@@ -6,7 +6,8 @@ from django.shortcuts import redirect
 from django.http import JsonResponse
 from main.models import CompanySmtpDetails
 from main.broker_instrument_cache import load_upstox_instruments
-from main.broker_order_utils import normalize_order_type, resolve_limit_price, resolve_limit_reference_price
+from main.broker_order_utils import extract_ltp_from_quote_payload, normalize_order_type, resolve_limit_price, resolve_limit_reference_price
+from main.services.option_ltp_fallback import cache_option_ltp
 from main.trade_history_service import save_trade_order_history
 import logging
 logger = logging.getLogger('main')
@@ -103,9 +104,13 @@ def place_upstox_orders(LivePrice,group_service,
             )
             quote_data = quote_response.json() if quote_response.content else {}
             if quote_response.status_code == 200:
-                quote_values = quote_data.get("data", {})
-                first_quote = next(iter(quote_values.values()), {}) if isinstance(quote_values, dict) else {}
-                ltp = first_quote.get("last_price") or first_quote.get("ltp")
+                ltp = extract_ltp_from_quote_payload(quote_data, preferred_keys=(instrument_key,))
+                if ltp is None:
+                    logger.warning(f"{user} : Upstox LTP response did not contain a usable option premium for {instrument_key}: {quote_data}")
+                else:
+                    cache_option_ltp(trade_symbol, ltp, underlying=Index_Symbol or symbol, source="upstox")
+                    if result.get("trading_symbol") and result.get("trading_symbol") != trade_symbol:
+                        cache_option_ltp(result.get("trading_symbol"), ltp, underlying=Index_Symbol or symbol, source="upstox")
         except Exception as e:
             logger.warning(f"{user} : Upstox LTP fetch failed for {instrument_key}: {str(e)}")
 

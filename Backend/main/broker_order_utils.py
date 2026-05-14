@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from typing import Any, Optional
+from typing import Any, Iterable, Optional
 
 from main.angelone.constants import (
     DEFAULT_BUFFER_PERCENTAGE,
@@ -32,6 +32,66 @@ def normalize_order_type(order_type: Any) -> str:
 def is_valid_market_price(value: Any) -> bool:
     price = to_float(value)
     return price is not None and MIN_VALID_LTP <= price <= MAX_VALID_LTP
+
+
+QUOTE_LTP_KEYS = {
+    "last_price",
+    "lastprice",
+    "lasttradedprice",
+    "ltp",
+    "LTP",
+    "lp",
+    "LastPrice",
+    "LastRate",
+    "LastTradedPrice",
+    "lastRate",
+}
+NORMALIZED_QUOTE_LTP_KEYS = {re.sub(r"[^a-z0-9]", "", key.lower()) for key in QUOTE_LTP_KEYS}
+
+
+def _normalize_quote_key(key: Any) -> str:
+    return re.sub(r"[^a-z0-9]", "", str(key or "").lower())
+
+
+def _extract_ltp_from_node(node: Any) -> Optional[float]:
+    if isinstance(node, dict):
+        for key, value in node.items():
+            if _normalize_quote_key(key) in NORMALIZED_QUOTE_LTP_KEYS:
+                price = to_float(value)
+                if price and price > 0:
+                    return price
+
+        for value in node.values():
+            price = _extract_ltp_from_node(value)
+            if price and price > 0:
+                return price
+
+    if isinstance(node, (list, tuple)):
+        for value in node:
+            price = _extract_ltp_from_node(value)
+            if price and price > 0:
+                return price
+
+    return None
+
+
+def extract_ltp_from_quote_payload(payload: Any, preferred_keys: Iterable[Any] = ()) -> Optional[float]:
+    """Extract option LTP from broker quote payload variants without using signal/index price."""
+    if isinstance(payload, dict):
+        for key in preferred_keys or ():
+            if key in payload:
+                price = _extract_ltp_from_node(payload.get(key))
+                if price and price > 0:
+                    return price
+
+        normalized_preferred = {_normalize_quote_key(key) for key in preferred_keys or ()}
+        for key, value in payload.items():
+            if _normalize_quote_key(key) in normalized_preferred:
+                price = _extract_ltp_from_node(value)
+                if price and price > 0:
+                    return price
+
+    return _extract_ltp_from_node(payload)
 
 
 def round_to_tick(price: float, tick_size: float = DEFAULT_TICK_SIZE) -> float:

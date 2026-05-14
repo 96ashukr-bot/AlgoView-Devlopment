@@ -24,13 +24,17 @@ from main.angelone.services.auth_service import AuthService
 from main.angelone.utils.logging_utils import TradingLogger
 from main.Alice_Blue_Api import fetch_instrument_data, get_alice_session
 from main.broker_instrument_cache import ensure_dhan_instruments_file, ensure_fivepaisa_scrip_master_file, ensure_fyers_instruments_file, load_upstox_instruments
+from main.broker_order_utils import extract_ltp_from_quote_payload
 from main.broker_registry import normalize_broker_name
 from main.execution_engine import ContractInfo, ExecutionRequest, OrderConfig, get_execution_engine
 from main.models import ClientBrokerdetails, ClientMultiLegStrategySetting, Strategies, StrategyExecution, StrategyExecutionLog, StrategyLeg, User
 from main.permissions import can_access_client_record, is_admin_or_superadmin
 from main.fivepaisa import MARKET_FEED_URL
 from main.services.broker_transport import ProxyRoutingRequiredError
+from main.services.option_ltp_fallback import cache_option_ltp, fetch_nse_option_chain_ltp
 from main.services.proxy_utils import build_requests_proxy_config
+from main.dhanapi import DHAN_LTP_URL
+from main.zerodha import KITE_LTP_URL
 
 try:
     from dhanhq import dhanhq
@@ -691,10 +695,16 @@ class MultiLegContractResolver:
             payload = response.json() if response.content else {}
             if response.status_code != 200:
                 return None
-            quote_values = payload.get("data", {})
-            first_quote = next(iter(quote_values.values()), {}) if isinstance(quote_values, dict) else {}
-            ltp = first_quote.get("last_price") or first_quote.get("ltp")
-            return float(ltp) if ltp is not None else None
+            ltp = extract_ltp_from_quote_payload(payload, preferred_keys=(contract.token, contract.symbol))
+            if ltp is not None:
+                return cache_option_ltp(
+                    contract.symbol,
+                    ltp,
+                    expiry_date=contract.expiry,
+                    underlying=contract.underlying,
+                    source="upstox",
+                ) or float(ltp)
+            return None
         except Exception:
             return None
 
@@ -711,12 +721,33 @@ class MultiLegContractResolver:
             if hasattr(dhan_client, "session"):
                 dhan_client.session.proxies.update(proxy_config)
             if not hasattr(dhan_client, "get_ltp_data"):
-                return None
+                pass
             exchange_code = getattr(dhan_client, "NSE_FNO", "NSE_FNO")
-            response = dhan_client.get_ltp_data({exchange_code: [int(float(contract.token))]})
-            exchange_quotes = (response or {}).get("data", {}).get(exchange_code, {})
-            quote = exchange_quotes.get(str(int(float(contract.token)))) or exchange_quotes.get(int(float(contract.token))) or {}
-            ltp = quote.get("last_price") or quote.get("ltp")
+            security_id_key = str(int(float(contract.token)))
+            rest_response = requests.post(
+                DHAN_LTP_URL,
+                headers={
+                    "Content-Type": "application/json",
+                    "access-token": access_token,
+                    "client-id": str(client_id),
+                },
+                json={exchange_code: [int(float(contract.token))]},
+                timeout=5,
+                proxies=proxy_config,
+            )
+            rest_payload = rest_response.json() if rest_response.content else {}
+            ltp = extract_ltp_from_quote_payload(rest_payload, preferred_keys=(exchange_code, security_id_key, int(float(contract.token))))
+            if ltp is None and hasattr(dhan_client, "get_ltp_data"):
+                response = dhan_client.get_ltp_data({exchange_code: [int(float(contract.token))]})
+                ltp = extract_ltp_from_quote_payload(response, preferred_keys=(exchange_code, security_id_key, int(float(contract.token))))
+            if ltp is None:
+                ltp = fetch_nse_option_chain_ltp(
+                    contract.symbol,
+                    expiry_date=contract.expiry,
+                    underlying=contract.underlying,
+                    proxy_config=proxy_config,
+                    user=getattr(broker_details.client, "email", None),
+                )
             return float(ltp) if ltp is not None else None
         except Exception:
             return None
@@ -736,10 +767,7 @@ class MultiLegContractResolver:
                 proxies=proxy_config,
             )
             payload = response.json() if response.content else {}
-            quotes = payload.get("d") or []
-            if not quotes:
-                return None
-            ltp = quotes[0].get("v", {}).get("lp")
+            ltp = extract_ltp_from_quote_payload(payload, preferred_keys=(contract.symbol,))
             return float(ltp) if ltp is not None else None
         except Exception:
             return None
@@ -765,11 +793,7 @@ class MultiLegContractResolver:
                 proxies=proxy_config,
             )
             data = response.json() if response.content else {}
-            feed_data = data.get("body", {}).get("Data") or data.get("body", {}).get("MarketFeedData") or []
-            if not feed_data:
-                return None
-            quote = feed_data[0]
-            ltp = quote.get("LastRate") or quote.get("LastTradedPrice") or quote.get("ltp")
+            ltp = extract_ltp_from_quote_payload(data, preferred_keys=(contract.token, contract.symbol))
             return float(ltp) if ltp is not None else None
         except Exception:
             return None
@@ -782,10 +806,33 @@ class MultiLegContractResolver:
         if not access_token or not api_key or not contract.symbol:
             return None
         try:
-            kite = KiteConnect(api_key=api_key, proxies=self._proxy_config_for_broker(broker_details))
+            proxy_config = self._proxy_config_for_broker(broker_details)
+            kite = KiteConnect(api_key=api_key, proxies=proxy_config)
             kite.set_access_token(access_token)
-            response = kite.ltp(f"{contract.exchange}:{contract.symbol}")
-            ltp = response.get(f"{contract.exchange}:{contract.symbol}", {}).get("last_price")
+            quote_key = f"{contract.exchange}:{contract.symbol}"
+            response = kite.ltp(quote_key)
+            ltp = extract_ltp_from_quote_payload(response, preferred_keys=(quote_key, contract.symbol))
+            if ltp is None:
+                rest_response = requests.get(
+                    KITE_LTP_URL,
+                    headers={
+                        "X-Kite-Version": "3",
+                        "Authorization": f"token {api_key}:{access_token}",
+                    },
+                    params={"i": quote_key},
+                    timeout=5,
+                    proxies=proxy_config,
+                )
+                rest_payload = rest_response.json() if rest_response.content else {}
+                ltp = extract_ltp_from_quote_payload(rest_payload, preferred_keys=(quote_key, contract.symbol))
+            if ltp is None:
+                ltp = fetch_nse_option_chain_ltp(
+                    contract.symbol,
+                    expiry_date=contract.expiry,
+                    underlying=contract.underlying,
+                    proxy_config=proxy_config,
+                    user=getattr(broker_details.client, "email", None),
+                )
             return float(ltp) if ltp is not None else None
         except Exception:
             return None

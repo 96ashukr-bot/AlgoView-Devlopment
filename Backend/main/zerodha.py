@@ -1,10 +1,14 @@
 from django.http import JsonResponse
 from kiteconnect import KiteConnect
 from main.models import ClientBrokerdetails, CompanySmtpDetails
-from main.broker_order_utils import normalize_order_type, resolve_limit_price, resolve_limit_reference_price
+from main.broker_order_utils import extract_ltp_from_quote_payload, normalize_order_type, resolve_limit_price, resolve_limit_reference_price
+from main.services.option_ltp_fallback import fetch_nse_option_chain_ltp
 from main.trade_history_service import save_trade_order_history
 import logging
+import requests
 logger = logging.getLogger('main')
+
+KITE_LTP_URL = "https://api.kite.trade/quote/ltp"
 
 def get_trading_symbol(exchange, symbol, kite, user=None):
     try:
@@ -52,6 +56,42 @@ def make_serializable(data):
         return data
     else:
         return str(data)
+
+
+def fetch_zerodha_option_ltp(kite, api_key, access_token, exchange, trading_symbol, proxy_config, user=None):
+    quote_key = f"{exchange}:{trading_symbol}"
+    try:
+        ltp_response = kite.ltp(quote_key)
+        ltp = extract_ltp_from_quote_payload(ltp_response, preferred_keys=(quote_key, trading_symbol))
+        if ltp is not None:
+            return ltp
+        logger.warning(f"[{user}] Zerodha SDK LTP response did not contain option premium for {quote_key}: {ltp_response}")
+    except Exception as exc:
+        logger.warning(f"[{user}] Zerodha SDK LTP fetch failed for {quote_key}: {str(exc)}")
+
+    try:
+        response = requests.get(
+            KITE_LTP_URL,
+            headers={
+                "X-Kite-Version": "3",
+                "Authorization": f"token {api_key}:{access_token}",
+            },
+            params={"i": quote_key},
+            timeout=5,
+            proxies=proxy_config,
+        )
+        payload = response.json() if response.content else {}
+        if response.status_code != 200:
+            logger.warning(f"[{user}] Zerodha REST LTP fetch failed for {quote_key}: {response.status_code} {payload}")
+            return fetch_nse_option_chain_ltp(trading_symbol, proxy_config=proxy_config, user=user)
+        ltp = extract_ltp_from_quote_payload(payload, preferred_keys=(quote_key, trading_symbol))
+        if ltp is None:
+            logger.warning(f"[{user}] Zerodha REST LTP response did not contain option premium for {quote_key}: {payload}")
+            return fetch_nse_option_chain_ltp(trading_symbol, proxy_config=proxy_config, user=user)
+        return ltp
+    except Exception as exc:
+        logger.warning(f"[{user}] Zerodha REST LTP fetch failed for {quote_key}: {str(exc)}")
+        return fetch_nse_option_chain_ltp(trading_symbol, proxy_config=proxy_config, user=user)
 
 def place_zerodha_orders(
     LivePrice, group_service, access_token, Api_key, trade_symbol, transaction_type,
@@ -114,8 +154,7 @@ def place_zerodha_orders(
         requested_order_type = normalize_order_type(ordertype)
         ltp = None
         try:
-            ltp_response = kite.ltp(f"{Exchange}:{trading_symbol}")
-            ltp = ltp_response.get(f"{Exchange}:{trading_symbol}", {}).get("last_price")
+            ltp = fetch_zerodha_option_ltp(kite, Api_key, access_token, Exchange, trading_symbol, proxy_config, user=user)
         except Exception as e:
             logger.warning(f"[{user}] Zerodha LTP fetch failed for {trading_symbol}: {str(e)}")
 

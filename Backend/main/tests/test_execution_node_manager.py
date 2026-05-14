@@ -25,6 +25,8 @@ from main.zerodha import place_zerodha_orders
 from main.dematemodule import _broker_proxy_config_or_none, _save_session_tokens_compat
 from main.dematemodule import BrokerCallbackView
 from main.broker_registry import get_broker_setup_spec
+from main.broker_order_utils import extract_ltp_from_quote_payload
+from main.services.option_ltp_fallback import cache_option_ltp, fetch_nse_option_chain_ltp, get_cached_option_ltp
 from main.serializers import ClientBrokerDetailsUpdateSerializer
 
 
@@ -211,6 +213,53 @@ class ExecutionNodeManagerTests(TestCase):
         alice._get("test")
         self.assertEqual(mock_get.call_args.kwargs["proxies"], proxy_config)
 
+    @mock.patch("main.views.get_alice_session")
+    def test_alice_blue_generate_token_uses_verified_proxy_and_marks_active(self, mock_get_alice_session):
+        broker = Broker.objects.create(broker_name="Alice Blue", is_active=True)
+        broker_details = ClientBrokerdetails.objects.create(
+            client=self.client_user,
+            broker_name=broker,
+            broker_API_KEY="alice-api-key",
+            broker_API_UID="alice-user-id",
+        )
+        proxy_node = ExecutionNode.objects.create(
+            name="Alice Proxy",
+            ip_address="203.0.113.55",
+            provider="proxy-vendor",
+            node_id="alice-proxy-node",
+            execution_type=ExecutionNode.EXECUTION_TYPE_PROXY,
+            proxy_host="proxy.example.com",
+            proxy_port=8080,
+            proxy_protocol=ExecutionNode.PROXY_PROTOCOL_HTTP,
+            proxy_public_ip_verified=True,
+            is_verified_with_broker=False,
+            assigned_client=self.client_user,
+            status=ExecutionNode.STATUS_ASSIGNED,
+        )
+        broker_details.execution_node = proxy_node
+        broker_details.save(update_fields=["execution_node"])
+        mock_get_alice_session.return_value = SimpleNamespace(
+            alice_session_id="alice-session-token",
+            alice_session_response={"stat": "Ok", "sessionID": "alice-session-token"},
+        )
+        self.client.force_login(self.client_user)
+
+        response = self.client.post("/api/broker-generate-token/")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["action"], "token_generated")
+        mock_get_alice_session.assert_called_once()
+        self.assertEqual(
+            mock_get_alice_session.call_args.kwargs["proxy_config"],
+            {"http": "http://proxy.example.com:8080", "https": "http://proxy.example.com:8080"},
+        )
+        broker_details.refresh_from_db()
+        proxy_node.refresh_from_db()
+        self.assertEqual(broker_details.access_token, "alice-session-token")
+        self.assertFalse(broker_details.isTokenExpired)
+        self.assertTrue(proxy_node.is_verified_with_broker)
+
     @mock.patch("main.angelone.managers.session_manager.SmartConnect")
     def test_angel_one_session_builds_smart_connect_with_proxy(self, mock_smart_connect):
         from main.angelone.managers.session_manager import ClientSession
@@ -299,8 +348,10 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertEqual(kite.place_order.call_args.kwargs["price"], 10.0)
         self.assertNotIn("reference_price", kite.place_order.call_args.kwargs)
 
+    @mock.patch("main.zerodha.fetch_nse_option_chain_ltp", return_value=None)
+    @mock.patch("main.zerodha.requests.get")
     @mock.patch("main.zerodha.KiteConnect")
-    def test_zerodha_option_limit_order_rejects_underlying_price_when_ltp_unavailable(self, mock_kite_class):
+    def test_zerodha_option_limit_order_rejects_underlying_price_when_ltp_unavailable(self, mock_kite_class, mock_get, mock_fallback):
         from main.zerodha import place_zerodha_orders
 
         proxy_config = {"http": "http://proxy.example.com:8080", "https": "http://proxy.example.com:8080"}
@@ -309,6 +360,7 @@ class ExecutionNodeManagerTests(TestCase):
         kite.profile.return_value = {"user_id": "kite-user"}
         kite.instruments.return_value = [{"tradingsymbol": "NIFTY24400CE"}]
         kite.ltp.return_value = {}
+        mock_get.return_value = SimpleNamespace(status_code=200, content=b"{}", json=lambda: {"data": {}})
 
         response = place_zerodha_orders(
             24087.5,
@@ -344,6 +396,219 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertEqual(response["data"]["status"], "Failed")
         self.assertIn("option live price is unavailable", response["data"]["message"])
         kite.place_order.assert_not_called()
+
+    @mock.patch("main.zerodha.fetch_nse_option_chain_ltp", return_value=10)
+    @mock.patch("main.zerodha.requests.get")
+    @mock.patch("main.zerodha.KiteConnect")
+    def test_zerodha_limit_order_uses_nse_option_chain_when_quote_permission_missing(self, mock_kite_class, mock_get, mock_fallback):
+        from main.zerodha import place_zerodha_orders
+
+        proxy_config = {"http": "http://proxy.example.com:8080", "https": "http://proxy.example.com:8080"}
+        kite = mock_kite_class.return_value
+        kite.VARIETY_REGULAR = "regular"
+        kite.profile.return_value = {"user_id": "kite-user"}
+        kite.instruments.return_value = [{"tradingsymbol": "NIFTY26MAY24400CE"}]
+        kite.ltp.side_effect = Exception("Insufficient permission for that call.")
+        kite.place_order.return_value = "kite-order-nse-ltp"
+        kite.order_history.return_value = [{"status": "COMPLETE", "transaction_type": "BUY", "average_price": 10, "filled_quantity": 65}]
+        mock_get.return_value = SimpleNamespace(
+            status_code=403,
+            content=b"{}",
+            json=lambda: {"status": "error", "message": "Insufficient permission for that call."},
+        )
+
+        response = place_zerodha_orders(
+            24087.5,
+            "Lite",
+            "kite-access",
+            "kite-api",
+            "NIFTY26MAY24400CE",
+            "BUY",
+            "NIFTY",
+            65,
+            "strategy",
+            "LIMIT",
+            "MIS",
+            None,
+            self.client_user,
+            1,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            "NFO",
+            "FNO",
+            "NIFTY",
+            None,
+            "OPEN",
+            "kite-history-nse-ltp",
+            proxy_config=proxy_config,
+        )
+
+        self.assertNotEqual(response["data"]["status"], "Failed")
+        self.assertEqual(kite.place_order.call_args.kwargs["price"], 10.25)
+        mock_fallback.assert_called_once_with("NIFTY26MAY24400CE", proxy_config=proxy_config, user=self.client_user)
+
+    @mock.patch("main.zerodha.requests.get")
+    @mock.patch("main.zerodha.KiteConnect")
+    def test_zerodha_limit_order_uses_rest_ltp_fallback(self, mock_kite_class, mock_get):
+        from main.zerodha import place_zerodha_orders
+
+        proxy_config = {"http": "http://proxy.example.com:8080", "https": "http://proxy.example.com:8080"}
+        kite = mock_kite_class.return_value
+        kite.VARIETY_REGULAR = "regular"
+        kite.profile.return_value = {"user_id": "kite-user"}
+        kite.instruments.return_value = [{"tradingsymbol": "NIFTY24400CE"}]
+        kite.ltp.return_value = {}
+        kite.place_order.return_value = "kite-order-rest-ltp"
+        kite.order_history.return_value = [{"status": "COMPLETE", "transaction_type": "BUY", "average_price": 10, "filled_quantity": 65}]
+        mock_get.return_value = SimpleNamespace(
+            status_code=200,
+            content=b"{}",
+            json=lambda: {"data": {"NFO:NIFTY24400CE": {"last_price": 10}}},
+        )
+
+        response = place_zerodha_orders(
+            24087.5,
+            "Lite",
+            "kite-access",
+            "kite-api",
+            "NIFTY24400CE",
+            "BUY",
+            "NIFTY",
+            65,
+            "strategy",
+            "LIMIT",
+            "MIS",
+            None,
+            self.client_user,
+            1,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            "NFO",
+            "FNO",
+            "NIFTY",
+            None,
+            "OPEN",
+            "kite-history-rest-ltp",
+            proxy_config=proxy_config,
+        )
+
+        self.assertNotEqual(response["data"]["status"], "Failed")
+        self.assertEqual(kite.place_order.call_args.kwargs["price"], 10.25)
+        self.assertEqual(mock_get.call_args.kwargs["proxies"], proxy_config)
+
+    def test_quote_ltp_parser_handles_broker_response_variants(self):
+        self.assertEqual(
+            extract_ltp_from_quote_payload({"data": {"NFO:NIFTY24400CE": {"lastPrice": "12.5"}}}, ("NFO:NIFTY24400CE",)),
+            12.5,
+        )
+        self.assertEqual(
+            extract_ltp_from_quote_payload({"data": {"NSE_FNO": {"12345": {"LTP": 17.25}}}}, ("NSE_FNO", "12345")),
+            17.25,
+        )
+        self.assertEqual(
+            extract_ltp_from_quote_payload({"data": [{"instrument_key": "NSE_FO|12345", "LastTradedPrice": 8.1}]}),
+            8.1,
+        )
+
+    @mock.patch("main.services.option_ltp_fallback.requests.Session")
+    def test_nse_option_chain_fallback_fetches_option_premium_through_proxy(self, mock_session_class):
+        proxy_config = {"http": "http://proxy.example.com:8080", "https": "http://proxy.example.com:8080"}
+        session = mock_session_class.return_value.__enter__.return_value
+        session.headers = {}
+        session.proxies = {}
+        session.get.side_effect = [
+            SimpleNamespace(status_code=200, content=b""),
+            SimpleNamespace(
+                status_code=200,
+                content=b"{}",
+                json=lambda: {
+                    "records": {
+                        "data": [
+                            {
+                                "expiryDate": "26-May-2026",
+                                "strikePrice": 24400,
+                                "CE": {"lastPrice": 10.0},
+                            }
+                        ]
+                    }
+                },
+            ),
+        ]
+
+        ltp = fetch_nse_option_chain_ltp(
+            "NIFTY26MAY24400CE",
+            proxy_config=proxy_config,
+            user=self.client_user,
+        )
+
+        self.assertEqual(ltp, 10.0)
+        self.assertEqual(session.proxies, proxy_config)
+
+    def test_option_ltp_cache_matches_upstox_dhan_and_zerodha_symbol_formats(self):
+        cache.clear()
+
+        cached = cache_option_ltp("NIFTY 23400 PE 19 MAY 26", 188.15, source="upstox")
+
+        self.assertEqual(cached, 188.15)
+        self.assertEqual(get_cached_option_ltp("NIFTYMAY202623400PE", underlying="NIFTY"), 188.15)
+        self.assertEqual(get_cached_option_ltp("NIFTY26MAY23400PE", underlying="NIFTY"), 188.15)
+
+    @mock.patch("main.zerodha.KiteConnect")
+    def test_zerodha_limit_order_uses_nested_last_price_variant(self, mock_kite_class):
+        from main.zerodha import place_zerodha_orders
+
+        proxy_config = {"http": "http://proxy.example.com:8080", "https": "http://proxy.example.com:8080"}
+        kite = mock_kite_class.return_value
+        kite.VARIETY_REGULAR = "regular"
+        kite.profile.return_value = {"user_id": "kite-user"}
+        kite.instruments.return_value = [{"tradingsymbol": "NIFTY24400CE"}]
+        kite.ltp.return_value = {"data": {"NFO:NIFTY24400CE": {"lastPrice": 10}}}
+        kite.place_order.return_value = "kite-order-variant"
+        kite.order_history.return_value = [{"status": "COMPLETE", "transaction_type": "BUY", "average_price": 10, "filled_quantity": 65}]
+
+        response = place_zerodha_orders(
+            24087.5,
+            "Lite",
+            "kite-access",
+            "kite-api",
+            "NIFTY24400CE",
+            "BUY",
+            "NIFTY",
+            65,
+            "strategy",
+            "LIMIT",
+            "MIS",
+            None,
+            self.client_user,
+            1,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            "NFO",
+            "FNO",
+            "NIFTY",
+            None,
+            "OPEN",
+            "kite-history-variant",
+            proxy_config=proxy_config,
+        )
+
+        self.assertNotEqual(response["data"]["status"], "Failed")
+        self.assertEqual(kite.place_order.call_args.kwargs["price"], 10.25)
 
     @mock.patch("main.upstock.load_upstox_instruments")
     @mock.patch("main.upstock.requests.get")
@@ -534,9 +799,10 @@ class ExecutionNodeManagerTests(TestCase):
         )
         self.assertEqual(mock_place_order.call_args.kwargs["proxy_config"], proxy_config)
 
+    @mock.patch("main.dhanapi.requests.post")
     @mock.patch("main.dhanapi.get_trading_symbol_security_id")
     @mock.patch("main.dhanapi.dhanhq")
-    def test_dhan_order_client_receives_proxy_config(self, mock_dhan_class, mock_security_lookup):
+    def test_dhan_order_client_receives_proxy_config(self, mock_dhan_class, mock_security_lookup, mock_post):
         from main.dhanapi import place_dhan_orders
 
         proxy_config = {"http": "http://proxy.example.com:8080", "https": "http://proxy.example.com:8080"}
@@ -553,6 +819,7 @@ class ExecutionNodeManagerTests(TestCase):
         dhan.LIMIT = "LIMIT"
         dhan.SL = "SL"
         dhan.get_ltp_data.return_value = {"data": {"NSE_FNO": {"12345": {"last_price": 10}}}}
+        mock_post.return_value = SimpleNamespace(status_code=200, content=b"{}", json=lambda: {"data": {"NSE_FNO": {"12345": {"last_price": 10}}}})
         dhan.place_order.return_value = {"status": "success", "data": {"orderId": "dhan-order-1"}}
         dhan.get_order_by_id.return_value = {
             "status": "success",
@@ -592,9 +859,11 @@ class ExecutionNodeManagerTests(TestCase):
         )
         self.assertEqual(dhan.session.proxies, proxy_config)
 
+    @mock.patch("main.dhanapi.fetch_nse_option_chain_ltp", return_value=None)
+    @mock.patch("main.dhanapi.requests.post")
     @mock.patch("main.dhanapi.get_trading_symbol_security_id")
     @mock.patch("main.dhanapi.dhanhq")
-    def test_dhan_option_limit_order_rejects_underlying_price_when_ltp_unavailable(self, mock_dhan_class, mock_security_lookup):
+    def test_dhan_option_limit_order_rejects_underlying_price_when_ltp_unavailable(self, mock_dhan_class, mock_security_lookup, mock_post, mock_fallback):
         from main.dhanapi import place_dhan_orders
 
         proxy_config = {"http": "http://proxy.example.com:8080", "https": "http://proxy.example.com:8080"}
@@ -611,6 +880,7 @@ class ExecutionNodeManagerTests(TestCase):
         dhan.LIMIT = "LIMIT"
         dhan.SL = "SL"
         dhan.get_ltp_data.return_value = {"data": {"NSE_FNO": {}}}
+        mock_post.return_value = SimpleNamespace(status_code=200, content=b"{}", json=lambda: {"data": {"NSE_FNO": {}}})
         mock_security_lookup.return_value = {"status": "success", "SECURITY_ID": 12345}
 
         response = place_dhan_orders(
@@ -648,6 +918,145 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertEqual(response["data"]["status"], "Failed")
         self.assertIn("option live price is unavailable", response["data"]["message"])
         dhan.place_order.assert_not_called()
+
+    @mock.patch("main.dhanapi.fetch_nse_option_chain_ltp", return_value=10)
+    @mock.patch("main.dhanapi.requests.post")
+    @mock.patch("main.dhanapi.get_trading_symbol_security_id")
+    @mock.patch("main.dhanapi.dhanhq")
+    def test_dhan_limit_order_uses_nse_option_chain_when_data_api_missing(self, mock_dhan_class, mock_security_lookup, mock_post, mock_fallback):
+        from main.dhanapi import place_dhan_orders
+
+        proxy_config = {"http": "http://proxy.example.com:8080", "https": "http://proxy.example.com:8080"}
+        dhan = mock_dhan_class.return_value
+        dhan.session.proxies = {}
+        dhan.NSE_FNO = "NSE_FNO"
+        dhan.NSE = "NSE"
+        dhan.NORMAL = "NORMAL"
+        dhan.INTRA = "INTRA"
+        dhan.CNC = "CNC"
+        dhan.BUY = "BUY"
+        dhan.SELL = "SELL"
+        dhan.MARKET = "MARKET"
+        dhan.LIMIT = "LIMIT"
+        dhan.SL = "SL"
+        dhan.get_ltp_data.return_value = {"data": {"NSE_FNO": {}}}
+        mock_post.return_value = SimpleNamespace(
+            status_code=401,
+            content=b"{}",
+            json=lambda: {"status": "failed", "data": {"806": "Data APIs not Subscribed"}},
+        )
+        mock_security_lookup.return_value = {"status": "success", "SECURITY_ID": 12345}
+        dhan.place_order.return_value = {"status": "success", "data": {"orderId": "dhan-order-nse-ltp"}}
+        dhan.get_order_by_id.return_value = {
+            "status": "success",
+            "data": [{"orderStatus": "TRADED", "transactionType": "BUY", "averageTradedPrice": 10, "quantity": 65}],
+        }
+
+        response = place_dhan_orders(
+            "2026-05-26",
+            24087.5,
+            "Lite",
+            "dhan-access",
+            "dhan-client",
+            "NIFTY-May2026-24400-CE",
+            "BUY",
+            "NIFTY",
+            65,
+            "strategy",
+            "LIMIT",
+            "MIS",
+            None,
+            self.client_user,
+            1,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            "NFO",
+            "FNO",
+            "NIFTY",
+            None,
+            "OPEN",
+            "dhan-history-nse-ltp",
+            proxy_config=proxy_config,
+        )
+
+        self.assertNotEqual(response["data"]["status"], "Failed")
+        self.assertEqual(dhan.place_order.call_args.kwargs["price"], 10.25)
+        mock_fallback.assert_called_once_with(
+            "NIFTY-May2026-24400-CE",
+            expiry_date="2026-05-26",
+            underlying="NIFTY",
+            proxy_config=proxy_config,
+            user=self.client_user,
+        )
+
+    @mock.patch("main.dhanapi.requests.post")
+    @mock.patch("main.dhanapi.get_trading_symbol_security_id")
+    @mock.patch("main.dhanapi.dhanhq")
+    def test_dhan_limit_order_uses_nested_ltp_variant(self, mock_dhan_class, mock_security_lookup, mock_post):
+        from main.dhanapi import place_dhan_orders
+
+        proxy_config = {"http": "http://proxy.example.com:8080", "https": "http://proxy.example.com:8080"}
+        dhan = mock_dhan_class.return_value
+        dhan.session.proxies = {}
+        dhan.NSE_FNO = "NSE_FNO"
+        dhan.NSE = "NSE"
+        dhan.NORMAL = "NORMAL"
+        dhan.INTRA = "INTRA"
+        dhan.CNC = "CNC"
+        dhan.BUY = "BUY"
+        dhan.SELL = "SELL"
+        dhan.MARKET = "MARKET"
+        dhan.LIMIT = "LIMIT"
+        dhan.SL = "SL"
+        dhan.get_ltp_data.return_value = {"data": {"NSE_FNO": {"12345": {"lastPrice": 10}}}}
+        mock_post.return_value = SimpleNamespace(status_code=200, content=b"{}", json=lambda: {"data": {"NSE_FNO": {"12345": {"lastPrice": 10}}}})
+        dhan.place_order.return_value = {"status": "success", "data": {"orderId": "dhan-order-variant"}}
+        dhan.get_order_by_id.return_value = {
+            "status": "success",
+            "data": [{"orderStatus": "TRADED", "transactionType": "BUY", "averageTradedPrice": 10, "quantity": 65}],
+        }
+        mock_security_lookup.return_value = {"status": "success", "SECURITY_ID": 12345}
+
+        response = place_dhan_orders(
+            "2026-05-12",
+            24087.5,
+            "Lite",
+            "dhan-access",
+            "dhan-client",
+            "NIFTY24400CE",
+            "BUY",
+            "NIFTY",
+            65,
+            "strategy",
+            "LIMIT",
+            "MIS",
+            None,
+            self.client_user,
+            1,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            "NFO",
+            "FNO",
+            "NIFTY",
+            None,
+            "OPEN",
+            "dhan-history-variant",
+            proxy_config=proxy_config,
+        )
+
+        self.assertNotEqual(response["data"]["status"], "Failed")
+        self.assertEqual(dhan.place_order.call_args.kwargs["price"], 10.25)
+        self.assertEqual(mock_post.call_args.kwargs["proxies"], proxy_config)
 
     @mock.patch("main.dhanapi.ensure_dhan_instruments_file")
     def test_dhan_security_lookup_ignores_invalid_placeholder_expiry_dates(self, mock_instrument_file):

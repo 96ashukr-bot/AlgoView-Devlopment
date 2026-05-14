@@ -3,7 +3,7 @@ import requests
 import pandas as pd
 from main.models import *
 from main.tasks import send_trade_email_async
-from main.broker_order_utils import normalize_order_type, resolve_limit_price
+from main.broker_order_utils import extract_ltp_from_quote_payload, normalize_order_type, resolve_limit_price
 from main.trade_history_service import save_trade_order_history
 from main.broker_instrument_cache import ensure_fivepaisa_scrip_master_file
 import logging
@@ -237,10 +237,9 @@ def place_5paisa_order(LivePrice,group_service,api_key,access_token,trade_symbol
                 }
                 ltp_response = requests.post(MARKET_FEED_URL, headers=headers, json=market_feed_payload, timeout=5, proxies=proxy_config)
                 ltp_data = ltp_response.json() if ltp_response.content else {}
-                feed_data = ltp_data.get("body", {}).get("Data") or ltp_data.get("body", {}).get("MarketFeedData") or []
-                if feed_data:
-                    quote = feed_data[0]
-                    ltp = quote.get("LastRate") or quote.get("LastTradedPrice") or quote.get("ltp")
+                ltp = extract_ltp_from_quote_payload(ltp_data, preferred_keys=(token,))
+                if ltp is None:
+                    logger.warning(f"{user} : 5Paisa LTP response did not contain a usable option premium for token {token}: {ltp_data}")
             except Exception as e:
                 logger.warning(f"{user} : 5Paisa LTP fetch failed for token {token}: {str(e)}")
 

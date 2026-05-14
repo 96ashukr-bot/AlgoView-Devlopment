@@ -96,9 +96,9 @@ class LoginActivityService:
         return has_refresh_token or has_credentials
 
     def _token_status(self, broker_payload: Dict[str, Any]) -> Dict[str, Any]:
-        access_token = decrypt_value(broker_payload.get("encrypted_access_token"))
-        refresh_token = decrypt_value(broker_payload.get("encrypted_refresh_token"))
-        feed_token = decrypt_value(broker_payload.get("encrypted_feed_token"))
+        access_token = decrypt_value(broker_payload.get("encrypted_access_token")) or broker_payload.get("access_token")
+        refresh_token = decrypt_value(broker_payload.get("encrypted_refresh_token")) or broker_payload.get("refreshToken")
+        feed_token = decrypt_value(broker_payload.get("encrypted_feed_token")) or broker_payload.get("feed_token")
         expiry = broker_payload.get("access_token_expiry")
         now = timezone.now()
 
@@ -209,6 +209,9 @@ class LoginActivityService:
             "encrypted_access_token",
             "encrypted_refresh_token",
             "encrypted_feed_token",
+            "access_token",
+            "refreshToken",
+            "feed_token",
             "access_token_expiry",
             "isTokenExpired",
             "tokenCreatedAt",

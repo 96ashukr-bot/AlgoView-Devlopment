@@ -8,6 +8,7 @@ import pytz
 import pandas as pd
 import json
 import requests
+import hashlib
 
 from datetime import datetime
 
@@ -18,7 +19,7 @@ from pya3 import Aliceblue, TransactionType, OrderType, ProductType
 
 from main.models import *
 from main.tasks import send_trade_email_async
-from main.broker_order_utils import normalize_order_type, resolve_limit_price
+from main.broker_order_utils import extract_ltp_from_quote_payload, normalize_order_type, resolve_limit_price
 from main.trade_history_service import save_trade_order_history
 
 
@@ -58,6 +59,8 @@ GET_TRADE_BOOK_URL = BASE_URL + GET_TRADE_BOOK_API
 GET_TREAD_BOOK_API = GET_TRADE_BOOK_API
 GET_TREAD_BOOK_URL = GET_TRADE_BOOK_URL
 
+ALICE_VENDOR_SESSION_URL = "https://ant.aliceblueonline.com/rest/AliceBlueAPIService/sso/getUserDetails"
+
 
 # ==============================
 # MULTI-USER SESSION
@@ -96,47 +99,207 @@ class ProxyAwareAliceblue(Aliceblue):
         return {"stat": "Not_ok", "emsg": emsg, "encKey": None}
 
 
-def _alice_proxy_cache_key(user_id, proxy_config=None):
+def _alice_proxy_cache_key(user_id, proxy_config=None, credential_label="api_key"):
     if not proxy_config:
-        return f"{user_id}:direct"
+        return f"{user_id}:{credential_label}:direct"
     proxy_identity = "|".join(str(proxy_config.get(key, "")).split("@", 1)[-1] for key in sorted(proxy_config))
-    return f"{user_id}:proxy:{proxy_identity}"
+    return f"{user_id}:{credential_label}:proxy:{proxy_identity}"
 
 
-def get_alice_session(user_id, api_key, proxy_config=None):
+def _build_alice_session(user_id, api_key, proxy_config=None):
+    alice = ProxyAwareAliceblue(user_id=user_id, api_key=api_key, proxy_config=proxy_config)
+    session = alice.get_session_id()
+
+    if not session or session.get("stat") != "Ok":
+        return None, session
+
+    alice.alice_session_response = session
+    alice.alice_session_id = (
+        session.get("sessionID")
+        or session.get("session_id")
+        or session.get("susertoken")
+        or session.get("token")
+    )
+    return alice, session
+
+
+def _extract_alice_session_id(payload):
+    if not isinstance(payload, dict):
+        return None
+
+    for key in (
+        "sessionID",
+        "session_id",
+        "susertoken",
+        "userSession",
+        "user_session",
+        "session",
+        "token",
+    ):
+        value = payload.get(key)
+        if value:
+            return value
+
+    for nested_key in ("data", "result", "response", "user"):
+        nested = payload.get(nested_key)
+        if isinstance(nested, dict):
+            value = _extract_alice_session_id(nested)
+            if value:
+                return value
+        elif isinstance(nested, list):
+            for item in nested:
+                value = _extract_alice_session_id(item)
+                if value:
+                    return value
+    return None
+
+
+def _build_alice_vendor_session(user_id, auth_code, api_secret, proxy_config=None):
+    if not user_id or not auth_code or not api_secret:
+        return None, {"stat": "Not_ok", "emsg": "Missing User ID, Vendor Auth Code, or API Secret."}
+
+    checksum_source = f"{str(user_id).strip()}{str(auth_code).strip()}{str(api_secret).strip()}"
+    checksum = hashlib.sha256(checksum_source.encode("utf-8")).hexdigest()
+
     try:
-        if not user_id or not api_key:
-            logger.error("Missing USER_ID or API_KEY")
-            return None
-
-        cache_key = _alice_proxy_cache_key(user_id, proxy_config)
-        if cache_key in alice_sessions:
-            session_data = alice_sessions[cache_key]
-            if datetime.now().date() == session_data["time"].date():
-                return session_data["client"]
-
-        alice = ProxyAwareAliceblue(user_id=user_id, api_key=api_key, proxy_config=proxy_config)
-
+        response = requests.post(
+            ALICE_VENDOR_SESSION_URL,
+            json={"checkSum": checksum},
+            headers={"Content-Type": "application/json", "Accept": "application/json"},
+            proxies=proxy_config,
+            timeout=10,
+        )
         try:
-            session = alice.get_session_id()
-        except Exception as e:
-            logger.error(f"Login Exception: {str(e)}")
-            return None
+            payload = response.json()
+        except ValueError:
+            payload = {"stat": "Not_ok", "emsg": response.text}
+    except (requests.ConnectionError, requests.Timeout) as exception:
+        return None, {"stat": "Not_ok", "emsg": str(exception)}
 
-        if not session or session.get("stat") != "Ok":
-            logger.error(f"Login Failed: {session}")
-            return None
+    status = str(payload.get("stat") or payload.get("status") or "").strip().lower()
+    session_id = _extract_alice_session_id(payload)
+    if response.status_code < 400 and status in {"ok", "success"} and session_id:
+        alice = ProxyAwareAliceblue(user_id=user_id, api_key=auth_code, session_id=session_id, proxy_config=proxy_config)
+        alice.alice_session_response = payload
+        alice.alice_session_id = session_id
+        return alice, payload
 
-        alice_sessions[cache_key] = {
-            "client": alice,
-            "time": datetime.now()
-        }
+    if response.status_code >= 400 and "emsg" not in payload:
+        payload["emsg"] = f"{response.status_code} - {response.reason}"
+    return None, payload
 
-        return alice
+
+def _describe_alice_login_failure(response):
+    if not response:
+        return "Alice Blue did not return a session response."
+    message = str(response.get("emsg") or response)
+    if "Tunnel connection failed: 401 Unauthorized" in message:
+        return (
+            "The assigned proxy authenticated for public-IP verification but rejected HTTPS broker traffic "
+            "with 401 Unauthorized. Re-save the proxy username/password/port or ask the proxy vendor to enable "
+            "HTTPS CONNECT tunneling to Alice Blue broker domains."
+        )
+    if "ProxyError" in message or "Unable to connect to proxy" in message:
+        return f"The assigned proxy route failed before reaching Alice Blue: {message}"
+    if "Invalid auth code" in message:
+        return (
+            "Alice Blue rejected the Vendor Auth Code. For Developer Portal apps, API Key and API Secret are not enough; "
+            "generate a fresh authCode from Alice Blue's SSO/app authorization flow, save it in Vendor Auth Code, and try again."
+        )
+    if "Invalid Input" in message:
+        return (
+            "Alice Blue rejected the saved User ID/API credentials as Invalid Input. If these credentials are from the "
+            "Alice Blue Developer Portal, also save the fresh Vendor Auth Code from Alice's SSO/app authorization flow; "
+            "the old ANT API-key login cannot use Developer Portal API Key + Secret alone."
+        )
+    return f"Alice Blue rejected the saved User ID/API credentials: {message}"
+
+
+def get_alice_session(user_id, api_key=None, proxy_config=None, api_secret=None, auth_code=None, return_error=False):
+    try:
+        api_key = str(api_key or "").strip()
+        api_secret = str(api_secret or "").strip()
+        auth_code = str(auth_code or "").strip()
+
+        if not user_id:
+            logger.error("Missing Alice Blue USER_ID")
+            return (None, "Missing Alice Blue User ID.") if return_error else None
+        if not api_key and not (api_secret and auth_code):
+            logger.error("Missing Alice Blue login credentials")
+            return (
+                None,
+                "Missing Alice Blue login credentials. Save either ANT API Key, or Developer Portal API Secret plus Vendor Auth Code.",
+            ) if return_error else None
+
+        candidates = []
+        if api_key:
+            candidates.append(("api_key", api_key))
+        if api_secret and api_secret != api_key:
+            candidates.append(("api_secret", api_secret))
+
+        last_response = None
+        for credential_label, credential_value in candidates:
+            cache_key = _alice_proxy_cache_key(user_id, proxy_config, credential_label=credential_label)
+            if cache_key in alice_sessions:
+                session_data = alice_sessions[cache_key]
+                if datetime.now().date() == session_data["time"].date():
+                    return (session_data["client"], None) if return_error else session_data["client"]
+
+            try:
+                alice, session = _build_alice_session(user_id, credential_value, proxy_config=proxy_config)
+            except Exception as e:
+                logger.error(f"Alice Blue login exception using {credential_label}: {str(e)}")
+                continue
+
+            last_response = session
+            if alice:
+                alice.alice_credential_label = credential_label
+                alice_sessions[cache_key] = {
+                    "client": alice,
+                    "session": session,
+                    "time": datetime.now()
+                }
+                return (alice, None) if return_error else alice
+
+            logger.error(f"Alice Blue login failed using {credential_label}: {session}")
+
+        if auth_code and api_secret:
+            cache_key = _alice_proxy_cache_key(user_id, proxy_config, credential_label="vendor_auth_code")
+            if cache_key in alice_sessions:
+                session_data = alice_sessions[cache_key]
+                if datetime.now().date() == session_data["time"].date():
+                    return (session_data["client"], None) if return_error else session_data["client"]
+
+            try:
+                alice, session = _build_alice_vendor_session(
+                    user_id,
+                    auth_code,
+                    api_secret,
+                    proxy_config=proxy_config,
+                )
+            except Exception as e:
+                logger.error(f"Alice Blue vendor auth-code login exception: {str(e)}")
+                alice, session = None, {"stat": "Not_ok", "emsg": str(e)}
+
+            last_response = session
+            if alice:
+                alice.alice_credential_label = "vendor_auth_code"
+                alice_sessions[cache_key] = {
+                    "client": alice,
+                    "session": session,
+                    "time": datetime.now()
+                }
+                return (alice, None) if return_error else alice
+
+            logger.error(f"Alice Blue vendor auth-code login failed: {session}")
+
+        logger.error(f"Alice Blue login failed for all configured credentials. Last response: {last_response}")
+        error_message = _describe_alice_login_failure(last_response)
+        return (None, error_message) if return_error else None
 
     except Exception as e:
         logger.error(f"Login Error: {str(e)}")
-        return None
+        return (None, str(e)) if return_error else None
 
 
 # ==============================
@@ -230,7 +393,8 @@ def place_alice_orders(
             return {"data": {"status": "error", "message": "Instrument not found"}}
 
         try:
-            ltp = float(alice.get_scrip_info(instrument).get("Ltp", 0))
+            ltp_payload = alice.get_scrip_info(instrument)
+            ltp = float(extract_ltp_from_quote_payload(ltp_payload) or 0)
         except Exception as e:
             logger.error(f"{user}: Alice Blue LTP fetch failed: {str(e)}")
             ltp = 0

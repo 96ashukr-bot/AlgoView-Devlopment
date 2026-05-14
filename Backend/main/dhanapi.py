@@ -4,13 +4,83 @@ from dhanhq import dhanhq
 import logging
 from django.conf import settings
 import pandas as pd
+import requests
 
 from main.broker_instrument_cache import ensure_dhan_instruments_file
 from main.models import CompanySmtpDetails
 from main.tasks import send_trade_email_async
-from main.broker_order_utils import normalize_order_type, resolve_limit_price, resolve_limit_reference_price
+from main.broker_order_utils import extract_ltp_from_quote_payload, normalize_order_type, resolve_limit_price, resolve_limit_reference_price
+from main.services.option_ltp_fallback import fetch_nse_option_chain_ltp
 from main.trade_history_service import save_trade_order_history
 logger = logging.getLogger('main')
+DHAN_LTP_URL = "https://api.dhan.co/v2/marketfeed/ltp"
+
+
+def fetch_dhan_option_ltp(
+    dhan_client,
+    client_id,
+    access_token,
+    exchange,
+    security_id,
+    proxy_config,
+    user=None,
+    trading_symbol=None,
+    expiry_date=None,
+    underlying=None,
+):
+    security_id_int = int(security_id)
+    security_id_key = str(security_id_int)
+    try:
+        response = requests.post(
+            DHAN_LTP_URL,
+            headers={
+                "Content-Type": "application/json",
+                "access-token": access_token,
+                "client-id": str(client_id),
+            },
+            json={exchange: [security_id_int]},
+            timeout=5,
+            proxies=proxy_config,
+        )
+        payload = response.json() if response.content else {}
+        if response.status_code == 200:
+            ltp = extract_ltp_from_quote_payload(payload, preferred_keys=(exchange, security_id_key, security_id_int))
+            if ltp is not None:
+                return ltp
+            logger.warning(
+                f"{user} : Dhan REST LTP response did not contain option premium for "
+                f"exchange {exchange}, security_id {security_id_key}: {payload}"
+            )
+        else:
+            logger.warning(f"{user} : Dhan REST LTP fetch failed for security_id {security_id_key}: {response.status_code} {payload}")
+    except Exception as exc:
+        logger.warning(f"{user} : Dhan REST LTP fetch failed for security_id {security_id_key}: {str(exc)}")
+
+    try:
+        if hasattr(dhan_client, "get_ltp_data"):
+            ltp_response = dhan_client.get_ltp_data({exchange: [security_id_int]})
+            ltp = extract_ltp_from_quote_payload(
+                ltp_response,
+                preferred_keys=(exchange, security_id_key, security_id_int),
+            )
+            if ltp is not None:
+                return ltp
+            logger.warning(
+                f"{user} : Dhan SDK LTP response did not contain option premium for "
+                f"exchange {exchange}, security_id {security_id_key}: {ltp_response}"
+            )
+    except Exception as exc:
+        logger.warning(f"{user} : Dhan SDK LTP fetch failed for security_id {security_id_key}: {str(exc)}")
+
+    if trading_symbol:
+        return fetch_nse_option_chain_ltp(
+            trading_symbol,
+            expiry_date=expiry_date,
+            underlying=underlying,
+            proxy_config=proxy_config,
+            user=user,
+        )
+    return None
 
 def fetch_order_details(order_id,dhan, user=None):
     try:
@@ -138,11 +208,18 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
         requested_order_type = normalize_order_type(ordertype)
         ltp = None
         try:
-            if hasattr(dhan, "get_ltp_data"):
-                ltp_response = dhan.get_ltp_data({Exchange: [int(security_id)]})
-                exchange_quotes = (ltp_response or {}).get("data", {}).get(Exchange, {})
-                quote = exchange_quotes.get(str(int(security_id))) or exchange_quotes.get(int(security_id)) or {}
-                ltp = quote.get("last_price") or quote.get("ltp")
+            ltp = fetch_dhan_option_ltp(
+                dhan,
+                client_id,
+                access_token,
+                Exchange,
+                security_id,
+                proxy_config,
+                user=user,
+                trading_symbol=trade_symbol,
+                expiry_date=expiry_date,
+                underlying=symbol,
+            )
         except Exception as e:
             logger.warning(f"{user} : Dhan LTP fetch failed for security_id {security_id}: {str(e)}")
 
