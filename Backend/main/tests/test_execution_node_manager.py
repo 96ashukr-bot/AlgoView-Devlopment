@@ -1169,6 +1169,23 @@ class ExecutionNodeManagerTests(TestCase):
         config = build_requests_proxy_config(node)
         self.assertEqual(config["https"], "https://[2001:db8::21]:8080")
 
+    def test_proxy_config_removes_invisible_paste_marks(self):
+        node = ExecutionNode(
+            name="Copied Proxy Node",
+            ip_address="2401:c080:2400:1e3d:815f:789:3fe8:f043",
+            execution_type=ExecutionNode.EXECUTION_TYPE_PROXY,
+            proxy_host="\u2060\u202fdc-mum-600.staticip.in",
+            proxy_port=443,
+            proxy_protocol=" HTTP\u200b",
+            proxy_username="5V5boNvhvVcW4280MYS5X\u200b",
+        )
+        node.set_proxy_password("f645e35e60c747f9a48f371f700d5d07")
+        config = build_requests_proxy_config(node)
+        self.assertEqual(
+            config["https"],
+            "http://5V5boNvhvVcW4280MYS5X:f645e35e60c747f9a48f371f700d5d07@dc-mum-600.staticip.in:443",
+        )
+
     @mock.patch("main.services.proxy_utils.requests.get")
     def test_verify_proxy_public_ip_success(self, mock_get):
         node = ExecutionNode.objects.create(

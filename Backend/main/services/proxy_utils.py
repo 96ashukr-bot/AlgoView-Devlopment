@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import ipaddress
+import unicodedata
 from typing import Any
 from urllib.parse import quote
 
@@ -22,15 +23,22 @@ PUBLIC_IP_ENDPOINTS = (
 )
 
 
+def _clean_proxy_value(value: str | None) -> str:
+    """Remove invisible copy/paste artifacts that make proxy URLs unparsable."""
+    cleaned = unicodedata.normalize("NFKC", str(value or ""))
+    cleaned = "".join(ch for ch in cleaned if unicodedata.category(ch) not in {"Cf", "Cc"})
+    return cleaned.strip()
+
+
 def _normalise_protocol(protocol: str | None) -> str:
-    protocol = (protocol or ExecutionNode.PROXY_PROTOCOL_HTTP).strip().lower()
+    protocol = _clean_proxy_value(protocol or ExecutionNode.PROXY_PROTOCOL_HTTP).lower()
     if protocol not in {ExecutionNode.PROXY_PROTOCOL_HTTP, ExecutionNode.PROXY_PROTOCOL_HTTPS, ExecutionNode.PROXY_PROTOCOL_SOCKS5}:
         raise ValueError(f"Unsupported proxy protocol: {protocol}")
     return protocol
 
 
 def _strip_ipv6_brackets(host: str) -> str:
-    host = (host or "").strip()
+    host = _clean_proxy_value(host)
     if host.startswith("[") and host.endswith("]"):
         return host[1:-1]
     return host
@@ -48,7 +56,7 @@ def _format_proxy_host(host: str) -> str:
 
 
 def _normalize_ip(value: str | None) -> str:
-    value = (value or "").strip()
+    value = _clean_proxy_value(value)
     if not value:
         return ""
     try:
@@ -59,14 +67,14 @@ def _normalize_ip(value: str | None) -> str:
 
 def _build_proxy_url(execution_node: ExecutionNode, *, mask_password: bool = False) -> str:
     protocol = _normalise_protocol(execution_node.proxy_protocol)
-    host = (execution_node.proxy_host or "").strip()
+    host = _clean_proxy_value(execution_node.proxy_host)
     port = execution_node.proxy_port
     if not host or not port:
         raise ValueError("Proxy host and port are required.")
 
-    username = (execution_node.proxy_username or "").strip()
+    username = _clean_proxy_value(execution_node.proxy_username)
     password = execution_node.get_proxy_password() if hasattr(execution_node, "get_proxy_password") else execution_node.proxy_password
-    password = (password or "").strip()
+    password = _clean_proxy_value(password)
     auth = ""
     if username:
         safe_username = quote(username, safe="")
