@@ -658,6 +658,51 @@ def _broker_callback_url_with_params(params):
     return urlunparse(parsed._replace(query=urlencode(query)))
 
 
+def _broker_callback_query_pairs(request):
+    pairs = []
+    try:
+        pairs.extend(request.GET.lists())
+    except Exception:
+        pass
+
+    raw_query = ""
+    try:
+        raw_query = request.META.get("QUERY_STRING", "") or ""
+    except Exception:
+        raw_query = ""
+    if raw_query:
+        normalized = raw_query.replace("&amp;", "&")
+        for token_name in (
+            "RequestToken",
+            "request_token",
+            "tokenId",
+            "token_id",
+            "code",
+            "state",
+            "State",
+            "redirect_params",
+        ):
+            normalized = normalized.replace(f"?{token_name}=", f"&{token_name}=")
+        for key, value in parse_qsl(normalized, keep_blank_values=True):
+            pairs.append((key, [value]))
+    return pairs
+
+
+def _broker_callback_param(request, *names):
+    wanted = set(names)
+    wanted.update({f"amp;{name}" for name in names})
+    for key, values in _broker_callback_query_pairs(request):
+        if key not in wanted:
+            continue
+        if isinstance(values, (list, tuple)):
+            value = values[-1] if values else ""
+        else:
+            value = values
+        if value not in (None, ""):
+            return value
+    return None
+
+
 def _resolve_frontend_return_url(request):
     configured_frontend = getattr(settings, "FRONTEND_APP_URL", "").rstrip("/")
     request_origin = ""
@@ -981,16 +1026,18 @@ class BrokerRedirectCallbackView(APIView):
         callback_info = _safe_broker_callback_payload(request.GET)
         logger.info("Broker callback received: %s", redact_secrets(callback_info))
 
-        if (
-            request.GET.get("auth_token")
-            or request.GET.get("access_token")
-            or request.GET.get("jwtToken")
-            or request.GET.get("state")
-            or request.GET.get("redirect_params")
-            or request.GET.get("tokenId")
-            or request.GET.get("token_id")
-            or request.GET.get("request_token")
-            or request.GET.get("RequestToken")
+        if _broker_callback_param(
+            request,
+            "auth_token",
+            "access_token",
+            "jwtToken",
+            "state",
+            "State",
+            "redirect_params",
+            "tokenId",
+            "token_id",
+            "request_token",
+            "RequestToken",
         ):
             return BrokerCallbackView.as_view()(request._request)
 
@@ -1039,14 +1086,14 @@ class BrokerCallbackView(APIView):
         return response
 
     def get(self, request, *args, **kwargs):
-        if request.GET.get("auth_token") or request.GET.get("access_token") or request.GET.get("jwtToken"):
+        if _broker_callback_param(request, "auth_token", "access_token", "jwtToken"):
             from main.angelone_views import angelone_callback as secure_angelone_callback
 
             return secure_angelone_callback(request)
 
         # Get the authorization code and state from the URL
         try:
-            broker_state = request.GET.get('state') or request.GET.get('State') or request.GET.get('redirect_params') or ""
+            broker_state = _broker_callback_param(request, "state", "State", "redirect_params") or ""
             state_record = CallbackStateService().consume(broker_state) if broker_state else None
             if state_record:
                 broker_details = ClientBrokerdetails.objects.select_related("broker_name").filter(id=state_record.broker_details_id, client_id=state_record.user_id).first()
@@ -1055,7 +1102,7 @@ class BrokerCallbackView(APIView):
                 broker_name = _normalize_broker_name_for_redirect(broker_details.broker_name.broker_name)
             else:
                 user = request.user if getattr(request, "user", None) and request.user.is_authenticated else None
-                if not user and (request.GET.get("tokenId") or request.GET.get("token_id")):
+                if not user and _broker_callback_param(request, "tokenId", "token_id"):
                     broker_details = (
                         ClientBrokerdetails.objects.select_related("broker_name")
                         .filter(
@@ -1071,11 +1118,11 @@ class BrokerCallbackView(APIView):
                     else:
                         raise ValidationError("Invalid or expired Dhan callback state")
                 elif not user and (
-                    request.GET.get("request_token") or request.GET.get("code")
+                    _broker_callback_param(request, "request_token", "code")
                 ) and (
-                    request.GET.get("action") == "login"
-                    or request.GET.get("type") == "login"
-                    or request.GET.get("status") == "success"
+                    _broker_callback_param(request, "action") == "login"
+                    or _broker_callback_param(request, "type") == "login"
+                    or _broker_callback_param(request, "status") == "success"
                 ):
                     broker_details = (
                         ClientBrokerdetails.objects.select_related("broker_name")
@@ -1091,7 +1138,7 @@ class BrokerCallbackView(APIView):
                         broker_name = "zerodha"
                     else:
                         raise ValidationError("Invalid or expired Zerodha callback state")
-                elif not user and request.GET.get("RequestToken"):
+                elif not user and _broker_callback_param(request, "RequestToken"):
                     broker_details = (
                         ClientBrokerdetails.objects.select_related("broker_name")
                         .filter(
@@ -1115,28 +1162,28 @@ class BrokerCallbackView(APIView):
                         raise ValidationError("Broker details not found for the user")
 
             if broker_name == "zerodha":
-                request_token = request.GET.get('request_token') or request.GET.get('code')
+                request_token = _broker_callback_param(request, "request_token", "code")
                 response = self.handle_zerodha(request_token, broker_details)
 
             elif broker_name == "5paisa":
-                request_token = request.GET.get('RequestToken') or request.GET.get('request_token') or request.GET.get('code')
+                request_token = _broker_callback_param(request, "RequestToken", "request_token", "code")
                 response = self.handle_5paisa(request_token, broker_details)
 
             elif broker_name == "alice blue":
-                request_token = request.GET.get('authCode') or request.GET.get('code')
+                request_token = _broker_callback_param(request, "authCode", "code")
                 response = self.handle_alice_blue(request_token, broker_details)
 
             elif broker_name == "upstox":
-                request_token = request.GET.get('code')
+                request_token = _broker_callback_param(request, "code")
                 response = self.handle_upstox(request_token, broker_details)
             
             elif broker_name == "fyers":
-                request_token =request.GET.get('code')
+                request_token = _broker_callback_param(request, "code")
                 
                 response = self.handle_fyers(request_token, broker_details)
 
             elif broker_name == "dhan":
-                token_id = request.GET.get("tokenId") or request.GET.get("token_id") or request.GET.get("code")
+                token_id = _broker_callback_param(request, "tokenId", "token_id", "code")
                 response = self.handle_dhan(token_id, broker_details)
 
             elif broker_name == "angel one":

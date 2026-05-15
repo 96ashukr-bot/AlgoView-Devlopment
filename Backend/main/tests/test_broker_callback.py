@@ -258,3 +258,39 @@ class BrokerCallbackRoutingTests(TestCase):
         self.assertTrue(mock_fetch.call_args.kwargs["return_details"])
         broker_details.refresh_from_db()
         self.assertEqual(broker_details.access_token, "fivepaisa-access-token")
+
+    @mock.patch("main.dematemodule.fetch_access_token_5paisa")
+    def test_fivepaisa_malformed_amp_callback_token_is_recovered(self, mock_fetch):
+        user = User.objects.create_user(
+            email="fivepaisa-amp@example.com",
+            firstName="Five",
+            lastName="Amp",
+            phoneNumber="9999999993",
+            password="Pass@1234",
+        )
+        broker = Broker.objects.create(broker_name="5Paisa", is_active=True)
+        broker_details = ClientBrokerdetails.objects.create(
+            client=user,
+            broker_name=broker,
+            broker_API_KEY="five-user-key",
+            broker_API_SKEY="five-encryption-key",
+            broker_API_UID="five-user-id",
+        )
+        self._attach_verified_proxy(broker_details, node_id="fivepaisa-amp-node")
+        CallbackStateService().create(
+            state="fivepaisa-amp-state",
+            user_id=user.id,
+            broker_details_id=broker_details.id,
+            client_code="fivepaisa-client",
+        )
+        mock_fetch.return_value = {"access_token": "fivepaisa-amp-access", "response": {"body": {}}}
+
+        response = self.client.get(
+            "/api/broker/callback/?broker=5paisa&amp;state=fivepaisa-amp-state?RequestToken=five-amp-token"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["message"], "success")
+        self.assertEqual(mock_fetch.call_args.args[0], "five-amp-token")
+        broker_details.refresh_from_db()
+        self.assertEqual(broker_details.access_token, "fivepaisa-amp-access")
