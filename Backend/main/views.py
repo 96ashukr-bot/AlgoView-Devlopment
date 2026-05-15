@@ -977,17 +977,22 @@ class CustomLoginView(generics.GenericAPIView):
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        user = serializer.validated_data.get('user')
+        user = None
+        user_id = serializer.validated_data.get('user_id')
+        if user_id:
+            user = User.objects.filter(id=user_id).first()
 
         # Log the login time in UserActivityLog
-        if request.session and not request.session.session_key:
+        if user and request.session and not request.session.session_key:
             request.session.save()
 
-        UserActivityLog.objects.create(
-            user=user,
-            last_login_time=now(),
-            session_key=request.session.session_key
-        )
+        if user:
+            UserActivityLog.objects.create(
+                user=user,
+                action_type='login',
+                last_login_time=now(),
+                session_key=request.session.session_key
+            )
 
         return Response(serializer.validated_data, status=status.HTTP_200_OK)
     

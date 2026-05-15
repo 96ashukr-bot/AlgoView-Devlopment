@@ -88,6 +88,30 @@ export const login = async (email, password) => {
     });
   };
 
+  const extractLoginErrorMessage = (error) => {
+    const data = error?.response?.data;
+    if (!data) {
+      return error?.message || "Login failed";
+    }
+    const pick = (value) => {
+      if (!value) return "";
+      if (Array.isArray(value)) {
+        return value.map(pick).filter(Boolean).join(" ");
+      }
+      if (typeof value === "object") {
+        return Object.values(value).map(pick).filter(Boolean).join(" ");
+      }
+      return String(value);
+    };
+    return (
+      pick(data.message) ||
+      pick(data.detail) ||
+      pick(data.non_field_errors) ||
+      pick(data.errors) ||
+      "Login failed"
+    );
+  };
+
   const localApiBaseUrl = getLocalApiBaseUrl();
   const primaryBaseUrl = baseUrl || localApiBaseUrl;
   const alternateBaseUrl =
@@ -103,11 +127,7 @@ export const login = async (email, password) => {
     } catch (primaryError) {
       const canFallback =
         alternateBaseUrl.replace(/\/$/, "") !== primaryBaseUrl.replace(/\/$/, "") &&
-        (
-          primaryError.message?.includes("Network Error") ||
-          primaryError.response?.status === 400 ||
-          primaryError.response?.status === 401
-        );
+        primaryError.message?.includes("Network Error");
 
       if (!canFallback) {
         throw primaryError;
@@ -185,12 +205,13 @@ export const login = async (email, password) => {
     } else if (error.response?.status >= 500) {
       toast.error("Server error! Please try again later.");
     } else {
-      toast.error(error.response?.data?.message || "An unexpected error occurred. Please try again.");
+      toast.error(extractLoginErrorMessage(error) || "An unexpected error occurred. Please try again.");
     }
 
     clearAuthTokens();
-    console.error('Login error:', error.response?.data?.message || "Login failed");
-    throw new Error(error.response?.data?.message || "Login failed");
+    const loginErrorMessage = extractLoginErrorMessage(error);
+    console.error('Login error:', loginErrorMessage);
+    throw new Error(loginErrorMessage);
   }
 };
 

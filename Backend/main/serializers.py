@@ -345,6 +345,9 @@ class CustomLoginSerializer(serializers.Serializer):
                     )
 
                 return {
+                    'user_id': user.id,
+                    'email': user.email,
+                    'is_client': True,
                     'message': f"OTP sent to your email: {email}. Please verify.",
                     'success':"True",
                     'role': {
