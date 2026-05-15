@@ -73,7 +73,7 @@ def fetch_access_token_5paisa(request_token, broker_details, proxy_config=None, 
                 response_data = {"raw": response.text}
             result["response"] = _safe_5paisa_token_response(response_data)
             if response.status_code == 200:
-                if "body" in response_data and "AccessToken" in response_data["body"]:
+                if "body" in response_data and response_data["body"].get("AccessToken"):
                     result["access_token"] = response_data["body"]["AccessToken"]
                     return result if return_details else result["access_token"]
                 body = response_data.get("body") if isinstance(response_data, dict) else {}

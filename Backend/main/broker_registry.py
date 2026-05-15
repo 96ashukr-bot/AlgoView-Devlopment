@@ -80,8 +80,9 @@ BROKER_SETUP_SPECS = {
         "fields": [
             {"key": "broker_API_KEY", "label": "User Key", "type": "password", "required": True, "secret": True},
             {"key": "broker_API_SKEY", "label": "Encryption Key", "type": "password", "required": True, "secret": True},
-            {"key": "broker_API_UID", "label": "User ID", "type": "text", "required": True, "secret": False},
+            {"key": "broker_API_UID", "label": "Vendor User ID / User ID", "type": "text", "required": True, "secret": False},
         ],
+        "requirement_note": "Use the 5Paisa vendor/API User ID that belongs to the User Key and Encryption Key. If 5Paisa returns 'Invalid Vendor UserID', this field does not match the app credentials.",
     },
     "fyers": {
         "display_name": "FYERS",
