@@ -29,7 +29,7 @@ import hashlib
 import json
 import secrets
 from rest_framework import permissions, status
-from urllib.parse import urlencode, urlparse, urlunparse
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 
 def _broker_proxy_config_or_none(broker_details, *, require_broker_verified=True):
@@ -650,6 +650,14 @@ def _broker_callback_url():
     return configured_url
 
 
+def _broker_callback_url_with_params(params):
+    callback_url = _broker_callback_url()
+    parsed = urlparse(callback_url)
+    query = dict(parse_qsl(parsed.query, keep_blank_values=True))
+    query.update({key: value for key, value in params.items() if value is not None})
+    return urlunparse(parsed._replace(query=urlencode(query)))
+
+
 def _resolve_frontend_return_url(request):
     configured_frontend = getattr(settings, "FRONTEND_APP_URL", "").rstrip("/")
     request_origin = ""
@@ -816,7 +824,11 @@ class BrokerLoginRedirectView(APIView):
         if not VENDOR_KEY or not broker_details.broker_API_SKEY or not broker_details.broker_API_UID:
             return Response({"error": "5Paisa credentials are incomplete."}, status=400)
         state = _create_broker_callback_state(request, broker_details, "5paisa")
-        params = urlencode({"VendorKey": VENDOR_KEY, "ResponseURL": _broker_callback_url(), "State": state})
+        broker_details.request_token = state
+        broker_details.tokenCreatedAt = now()
+        broker_details.save(update_fields=["request_token", "tokenCreatedAt"])
+        response_url = _broker_callback_url_with_params({"broker": "5paisa", "state": state})
+        params = urlencode({"VendorKey": VENDOR_KEY, "ResponseURL": response_url, "State": state})
         paisa_url = f"https://dev-openapi.5paisa.com/WebVendorLogin/VLogin/Index?{params}"
         return Response({"redirect_url": paisa_url})
 
@@ -1034,7 +1046,7 @@ class BrokerCallbackView(APIView):
 
         # Get the authorization code and state from the URL
         try:
-            broker_state = request.GET.get('state') or request.GET.get('redirect_params') or ""
+            broker_state = request.GET.get('state') or request.GET.get('State') or request.GET.get('redirect_params') or ""
             state_record = CallbackStateService().consume(broker_state) if broker_state else None
             if state_record:
                 broker_details = ClientBrokerdetails.objects.select_related("broker_name").filter(id=state_record.broker_details_id, client_id=state_record.user_id).first()
@@ -1079,6 +1091,21 @@ class BrokerCallbackView(APIView):
                         broker_name = "zerodha"
                     else:
                         raise ValidationError("Invalid or expired Zerodha callback state")
+                elif not user and request.GET.get("RequestToken"):
+                    broker_details = (
+                        ClientBrokerdetails.objects.select_related("broker_name")
+                        .filter(
+                            broker_name__broker_name__iexact="5paisa",
+                            request_token__isnull=False,
+                            tokenCreatedAt__gte=now() - timedelta(minutes=15),
+                        )
+                        .order_by("-tokenCreatedAt", "-id")
+                        .first()
+                    )
+                    if broker_details:
+                        broker_name = "5paisa"
+                    else:
+                        raise ValidationError("Invalid or expired 5Paisa callback state")
                 elif not user:
                     raise ValidationError("Invalid or expired broker callback state")
                 else:
@@ -1200,13 +1227,27 @@ class BrokerCallbackView(APIView):
             proxy_config = _broker_proxy_config_or_none(broker_details, require_broker_verified=False)
             if not proxy_config:
                 return _broker_proxy_required_response()
-            access_token = fetch_access_token_5paisa(request_token,broker_details, proxy_config=proxy_config)
+            token_result = fetch_access_token_5paisa(
+                request_token,
+                broker_details,
+                proxy_config=proxy_config,
+                return_details=True,
+            )
+            access_token = token_result.get("access_token") if isinstance(token_result, dict) else token_result
             if access_token:
                 expiry_time = _next_session_cutoff(23, 59)
                 _save_session_tokens_compat(broker_details, request_token, access_token, expiry=expiry_time)
                 return JsonResponse({"message": "success", "token_saved": True})
             else:
-                return JsonResponse({"message": "Failed"}, status=400)
+                error_message = "5Paisa access token exchange failed."
+                response_payload = None
+                if isinstance(token_result, dict):
+                    error_message = token_result.get("error") or error_message
+                    response_payload = token_result.get("response")
+                payload = {"message": "Failed", "error": error_message}
+                if response_payload:
+                    payload["response"] = response_payload
+                return JsonResponse(payload, status=400)
         except Exception as e:
             return JsonResponse({"message":"Failed","error": str(e)}, status=500)
     def handle_alice_blue(self, request_token, broker_details):

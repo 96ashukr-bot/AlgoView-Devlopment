@@ -18,10 +18,33 @@ the time of its generation. Token expires every day at 11:59 PM.
 """
 
 ACCESS_TOKEN_URL = "https://Openapi.5paisa.com/VendorsAPI/Service1.svc/GetAccessToken"
-def fetch_access_token_5paisa(request_token,broker_details, proxy_config=None):
+
+
+def _safe_5paisa_token_response(payload):
+    if isinstance(payload, dict):
+        safe = {}
+        for key, value in payload.items():
+            if str(key).lower() in {"accesstoken", "access_token", "jwt", "jwttoken", "requesttoken", "token"}:
+                safe[key] = "***masked***" if value else value
+            else:
+                safe[key] = _safe_5paisa_token_response(value)
+        return safe
+    if isinstance(payload, list):
+        return [_safe_5paisa_token_response(item) for item in payload]
+    return payload
+
+
+def fetch_access_token_5paisa(request_token, broker_details, proxy_config=None, return_details=False):
+        result = {
+            "access_token": None,
+            "status_code": None,
+            "error": None,
+            "response": None,
+        }
         if not proxy_config:
             logger.error("Proxy/static-IP execution route is required for 5Paisa token generation.")
-            return None
+            result["error"] = "Proxy/static-IP execution route is required for 5Paisa token generation."
+            return result if return_details else None
         api_key=broker_details.broker_API_KEY
         encreption_key=broker_details.broker_API_SKEY
         user_id=broker_details.broker_API_UID
@@ -43,18 +66,31 @@ def fetch_access_token_5paisa(request_token,broker_details, proxy_config=None):
 
         try:
             response = requests.post(ACCESS_TOKEN_URL, json=payload, headers=headers, timeout=10, proxies=proxy_config)
+            result["status_code"] = response.status_code
+            try:
+                response_data = response.json() if response.content else {}
+            except ValueError:
+                response_data = {"raw": response.text}
+            result["response"] = _safe_5paisa_token_response(response_data)
             if response.status_code == 200:
-                response_data = response.json()  
                 if "body" in response_data and "AccessToken" in response_data["body"]:
-                    return response_data["body"]["AccessToken"]
-                logger.warning("5Paisa access token response did not include AccessToken")
+                    result["access_token"] = response_data["body"]["AccessToken"]
+                    return result if return_details else result["access_token"]
+                body = response_data.get("body") if isinstance(response_data, dict) else {}
+                message = ""
+                if isinstance(body, dict):
+                    message = body.get("Message") or body.get("message") or body.get("StatusDescription") or ""
+                result["error"] = message or "5Paisa access token response did not include AccessToken."
+                logger.warning("5Paisa access token response did not include AccessToken: %s", result["response"])
             else:
-                logger.warning("5Paisa access token request failed with status %s", response.status_code)
+                result["error"] = f"5Paisa access token request failed with status {response.status_code}."
+                logger.warning("5Paisa access token request failed with status %s: %s", response.status_code, result["response"])
 
         except Exception as e:
             logger.exception("5Paisa access token request failed")
+            result["error"] = str(e)
 
-        return None
+        return result if return_details else None
 from datetime import datetime
 def download_scrip_master(segment, save_path):
     """

@@ -75,7 +75,7 @@ BROKER_SETUP_SPECS = {
         "save_action_label": "Save 5Paisa API Details",
         "connect_action_label": "Connect to 5Paisa",
         "connect_path": "/broker_auth_login/?broker=5paisa",
-        "supports_callback": False,
+        "supports_callback": True,
         "supports_redirect": True,
         "fields": [
             {"key": "broker_API_KEY", "label": "User Key", "type": "password", "required": True, "secret": True},

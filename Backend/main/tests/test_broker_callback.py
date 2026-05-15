@@ -2,6 +2,7 @@ from types import SimpleNamespace
 from unittest import mock
 
 from django.test import TestCase, override_settings
+from django.utils import timezone
 from django.urls import Resolver404, resolve
 
 from main.angelone.services.state_service import CallbackStateService
@@ -226,3 +227,34 @@ class BrokerCallbackRoutingTests(TestCase):
         kite.generate_session.assert_called_once_with("kite-request-token", api_secret="kite-secret")
         broker_details.refresh_from_db()
         self.assertEqual(broker_details.access_token, "kite-access-token")
+
+    @mock.patch("main.dematemodule.fetch_access_token_5paisa")
+    def test_fivepaisa_request_token_callback_is_exchanged_without_state(self, mock_fetch):
+        user = User.objects.create_user(
+            email="fivepaisa-owner@example.com",
+            firstName="Five",
+            lastName="Paisa",
+            phoneNumber="9999999994",
+            password="Pass@1234",
+        )
+        broker = Broker.objects.create(broker_name="5Paisa", is_active=True)
+        broker_details = ClientBrokerdetails.objects.create(
+            client=user,
+            broker_name=broker,
+            broker_API_KEY="five-user-key",
+            broker_API_SKEY="five-encryption-key",
+            broker_API_UID="five-user-id",
+            request_token="fivepaisa-login-state",
+            tokenCreatedAt=timezone.now(),
+        )
+        self._attach_verified_proxy(broker_details, node_id="fivepaisa-callback-node")
+        mock_fetch.return_value = {"access_token": "fivepaisa-access-token", "response": {"body": {}}}
+
+        response = self.client.get("/api/broker/callback/", {"RequestToken": "five-request-token"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["message"], "success")
+        mock_fetch.assert_called_once()
+        self.assertTrue(mock_fetch.call_args.kwargs["return_details"])
+        broker_details.refresh_from_db()
+        self.assertEqual(broker_details.access_token, "fivepaisa-access-token")
