@@ -272,7 +272,10 @@ class ExecutionNodeManagerTests(TestCase):
     def test_alice_blue_individual_login_does_not_use_stale_vendor_auth_code(self, mock_build_session, mock_vendor_session):
         from main.Alice_Blue_Api import get_alice_session
 
-        mock_build_session.return_value = (None, {"stat": "Not_ok", "emsg": "Invalid Input"})
+        mock_build_session.return_value = (
+            None,
+            {"stat": "Not_ok", "emsg": "Invalid Input", "alice_step": "get_session_data"},
+        )
 
         alice, error = get_alice_session(
             "alice-user-id",
@@ -283,9 +286,22 @@ class ExecutionNodeManagerTests(TestCase):
         )
 
         self.assertIsNone(alice)
-        self.assertIn("Alice Blue rejected the saved User ID/App credentials", error)
+        self.assertIn("Alice Blue accepted the User ID but rejected the saved ANT API_KEY", error)
         self.assertEqual(mock_build_session.call_count, 2)
         mock_vendor_session.assert_not_called()
+
+    def test_alice_blue_invalid_input_message_identifies_failed_login_step(self):
+        from main.Alice_Blue_Api import _describe_alice_login_failure
+
+        user_error = _describe_alice_login_failure(
+            {"stat": "Not_ok", "emsg": "Invalid Input", "alice_step": "encryption_key"}
+        )
+        key_error = _describe_alice_login_failure(
+            {"stat": "Not_ok", "emsg": "Invalid Input", "alice_step": "get_session_data"}
+        )
+
+        self.assertIn("rejected the saved User ID", user_error)
+        self.assertIn("rejected the saved ANT API_KEY", key_error)
 
     @mock.patch("main.angelone.managers.session_manager.SmartConnect")
     def test_angel_one_session_builds_smart_connect_with_proxy(self, mock_smart_connect):

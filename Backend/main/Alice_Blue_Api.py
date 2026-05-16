@@ -16,6 +16,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 
 from pya3 import Aliceblue, TransactionType, OrderType, ProductType
+from pya3.alicebluepy import encrypt_string
 
 from main.models import *
 from main.tasks import send_trade_email_async
@@ -108,7 +109,20 @@ def _alice_proxy_cache_key(user_id, proxy_config=None, credential_label="api_key
 
 def _build_alice_session(user_id, api_key, proxy_config=None):
     alice = ProxyAwareAliceblue(user_id=user_id, api_key=api_key, proxy_config=proxy_config)
-    session = alice.get_session_id()
+    normalized_user_id = str(user_id or "").strip().upper()
+    encryption_response = alice._post("encryption_key", {"userId": normalized_user_id})
+    if not encryption_response or encryption_response.get("encKey") is None:
+        if isinstance(encryption_response, dict):
+            encryption_response = {
+                **encryption_response,
+                "alice_step": "encryption_key",
+            }
+        return None, encryption_response
+
+    encrypted_payload = encrypt_string(normalized_user_id + str(api_key or "") + encryption_response["encKey"])
+    session = alice._post("getsessiondata", {"userId": normalized_user_id, "userData": encrypted_payload})
+    if isinstance(session, dict):
+        session = {**session, "alice_step": "get_session_data"}
 
     if not session or session.get("stat") != "Ok":
         return None, session
@@ -207,10 +221,24 @@ def _describe_alice_login_failure(response):
             "generate a fresh authCode from Alice Blue's SSO/app authorization flow, save it in Vendor Auth Code, and try again."
         )
     if "Invalid Input" in message:
+        step = response.get("alice_step")
+        if step == "encryption_key":
+            return (
+                "Alice Blue rejected the saved User ID before session generation. Verify the Alice User ID/Login ID, "
+                "log in to Alice Blue web/mobile once today, and confirm this account is allowed for API login."
+            )
+        if step == "get_session_data":
+            return (
+                "Alice Blue accepted the User ID but rejected the saved ANT API_KEY. For individual trader login, "
+                "the API Key field must contain the API_KEY generated inside ANT Web Trading Platform, not the "
+                "Developer Portal app key/secret. Leave App Secret blank unless Alice specifically gives an alternate "
+                "individual API key, and confirm the assigned proxy/static IP is whitelisted for this Alice app."
+            )
         return (
             "Alice Blue rejected the saved User ID/App credentials as Invalid Input. For individual trader login, "
-            "verify the User ID and App/API Key, log in to Alice Blue web/mobile once today, and confirm the assigned "
-            "proxy/static IP is whitelisted for this Alice app. Vendor Auth Code is only for Alice's vendor SSO flow."
+            "verify the User ID and ANT API_KEY, log in to Alice Blue web/mobile once today, and confirm the assigned "
+            "proxy/static IP is whitelisted for this Alice app. Developer Portal app key/secret requires Alice's "
+            "vendor SSO authCode flow and is not enough for pya3 individual login."
         )
     return f"Alice Blue rejected the saved User ID/App credentials: {message}"
 

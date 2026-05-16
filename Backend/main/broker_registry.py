@@ -53,7 +53,7 @@ BROKER_SETUP_SPECS = {
         "display_name": "Alice Blue",
         "slug": "alice-blue",
         "auth_mode": "direct_credentials",
-        "description": "Save Alice Blue User ID and App/API Key, then generate the daily pya3 session through the assigned execution proxy/static IP.",
+        "description": "Save Alice Blue User ID and the ANT Web Trading Platform API_KEY, then generate the daily pya3 session through the assigned execution proxy/static IP.",
         "save_action_label": "Save Alice Blue API Details",
         "connect_action_label": "Generate Alice Blue Token",
         "connect_path": None,
@@ -61,10 +61,10 @@ BROKER_SETUP_SPECS = {
         "supports_redirect": False,
         "fields": [
             {"key": "broker_API_UID", "label": "User ID", "type": "text", "required": True, "secret": False},
-            {"key": "broker_API_KEY", "label": "App/API Key", "type": "password", "required": True, "secret": True},
-            {"key": "broker_API_SKEY", "label": "App Secret Key (optional fallback)", "type": "password", "required": False, "secret": True},
+            {"key": "broker_API_KEY", "label": "ANT API_KEY", "type": "password", "required": True, "secret": True},
+            {"key": "broker_API_SKEY", "label": "Alternate API_KEY (optional)", "type": "password", "required": False, "secret": True},
         ],
-        "requirement_note": "Individual trader login uses User ID + App/API Key through pya3. App Secret can be saved as a fallback if Alice has issued both values. Login to Alice Blue web/mobile once each day before generating the token.",
+        "requirement_note": "Individual trader login uses User ID + ANT API_KEY through pya3. Do not paste the Developer Portal app secret here; that belongs to Alice's vendor SSO/authCode flow. Login to Alice Blue web/mobile once each day before generating the token.",
     },
     "5paisa": {
         "display_name": "5Paisa",
