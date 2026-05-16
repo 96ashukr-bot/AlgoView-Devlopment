@@ -208,11 +208,11 @@ def _describe_alice_login_failure(response):
         )
     if "Invalid Input" in message:
         return (
-            "Alice Blue rejected the saved User ID/API credentials as Invalid Input. If these credentials are from the "
-            "Alice Blue Developer Portal, also save the fresh Vendor Auth Code from Alice's SSO/app authorization flow; "
-            "the old ANT API-key login cannot use Developer Portal API Key + Secret alone."
+            "Alice Blue rejected the saved User ID/App credentials as Invalid Input. For individual trader login, "
+            "verify the User ID and App/API Key, log in to Alice Blue web/mobile once today, and confirm the assigned "
+            "proxy/static IP is whitelisted for this Alice app. Vendor Auth Code is only for Alice's vendor SSO flow."
         )
-    return f"Alice Blue rejected the saved User ID/API credentials: {message}"
+    return f"Alice Blue rejected the saved User ID/App credentials: {message}"
 
 
 def get_alice_session(user_id, api_key=None, proxy_config=None, api_secret=None, auth_code=None, return_error=False):
@@ -224,11 +224,11 @@ def get_alice_session(user_id, api_key=None, proxy_config=None, api_secret=None,
         if not user_id:
             logger.error("Missing Alice Blue USER_ID")
             return (None, "Missing Alice Blue User ID.") if return_error else None
-        if not api_key and not (api_secret and auth_code):
+        if not api_key and not api_secret:
             logger.error("Missing Alice Blue login credentials")
             return (
                 None,
-                "Missing Alice Blue login credentials. Save either ANT API Key, or Developer Portal API Secret plus Vendor Auth Code.",
+                "Missing Alice Blue login credentials. Save User ID and App/API Key. App Secret is optional fallback; Vendor Auth Code is not required for individual trader login.",
             ) if return_error else None
 
         candidates = []

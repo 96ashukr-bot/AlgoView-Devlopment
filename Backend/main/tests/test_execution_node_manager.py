@@ -8,6 +8,7 @@ from django.core.cache import cache
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.test import TestCase, override_settings
 from django.utils import timezone
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from main.brokers.base import get_broker_adapter
 from main.models import Broker, ClientBrokerdetails, ExecutionNode, ExecutionOrderJob, User
@@ -238,13 +239,16 @@ class ExecutionNodeManagerTests(TestCase):
         )
         broker_details.execution_node = proxy_node
         broker_details.save(update_fields=["execution_node"])
-        mock_get_alice_session.return_value = SimpleNamespace(
-            alice_session_id="alice-session-token",
-            alice_session_response={"stat": "Ok", "sessionID": "alice-session-token"},
+        mock_get_alice_session.return_value = (
+            SimpleNamespace(
+                alice_session_id="alice-session-token",
+                alice_session_response={"stat": "Ok", "sessionID": "alice-session-token"},
+            ),
+            None,
         )
-        self.client.force_login(self.client_user)
+        access_token = str(RefreshToken.for_user(self.client_user).access_token)
 
-        response = self.client.post("/api/broker-generate-token/")
+        response = self.client.post("/api/broker-generate-token/", HTTP_AUTHORIZATION=f"Bearer {access_token}")
 
         self.assertEqual(response.status_code, 200)
         payload = response.json()
@@ -254,6 +258,9 @@ class ExecutionNodeManagerTests(TestCase):
             mock_get_alice_session.call_args.kwargs["proxy_config"],
             {"http": "http://proxy.example.com:8080", "https": "http://proxy.example.com:8080"},
         )
+        self.assertEqual(mock_get_alice_session.call_args.args[0], "alice-user-id")
+        self.assertEqual(mock_get_alice_session.call_args.args[1], "alice-api-key")
+        self.assertEqual(mock_get_alice_session.call_args.kwargs["auth_code"], "")
         broker_details.refresh_from_db()
         proxy_node.refresh_from_db()
         self.assertEqual(broker_details.access_token, "alice-session-token")

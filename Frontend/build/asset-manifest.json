@@ -1,7 +1,7 @@
 {
   "files": {
     "main.css": "/static/css/main.10f5d9fd.css",
-    "main.js": "/static/js/main.53936267.js",
+    "main.js": "/static/js/main.eeae0b26.js",
     "static/js/685.cae94d99.chunk.js": "/static/js/685.cae94d99.chunk.js",
     "static/media/2.svg": "/static/media/2.ab5388284836cc68cf9b.svg",
     "static/media/icofont.svg?v=1.0.0-beta": "/static/media/icofont.4f7f7bf78dfd2979cbba.svg",
@@ -445,6 +445,6 @@
   },
   "entrypoints": [
     "static/css/main.10f5d9fd.css",
-    "static/js/main.53936267.js"
+    "static/js/main.eeae0b26.js"
   ]
 }

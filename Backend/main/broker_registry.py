@@ -53,7 +53,7 @@ BROKER_SETUP_SPECS = {
         "display_name": "Alice Blue",
         "slug": "alice-blue",
         "auth_mode": "direct_credentials",
-        "description": "Save Alice Blue User ID and either ANT API Key, or Developer Portal API Secret plus fresh Vendor Auth Code, then generate the daily session through the assigned execution proxy/static IP.",
+        "description": "Save Alice Blue User ID and App/API Key, then generate the daily pya3 session through the assigned execution proxy/static IP.",
         "save_action_label": "Save Alice Blue API Details",
         "connect_action_label": "Generate Alice Blue Token",
         "connect_path": None,
@@ -61,11 +61,10 @@ BROKER_SETUP_SPECS = {
         "supports_redirect": False,
         "fields": [
             {"key": "broker_API_UID", "label": "User ID", "type": "text", "required": True, "secret": False},
-            {"key": "broker_API_KEY", "label": "ANT API Key / App Code", "type": "password", "required": False, "secret": True},
-            {"key": "broker_API_SKEY", "label": "Developer Portal API Secret", "type": "password", "required": False, "secret": True},
-            {"key": "broker_Totp_Authcode", "label": "Vendor Auth Code", "type": "password", "required": False, "secret": True},
+            {"key": "broker_API_KEY", "label": "App/API Key", "type": "password", "required": True, "secret": True},
+            {"key": "broker_API_SKEY", "label": "App Secret Key (optional fallback)", "type": "password", "required": False, "secret": True},
         ],
-        "requirement_note": "ANT/pya3 login uses User ID + ANT API Key. Alice Blue Developer Portal apps use SHA-256(User ID + fresh authCode + API Secret), so save the Vendor Auth Code as well. API Key + Secret alone cannot create the daily vendor session.",
+        "requirement_note": "Individual trader login uses User ID + App/API Key through pya3. App Secret can be saved as a fallback if Alice has issued both values. Login to Alice Blue web/mobile once each day before generating the token.",
     },
     "5paisa": {
         "display_name": "5Paisa",

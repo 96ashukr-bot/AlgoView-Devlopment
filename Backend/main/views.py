@@ -4493,8 +4493,8 @@ class BrokerGenerateTokenView(APIView):
                 missing_fields = []
                 if not user_id:
                     missing_fields.append("User ID")
-                if not api_key and not (api_secret and auth_code):
-                    missing_fields.append("ANT API key or Developer Portal API Secret + Vendor Auth Code")
+                if not api_key and not api_secret:
+                    missing_fields.append("App/API Key")
 
                 if missing_fields:
                     return Response(
