@@ -267,6 +267,26 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertFalse(broker_details.isTokenExpired)
         self.assertTrue(proxy_node.is_verified_with_broker)
 
+    @mock.patch("main.Alice_Blue_Api._build_alice_vendor_session")
+    @mock.patch("main.Alice_Blue_Api._build_alice_session")
+    def test_alice_blue_individual_login_does_not_use_stale_vendor_auth_code(self, mock_build_session, mock_vendor_session):
+        from main.Alice_Blue_Api import get_alice_session
+
+        mock_build_session.return_value = (None, {"stat": "Not_ok", "emsg": "Invalid Input"})
+
+        alice, error = get_alice_session(
+            "alice-user-id",
+            "alice-api-key",
+            api_secret="alice-secret",
+            auth_code="stale-vendor-auth-code",
+            return_error=True,
+        )
+
+        self.assertIsNone(alice)
+        self.assertIn("Alice Blue rejected the saved User ID/App credentials", error)
+        self.assertEqual(mock_build_session.call_count, 2)
+        mock_vendor_session.assert_not_called()
+
     @mock.patch("main.angelone.managers.session_manager.SmartConnect")
     def test_angel_one_session_builds_smart_connect_with_proxy(self, mock_smart_connect):
         from main.angelone.managers.session_manager import ClientSession

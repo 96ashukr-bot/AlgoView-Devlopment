@@ -263,6 +263,12 @@ def get_alice_session(user_id, api_key=None, proxy_config=None, api_secret=None,
 
             logger.error(f"Alice Blue login failed using {credential_label}: {session}")
 
+        if candidates:
+            # Individual trader login must not fall through to stale vendor auth-code values.
+            logger.error(f"Alice Blue individual login failed for all configured credentials. Last response: {last_response}")
+            error_message = _describe_alice_login_failure(last_response)
+            return (None, error_message) if return_error else None
+
         if auth_code and api_secret:
             cache_key = _alice_proxy_cache_key(user_id, proxy_config, credential_label="vendor_auth_code")
             if cache_key in alice_sessions:
