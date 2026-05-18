@@ -235,6 +235,50 @@ def get_alice_vendor_session(user_id, auth_code, api_secret, proxy_config=None, 
     return (None, error_message) if return_error else None
 
 
+def _build_alice_saved_session(user_id, api_key, session_id, proxy_config=None):
+    if not user_id or not session_id:
+        return None
+    alice = ProxyAwareAliceblue(
+        user_id=user_id,
+        api_key=str(api_key or "").strip(),
+        session_id=str(session_id or "").strip(),
+        proxy_config=proxy_config,
+    )
+    alice.alice_session_id = str(session_id or "").strip()
+    alice.alice_session_response = {"stat": "Ok", "sessionID": alice.alice_session_id, "source": "saved_access_token"}
+    alice.alice_credential_label = "saved_access_token"
+    return alice
+
+
+def get_alice_saved_session(user_id, api_key, session_id, proxy_config=None, return_error=False):
+    session_id = str(session_id or "").strip()
+    if not session_id:
+        message = "Alice Blue session token is missing. Connect to Alice Blue again before placing orders."
+        return (None, message) if return_error else None
+
+    cache_key = _alice_proxy_cache_key(
+        user_id,
+        proxy_config,
+        credential_label=f"saved_session:{session_id[-12:]}",
+    )
+    if cache_key in alice_sessions:
+        session_data = alice_sessions[cache_key]
+        if datetime.now().date() == session_data["time"].date():
+            return (session_data["client"], None) if return_error else session_data["client"]
+
+    alice = _build_alice_saved_session(user_id, api_key, session_id, proxy_config=proxy_config)
+    if not alice:
+        message = "Alice Blue saved session could not be prepared. Connect to Alice Blue again."
+        return (None, message) if return_error else None
+
+    alice_sessions[cache_key] = {
+        "client": alice,
+        "session": alice.alice_session_response,
+        "time": datetime.now(),
+    }
+    return (alice, None) if return_error else alice
+
+
 def _describe_alice_login_failure(response):
     if not response:
         return "Alice Blue did not return a session response."
@@ -273,6 +317,36 @@ def _describe_alice_login_failure(response):
             "vendor SSO authCode flow and is not enough for pya3 individual login."
         )
     return f"Alice Blue rejected the saved User ID/App credentials: {message}"
+
+
+def _extract_alice_response_message(payload):
+    if payload in (None, ""):
+        return None
+    if isinstance(payload, str):
+        return payload
+    if isinstance(payload, list):
+        for item in payload:
+            message = _extract_alice_response_message(item)
+            if message:
+                return message
+        return None
+    if not isinstance(payload, dict):
+        return str(payload)
+
+    for key in ("emsg", "message", "Message", "error", "Error", "remarks", "rejectreason", "rejReason"):
+        value = payload.get(key)
+        if value:
+            return str(value)
+
+    for key in ("data", "response", "result", "body"):
+        message = _extract_alice_response_message(payload.get(key))
+        if message:
+            return message
+
+    stat = payload.get("stat") or payload.get("status")
+    if stat and str(stat).lower() not in {"ok", "success", "completed", "complete"}:
+        return str(stat)
+    return None
 
 
 def get_alice_session(user_id, api_key=None, proxy_config=None, api_secret=None, auth_code=None, return_error=False):
@@ -431,15 +505,29 @@ def place_alice_orders(
     Lots, trade_order_status, Entry_type, Exit_type,
     Entry_price, Exit_price, EntryQty, ExitQty,
     webhook_signal, Exchange, Segment, Index_Symbol, history_id=None,
-    trigger_price=None, proxy_config=None
+    trigger_price=None, proxy_config=None, session_id=None
 ):
     if not proxy_config:
         return {"data": {"status": "Failed", "message": "Proxy/static-IP execution route is required for Alice Blue orders."}}
     try:
-        alice = get_alice_session(api_uid, api_skey, proxy_config=proxy_config)
+        if session_id:
+            alice, session_error = get_alice_saved_session(
+                api_uid,
+                api_skey,
+                session_id,
+                proxy_config=proxy_config,
+                return_error=True,
+            )
+        else:
+            alice, session_error = get_alice_session(
+                api_uid,
+                api_skey,
+                proxy_config=proxy_config,
+                return_error=True,
+            )
 
         if not alice:
-            return {"data": {"status": "Login Failed or API Disabled"}}
+            return {"data": {"status": "Failed", "message": session_error or "Alice Blue login failed or API is disabled."}}
 
         txn = TransactionType.Buy if transaction_type.upper() == "BUY" else TransactionType.Sell
 
@@ -505,7 +593,8 @@ def place_alice_orders(
                 }
             }
 
-        return {"data": {"status": "Failed", "response": response}}
+        message = _extract_alice_response_message(response) or "Broker rejected Alice Blue order."
+        return {"data": {"status": "Failed", "message": message, "response": response}}
 
     except Exception as e:
         logger.error(str(e))

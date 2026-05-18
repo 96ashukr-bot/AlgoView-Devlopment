@@ -11,6 +11,8 @@ class AliceBlueBroker(BaseBroker):
     def validate_credentials(self, proxy_config=None):
         if not self.broker_details.broker_API_KEY or not self.broker_details.broker_API_UID:
             return {"status": "failed", "message": "Missing Alice Blue API key or user id."}
+        if not self.broker_details.access_token:
+            return {"status": "failed", "message": "Alice Blue session token is missing. Connect to Alice Blue again before trading."}
         return {"status": "success"}
 
     def place_order(self, payload, proxy_config=None):
@@ -44,4 +46,5 @@ class AliceBlueBroker(BaseBroker):
             order.get("history_id"),
             order.get("triggerPrice"),
             proxy_config=proxy_config,
+            session_id=self.broker_details.access_token,
         )

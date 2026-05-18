@@ -203,6 +203,41 @@ class ExecutionNodeManagerTests(TestCase):
         )
         self.assertEqual(mock_place_order.call_args.kwargs["proxy_config"], proxy_config)
 
+    @mock.patch("main.brokers.aliceblue.place_alice_orders")
+    def test_alice_blue_adapter_uses_saved_session_token_for_orders(self, mock_place_order):
+        broker = Broker.objects.create(broker_name="Alice Blue", is_active=True)
+        broker_details = ClientBrokerdetails.objects.create(
+            client=self.client_user,
+            broker_name=broker,
+            broker_API_KEY="alice-api",
+            broker_API_UID="alice-user",
+            access_token="alice-session-token",
+        )
+        adapter = get_broker_adapter(broker_details)
+        proxy_config = {"http": "http://proxy.example.com:8080", "https": "http://proxy.example.com:8080"}
+        mock_place_order.return_value = {"data": {"status": "completed", "order_id": "alice-proxy-1"}}
+
+        adapter.place_order(
+            {
+                "symbol": "NIFTY24400CE",
+                "quantity": 65,
+                "transaction_type": "BUY",
+                "order_type": "LIMIT",
+                "Exchange": "NFO",
+            },
+            proxy_config=proxy_config,
+        )
+
+        self.assertEqual(mock_place_order.call_args.kwargs["proxy_config"], proxy_config)
+        self.assertEqual(mock_place_order.call_args.kwargs["session_id"], "alice-session-token")
+
+    def test_alice_blue_order_response_message_is_extracted(self):
+        from main.Alice_Blue_Api import _extract_alice_response_message
+
+        message = _extract_alice_response_message({"stat": "Not_ok", "emsg": "Invalid symbol"})
+
+        self.assertEqual(message, "Invalid symbol")
+
     @mock.patch("main.Alice_Blue_Api.requests.get")
     def test_alice_blue_proxy_client_passes_proxies_to_requests(self, mock_get):
         from main.Alice_Blue_Api import ProxyAwareAliceblue
@@ -215,7 +250,7 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertEqual(mock_get.call_args.kwargs["proxies"], proxy_config)
 
     @mock.patch("main.views.get_alice_session")
-    def test_alice_blue_generate_token_uses_verified_proxy_and_marks_active(self, mock_get_alice_session):
+    def test_alice_blue_generate_token_redirects_to_sso_flow(self, mock_get_alice_session):
         broker = Broker.objects.create(broker_name="Alice Blue", is_active=True)
         broker_details = ClientBrokerdetails.objects.create(
             client=self.client_user,
@@ -239,33 +274,19 @@ class ExecutionNodeManagerTests(TestCase):
         )
         broker_details.execution_node = proxy_node
         broker_details.save(update_fields=["execution_node"])
-        mock_get_alice_session.return_value = (
-            SimpleNamespace(
-                alice_session_id="alice-session-token",
-                alice_session_response={"stat": "Ok", "sessionID": "alice-session-token"},
-            ),
-            None,
-        )
         access_token = str(RefreshToken.for_user(self.client_user).access_token)
 
         response = self.client.post("/api/broker-generate-token/", HTTP_AUTHORIZATION=f"Bearer {access_token}")
 
         self.assertEqual(response.status_code, 200)
         payload = response.json()
-        self.assertEqual(payload["action"], "token_generated")
-        mock_get_alice_session.assert_called_once()
-        self.assertEqual(
-            mock_get_alice_session.call_args.kwargs["proxy_config"],
-            {"http": "http://proxy.example.com:8080", "https": "http://proxy.example.com:8080"},
-        )
-        self.assertEqual(mock_get_alice_session.call_args.args[0], "alice-user-id")
-        self.assertEqual(mock_get_alice_session.call_args.args[1], "alice-api-key")
-        self.assertEqual(mock_get_alice_session.call_args.kwargs["auth_code"], "")
+        self.assertEqual(payload["action"], "redirect")
+        self.assertEqual(payload["data"]["connect_path"], "/broker_auth_login/?broker=alice%20blue")
+        mock_get_alice_session.assert_not_called()
         broker_details.refresh_from_db()
         proxy_node.refresh_from_db()
-        self.assertEqual(broker_details.access_token, "alice-session-token")
-        self.assertFalse(broker_details.isTokenExpired)
-        self.assertTrue(proxy_node.is_verified_with_broker)
+        self.assertFalse(broker_details.access_token)
+        self.assertFalse(proxy_node.is_verified_with_broker)
 
     @mock.patch("main.Alice_Blue_Api._build_alice_vendor_session")
     @mock.patch("main.Alice_Blue_Api._build_alice_session")
