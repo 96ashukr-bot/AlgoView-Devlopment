@@ -1,11 +1,14 @@
 from types import SimpleNamespace
 from unittest import mock
+from urllib.parse import parse_qs, urlparse
 
 from django.test import TestCase, override_settings
 from django.utils import timezone
 from django.urls import Resolver404, resolve
+from rest_framework.test import APIRequestFactory, force_authenticate
 
 from main.angelone.services.state_service import CallbackStateService
+from main.dematemodule import BrokerLoginRedirectView
 from main.models import Broker, ClientBrokerdetails, ExecutionNode, User
 
 
@@ -105,6 +108,77 @@ class BrokerCallbackRoutingTests(TestCase):
         mock_post.assert_called_once()
         broker_details.refresh_from_db()
         self.assertEqual(broker_details.access_token, "upstox-access")
+
+    def test_alice_blue_redirect_uses_ant_appcode_flow(self):
+        user = User.objects.create_user(
+            email="alice-redirect@example.com",
+            firstName="Alice",
+            lastName="Redirect",
+            phoneNumber="9999999992",
+            password="Pass@1234",
+        )
+        broker = Broker.objects.create(broker_name="Alice Blue", is_active=True)
+        broker_details = ClientBrokerdetails.objects.create(
+            client=user,
+            broker_name=broker,
+            broker_API_UID="857958",
+            broker_API_KEY="rUQzUgpWmi",
+            broker_API_SKEY="alice-secret",
+        )
+        self._attach_verified_proxy(broker_details, node_id="alice-redirect-node")
+
+        request = APIRequestFactory().get("/api/broker_auth_login/?broker=alice%20blue")
+        force_authenticate(request, user=user)
+        response = BrokerLoginRedirectView.as_view()(request)
+
+        self.assertEqual(response.status_code, 200)
+        redirect_url = response.data["redirect_url"]
+        parsed_redirect = urlparse(redirect_url)
+        self.assertEqual(parsed_redirect.scheme, "https")
+        self.assertEqual(parsed_redirect.netloc, "ant.aliceblueonline.com")
+        redirect_query = parse_qs(parsed_redirect.query)
+        self.assertEqual(redirect_query["appcode"][0], "rUQzUgpWmi")
+        nested_query = parse_qs(urlparse(redirect_query["redirect_uri"][0]).query)
+        self.assertEqual(nested_query["broker"][0], "alice blue")
+        self.assertEqual(nested_query["state"][0], redirect_query["state"][0])
+        broker_details.refresh_from_db()
+        self.assertTrue(broker_details.request_token)
+
+    @mock.patch("main.dematemodule.get_alice_vendor_session")
+    def test_alice_blue_auth_code_callback_exchanges_session(self, mock_vendor_session):
+        user = User.objects.create_user(
+            email="alice-callback@example.com",
+            firstName="Alice",
+            lastName="Callback",
+            phoneNumber="9999999991",
+            password="Pass@1234",
+        )
+        broker = Broker.objects.create(broker_name="Alice Blue", is_active=True)
+        broker_details = ClientBrokerdetails.objects.create(
+            client=user,
+            broker_name=broker,
+            broker_API_UID="857958",
+            broker_API_KEY="rUQzUgpWmi",
+            broker_API_SKEY="alice-secret",
+        )
+        self._attach_verified_proxy(broker_details, node_id="alice-callback-node")
+        CallbackStateService().create(
+            state="alice-state",
+            user_id=user.id,
+            broker_details_id=broker_details.id,
+            client_code="alice-client",
+        )
+        mock_vendor_session.return_value = (SimpleNamespace(alice_session_id="alice-session-token"), None)
+
+        response = self.client.get("/api/broker/callback/", {"authCode": "alice-auth-code", "state": "alice-state"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["message"], "success")
+        mock_vendor_session.assert_called_once()
+        self.assertEqual(mock_vendor_session.call_args.args[0], "857958")
+        self.assertEqual(mock_vendor_session.call_args.args[1], "alice-auth-code")
+        broker_details.refresh_from_db()
+        self.assertEqual(broker_details.access_token, "alice-session-token")
 
     @mock.patch("main.dematemodule.requests.post")
     def test_browser_broker_callback_redirects_without_token_json(self, mock_post):

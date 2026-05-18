@@ -8,7 +8,7 @@ import time
 import requests
 import logging
 from django.db.models import Q
-from main.Alice_Blue_Api import place_alice_orders
+from main.Alice_Blue_Api import get_alice_vendor_session, place_alice_orders
 from main.dhanapi import place_dhan_orders
 from main.fivepaisa import fetch_access_token_5paisa, place_5paisa_order
 from main.fyersapi import place_fyers_orders
@@ -677,6 +677,9 @@ def _broker_callback_query_pairs(request):
             "request_token",
             "tokenId",
             "token_id",
+            "authCode",
+            "authcode",
+            "auth_code",
             "code",
             "state",
             "State",
@@ -685,7 +688,33 @@ def _broker_callback_query_pairs(request):
             normalized = normalized.replace(f"?{token_name}=", f"&{token_name}=")
         for key, value in parse_qsl(normalized, keep_blank_values=True):
             pairs.append((key, [value]))
-    return pairs
+    recovered_pairs = []
+    token_names = (
+        "RequestToken",
+        "request_token",
+        "tokenId",
+        "token_id",
+        "authCode",
+        "authcode",
+        "auth_code",
+        "code",
+        "state",
+        "State",
+        "redirect_params",
+    )
+    for key, values in pairs:
+        normalized_values = values if isinstance(values, (list, tuple)) else [values]
+        for value in normalized_values:
+            if not isinstance(value, str):
+                continue
+            for token_name in token_names:
+                marker = f"?{token_name}="
+                if marker in value:
+                    before, after = value.split(marker, 1)
+                    recovered_pairs.append((key, [before]))
+                    recovered_pairs.append((token_name, [after.split("&", 1)[0]]))
+                    break
+    return recovered_pairs + pairs
 
 
 def _broker_callback_param(request, *names):
@@ -806,7 +835,7 @@ class BrokerLoginRedirectView(APIView):
                 response = self.redirect_to_5paisa(request, broker_details)
 
             elif broker_name == "alice blue":
-                response = self.redirect_to_alice_blue(broker_details)
+                response = self.redirect_to_alice_blue(request, broker_details)
 
             elif broker_name == "upstox":
                 response = self.redirect_to_upstox(request, broker_details)
@@ -877,17 +906,34 @@ class BrokerLoginRedirectView(APIView):
         paisa_url = f"https://dev-openapi.5paisa.com/WebVendorLogin/VLogin/Index?{params}"
         return Response({"redirect_url": paisa_url})
 
-    def redirect_to_alice_blue(self, broker_details):
-        return Response(
+    def redirect_to_alice_blue(self, request, broker_details):
+        app_code = (broker_details.broker_API_KEY or "").strip()
+        app_secret = (broker_details.broker_API_SKEY or "").strip()
+        user_id = (broker_details.broker_API_UID or broker_details.broker_Demate_User_Name or "").strip()
+        if not app_code or not app_secret or not user_id:
+            return Response(
+                {"error": "Alice Blue credentials are incomplete. Save User ID, App Code/API Key, and App Secret first."},
+                status=400,
+            )
+
+        proxy_config = _broker_proxy_config_or_none(broker_details, require_broker_verified=False)
+        if not proxy_config:
+            return _broker_proxy_required_response()
+
+        state = _create_broker_callback_state(request, broker_details, "alice blue")
+        broker_details.request_token = state
+        broker_details.tokenCreatedAt = now()
+        broker_details.save(update_fields=["request_token", "tokenCreatedAt"])
+
+        callback_url = _broker_callback_url_with_params({"broker": "alice blue", "state": state})
+        params = urlencode(
             {
-                "status": "direct_token",
-                "message": (
-                    "Alice Blue does not use an OAuth redirect flow. "
-                    "Use the Generate Alice Blue Token action after saving API Key and User ID."
-                ),
-            },
-            status=200,
+                "appcode": app_code,
+                "state": state,
+                "redirect_uri": callback_url,
+            }
         )
+        return Response({"redirect_url": f"https://ant.aliceblueonline.com/?{params}"})
     
     def redirect_to_fyers(self, request, broker_details):
         CLIENT_ID = broker_details.broker_API_KEY
@@ -1038,6 +1084,9 @@ class BrokerRedirectCallbackView(APIView):
             "token_id",
             "request_token",
             "RequestToken",
+            "authCode",
+            "authcode",
+            "auth_code",
         ):
             return BrokerCallbackView.as_view()(request._request)
 
@@ -1153,6 +1202,21 @@ class BrokerCallbackView(APIView):
                         broker_name = "5paisa"
                     else:
                         raise ValidationError("Invalid or expired 5Paisa callback state")
+                elif not user and _broker_callback_param(request, "authCode", "authcode", "auth_code"):
+                    broker_details = (
+                        ClientBrokerdetails.objects.select_related("broker_name")
+                        .filter(
+                            broker_name__broker_name__iexact="Alice Blue",
+                            request_token__isnull=False,
+                            tokenCreatedAt__gte=now() - timedelta(minutes=15),
+                        )
+                        .order_by("-tokenCreatedAt", "-id")
+                        .first()
+                    )
+                    if broker_details:
+                        broker_name = "alice blue"
+                    else:
+                        raise ValidationError("Invalid or expired Alice Blue callback state")
                 elif not user:
                     raise ValidationError("Invalid or expired broker callback state")
                 else:
@@ -1170,7 +1234,7 @@ class BrokerCallbackView(APIView):
                 response = self.handle_5paisa(request_token, broker_details)
 
             elif broker_name == "alice blue":
-                request_token = _broker_callback_param(request, "authCode", "code")
+                request_token = _broker_callback_param(request, "authCode", "authcode", "auth_code", "code")
                 response = self.handle_alice_blue(request_token, broker_details)
 
             elif broker_name == "upstox":
@@ -1299,13 +1363,36 @@ class BrokerCallbackView(APIView):
             return JsonResponse({"message":"Failed","error": str(e)}, status=500)
     def handle_alice_blue(self, request_token, broker_details):
         try: 
-            return JsonResponse(
-                {
-                    "message": "Alice Blue uses API key and API UID session generation during order placement. No OAuth token callback is required.",
-                    "status": "manual_session",
-                },
-                status=200,
+            if not request_token:
+                return JsonResponse({"message": "Failed", "error": "Alice Blue auth code not provided"}, status=400)
+
+            user_id = (broker_details.broker_API_UID or broker_details.broker_Demate_User_Name or "").strip()
+            api_secret = (broker_details.broker_API_SKEY or "").strip()
+            if not user_id or not api_secret:
+                return JsonResponse(
+                    {"message": "Failed", "error": "Alice Blue User ID and App Secret are required to exchange authCode."},
+                    status=400,
+                )
+
+            proxy_config = _broker_proxy_config_or_none(broker_details, require_broker_verified=False)
+            if not proxy_config:
+                return _broker_proxy_required_response()
+
+            alice, error = get_alice_vendor_session(
+                user_id,
+                request_token,
+                api_secret,
+                proxy_config=proxy_config,
+                return_error=True,
             )
+            if not alice:
+                return JsonResponse({"message": "Failed", "error": error or "Alice Blue auth-code exchange failed."}, status=400)
+
+            access_token = getattr(alice, "alice_session_id", None) or request_token
+            expiry_time = _next_session_cutoff(6, 0)
+            _save_session_tokens_compat(broker_details, request_token, access_token, expiry=expiry_time)
+
+            return JsonResponse({"message": "success", "token_saved": True})
         
         except Exception as e:
             return JsonResponse({"message":"Failed","error": str(e)}, status=500)

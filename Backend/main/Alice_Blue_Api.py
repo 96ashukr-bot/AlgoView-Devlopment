@@ -203,6 +203,38 @@ def _build_alice_vendor_session(user_id, auth_code, api_secret, proxy_config=Non
     return None, payload
 
 
+def get_alice_vendor_session(user_id, auth_code, api_secret, proxy_config=None, return_error=False):
+    cache_key = _alice_proxy_cache_key(user_id, proxy_config, credential_label=f"vendor_auth_code:{str(auth_code or '').strip()}")
+    if cache_key in alice_sessions:
+        session_data = alice_sessions[cache_key]
+        if datetime.now().date() == session_data["time"].date():
+            return (session_data["client"], None) if return_error else session_data["client"]
+
+    try:
+        alice, session = _build_alice_vendor_session(
+            user_id,
+            auth_code,
+            api_secret,
+            proxy_config=proxy_config,
+        )
+    except Exception as e:
+        logger.error(f"Alice Blue vendor auth-code login exception: {str(e)}")
+        alice, session = None, {"stat": "Not_ok", "emsg": str(e)}
+
+    if alice:
+        alice.alice_credential_label = "vendor_auth_code"
+        alice_sessions[cache_key] = {
+            "client": alice,
+            "session": session,
+            "time": datetime.now()
+        }
+        return (alice, None) if return_error else alice
+
+    logger.error(f"Alice Blue vendor auth-code login failed: {session}")
+    error_message = _describe_alice_login_failure(session)
+    return (None, error_message) if return_error else None
+
+
 def _describe_alice_login_failure(response):
     if not response:
         return "Alice Blue did not return a session response."
