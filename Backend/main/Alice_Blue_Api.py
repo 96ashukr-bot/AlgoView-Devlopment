@@ -99,6 +99,18 @@ class ProxyAwareAliceblue(Aliceblue):
         emsg = str(response.status_code) + " - " + response.reason
         return {"stat": "Not_ok", "emsg": emsg, "encKey": None}
 
+    def get_contract_master(self, exchange):
+        if not exchange or not (len(exchange) == 3 or exchange == "INDICES"):
+            return self._error_response("Invalid Exchange parameter")
+
+        print("NOTE: Today's contract master file will be updated after 08:00 AM. Before 08:00 AM previous day contract file be downloaded.")
+        url = self.base_url_c % exchange.upper()
+        response = requests.get(url, proxies=self.proxy_config, timeout=20)
+        response.raise_for_status()
+        with open("%s.csv" % exchange.upper(), "w") as file_obj:
+            file_obj.write(response.text)
+        return self._error_response("Today contract File Downloaded")
+
 
 def _alice_proxy_cache_key(user_id, proxy_config=None, credential_label="api_key"):
     if not proxy_config:

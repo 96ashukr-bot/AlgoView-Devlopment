@@ -249,6 +249,25 @@ class ExecutionNodeManagerTests(TestCase):
         alice._get("test")
         self.assertEqual(mock_get.call_args.kwargs["proxies"], proxy_config)
 
+    @mock.patch("builtins.open", new_callable=mock.mock_open)
+    @mock.patch("main.Alice_Blue_Api.requests.get")
+    def test_alice_blue_contract_master_uses_proxy(self, mock_get, mock_file):
+        from main.Alice_Blue_Api import ProxyAwareAliceblue
+
+        proxy_config = {"http": "http://proxy.example.com:8080", "https": "http://proxy.example.com:8080"}
+        mock_get.return_value = SimpleNamespace(
+            status_code=200,
+            text="Exch,Token,Symbol,Trading Symbol,Expiry Date,Lot Size\n",
+            reason="OK",
+            raise_for_status=lambda: None,
+        )
+        alice = ProxyAwareAliceblue(user_id="alice-user", api_key="alice-api", proxy_config=proxy_config)
+
+        alice.get_contract_master("NFO")
+
+        self.assertEqual(mock_get.call_args.kwargs["proxies"], proxy_config)
+        mock_file.assert_called_once_with("NFO.csv", "w")
+
     @mock.patch("main.views.get_alice_session")
     def test_alice_blue_generate_token_redirects_to_sso_flow(self, mock_get_alice_session):
         broker = Broker.objects.create(broker_name="Alice Blue", is_active=True)
