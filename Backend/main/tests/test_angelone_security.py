@@ -745,6 +745,40 @@ class AngelOneExecutionValidationTests(TestCase):
         self.assertEqual(history.response_data["data"]["error_code"], "CONTRACT_EXPIRED")
         self.assertEqual(history.broker, "Angel One")
 
+    def test_dispatch_uses_direct_smartapi_path_for_angel_one_without_execution_node(self):
+        request = self._request()
+        engine = ExecutionEngine.__new__(ExecutionEngine)
+        engine._execute_angel_one = mock.Mock(
+            return_value={"status": "success", "message": "Order placed", "order_id": "angel-order-1"}
+        )
+        engine._route_to_execution_node_if_configured = mock.Mock()
+
+        response = engine._dispatch(request, {"client_broker": self.broker_details})
+
+        self.assertEqual(response["status"], "success")
+        engine._execute_angel_one.assert_called_once_with(request, {"client_broker": self.broker_details})
+        engine._route_to_execution_node_if_configured.assert_not_called()
+
+    def test_dispatch_keeps_proxy_requirement_for_non_angel_brokers(self):
+        request = self._request()
+        request = ExecutionRequest(
+            **{
+                **request.__dict__,
+                "trade": SimpleNamespace(broker="Alice Blue", max_order_value=1000000),
+            }
+        )
+        engine = ExecutionEngine.__new__(ExecutionEngine)
+        engine._execute_angel_one = mock.Mock()
+        engine._route_to_execution_node_if_configured = mock.Mock(
+            return_value={"data": {"status": "Failed", "message": "No verified execution node/proxy is assigned. Direct broker execution is blocked."}}
+        )
+
+        response = engine._dispatch(request, {})
+
+        self.assertEqual(response["data"]["status"], "Failed")
+        engine._route_to_execution_node_if_configured.assert_called_once_with(request)
+        engine._execute_angel_one.assert_not_called()
+
 
 class SecretLeakageTests(TestCase):
     def test_sensitive_print_statements_are_absent_from_hardened_paths(self):

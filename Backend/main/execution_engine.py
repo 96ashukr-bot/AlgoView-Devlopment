@@ -871,6 +871,9 @@ class ExecutionEngine:
         return contract_expiry
 
     def _dispatch(self, request: ExecutionRequest, validation_context: Dict[str, Any]) -> Dict[str, Any]:
+        if request.broker_name in {"angel one", "angle one"}:
+            return self._execute_angel_one(request, validation_context)
+
         routed_response = self._route_to_execution_node_if_configured(request)
         if routed_response is None:
             return self._failed_response("Execution routing failed closed before broker dispatch.")
