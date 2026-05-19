@@ -479,6 +479,30 @@ class LoginActivitySummaryTests(TestCase):
         self.assertEqual(response.data["data"]["broker"]["token"]["status"], "active")
         self.assertIsNotNone(response.data["data"]["panel"]["panel_login_time"])
 
+    def test_login_activity_summary_ignores_legacy_plaintext_tokens(self):
+        self.broker_details.encrypted_access_token = None
+        self.broker_details.encrypted_refresh_token = None
+        self.broker_details.encrypted_feed_token = None
+        self.broker_details.access_token = "legacy-jwt-token"
+        self.broker_details.refreshToken = "legacy-refresh-token"
+        self.broker_details.feed_token = "legacy-feed-token"
+        self.broker_details.save(
+            update_fields=[
+                "encrypted_access_token",
+                "encrypted_refresh_token",
+                "encrypted_feed_token",
+                "access_token",
+                "refreshToken",
+                "feed_token",
+            ]
+        )
+
+        summary = LoginActivityService().build_summary(self.user)
+
+        self.assertEqual(summary["data"]["broker"]["token"]["status"], "unavailable")
+        self.assertFalse(summary["data"]["broker"]["token"]["has_refresh_token"])
+        self.assertFalse(summary["data"]["broker"]["token"]["has_feed_token"])
+
 
 class PanelLoginTrackingTests(TestCase):
     def setUp(self):
