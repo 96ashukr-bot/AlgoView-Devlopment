@@ -1,10 +1,12 @@
 import os
 import re
 import subprocess
+from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from unittest import mock
 from types import SimpleNamespace
+from zoneinfo import ZoneInfo
 
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.db import connection
@@ -13,11 +15,15 @@ from django.test import RequestFactory, TestCase, override_settings
 from rest_framework.test import APIRequestFactory, force_authenticate
 
 from main.angelone.managers.session_manager import SessionManager
+from main.angelone.managers.contract_manager import Contract
+from main.angelone.constants import MARKET_CLOSE_HOUR, MARKET_CLOSE_MINUTE, TIMEZONE
 from main.angelone.services.state_service import CallbackStateService
 from main.angelone_views import angelone_callback
-from main.models import Broker, ClientBrokerdetails, OTP, User, UserActivityLog
+from main.execution_engine import ContractInfo, ExecutionEngine, ExecutionRequest
+from main.models import Broker, ClientBrokerdetails, OTP, Tradeorderhistory, User, UserActivityLog
 from main.serializers import ClientBrokerDetailsSerializer, ClientBrokerDetailsUpdateSerializer, OTPVerifySerializer
 from main.services.login_activity_service import LoginActivityService
+from main.trade_history_service import save_trade_order_history
 from main.views import AdminClientBrokerDetailsView, LoginActivitySummaryView
 from django.utils import timezone
 
@@ -581,6 +587,163 @@ class MigrationSafetyTests(TestCase):
         loader = MigrationLoader(connection)
         migration = loader.disk_migrations[("main", "0001_add_order_type_and_buffer_to_client_trade_setting")]
         self.assertIn(("main", "0001_initial"), migration.dependencies)
+
+
+@override_settings(CACHES=TEST_CACHES)
+class AngelOneExecutionValidationTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            email="angelone-validation@example.com",
+            firstName="Angel",
+            lastName="Validation",
+            phoneNumber="9999999988",
+            password="Pass@1234",
+        )
+        self.broker = Broker.objects.create(broker_name="Angel One", is_active=True)
+        self.broker_details = ClientBrokerdetails.objects.create(
+            client=self.user,
+            broker_name=self.broker,
+            broker_API_KEY="angel-key",
+            broker_API_UID="A1420760",
+            broker_Demate_User_Name="A1420760",
+        )
+
+    def _request(self, history_id="angel-history-1"):
+        return ExecutionRequest(
+            LivePrice=100,
+            group_service="test",
+            trade=SimpleNamespace(broker="Angel One", max_order_value=1000000),
+            user=self.user,
+            transaction_type="BUY",
+            symbol="NIFTY",
+            quantity=65,
+            strategy="test-strategy",
+            ordertype="LIMIT",
+            product_type="INTRADAY",
+            price=100,
+            Lots=1,
+            trade_order_status="ENTRY",
+            Entry_type="BUY",
+            Exit_type=None,
+            Entry_price=None,
+            Exit_price=None,
+            EntryQty=65,
+            ExitQty=None,
+            webhook_signal={},
+            Exchange="NFO",
+            Segment="OPT",
+            Index_Symbol="NIFTY",
+            triggerPrice=None,
+            day="19",
+            month="May",
+            year="26",
+            fullyear="2026",
+            strike=23700,
+            option_type="PE",
+            order_params={"quantity": 65},
+            history_id=history_id,
+            contract_info=ContractInfo(
+                symbol="NIFTY",
+                strike=23700,
+                option_type="PE",
+                exchange="NFO",
+                expiry=datetime(2026, 5, 19),
+            ),
+        )
+
+    def test_same_day_midnight_contract_expiry_is_tradable_until_market_close(self):
+        engine = ExecutionEngine.__new__(ExecutionEngine)
+        engine._auth_service = mock.Mock()
+        engine._auth_service.ensure_valid_session.return_value = {
+            "status": "success",
+            "session": SimpleNamespace(smart_connect=mock.Mock()),
+        }
+        engine._contract_manager = mock.Mock()
+        engine._contract_manager.initialize.return_value = None
+        engine._contract_manager.resolve_option_contract.return_value = (
+            Contract(
+                token="12345",
+                symbol="NIFTY19MAY2623700PE",
+                name="NIFTY",
+                expiry=datetime(2026, 5, 19),
+                strike=23700,
+                lot_size=65,
+                instrument_type="OPTIDX",
+                exchange="NFO",
+                tick_size=0.05,
+                option_type="PE",
+            ),
+            {"tradingsymbol": "NIFTY19MAY2623700PE", "expiry": "2026-05-19"},
+        )
+        engine._ltp_service = mock.Mock()
+        engine._ltp_service.get_ltp.return_value = 100
+        engine._ltp_service.round_to_tick.return_value = 100
+        engine._get_client_broker = mock.Mock(return_value=self.broker_details)
+
+        fixed_now = datetime(2026, 5, 19, 14, 37, tzinfo=ZoneInfo(TIMEZONE))
+        with mock.patch("main.execution_engine.datetime", wraps=datetime) as mock_datetime:
+            mock_datetime.now.return_value = fixed_now
+            result = engine._validate_angel_one_request(self._request())
+
+        self.assertEqual(result["status"], "success")
+
+    def test_midnight_contract_expiry_cutoff_uses_market_close(self):
+        engine = ExecutionEngine.__new__(ExecutionEngine)
+
+        cutoff = engine._normalize_contract_expiry_cutoff(datetime(2026, 5, 19))
+
+        self.assertEqual(cutoff.hour, MARKET_CLOSE_HOUR)
+        self.assertEqual(cutoff.minute, MARKET_CLOSE_MINUTE)
+        self.assertEqual(cutoff.tzinfo, ZoneInfo(TIMEZONE))
+
+    def test_validation_failure_updates_trade_history_placeholder(self):
+        request = self._request(history_id="angel-history-validation-failure")
+        placeholder = "Order is placing by place order broker !!"
+        save_trade_order_history(
+            100,
+            "test",
+            "BUY",
+            "ENTRY",
+            self.user,
+            None,
+            0,
+            "Failed",
+            placeholder,
+            placeholder,
+            "test-strategy",
+            "BUY",
+            None,
+            None,
+            None,
+            65,
+            None,
+            {},
+            "NFO",
+            "OPT",
+            "NIFTY",
+            {"quantity": 65},
+            broker=None,
+            history_id=request.history_id,
+        )
+        engine = ExecutionEngine.__new__(ExecutionEngine)
+        response = {
+            "data": {
+                "status": "Failed",
+                "message": "Resolved contract has already expired and cannot be traded.",
+                "error_code": "CONTRACT_EXPIRED",
+            }
+        }
+
+        engine._record_validation_failure_history(
+            request,
+            response,
+            {"contract_match": {"tradingsymbol": "NIFTY19MAY2623700PE"}},
+        )
+
+        history = Tradeorderhistory.objects.get(history_id=request.history_id)
+        self.assertEqual(history.failure_reason, response["data"]["message"])
+        self.assertEqual(history.response_data["data"]["error_code"], "CONTRACT_EXPIRED")
+        self.assertEqual(history.broker, "Angel One")
 
 
 class SecretLeakageTests(TestCase):

@@ -10,7 +10,7 @@ from __future__ import annotations
 import time
 import uuid
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, time as datetime_time
 from typing import Any, Optional, Dict
 from zoneinfo import ZoneInfo
 
@@ -308,6 +308,7 @@ class ExecutionEngine:
                     error_code=validation_context.get("error_code"),
                 )
                 self._record_broker_failure(request)
+                self._record_validation_failure_history(request, response, validation_context)
                 self._log_audit_event("failure", request, response["data"], elapsed_seconds=time.perf_counter() - start)
                 return response
 
@@ -728,10 +729,8 @@ class ExecutionEngine:
             }
 
         current_time = datetime.now(ZoneInfo(TIMEZONE if USE_IST else "UTC"))
-        contract_expiry = contract.expiry
+        contract_expiry = self._normalize_contract_expiry_cutoff(contract.expiry)
         if contract_expiry is not None:
-            if contract_expiry.tzinfo is None:
-                contract_expiry = contract_expiry.replace(tzinfo=ZoneInfo(TIMEZONE if USE_IST else "UTC"))
             if contract_expiry < current_time:
                 return {
                     "status": "error",
@@ -850,6 +849,26 @@ class ExecutionEngine:
                 "lot_size_check": "passed",
             },
         }
+
+    def _normalize_contract_expiry_cutoff(self, contract_expiry: Optional[datetime]) -> Optional[datetime]:
+        if contract_expiry is None:
+            return None
+
+        timezone_name = TIMEZONE if USE_IST else "UTC"
+        trading_timezone = ZoneInfo(timezone_name)
+        if contract_expiry.tzinfo is None:
+            contract_expiry = contract_expiry.replace(tzinfo=trading_timezone)
+        else:
+            contract_expiry = contract_expiry.astimezone(trading_timezone)
+
+        if contract_expiry.timetz().replace(tzinfo=None) == datetime_time.min:
+            return contract_expiry.replace(
+                hour=MARKET_CLOSE_HOUR,
+                minute=MARKET_CLOSE_MINUTE,
+                second=0,
+                microsecond=0,
+            )
+        return contract_expiry
 
     def _dispatch(self, request: ExecutionRequest, validation_context: Dict[str, Any]) -> Dict[str, Any]:
         routed_response = self._route_to_execution_node_if_configured(request)
@@ -1428,6 +1447,54 @@ class ExecutionEngine:
         if idempotency_key and validation_context.get("idempotency_record"):
             self._idempotency_manager.remove_record(idempotency_key)
         self._log_audit_event("failure", request, normalized.get("data", {}), elapsed_seconds=elapsed_seconds)
+
+    def _record_validation_failure_history(
+        self,
+        request: ExecutionRequest,
+        normalized: Dict[str, Any],
+        validation_context: Dict[str, Any],
+    ) -> None:
+        if not request.history_id:
+            return
+
+        history_order_params = {}
+        if isinstance(request.order_params, dict):
+            history_order_params.update(request.order_params)
+        history_order_params.update(
+            {
+                "request_id": request.request_id,
+                "error_code": normalized.get("data", {}).get("error_code"),
+                "contract_match": validation_context.get("contract_match"),
+                "broker": getattr(request.trade, "broker", None),
+            }
+        )
+
+        save_trade_order_history(
+            request.LivePrice,
+            request.group_service,
+            request.transaction_type,
+            request.trade_order_status,
+            request.user,
+            request.Index_Symbol or request.underlying_symbol,
+            0,
+            normalized.get("data", {}).get("status") or "Failed",
+            normalized,
+            normalized.get("data", {}).get("message"),
+            request.strategy,
+            request.Entry_type,
+            request.Exit_type,
+            request.Entry_price,
+            request.Exit_price,
+            request.EntryQty,
+            request.ExitQty,
+            request.webhook_signal,
+            request.exchange_name,
+            request.Segment,
+            request.Index_Symbol,
+            history_order_params,
+            broker=getattr(request.trade, "broker", None),
+            history_id=request.history_id,
+        )
 
     def _should_retry(self, normalized: Dict[str, Any]) -> bool:
         if normalized.get("data", {}).get("status") in {"complete", "completed", "open"}:
