@@ -745,19 +745,19 @@ class AngelOneExecutionValidationTests(TestCase):
         self.assertEqual(history.response_data["data"]["error_code"], "CONTRACT_EXPIRED")
         self.assertEqual(history.broker, "Angel One")
 
-    def test_dispatch_uses_direct_smartapi_path_for_angel_one_without_execution_node(self):
+    def test_dispatch_routes_angel_one_through_execution_node_proxy(self):
         request = self._request()
         engine = ExecutionEngine.__new__(ExecutionEngine)
-        engine._execute_angel_one = mock.Mock(
-            return_value={"status": "success", "message": "Order placed", "order_id": "angel-order-1"}
+        engine._execute_angel_one = mock.Mock()
+        engine._route_to_execution_node_if_configured = mock.Mock(
+            return_value={"status": "proxy_routing", "job_id": 1, "message": ""}
         )
-        engine._route_to_execution_node_if_configured = mock.Mock()
 
         response = engine._dispatch(request, {"client_broker": self.broker_details})
 
-        self.assertEqual(response["status"], "success")
-        engine._execute_angel_one.assert_called_once_with(request, {"client_broker": self.broker_details})
-        engine._route_to_execution_node_if_configured.assert_not_called()
+        self.assertEqual(response["status"], "proxy_routing")
+        engine._route_to_execution_node_if_configured.assert_called_once_with(request)
+        engine._execute_angel_one.assert_not_called()
 
     def test_dispatch_keeps_proxy_requirement_for_non_angel_brokers(self):
         request = self._request()
