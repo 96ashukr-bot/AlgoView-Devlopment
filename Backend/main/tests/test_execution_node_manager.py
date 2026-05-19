@@ -23,6 +23,7 @@ from main.fivepaisa import place_5paisa_order
 from main.dhanapi import place_dhan_orders
 from main.dhanapi import get_trading_symbol_security_id
 from main.zerodha import place_zerodha_orders
+from main.Alice_Blue_Api import place_alice_orders
 from main.dematemodule import _broker_proxy_config_or_none, _save_session_tokens_compat
 from main.dematemodule import BrokerCallbackView
 from main.broker_registry import get_broker_setup_spec
@@ -194,6 +195,7 @@ class ExecutionNodeManagerTests(TestCase):
         adapter.place_order(
             {
                 "symbol": "NIFTY24400CE",
+                "trade_symbol": "NIFTY19MAY26C24400",
                 "quantity": 65,
                 "transaction_type": "BUY",
                 "order_type": "LIMIT",
@@ -202,6 +204,7 @@ class ExecutionNodeManagerTests(TestCase):
             proxy_config=proxy_config,
         )
         self.assertEqual(mock_place_order.call_args.kwargs["proxy_config"], proxy_config)
+        self.assertEqual(mock_place_order.call_args.args[4], "NIFTY19MAY26C24400")
 
     @mock.patch("main.brokers.aliceblue.place_alice_orders")
     def test_alice_blue_adapter_uses_saved_session_token_for_orders(self, mock_place_order):
@@ -230,6 +233,37 @@ class ExecutionNodeManagerTests(TestCase):
 
         self.assertEqual(mock_place_order.call_args.kwargs["proxy_config"], proxy_config)
         self.assertEqual(mock_place_order.call_args.kwargs["session_id"], "alice-session-token")
+
+    @mock.patch("main.brokers.aliceblue.place_alice_orders")
+    def test_alice_blue_adapter_builds_contract_symbol_when_trade_symbol_missing(self, mock_place_order):
+        broker = Broker.objects.create(broker_name="Alice Blue", is_active=True)
+        broker_details = ClientBrokerdetails.objects.create(
+            client=self.client_user,
+            broker_name=broker,
+            broker_API_KEY="alice-api",
+            broker_API_UID="alice-user",
+            access_token="alice-session-token",
+        )
+        adapter = get_broker_adapter(broker_details)
+        mock_place_order.return_value = {"data": {"status": "completed", "order_id": "alice-proxy-1"}}
+
+        adapter.place_order(
+            {
+                "symbol": "NIFTY",
+                "strike": 24400,
+                "option_type": "CE",
+                "day": "19",
+                "month": "MAY",
+                "year": "26",
+                "quantity": 65,
+                "transaction_type": "BUY",
+                "order_type": "LIMIT",
+                "Exchange": "NFO",
+            },
+            proxy_config={"http": "http://proxy.example.com:8080", "https": "http://proxy.example.com:8080"},
+        )
+
+        self.assertEqual(mock_place_order.call_args.args[4], "NIFTY19MAY26C24400")
 
     def test_alice_blue_order_response_message_is_extracted(self):
         from main.Alice_Blue_Api import _extract_alice_response_message
@@ -1486,6 +1520,7 @@ class ExecutionNodeManagerTests(TestCase):
             second = self.client.post("/api/node/place-order/", data=payload, content_type="application/json", **headers)
         self.assertEqual(first.status_code, 200)
         self.assertEqual(second.status_code, 409)
+        self.assertTrue(adapter_factory.return_value.place_order.call_args.args[0]["_allow_direct_node_execution"])
 
     def test_direct_order_helpers_fail_closed_without_proxy(self):
         common = dict(
@@ -1521,4 +1556,35 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertIn(
             "Proxy/static-IP",
             place_5paisa_order(api_key="k", access_token="t", trade_symbol="NIFTY", trade=SimpleNamespace(), **common)["data"]["message"],
+        )
+        self.assertIn(
+            "Proxy/static-IP",
+            place_alice_orders(
+                None,
+                None,
+                "k",
+                "u",
+                "NIFTY",
+                "BUY",
+                "NIFTY",
+                1,
+                "test",
+                "LIMIT",
+                "INTRADAY",
+                1,
+                self.client_user,
+                1,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                "NFO",
+                "FNO",
+                "NIFTY",
+                history_id="no-proxy",
+            )["data"]["message"],
         )

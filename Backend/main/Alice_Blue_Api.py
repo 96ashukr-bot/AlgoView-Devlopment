@@ -517,9 +517,10 @@ def place_alice_orders(
     Lots, trade_order_status, Entry_type, Exit_type,
     Entry_price, Exit_price, EntryQty, ExitQty,
     webhook_signal, Exchange, Segment, Index_Symbol, history_id=None,
-    trigger_price=None, proxy_config=None, session_id=None
+    trigger_price=None, proxy_config=None, session_id=None,
+    allow_direct_node_execution=False,
 ):
-    if not proxy_config:
+    if not proxy_config and not allow_direct_node_execution:
         return {"data": {"status": "Failed", "message": "Proxy/static-IP execution route is required for Alice Blue orders."}}
     try:
         if session_id:

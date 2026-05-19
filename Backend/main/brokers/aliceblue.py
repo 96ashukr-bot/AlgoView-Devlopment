@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from main.Alice_Blue_Api import place_alice_orders
 from main.brokers.base import BaseBroker
+from main.brokers.utils import build_trade_symbol
 
 
 class AliceBlueBroker(BaseBroker):
@@ -17,12 +18,18 @@ class AliceBlueBroker(BaseBroker):
 
     def place_order(self, payload, proxy_config=None):
         order = payload.get("order", payload)
+        trade_symbol = (
+            order.get("trade_symbol")
+            or order.get("trading_symbol")
+            or order.get("tradingsymbol")
+            or build_trade_symbol(order, self.broker_name)
+        )
         return place_alice_orders(
             order.get("LivePrice"),
             order.get("group_service"),
             self.broker_details.broker_API_KEY,
             self.broker_details.broker_API_UID,
-            order.get("trading_symbol") or order.get("symbol"),
+            trade_symbol,
             str(order.get("transaction_type") or "").upper(),
             order.get("symbol"),
             int(order.get("quantity") or 0),
@@ -47,4 +54,5 @@ class AliceBlueBroker(BaseBroker):
             order.get("triggerPrice"),
             proxy_config=proxy_config,
             session_id=self.broker_details.access_token,
+            allow_direct_node_execution=bool(payload.get("_allow_direct_node_execution")),
         )

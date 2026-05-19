@@ -537,7 +537,8 @@ class NodePlaceOrderAPIView(APIView):
         if validation.get("status") != "success":
             return Response({"status": "failed", "message": validation.get("message")}, status=status.HTTP_400_BAD_REQUEST)
         try:
-            broker_response = adapter.place_order(request.data)
+            order_payload = {**request.data, "_allow_direct_node_execution": True}
+            broker_response = adapter.place_order(order_payload)
             safe_response = {
                 "status": "placed" if str(broker_response.get("status", broker_response.get("data", {}).get("status", ""))).lower() in {"success", "complete", "completed", "open"} else "accepted",
                 "broker_response": broker_response,
