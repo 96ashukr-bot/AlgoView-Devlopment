@@ -882,6 +882,8 @@ class ExecutionEngine:
             return self._failed_response("No broker details found for this client.")
         if not client_broker.execution_node_id:
             return self._failed_response("No verified execution node/proxy is assigned. Direct broker execution is blocked.")
+        contract = validation_context.get("contract")
+        contract_expiry = getattr(contract, "expiry", None)
         order_payload = {
             "idempotency_key": request.history_id or request.request_id,
             "history_id": request.history_id,
@@ -919,6 +921,7 @@ class ExecutionEngine:
             "month": request.month,
             "year": request.year,
             "fullyear": request.fullyear,
+            "expiry": contract_expiry.isoformat() if contract_expiry else None,
             "request_id": request.request_id,
             "order_params": request.order_params if isinstance(request.order_params, dict) else {},
         }

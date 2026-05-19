@@ -174,10 +174,14 @@ class ExecutionNodeManagerTests(TestCase):
                 "option_type": "CE",
                 "quantity": 65,
                 "transaction_type": "BUY",
+                "day": "26",
+                "month": "MAY",
+                "fullyear": "2026",
             },
             proxy_config=proxy_config,
         )
         self.assertEqual(mock_place_order.call_args.kwargs["proxy_config"], proxy_config)
+        self.assertEqual(mock_place_order.call_args.kwargs["expiry_override"].date().isoformat(), "2026-05-26")
 
     @mock.patch("main.brokers.aliceblue.place_alice_orders")
     def test_alice_blue_adapter_supports_proxy_and_passes_config(self, mock_place_order):

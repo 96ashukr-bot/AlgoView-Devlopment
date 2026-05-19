@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import datetime
+
 from main.angleapi_upgraded import (
     cancel_angel_one_order,
     get_angel_one_holdings,
@@ -8,6 +10,27 @@ from main.angleapi_upgraded import (
     place_angel_one_order,
 )
 from main.brokers.base import BaseBroker
+
+
+def _parse_expiry_override(order):
+    expiry = order.get("expiry") or order.get("expiry_date")
+    if expiry:
+        expiry_text = str(expiry).split("T", 1)[0]
+        for date_format in ("%Y-%m-%d", "%d%b%Y", "%d%b%y"):
+            try:
+                return datetime.strptime(expiry_text.upper(), date_format)
+            except ValueError:
+                continue
+
+    day = order.get("day")
+    month = order.get("month")
+    fullyear = order.get("fullyear") or order.get("full_year")
+    if day and month and fullyear:
+        try:
+            return datetime.strptime(f"{str(day).zfill(2)}{str(month)[:3].upper()}{fullyear}", "%d%b%Y")
+        except ValueError:
+            return None
+    return None
 
 
 class AngelOneBroker(BaseBroker):
@@ -36,6 +59,7 @@ class AngelOneBroker(BaseBroker):
             exchange=order.get("exchange") or order.get("Exchange") or "NFO",
             product_type=order.get("product_type") or order.get("product") or "INTRADAY",
             request_id=order.get("request_id") or order.get("idempotency_key"),
+            expiry_override=_parse_expiry_override(order),
             proxy_config=proxy_config,
         )
 

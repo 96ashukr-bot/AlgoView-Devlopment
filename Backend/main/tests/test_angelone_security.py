@@ -20,6 +20,7 @@ from main.angelone.constants import MARKET_CLOSE_HOUR, MARKET_CLOSE_MINUTE, TIME
 from main.angelone.services.state_service import CallbackStateService
 from main.angelone_views import angelone_callback
 from main.execution_engine import ContractInfo, ExecutionEngine, ExecutionRequest
+from main.angelone.services.order_service import OrderService
 from main.models import Broker, ClientBrokerdetails, OTP, Tradeorderhistory, User, UserActivityLog
 from main.serializers import ClientBrokerDetailsSerializer, ClientBrokerDetailsUpdateSerializer, OTPVerifySerializer
 from main.services.login_activity_service import LoginActivityService
@@ -778,6 +779,18 @@ class AngelOneExecutionValidationTests(TestCase):
         self.assertEqual(response["data"]["status"], "Failed")
         engine._route_to_execution_node_if_configured.assert_called_once_with(request)
         engine._execute_angel_one.assert_not_called()
+
+    def test_order_service_structured_failure_keeps_original_message(self):
+        service = OrderService.__new__(OrderService)
+
+        response = service._error_response(
+            "Broker rejected order",
+            "request-1",
+            **{key: value for key, value in {"message": "Broker rejected order", "error_code": "ORDER_EXECUTION_FAILED"}.items() if key != "message"},
+        )
+
+        self.assertEqual(response["message"], "Broker rejected order")
+        self.assertEqual(response["error_code"], "ORDER_EXECUTION_FAILED")
 
 
 class SecretLeakageTests(TestCase):

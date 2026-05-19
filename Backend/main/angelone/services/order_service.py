@@ -446,7 +446,11 @@ class OrderService:
                 request_id=request_id,
                 response=structured_error,
             )
-            return self._error_response(structured_error["message"], request_id, **structured_error)
+            return self._error_response(
+                structured_error["message"],
+                request_id,
+                **{key: value for key, value in structured_error.items() if key != "message"},
+            )
 
         except Exception as e:
             if existing:
@@ -459,7 +463,11 @@ class OrderService:
                 request_id=request_id,
                 response=structured_error,
             )
-            return self._error_response(structured_error["message"], request_id, **structured_error)
+            return self._error_response(
+                structured_error["message"],
+                request_id,
+                **{key: value for key, value in structured_error.items() if key != "message"},
+            )
     
     def place_order_async(
         self,

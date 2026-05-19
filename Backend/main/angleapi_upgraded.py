@@ -6,7 +6,7 @@ used across Django views while delegating all real work to the modular
 service/manager layer under ``main.angelone``.
 """
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Optional
 
 from django.utils import timezone
@@ -179,6 +179,7 @@ def place_angel_one_order(
     product_type: str = "INTRADAY",
     duration: str = "DAY",
     request_id: str = None,
+    expiry_override: Optional[datetime] = None,
     proxy_config=None,
 ) -> dict:
     """Legacy order facade routed to OrderService."""
@@ -209,6 +210,7 @@ def place_angel_one_order(
         underlying=symbol,
         strike=float(strike) if strike is not None else None,
         option_type=option_type,
+        expiry_override=expiry_override,
         request_id=request_id,
         broker_details=broker_details,
         proxy_config=proxy_config,
@@ -514,6 +516,7 @@ def place_Angle_order(*args, **kwargs):
             exchange=exchange,
             buffer_percentage=buffer_percentage,
             request_id=str(kwargs.get("history_id")) if kwargs.get("history_id") else None,
+            expiry_override=parsed.expiry_date,
         )
 
     return place_angel_one_order(*args, **kwargs)
