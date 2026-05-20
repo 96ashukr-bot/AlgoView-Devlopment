@@ -383,6 +383,7 @@ class ExecutionEngine:
                 error=str(exc),
             )
             response = self._failed_response(str(exc))
+            self._record_validation_failure_history(request, response, {})
             self._log_audit_event("failure", request, response["data"], elapsed_seconds=time.perf_counter() - start)
             return response
 
@@ -871,12 +872,17 @@ class ExecutionEngine:
         return contract_expiry
 
     def _dispatch(self, request: ExecutionRequest, validation_context: Dict[str, Any]) -> Dict[str, Any]:
-        routed_response = self._route_to_execution_node_if_configured(request)
+        routed_response = self._route_to_execution_node_if_configured(request, validation_context)
         if routed_response is None:
             return self._failed_response("Execution routing failed closed before broker dispatch.")
         return routed_response
 
-    def _route_to_execution_node_if_configured(self, request: ExecutionRequest) -> Optional[Dict[str, Any]]:
+    def _route_to_execution_node_if_configured(
+        self,
+        request: ExecutionRequest,
+        validation_context: Optional[Dict[str, Any]] = None,
+    ) -> Optional[Dict[str, Any]]:
+        validation_context = validation_context or {}
         client_broker = self._get_client_broker(request)
         if not client_broker:
             return self._failed_response("No broker details found for this client.")

@@ -757,7 +757,7 @@ class AngelOneExecutionValidationTests(TestCase):
         response = engine._dispatch(request, {"client_broker": self.broker_details})
 
         self.assertEqual(response["status"], "proxy_routing")
-        engine._route_to_execution_node_if_configured.assert_called_once_with(request)
+        engine._route_to_execution_node_if_configured.assert_called_once_with(request, {"client_broker": self.broker_details})
         engine._execute_angel_one.assert_not_called()
 
     def test_dispatch_keeps_proxy_requirement_for_non_angel_brokers(self):
@@ -777,7 +777,7 @@ class AngelOneExecutionValidationTests(TestCase):
         response = engine._dispatch(request, {})
 
         self.assertEqual(response["data"]["status"], "Failed")
-        engine._route_to_execution_node_if_configured.assert_called_once_with(request)
+        engine._route_to_execution_node_if_configured.assert_called_once_with(request, {})
         engine._execute_angel_one.assert_not_called()
 
     def test_order_service_structured_failure_keeps_original_message(self):
