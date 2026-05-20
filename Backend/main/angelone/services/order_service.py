@@ -411,8 +411,9 @@ class OrderService:
                 order_id = self._extract_order_id(result)
                 broker_order = self._wait_for_broker_order_status(smart_connect, order_id)
                 broker_status = self._broker_order_status(broker_order)
+                broker_message = self._broker_order_message(broker_order)
                 if broker_status in {"rejected", "cancelled", "failed"}:
-                    broker_message = self._broker_order_message(broker_order) or "Angel One rejected the order."
+                    broker_message = broker_message or "Angel One rejected the order."
                     if existing:
                         self._idempotency_manager.remove_record(existing.idempotency_key)
                     return self._error_response(
@@ -439,9 +440,9 @@ class OrderService:
                 )
 
                 return {
-                    "status": "success",
+                    "status": self._successful_broker_status(broker_status),
                     "order_id": order_id,
-                    "message": "Order placed successfully",
+                    "message": broker_message or "Order placed successfully",
                     "symbol": contract.symbol,
                     "strike": strike_value,
                     "option_type": option_type_value,
@@ -691,6 +692,15 @@ class OrderService:
             or order.get("rejectionreason")
             or ""
         ).strip()
+
+    @staticmethod
+    def _successful_broker_status(broker_status: str) -> str:
+        normalized = str(broker_status or "").strip().lower()
+        if normalized in {"open", "pending", "put order req received"}:
+            return "open"
+        if normalized in {"complete", "completed", "executed", "filled", "traded"}:
+            return "complete"
+        return "success"
     
     def get_order_book(
         self,

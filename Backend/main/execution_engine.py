@@ -1229,6 +1229,16 @@ class ExecutionEngine:
         status_value = str(response.get("status", "") or "").lower()
         message = response.get("message", "")
         order_id = response.get("order_id")
+        broker_order = response.get("broker_order") if isinstance(response.get("broker_order"), dict) else {}
+        if broker_order:
+            status_value = status_value or str(broker_order.get("orderstatus") or broker_order.get("status") or "").lower()
+            message = message or str(
+                broker_order.get("text")
+                or broker_order.get("status_message")
+                or broker_order.get("message")
+                or ""
+            )
+            order_id = order_id or broker_order.get("orderid") or broker_order.get("order_id")
         if not order_id and isinstance(response.get("data"), str):
             message = message or str(response.get("data"))
 
@@ -1238,10 +1248,14 @@ class ExecutionEngine:
             "completed": "completed",
             "open": "open",
             "pending": "open",
+            "put order req received": "open",
             "info": "complete",
             "duplicate": "Failed",
             "error": "Failed",
             "failed": "Failed",
+            "rejected": "Failed",
+            "cancelled": "Failed",
+            "canceled": "Failed",
         }.get(status_value, "Failed")
 
         data = {"status": mapped_status, "message": message}
@@ -1261,6 +1275,8 @@ class ExecutionEngine:
             data["reference_price"] = response.get("reference_price")
         if response.get("buffer_percentage_used") is not None:
             data["buffer_used"] = response.get("buffer_percentage_used")
+        if broker_order:
+            data["broker_order"] = broker_order
         return {"data": data, "meta": response}
 
     @staticmethod
