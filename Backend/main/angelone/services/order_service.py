@@ -226,6 +226,15 @@ class OrderService:
                 )
 
             requested_order_type = (order_type or "LIMIT").upper()
+            normalized_product_type = self._normalize_product_type(product_type)
+            if not normalized_product_type:
+                if existing:
+                    self._idempotency_manager.remove_record(existing.idempotency_key)
+                return self._error_response(
+                    f"Product type '{product_type}' is not supported for Angel One.",
+                    request_id,
+                    error_code="INVALID_PRODUCT_TYPE",
+                )
             normalized_buffer = max(MIN_BUFFER_PERCENTAGE, min(MAX_BUFFER_PERCENTAGE, float(buffer_percentage or DEFAULT_BUFFER_PERCENTAGE)))
 
             if check_duplicate:
@@ -340,7 +349,7 @@ class OrderService:
                 "transactiontype": side.upper(),
                 "exchange": exchange,
                 "ordertype": resolved_order_type,
-                "producttype": product_type.upper(),
+                "producttype": normalized_product_type,
                 "duration": duration.upper(),
                 "quantity": str(quantity),
             }
@@ -428,6 +437,7 @@ class OrderService:
                     "request_id": request_id,
                     "order_type": resolved_order_type,
                     "requested_order_type": requested_order_type,
+                    "product_type": normalized_product_type,
                     "buffer_percentage_used": normalized_buffer if resolved_order_type == OrderType.LIMIT.value else None,
                     "ltp": ltp,
                     "contract_match": contract_resolution,
@@ -536,6 +546,24 @@ class OrderService:
     def _is_transient_error(self, message: str) -> bool:
         normalized = (message or "").lower()
         return any(marker in normalized for marker in self.TRANSIENT_ERROR_MARKERS)
+
+    def _normalize_product_type(self, product_type: Optional[str]) -> Optional[str]:
+        normalized = str(product_type or ProductType.INTRADAY.value).strip().upper()
+        product_map = {
+            "MIS": ProductType.INTRADAY.value,
+            "I": ProductType.INTRADAY.value,
+            "INTRADAY": ProductType.INTRADAY.value,
+            "NRML": ProductType.CARRYFORWARD.value,
+            "NORMAL": ProductType.CARRYFORWARD.value,
+            "CARRY_FORWARD": ProductType.CARRYFORWARD.value,
+            "CARRYFORWARD": ProductType.CARRYFORWARD.value,
+            "CNC": ProductType.DELIVERY.value,
+            "D": ProductType.DELIVERY.value,
+            "DELIVERY": ProductType.DELIVERY.value,
+            "MARGIN": ProductType.MARGIN.value,
+            "BO": ProductType.BO.value,
+        }
+        return product_map.get(normalized)
 
     def _build_error_payload(self, message: str) -> Dict[str, Any]:
         normalized = (message or "").lower()

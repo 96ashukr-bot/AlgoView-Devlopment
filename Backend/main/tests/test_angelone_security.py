@@ -800,6 +800,13 @@ class AngelOneExecutionValidationTests(TestCase):
         self.assertEqual(response["error_code"], "EMPTY_BROKER_RESPONSE")
         self.assertIn("check the Angel One order book before retrying", response["message"])
 
+    def test_order_service_normalizes_product_type_aliases_for_angel_one(self):
+        service = OrderService.__new__(OrderService)
+
+        self.assertEqual(service._normalize_product_type("MIS"), "INTRADAY")
+        self.assertEqual(service._normalize_product_type("NRML"), "CARRYFORWARD")
+        self.assertEqual(service._normalize_product_type("CNC"), "DELIVERY")
+
 
 class SecretLeakageTests(TestCase):
     def test_sensitive_print_statements_are_absent_from_hardened_paths(self):
