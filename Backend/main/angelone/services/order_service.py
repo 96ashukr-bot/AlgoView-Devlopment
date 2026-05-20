@@ -549,6 +549,14 @@ class OrderService:
                 "error_code": "TOKEN_EXPIRED",
                 "message": "Angel One session is invalid or expired. Please login again.",
             }
+        if (
+            "couldn't parse the json response" in normalized
+            and ("server: b''" in normalized or 'server: b""' in normalized)
+        ) or "empty response from broker" in normalized:
+            return {
+                "error_code": "EMPTY_BROKER_RESPONSE",
+                "message": "Angel One returned an empty response while placing the order. Please check the Angel One order book before retrying to avoid a duplicate order.",
+            }
         if "margin" in normalized or "rms" in normalized or "fund" in normalized:
             return {
                 "error_code": "MARGIN_ERROR",

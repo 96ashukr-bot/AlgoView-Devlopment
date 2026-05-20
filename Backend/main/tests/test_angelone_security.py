@@ -792,6 +792,14 @@ class AngelOneExecutionValidationTests(TestCase):
         self.assertEqual(response["message"], "Broker rejected order")
         self.assertEqual(response["error_code"], "ORDER_EXECUTION_FAILED")
 
+    def test_order_service_maps_empty_smartapi_response_to_safe_message(self):
+        service = OrderService.__new__(OrderService)
+
+        response = service._build_error_payload("Couldn't parse the JSON response received from the server: b''")
+
+        self.assertEqual(response["error_code"], "EMPTY_BROKER_RESPONSE")
+        self.assertIn("check the Angel One order book before retrying", response["message"])
+
 
 class SecretLeakageTests(TestCase):
     def test_sensitive_print_statements_are_absent_from_hardened_paths(self):
