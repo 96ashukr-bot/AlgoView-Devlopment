@@ -539,8 +539,10 @@ class NodePlaceOrderAPIView(APIView):
         try:
             order_payload = {**request.data, "_allow_direct_node_execution": True}
             broker_response = adapter.place_order(order_payload)
+            broker_status = str(broker_response.get("status", broker_response.get("data", {}).get("status", ""))).lower()
             safe_response = {
-                "status": "placed" if str(broker_response.get("status", broker_response.get("data", {}).get("status", ""))).lower() in {"success", "complete", "completed", "open"} else "accepted",
+                "status": "placed" if broker_status in {"success", "complete", "completed", "open"} else "failed",
+                "message": broker_response.get("message") or broker_response.get("data", {}).get("message"),
                 "broker_response": broker_response,
             }
             node = ExecutionNode.objects.filter(node_id=settings.ALGOVIEW_NODE_ID).first()

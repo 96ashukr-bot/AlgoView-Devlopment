@@ -13,6 +13,7 @@ Features:
 """
 
 import uuid
+import time
 from typing import Dict, Any, Optional, List
 from datetime import datetime
 
@@ -408,6 +409,19 @@ class OrderService:
 
             if result:
                 order_id = self._extract_order_id(result)
+                broker_order = self._wait_for_broker_order_status(smart_connect, order_id)
+                broker_status = self._broker_order_status(broker_order)
+                if broker_status in {"rejected", "cancelled", "failed"}:
+                    broker_message = self._broker_order_message(broker_order) or "Angel One rejected the order."
+                    if existing:
+                        self._idempotency_manager.remove_record(existing.idempotency_key)
+                    return self._error_response(
+                        broker_message,
+                        request_id,
+                        error_code="BROKER_ORDER_REJECTED",
+                        order_id=order_id,
+                        broker_order=broker_order,
+                    )
                 if check_duplicate and existing:
                     self._idempotency_manager.record_execution(existing.idempotency_key, order_id, "complete")
 
@@ -441,6 +455,7 @@ class OrderService:
                     "buffer_percentage_used": normalized_buffer if resolved_order_type == OrderType.LIMIT.value else None,
                     "ltp": ltp,
                     "contract_match": contract_resolution,
+                    "broker_order": broker_order,
                 }
 
             error_msg = result.get("message", "Order placement failed") if isinstance(result, dict) else (last_error or "Order placement failed")
@@ -614,6 +629,68 @@ class OrderService:
             or result.get("orderid")
             or result.get("order_id")
         )
+
+    def _wait_for_broker_order_status(self, smart_connect, order_id: Optional[str]) -> Optional[Dict[str, Any]]:
+        if not order_id:
+            return None
+
+        for attempt in range(3):
+            broker_order = self._find_broker_order(smart_connect, order_id)
+            if broker_order:
+                status = self._broker_order_status(broker_order)
+                if status and status not in {"open", "pending", "put order req received"}:
+                    return broker_order
+                if attempt == 2:
+                    return broker_order
+            time.sleep(0.5)
+        return None
+
+    def _find_broker_order(self, smart_connect, order_id: str) -> Optional[Dict[str, Any]]:
+        try:
+            response = smart_connect.orderBook()
+        except Exception as exc:
+            logger.warning("Could not fetch Angel One order book after placement", order_id=order_id, error=str(exc))
+            return None
+
+        orders = response.get("data", []) if isinstance(response, dict) else []
+        if isinstance(orders, dict):
+            orders = [orders]
+        if not isinstance(orders, list):
+            return None
+
+        target = str(order_id)
+        for order in orders:
+            if not isinstance(order, dict):
+                continue
+            candidate = str(
+                order.get("orderid")
+                or order.get("order_id")
+                or order.get("brokerorderid")
+                or order.get("broker_order_id")
+                or ""
+            )
+            if candidate == target:
+                return order
+        return None
+
+    @staticmethod
+    def _broker_order_status(order: Optional[Dict[str, Any]]) -> str:
+        if not isinstance(order, dict):
+            return ""
+        return str(order.get("orderstatus") or order.get("status") or "").strip().lower()
+
+    @staticmethod
+    def _broker_order_message(order: Optional[Dict[str, Any]]) -> str:
+        if not isinstance(order, dict):
+            return ""
+        return str(
+            order.get("text")
+            or order.get("status_message")
+            or order.get("message")
+            or order.get("rejreason")
+            or order.get("rejectionreason")
+            or ""
+        ).strip()
     
     def get_order_book(
         self,

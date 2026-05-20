@@ -126,7 +126,7 @@ def route_order_to_execution_node(client: User, broker_details: ClientBrokerdeta
                 job.error_message = broker_response.get("message") or broker_response.get("data", {}).get("message") or "Broker rejected proxy-routed order."
             job.save(update_fields=["broker_response", "status", "error_message", "updated_at"])
             node.mark_log("proxy_order_routed", f"Order job {job.id} routed through assigned proxy.", client=client, metadata={"status": job.status, "proxy": mask_proxy_url(node)})
-            return {"status": job.status, "job_id": job.id, "message": job.error_message}
+            return {"status": job.status, "job_id": job.id, "message": job.error_message, "broker_response": broker_response}
         except ValidationError:
             job.status = ExecutionOrderJob.STATUS_FAILED
             job.error_message = "Proxy order validation failed."

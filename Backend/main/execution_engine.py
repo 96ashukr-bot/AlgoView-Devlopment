@@ -936,6 +936,11 @@ class ExecutionEngine:
         except Exception as exc:
             return self._failed_response(str(exc) or "Execution routing failed.")
         status_value = str(result.get("status") or "").lower()
+        broker_response = result.get("broker_response")
+        if isinstance(broker_response, dict):
+            response_payload = dict(broker_response)
+            response_payload["job_id"] = result.get("job_id")
+            return self._normalize_response(response_payload)
         if status_value in {"placed", "accepted_by_node", "sent_to_node", "duplicate"}:
             return {"data": {"status": "open", "message": "Order routed to execution node.", "job_id": result.get("job_id")}}
         return {"data": {"status": "Failed", "message": result.get("message") or "Execution node routing failed.", "job_id": result.get("job_id")}}
