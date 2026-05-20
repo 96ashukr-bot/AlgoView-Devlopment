@@ -304,6 +304,21 @@ class ExecutionNodeManagerTests(TestCase):
         alice._get("test")
         self.assertEqual(mock_get.call_args.kwargs["proxies"], proxy_config)
 
+    @mock.patch("main.Alice_Blue_Api.requests.request")
+    def test_alice_blue_websocket_session_calls_use_proxy(self, mock_request):
+        from main.Alice_Blue_Api import ProxyAwareAliceblue
+
+        proxy_config = {"http": "http://proxy.example.com:8080", "https": "http://proxy.example.com:8080"}
+        mock_request.return_value = SimpleNamespace(json=lambda: {"stat": "Ok"})
+        alice = ProxyAwareAliceblue(user_id="alice-user", api_key="alice-api", proxy_config=proxy_config)
+
+        alice.invalid_sess("session-token")
+        alice.createSession("session-token")
+
+        self.assertEqual(mock_request.call_count, 2)
+        for call in mock_request.call_args_list:
+            self.assertEqual(call.kwargs["proxies"], proxy_config)
+
     @mock.patch("builtins.open", new_callable=mock.mock_open)
     @mock.patch("main.Alice_Blue_Api.requests.get")
     def test_alice_blue_contract_master_uses_proxy(self, mock_get, mock_file):

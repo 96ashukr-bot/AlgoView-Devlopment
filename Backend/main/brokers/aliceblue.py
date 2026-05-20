@@ -1,8 +1,10 @@
 from __future__ import annotations
 
-from main.Alice_Blue_Api import place_alice_orders
+from django.utils import timezone
+
+from main.Alice_Blue_Api import get_alice_saved_session, place_alice_orders
 from main.brokers.base import BaseBroker
-from main.brokers.utils import build_trade_symbol
+from main.brokers.utils import build_trade_symbol, get_access_token
 
 
 class AliceBlueBroker(BaseBroker):
@@ -12,8 +14,15 @@ class AliceBlueBroker(BaseBroker):
     def validate_credentials(self, proxy_config=None):
         if not self.broker_details.broker_API_KEY or not self.broker_details.broker_API_UID:
             return {"status": "failed", "message": "Missing Alice Blue API key or user id."}
-        if not self.broker_details.access_token:
+        access_token = get_access_token(self.broker_details)
+        if not access_token:
             return {"status": "failed", "message": "Alice Blue session token is missing. Connect to Alice Blue again before trading."}
+        expiry = getattr(self.broker_details, "access_token_expiry", None)
+        if expiry:
+            if timezone.is_naive(expiry):
+                expiry = timezone.make_aware(expiry)
+            if expiry <= timezone.now():
+                return {"status": "failed", "message": "Alice Blue session token has expired. Connect to Alice Blue again through the assigned proxy before trading."}
         return {"status": "success"}
 
     def place_order(self, payload, proxy_config=None):
@@ -53,6 +62,29 @@ class AliceBlueBroker(BaseBroker):
             order.get("history_id"),
             order.get("triggerPrice"),
             proxy_config=proxy_config,
-            session_id=self.broker_details.access_token,
+            session_id=get_access_token(self.broker_details),
             allow_direct_node_execution=bool(payload.get("_allow_direct_node_execution")),
         )
+
+    def get_orderbook(self, proxy_config=None):
+        validation = self.validate_credentials(proxy_config=proxy_config)
+        if validation.get("status") != "success":
+            return validation
+        alice, error = get_alice_saved_session(
+            self.broker_details.broker_API_UID,
+            self.broker_details.broker_API_KEY,
+            get_access_token(self.broker_details),
+            proxy_config=proxy_config,
+            return_error=True,
+        )
+        if not alice:
+            return {"status": "failed", "message": error or "Alice Blue saved session could not be prepared."}
+        response = alice._get("orderbook")
+        status = str(response.get("stat") or response.get("status") or "").strip().lower() if isinstance(response, dict) else ""
+        if status in {"ok", "success"}:
+            return {"status": "success", "response": response}
+        return {
+            "status": "failed",
+            "message": response.get("emsg") if isinstance(response, dict) else str(response),
+            "response": response,
+        }

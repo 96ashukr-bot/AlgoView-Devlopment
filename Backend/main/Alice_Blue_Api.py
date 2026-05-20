@@ -9,8 +9,11 @@ import pandas as pd
 import json
 import requests
 import hashlib
+import ssl
 
 from datetime import datetime
+from time import sleep
+from urllib.parse import urlparse
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -75,6 +78,26 @@ class ProxyAwareAliceblue(Aliceblue):
         super().__init__(*args, **kwargs)
         self.proxy_config = proxy_config
 
+    def _proxy_url(self):
+        if not self.proxy_config:
+            return None
+        return self.proxy_config.get("https") or self.proxy_config.get("http")
+
+    def _websocket_proxy_kwargs(self):
+        proxy_url = self._proxy_url()
+        if not proxy_url:
+            return {}
+        parsed = urlparse(proxy_url)
+        proxy_type = "socks5" if parsed.scheme.startswith("socks5") else "http"
+        kwargs = {
+            "proxy_type": proxy_type,
+            "http_proxy_host": parsed.hostname,
+            "http_proxy_port": parsed.port,
+        }
+        if parsed.username:
+            kwargs["http_proxy_auth"] = (parsed.username, parsed.password or "")
+        return kwargs
+
     def _request(self, method, req_type, data=None):
         if not self.proxy_config:
             return super()._request(method, req_type, data=data)
@@ -86,9 +109,9 @@ class ProxyAwareAliceblue(Aliceblue):
         }
         try:
             if req_type == "POST":
-                response = requests.post(method, json=data, headers=headers, proxies=self.proxy_config)
+                response = requests.post(method, json=data, headers=headers, proxies=self.proxy_config, timeout=10)
             elif req_type == "GET":
-                response = requests.get(method, json=data, headers=headers, proxies=self.proxy_config)
+                response = requests.get(method, json=data, headers=headers, proxies=self.proxy_config, timeout=10)
             else:
                 return {"stat": "Not_ok", "emsg": f"Unsupported request type: {req_type}", "encKey": None}
         except (requests.ConnectionError, requests.Timeout) as exception:
@@ -110,6 +133,55 @@ class ProxyAwareAliceblue(Aliceblue):
         with open("%s.csv" % exchange.upper(), "w") as file_obj:
             file_obj.write(response.text)
         return self._error_response("Today contract File Downloaded")
+
+    def invalid_sess(self, session_ID):
+        if not self.proxy_config:
+            return super().invalid_sess(session_ID)
+        url = self.base_url + "ws/invalidateSocketSess"
+        headers = {
+            "Authorization": "Bearer " + self.user_id + " " + session_ID,
+            "Content-Type": "application/json",
+        }
+        response = requests.request(
+            "POST",
+            url,
+            headers=headers,
+            data=json.dumps({"loginType": "API"}),
+            proxies=self.proxy_config,
+            timeout=10,
+        )
+        return response.json()
+
+    def createSession(self, session_ID):
+        if not self.proxy_config:
+            return super().createSession(session_ID)
+        url = self.base_url + "ws/createSocketSess"
+        headers = {
+            "Authorization": "Bearer " + self.user_id + " " + session_ID,
+            "Content-Type": "application/json",
+        }
+        response = requests.request(
+            "POST",
+            url,
+            headers=headers,
+            data=json.dumps({"loginType": "API"}),
+            proxies=self.proxy_config,
+            timeout=10,
+        )
+        return response.json()
+
+    def _Aliceblue__ws_run_forever(self):
+        while self._Aliceblue__stop_event.is_set() is False:
+            try:
+                self.ws.run_forever(
+                    ping_interval=3,
+                    ping_payload='{"t":"h"}',
+                    sslopt={"cert_reqs": ssl.CERT_NONE},
+                    **self._websocket_proxy_kwargs(),
+                )
+            except Exception as e:
+                logger.warning(f"websocket run forever ended in exception, {e}")
+            sleep(0.1)
 
 
 def _alice_proxy_cache_key(user_id, proxy_config=None, credential_label="api_key"):
