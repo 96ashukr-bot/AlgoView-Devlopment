@@ -48,22 +48,34 @@ logger = logging.getLogger('main')
 # CONSTANTS (FULL SAFE)
 # ==============================
 
-BASE_URL = "https://ant.aliceblueonline.com/rest/AliceBlueAPIService/api/"
+A3_BASE_URL = "https://a3.aliceblueonline.com/"
+A3_OPEN_API_BASE_URL = A3_BASE_URL + "open-api/od/v1/"
+A3_CONTRACT_BASE_URL = "https://v2api.aliceblueonline.com/restpy/static/contract_master/"
 
-ORDER_PLACE_API = "placeOrder/executePlaceOrder"
-ALICE_ORDER_URL = BASE_URL + ORDER_PLACE_API
+A3_VENDOR_SESSION_URL = A3_OPEN_API_BASE_URL + "vendor/getUserDetails"
+A3_ORDER_PLACE_URL = A3_OPEN_API_BASE_URL + "orders/placeorder"
+A3_ORDER_BOOK_URL = A3_OPEN_API_BASE_URL + "orders/book"
+A3_TRADE_BOOK_URL = A3_OPEN_API_BASE_URL + "orders/trades"
+A3_ORDER_HISTORY_URL = A3_OPEN_API_BASE_URL + "orders/history"
+A3_WS_INVALIDATE_URL = A3_OPEN_API_BASE_URL + "profile/invalidateWsSess"
+A3_WS_CREATE_URL = A3_OPEN_API_BASE_URL + "profile/createWsSess"
 
-GET_ORDER_BOOK_API = "placeOrder/fetchOrderBook"
-GET_ORDER_BOOK_URL = BASE_URL + GET_ORDER_BOOK_API
+BASE_URL = A3_BASE_URL
 
-GET_TRADE_BOOK_API = "placeOrder/fetchTradeBook"
-GET_TRADE_BOOK_URL = BASE_URL + GET_TRADE_BOOK_API
+ORDER_PLACE_API = "open-api/od/v1/orders/placeorder"
+ALICE_ORDER_URL = A3_ORDER_PLACE_URL
+
+GET_ORDER_BOOK_API = "open-api/od/v1/orders/book"
+GET_ORDER_BOOK_URL = A3_ORDER_BOOK_URL
+
+GET_TRADE_BOOK_API = "open-api/od/v1/orders/trades"
+GET_TRADE_BOOK_URL = A3_TRADE_BOOK_URL
 
 # Backward compatibility (IMPORTANT)
 GET_TREAD_BOOK_API = GET_TRADE_BOOK_API
 GET_TREAD_BOOK_URL = GET_TRADE_BOOK_URL
 
-ALICE_VENDOR_SESSION_URL = "https://ant.aliceblueonline.com/rest/AliceBlueAPIService/sso/getUserDetails"
+ALICE_VENDOR_SESSION_URL = A3_VENDOR_SESSION_URL
 
 
 # ==============================
@@ -71,6 +83,39 @@ ALICE_VENDOR_SESSION_URL = "https://ant.aliceblueonline.com/rest/AliceBlueAPISer
 # ==============================
 
 alice_sessions = {}
+
+
+def _alice_a3_headers(session_id=None):
+    headers = {"Content-Type": "application/json", "Accept": "application/json"}
+    if session_id:
+        headers["Authorization"] = f"Bearer {session_id}"
+    return headers
+
+
+def _alice_a3_request(method, url, *, session_id=None, json_payload=None, proxy_config=None, timeout=10):
+    try:
+        response = requests.request(
+            method,
+            url,
+            headers=_alice_a3_headers(session_id),
+            json=json_payload,
+            proxies=proxy_config,
+            timeout=timeout,
+        )
+    except (requests.ConnectionError, requests.Timeout) as exception:
+        return {"status": "Not_ok", "message": str(exception)}
+
+    try:
+        content = getattr(response, "content", None)
+        payload = response.json() if content is None or content != b"" else {}
+    except ValueError:
+        payload = {"status": "Not_ok", "message": response.text}
+
+    if isinstance(payload, dict):
+        payload.setdefault("http_status_code", response.status_code)
+        if response.status_code >= 400 and not _extract_alice_response_message(payload):
+            payload["message"] = f"{response.status_code} - {response.reason}"
+    return payload
 
 
 class ProxyAwareAliceblue(Aliceblue):
@@ -127,7 +172,7 @@ class ProxyAwareAliceblue(Aliceblue):
             return self._error_response("Invalid Exchange parameter")
 
         print("NOTE: Today's contract master file will be updated after 08:00 AM. Before 08:00 AM previous day contract file be downloaded.")
-        url = self.base_url_c % exchange.upper()
+        url = A3_CONTRACT_BASE_URL + f"{exchange.upper()}.csv"
         response = requests.get(url, proxies=self.proxy_config, timeout=20)
         response.raise_for_status()
         with open("%s.csv" % exchange.upper(), "w") as file_obj:
@@ -135,40 +180,22 @@ class ProxyAwareAliceblue(Aliceblue):
         return self._error_response("Today contract File Downloaded")
 
     def invalid_sess(self, session_ID):
-        if not self.proxy_config:
-            return super().invalid_sess(session_ID)
-        url = self.base_url + "ws/invalidateSocketSess"
-        headers = {
-            "Authorization": "Bearer " + self.user_id + " " + session_ID,
-            "Content-Type": "application/json",
-        }
-        response = requests.request(
+        return _alice_a3_request(
             "POST",
-            url,
-            headers=headers,
-            data=json.dumps({"loginType": "API"}),
-            proxies=self.proxy_config,
-            timeout=10,
+            A3_WS_INVALIDATE_URL,
+            session_id=session_ID,
+            json_payload={"source": "API", "userId": self.user_id},
+            proxy_config=self.proxy_config,
         )
-        return response.json()
 
     def createSession(self, session_ID):
-        if not self.proxy_config:
-            return super().createSession(session_ID)
-        url = self.base_url + "ws/createSocketSess"
-        headers = {
-            "Authorization": "Bearer " + self.user_id + " " + session_ID,
-            "Content-Type": "application/json",
-        }
-        response = requests.request(
+        return _alice_a3_request(
             "POST",
-            url,
-            headers=headers,
-            data=json.dumps({"loginType": "API"}),
-            proxies=self.proxy_config,
-            timeout=10,
+            A3_WS_CREATE_URL,
+            session_id=session_ID,
+            json_payload={"source": "API", "userId": self.user_id},
+            proxy_config=self.proxy_config,
         )
-        return response.json()
 
     def _Aliceblue__ws_run_forever(self):
         while self._Aliceblue__stop_event.is_set() is False:
@@ -222,10 +249,18 @@ def _build_alice_session(user_id, api_key, proxy_config=None):
 
 
 def _extract_alice_session_id(payload):
+    if isinstance(payload, list):
+        for item in payload:
+            value = _extract_alice_session_id(item)
+            if value:
+                return value
+        return None
     if not isinstance(payload, dict):
         return None
 
     for key in (
+        "accessToken",
+        "access_token",
         "sessionID",
         "session_id",
         "susertoken",
@@ -259,31 +294,21 @@ def _build_alice_vendor_session(user_id, auth_code, api_secret, proxy_config=Non
     checksum_source = f"{str(user_id).strip()}{str(auth_code).strip()}{str(api_secret).strip()}"
     checksum = hashlib.sha256(checksum_source.encode("utf-8")).hexdigest()
 
-    try:
-        response = requests.post(
-            ALICE_VENDOR_SESSION_URL,
-            json={"checkSum": checksum},
-            headers={"Content-Type": "application/json", "Accept": "application/json"},
-            proxies=proxy_config,
-            timeout=10,
-        )
-        try:
-            payload = response.json()
-        except ValueError:
-            payload = {"stat": "Not_ok", "emsg": response.text}
-    except (requests.ConnectionError, requests.Timeout) as exception:
-        return None, {"stat": "Not_ok", "emsg": str(exception)}
+    payload = _alice_a3_request(
+        "POST",
+        ALICE_VENDOR_SESSION_URL,
+        json_payload={"checkSum": checksum},
+        proxy_config=proxy_config,
+    )
 
     status = str(payload.get("stat") or payload.get("status") or "").strip().lower()
     session_id = _extract_alice_session_id(payload)
-    if response.status_code < 400 and status in {"ok", "success"} and session_id:
+    if int(payload.get("http_status_code") or 200) < 400 and status in {"ok", "success"} and session_id:
         alice = ProxyAwareAliceblue(user_id=user_id, api_key=auth_code, session_id=session_id, proxy_config=proxy_config)
         alice.alice_session_response = payload
         alice.alice_session_id = session_id
         return alice, payload
 
-    if response.status_code >= 400 and "emsg" not in payload:
-        payload["emsg"] = f"{response.status_code} - {response.reason}"
     return None, payload
 
 
@@ -431,6 +456,110 @@ def _extract_alice_response_message(payload):
     if stat and str(stat).lower() not in {"ok", "success", "completed", "complete"}:
         return str(stat)
     return None
+
+
+def _alice_nested_values(payload):
+    if isinstance(payload, dict):
+        yield payload
+        for value in payload.values():
+            yield from _alice_nested_values(value)
+    elif isinstance(payload, list):
+        for item in payload:
+            yield from _alice_nested_values(item)
+
+
+def _extract_alice_order_id(payload):
+    for item in _alice_nested_values(payload):
+        for key in (
+            "brokerOrderId",
+            "broker_order_id",
+            "orderId",
+            "order_id",
+            "NOrdNo",
+            "nestOrderNumber",
+            "exchangeOrderNo",
+        ):
+            value = item.get(key)
+            if value:
+                return str(value)
+    return None
+
+
+def _extract_alice_order_status(payload):
+    for item in _alice_nested_values(payload):
+        for key in ("orderStatus", "order_status", "status", "stat"):
+            value = item.get(key)
+            if value:
+                return str(value).strip()
+    return None
+
+
+def _alice_order_statuses(payload):
+    statuses = []
+    for item in _alice_nested_values(payload):
+        for key in ("orderStatus", "order_status", "status", "stat"):
+            value = item.get(key)
+            if value:
+                statuses.append(str(value).strip())
+    return statuses
+
+
+def _alice_a3_order_succeeded(payload):
+    order_id = _extract_alice_order_id(payload)
+    if order_id:
+        return True
+    statuses = [status.lower() for status in _alice_order_statuses(payload)]
+    if any(status in {"not_ok", "failed", "failure", "rejected", "cancelled", "error"} for status in statuses):
+        return False
+    if any(status in {"open", "complete", "completed", "pending", "put order req received"} for status in statuses):
+        return True
+    message = str(_extract_alice_response_message(payload) or "").lower()
+    if "routed to execution" in message or "order placed" in message:
+        return True
+    return False
+
+
+def _alice_order_display_status(payload):
+    statuses = _alice_order_statuses(payload)
+    for status in statuses:
+        normalized = status.lower()
+        if normalized in {"failed", "failure", "rejected", "cancelled", "error"}:
+            return "Failed"
+        if normalized not in {"ok", "success"}:
+            return status
+    if any(status.lower() == "success" for status in statuses):
+        return "Success"
+    return "open"
+
+
+def _alice_a3_product(product_type):
+    value = str(product_type or "").strip().upper()
+    if value in {"MIS", "INTRADAY", "I"}:
+        return "INTRADAY"
+    if value in {"NRML", "NORMAL", "CARRYFORWARD", "MARGIN"}:
+        return "NORMAL"
+    if value in {"CNC", "DELIVERY", "LONGTERM"}:
+        return "DELIVERY"
+    return "INTRADAY"
+
+
+def _alice_a3_order_type(order_type):
+    value = normalize_order_type(order_type)
+    if value == "LIMIT":
+        return "LIMIT"
+    if value == "MARKET":
+        return "MARKET"
+    if value in {"SL", "STOPLOSS_LIMIT"}:
+        return "SL"
+    if value in {"SLM", "STOPLOSS_MARKET"}:
+        return "SLM"
+    return value
+
+
+def get_alice_a3_orderbook(session_id, proxy_config=None):
+    if not session_id:
+        return {"status": "Not_ok", "message": "Alice Blue session token is missing."}
+    return _alice_a3_request("GET", A3_ORDER_BOOK_URL, session_id=session_id, proxy_config=proxy_config)
 
 
 def get_alice_session(user_id, api_key=None, proxy_config=None, api_secret=None, auth_code=None, return_error=False):
@@ -620,67 +749,92 @@ def place_alice_orders(
         if not alice:
             return _alice_failed_response(session_error or "Alice Blue login failed or API is disabled.")
 
-        txn = TransactionType.Buy if transaction_type.upper() == "BUY" else TransactionType.Sell
-
-        product_type = ProductType.Intraday if str(product_type).upper() in ["MIS", "INTRADAY"] else ProductType.Normal
-
         # Instrument
+        exchange = str(Exchange or "NFO").strip().upper()
         try:
-            if Exchange == "NFO":
-                fetch_instrument_data(alice, "NFO")
-                instrument = alice.get_instrument_by_symbol("NFO", trading_symbol_aliceblue)
-            else:
-                instrument = alice.get_instrument_by_symbol("BSE", trading_symbol_aliceblue)
+            fetch_exchange = exchange if exchange in {"NFO", "NSE", "BSE", "MCX"} else "NFO"
+            fetch_instrument_data(alice, fetch_exchange)
+            instrument = alice.get_instrument_by_symbol(fetch_exchange, trading_symbol_aliceblue)
         except Exception as e:
             return _alice_failed_response(str(e))
 
         if not instrument:
             return _alice_failed_response("Instrument not found")
 
-        try:
-            ltp_payload = alice.get_scrip_info(instrument)
-            ltp = float(extract_ltp_from_quote_payload(ltp_payload) or 0)
-        except Exception as e:
-            logger.error(f"{user}: Alice Blue LTP fetch failed: {str(e)}")
-            ltp = 0
-
-        if ltp == 0:
-            return _alice_failed_response("Invalid LTP")
-
         requested_order_type = normalize_order_type(order_type)
+        ltp = 0
         if requested_order_type == "LIMIT":
-            price = resolve_limit_price(price, ltp, transaction_type)
+            explicit_price = price
+            if not explicit_price:
+                try:
+                    ltp_payload = alice.get_scrip_info(instrument)
+                    ltp = float(extract_ltp_from_quote_payload(ltp_payload) or 0)
+                except Exception as e:
+                    logger.error(f"{user}: Alice Blue LTP fetch failed: {str(e)}")
+                    ltp = 0
+
+                if ltp == 0:
+                    return _alice_failed_response("Invalid LTP")
+
+            price = resolve_limit_price(explicit_price, ltp, transaction_type)
             if not price:
                 return _alice_failed_response("Unable to calculate Alice Blue limit price.")
-            alice_order_type = OrderType.Limit
         elif requested_order_type == "MARKET":
             price = 0
-            alice_order_type = OrderType.Market
         else:
             return _alice_failed_response(f"Unsupported Alice Blue order type: {requested_order_type}")
 
-        # Place order
-        try:
-            response = alice.place_order(
-                transaction_type=txn,
-                instrument=instrument,
-                quantity=quantity,
-                order_type=alice_order_type,
-                product_type=product_type,
-                price=price
-            )
-        except Exception as e:
-            return _alice_failed_response(str(e))
+        instrument_id = str(
+            getattr(instrument, "token", "")
+            or getattr(instrument, "instrument_token", "")
+            or getattr(instrument, "instrumentId", "")
+            or ""
+        ).strip()
+        if not instrument_id:
+            return _alice_failed_response("Alice Blue instrument token was not found for the selected symbol.")
 
-        if response and response.get("stat") == "Ok":
+        broker_session_id = getattr(alice, "alice_session_id", None) or session_id
+        order_payload = [{
+            "exchange": fetch_exchange,
+            "instrumentId": instrument_id,
+            "transactionType": str(transaction_type or "").strip().upper(),
+            "quantity": int(quantity or 0),
+            "product": _alice_a3_product(product_type),
+            "orderComplexity": "REGULAR",
+            "orderType": _alice_a3_order_type(requested_order_type),
+            "validity": "DAY",
+            "price": price if requested_order_type == "LIMIT" else 0,
+            "slTriggerPrice": trigger_price or "",
+            "slLegPrice": "",
+            "targetLegPrice": "",
+            "disclosedQuantity": "",
+            "marketProtectionPercent": "",
+            "trailingSlAmount": "",
+            "apiOrderSource": "",
+            "algoId": "",
+            "orderTag": str(history_id or ""),
+        }]
+
+        response = _alice_a3_request(
+            "POST",
+            A3_ORDER_PLACE_URL,
+            session_id=broker_session_id,
+            json_payload=order_payload,
+            proxy_config=proxy_config,
+        )
+
+        if _alice_a3_order_succeeded(response):
             return {
                 "data": {
-                    "status": "completed",
-                    "order_id": response.get("NOrdNo"),
+                    "status": _alice_order_display_status(response),
+                    "order_id": _extract_alice_order_id(response),
+                    "message": _extract_alice_response_message(response) or _alice_order_display_status(response),
                     "order_type": requested_order_type,
                     "price": price if price else None,
-                    "ltp": ltp,
-                    "reference_price": ltp,
+                    "ltp": ltp or None,
+                    "reference_price": ltp or None,
+                    "response": response,
+                    "broker_order": response,
                 }
             }
 

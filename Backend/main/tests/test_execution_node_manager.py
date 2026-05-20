@@ -306,18 +306,22 @@ class ExecutionNodeManagerTests(TestCase):
 
     @mock.patch("main.Alice_Blue_Api.requests.request")
     def test_alice_blue_websocket_session_calls_use_proxy(self, mock_request):
-        from main.Alice_Blue_Api import ProxyAwareAliceblue
+        from main.Alice_Blue_Api import A3_WS_CREATE_URL, A3_WS_INVALIDATE_URL, ProxyAwareAliceblue
 
         proxy_config = {"http": "http://proxy.example.com:8080", "https": "http://proxy.example.com:8080"}
-        mock_request.return_value = SimpleNamespace(json=lambda: {"stat": "Ok"})
+        mock_request.return_value = SimpleNamespace(status_code=200, reason="OK", json=lambda: {"status": "Ok"})
         alice = ProxyAwareAliceblue(user_id="alice-user", api_key="alice-api", proxy_config=proxy_config)
 
         alice.invalid_sess("session-token")
         alice.createSession("session-token")
 
         self.assertEqual(mock_request.call_count, 2)
+        self.assertEqual(mock_request.call_args_list[0].args[:2], ("POST", A3_WS_INVALIDATE_URL))
+        self.assertEqual(mock_request.call_args_list[1].args[:2], ("POST", A3_WS_CREATE_URL))
         for call in mock_request.call_args_list:
             self.assertEqual(call.kwargs["proxies"], proxy_config)
+            self.assertEqual(call.kwargs["headers"]["Authorization"], "Bearer session-token")
+            self.assertEqual(call.kwargs["json"]["source"], "API")
 
     @mock.patch("builtins.open", new_callable=mock.mock_open)
     @mock.patch("main.Alice_Blue_Api.requests.get")
@@ -337,6 +341,31 @@ class ExecutionNodeManagerTests(TestCase):
 
         self.assertEqual(mock_get.call_args.kwargs["proxies"], proxy_config)
         mock_file.assert_called_once_with("NFO.csv", "w")
+
+    @mock.patch("main.Alice_Blue_Api.requests.request")
+    def test_alice_blue_vendor_session_uses_a3_open_api(self, mock_request):
+        from main.Alice_Blue_Api import A3_VENDOR_SESSION_URL, _build_alice_vendor_session
+
+        proxy_config = {"http": "http://proxy.example.com:8080", "https": "http://proxy.example.com:8080"}
+        mock_request.return_value = SimpleNamespace(
+            status_code=200,
+            reason="OK",
+            json=lambda: {"status": "Ok", "result": [{"accessToken": "a3-access-token"}]},
+        )
+
+        alice, payload = _build_alice_vendor_session(
+            "alice-user",
+            "auth-code",
+            "api-secret",
+            proxy_config=proxy_config,
+        )
+
+        self.assertIsNotNone(alice)
+        self.assertEqual(alice.alice_session_id, "a3-access-token")
+        self.assertEqual(payload["status"], "Ok")
+        self.assertEqual(mock_request.call_args.args[:2], ("POST", A3_VENDOR_SESSION_URL))
+        self.assertEqual(mock_request.call_args.kwargs["proxies"], proxy_config)
+        self.assertIn("checkSum", mock_request.call_args.kwargs["json"])
 
     @mock.patch("main.views.get_alice_session")
     def test_alice_blue_generate_token_redirects_to_sso_flow(self, mock_get_alice_session):
@@ -412,6 +441,68 @@ class ExecutionNodeManagerTests(TestCase):
 
         self.assertIn("rejected the saved User ID", user_error)
         self.assertIn("rejected the saved ANT API_KEY", key_error)
+
+    @mock.patch("main.Alice_Blue_Api.requests.request")
+    @mock.patch("main.Alice_Blue_Api.fetch_instrument_data")
+    @mock.patch("main.Alice_Blue_Api.get_alice_saved_session")
+    def test_alice_blue_place_order_uses_a3_open_api(self, mock_saved_session, mock_fetch, mock_request):
+        from main.Alice_Blue_Api import A3_ORDER_PLACE_URL
+
+        proxy_config = {"http": "http://proxy.example.com:8080", "https": "http://proxy.example.com:8080"}
+        alice = SimpleNamespace(
+            alice_session_id="saved-session",
+            get_instrument_by_symbol=mock.Mock(return_value=SimpleNamespace(token="260520000352208")),
+        )
+        mock_saved_session.return_value = (alice, None)
+        mock_request.return_value = SimpleNamespace(
+            status_code=200,
+            reason="OK",
+            json=lambda: {
+                "status": "Ok",
+                "result": [{"brokerOrderId": "260520000352208", "status": "open", "message": "Order routed to execution node."}],
+            },
+        )
+
+        response = place_alice_orders(
+            None,
+            None,
+            "api-key",
+            "alice-user",
+            "NIFTY26MAY2623600CE",
+            "BUY",
+            "NIFTY",
+            75,
+            "test",
+            "LIMIT",
+            "INTRADAY",
+            211.65,
+            self.client_user,
+            1,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            "NFO",
+            "FNO",
+            "NIFTY",
+            history_id="alice-a3",
+            proxy_config=proxy_config,
+            session_id="saved-session",
+        )
+
+        self.assertEqual(response["data"]["status"], "open")
+        self.assertEqual(response["data"]["order_id"], "260520000352208")
+        self.assertEqual(mock_request.call_args.args[:2], ("POST", A3_ORDER_PLACE_URL))
+        self.assertEqual(mock_request.call_args.kwargs["headers"]["Authorization"], "Bearer saved-session")
+        self.assertEqual(mock_request.call_args.kwargs["proxies"], proxy_config)
+        order_payload = mock_request.call_args.kwargs["json"][0]
+        self.assertEqual(order_payload["instrumentId"], "260520000352208")
+        self.assertEqual(order_payload["orderComplexity"], "REGULAR")
+        self.assertEqual(order_payload["product"], "INTRADAY")
+        self.assertEqual(order_payload["price"], 211.65)
 
     @mock.patch("main.angelone.managers.session_manager.SmartConnect")
     def test_angel_one_session_builds_smart_connect_with_proxy(self, mock_smart_connect):

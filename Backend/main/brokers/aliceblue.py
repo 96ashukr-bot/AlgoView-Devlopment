@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from django.utils import timezone
 
-from main.Alice_Blue_Api import get_alice_saved_session, place_alice_orders
+from main.Alice_Blue_Api import get_alice_a3_orderbook, get_alice_saved_session, place_alice_orders
 from main.brokers.base import BaseBroker
 from main.brokers.utils import build_trade_symbol, get_access_token
 
@@ -79,7 +79,7 @@ class AliceBlueBroker(BaseBroker):
         )
         if not alice:
             return {"status": "failed", "message": error or "Alice Blue saved session could not be prepared."}
-        response = alice._get("orderbook")
+        response = get_alice_a3_orderbook(get_access_token(self.broker_details), proxy_config=proxy_config)
         status = str(response.get("stat") or response.get("status") or "").strip().lower() if isinstance(response, dict) else ""
         if status in {"ok", "success"}:
             return {"status": "success", "response": response}
