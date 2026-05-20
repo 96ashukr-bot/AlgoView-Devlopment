@@ -53,17 +53,7 @@ const SidebarMenuItems = ({ setMainMenu, sidebartoogle, setNavActive, activeClas
   let menuItems;
 
   if (isAdmin || isSuperAdmin ) {
-      menuItems = MENUITEMS.map((section) => ({
-        ...section,
-        Items: section.Items
-          .filter((item) => isSuperAdmin || !item.superadminOnly)
-          .map((item) => ({
-            ...item,
-            children: item.children
-              ? item.children.filter((child) => isSuperAdmin || !child.superadminOnly)
-              : item.children,
-          })),
-      }));
+      menuItems = MENUITEMS;
   } else if (issubAdmin) {
       menuItems = MENUITEMSNEWNEW; 
   } else {
@@ -119,7 +109,7 @@ const SidebarMenuItems = ({ setMainMenu, sidebartoogle, setNavActive, activeClas
               <h6 className="lan-1">{t(Item.menutitle)}</h6>
             </div>
           </li>
-          {Item.Items.map((menuItem, i) => (
+          {Item.Items.filter((menuItem) => isSuperAdmin || !menuItem.superadminOnly).map((menuItem, i) => (
             <li className="sidebar-list" key={i}>
               {menuItem.type === "sub" ? (
                 <a
@@ -153,7 +143,7 @@ const SidebarMenuItems = ({ setMainMenu, sidebartoogle, setNavActive, activeClas
 
               {menuItem.children ? (
                 <ul className="sidebar-submenu" style={layout1 !== "compact-sidebar compact-small" ? (menuItem?.active || CurrentPath.includes(menuItem?.title?.toLowerCase()) ? (sidebartoogle ? { opacity: 1, transition: "opacity 500ms ease-in" } : { display: "block" }) : { display: "none" }) : { display: "none" }}>
-                  {menuItem.children.map((childrenItem, index) => {
+                  {menuItem.children.filter((childrenItem) => isSuperAdmin || !childrenItem.superadminOnly).map((childrenItem, index) => {
                     return (
                       <li key={index}>
                         {childrenItem.type === "sub" ? (
