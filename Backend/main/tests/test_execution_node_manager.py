@@ -276,6 +276,23 @@ class ExecutionNodeManagerTests(TestCase):
 
         self.assertEqual(message, "Invalid symbol")
 
+    def test_alice_blue_pre_placement_errors_are_failed(self):
+        from main.Alice_Blue_Api import _alice_failed_response
+
+        response = _alice_failed_response("Invalid LTP")
+
+        self.assertEqual(response["data"]["status"], "Failed")
+        self.assertEqual(response["data"]["message"], "Invalid LTP")
+
+    def test_execution_engine_normalizes_nested_error_status_to_failed(self):
+        from main.execution_engine import ExecutionEngine
+
+        normalized = ExecutionEngine()._normalize_response({"data": {"status": "error", "message": "Invalid LTP"}, "job_id": 769})
+
+        self.assertEqual(normalized["data"]["status"], "Failed")
+        self.assertEqual(normalized["data"]["message"], "Invalid LTP")
+        self.assertEqual(normalized["job_id"], 769)
+
     @mock.patch("main.Alice_Blue_Api.requests.get")
     def test_alice_blue_proxy_client_passes_proxies_to_requests(self, mock_get):
         from main.Alice_Blue_Api import ProxyAwareAliceblue

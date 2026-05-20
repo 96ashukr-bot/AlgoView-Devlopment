@@ -483,6 +483,12 @@ def get_limit_price(ltp, side):
     return resolve_limit_price(None, ltp, side)
 
 
+def _alice_failed_response(message, **extra):
+    data = {"status": "Failed", "message": str(message or "Alice Blue order failed.")}
+    data.update({key: value for key, value in extra.items() if value not in (None, "")})
+    return {"data": data}
+
+
 # ==============================
 # MARKET CHECK (FIXED)
 # ==============================
@@ -521,7 +527,7 @@ def place_alice_orders(
     allow_direct_node_execution=False,
 ):
     if not proxy_config and not allow_direct_node_execution:
-        return {"data": {"status": "Failed", "message": "Proxy/static-IP execution route is required for Alice Blue orders."}}
+        return _alice_failed_response("Proxy/static-IP execution route is required for Alice Blue orders.")
     try:
         if session_id:
             alice, session_error = get_alice_saved_session(
@@ -540,7 +546,7 @@ def place_alice_orders(
             )
 
         if not alice:
-            return {"data": {"status": "Failed", "message": session_error or "Alice Blue login failed or API is disabled."}}
+            return _alice_failed_response(session_error or "Alice Blue login failed or API is disabled.")
 
         txn = TransactionType.Buy if transaction_type.upper() == "BUY" else TransactionType.Sell
 
@@ -554,10 +560,10 @@ def place_alice_orders(
             else:
                 instrument = alice.get_instrument_by_symbol("BSE", trading_symbol_aliceblue)
         except Exception as e:
-            return {"data": {"status": "error", "message": str(e)}}
+            return _alice_failed_response(str(e))
 
         if not instrument:
-            return {"data": {"status": "error", "message": "Instrument not found"}}
+            return _alice_failed_response("Instrument not found")
 
         try:
             ltp_payload = alice.get_scrip_info(instrument)
@@ -567,19 +573,19 @@ def place_alice_orders(
             ltp = 0
 
         if ltp == 0:
-            return {"data": {"status": "error", "message": "Invalid LTP"}}
+            return _alice_failed_response("Invalid LTP")
 
         requested_order_type = normalize_order_type(order_type)
         if requested_order_type == "LIMIT":
             price = resolve_limit_price(price, ltp, transaction_type)
             if not price:
-                return {"data": {"status": "error", "message": "Unable to calculate Alice Blue limit price."}}
+                return _alice_failed_response("Unable to calculate Alice Blue limit price.")
             alice_order_type = OrderType.Limit
         elif requested_order_type == "MARKET":
             price = 0
             alice_order_type = OrderType.Market
         else:
-            return {"data": {"status": "error", "message": f"Unsupported Alice Blue order type: {requested_order_type}"}}
+            return _alice_failed_response(f"Unsupported Alice Blue order type: {requested_order_type}")
 
         # Place order
         try:
@@ -592,7 +598,7 @@ def place_alice_orders(
                 price=price
             )
         except Exception as e:
-            return {"data": {"status": "order_failed", "message": str(e)}}
+            return _alice_failed_response(str(e))
 
         if response and response.get("stat") == "Ok":
             return {
@@ -607,11 +613,11 @@ def place_alice_orders(
             }
 
         message = _extract_alice_response_message(response) or "Broker rejected Alice Blue order."
-        return {"data": {"status": "Failed", "message": message, "response": response}}
+        return _alice_failed_response(message, response=response)
 
     except Exception as e:
         logger.error(str(e))
-        return {"data": {"status": "error", "message": str(e)}}
+        return _alice_failed_response(str(e))
 
 
 # ==============================

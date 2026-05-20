@@ -1217,6 +1217,11 @@ class ExecutionEngine:
 
     def _normalize_response(self, response: Any) -> Dict[str, Any]:
         if isinstance(response, dict) and isinstance(response.get("data"), dict):
+            data = dict(response.get("data") or {})
+            nested_status = str(data.get("status", "") or "").strip().lower()
+            if nested_status in {"error", "failed", "failure", "rejected", "cancelled", "canceled", "order_failed"}:
+                data["status"] = "Failed"
+                return {**response, "data": data}
             return response
         if isinstance(response, dict) and isinstance(response.get("data"), list):
             data_items = response.get("data") or []
