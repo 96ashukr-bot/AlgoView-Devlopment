@@ -17,7 +17,7 @@ from rest_framework.views import APIView
 
 from main.brokers import get_broker_adapter
 from main.models import ClientBrokerdetails, ExecutionNode, ExecutionNodeLog, ExecutionOrderJob, User
-from main.permissions import is_admin_or_superadmin
+from main.permissions import can_access_client_record, is_admin_or_superadmin, is_subadmin_user
 from main.services.execution_nodes import assign_execution_node_to_client, release_execution_node
 from main.services.execution_router import route_order_to_execution_node
 from main.services.node_security import verify_node_signature
@@ -233,8 +233,14 @@ class ExecutionOrderJobSerializer(serializers.ModelSerializer):
 
 
 def _require_node_admin(user):
-    if not is_admin_or_superadmin(user):
-        raise PermissionDenied("Only admin users can manage execution nodes.")
+    if not (is_admin_or_superadmin(user) or is_subadmin_user(user)):
+        raise PermissionDenied("Only admin or subadmin users can manage execution nodes.")
+
+
+def _require_client_node_access(user, client):
+    _require_node_admin(user)
+    if is_subadmin_user(user) and not can_access_client_record(user, client):
+        raise PermissionDenied("You can only assign execution IPs to your own clients.")
 
 
 class ExecutionNodeListAPIView(APIView):
@@ -250,6 +256,9 @@ class ExecutionNodeListAPIView(APIView):
         serializer = ExecutionNodeSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         node = serializer.save()
+        if not node.assigned_client_id and node.status == ExecutionNode.STATUS_ASSIGNED:
+            node.status = ExecutionNode.STATUS_FREE
+            node.save(update_fields=["status", "updated_at"])
         raw_secret = request.data.get("node_secret")
         if raw_secret:
             node.set_node_secret(raw_secret)
@@ -264,6 +273,7 @@ class ExecutionNodeAssignAPIView(APIView):
     def post(self, request):
         _require_node_admin(request.user)
         client = User.objects.get(pk=request.data.get("client_id"))
+        _require_client_node_access(request.user, client)
         node = ExecutionNode.objects.get(pk=request.data.get("node_id"))
         assigned = assign_execution_node_to_client(client, node)
         return Response(ExecutionNodeSerializer(assigned).data)
@@ -275,6 +285,7 @@ class ExecutionNodeAssignByIdAPIView(APIView):
     def post(self, request, node_id):
         _require_node_admin(request.user)
         client = User.objects.get(pk=request.data.get("client_id"))
+        _require_client_node_access(request.user, client)
         node = ExecutionNode.objects.get(pk=node_id)
         assigned = assign_execution_node_to_client(client, node)
         return Response(ExecutionNodeSerializer(assigned).data)
@@ -307,6 +318,7 @@ class ExecutionNodeReleaseAPIView(APIView):
     def post(self, request):
         _require_node_admin(request.user)
         client = User.objects.get(pk=request.data.get("client_id"))
+        _require_client_node_access(request.user, client)
         node = release_execution_node(client)
         return Response({"status": "released", "node_id": node.id if node else None})
 
@@ -319,6 +331,7 @@ class ExecutionNodeReleaseByIdAPIView(APIView):
         node = ExecutionNode.objects.select_related("assigned_client").get(pk=node_id)
         client = node.assigned_client
         if client:
+            _require_client_node_access(request.user, client)
             release_execution_node(client)
         return Response({"status": "released", "node_id": node.id})
 

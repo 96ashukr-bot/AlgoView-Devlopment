@@ -64,10 +64,10 @@ const ClientView = () => {
         proxy_port: '',
         proxy_username: '',
         proxy_password: '',
-        status: 'assigned',
+        status: 'free',
         is_active: true,
         is_verified_with_broker: true,
-        assign_now: true,
+        assign_now: false,
     });
 
     useEffect(() => {
@@ -202,6 +202,8 @@ const ClientView = () => {
     const assignableExecutionNodes = executionNodes.filter(
         (node) => !node.assigned_client || Number(node.assigned_client) === Number(clientId)
     );
+    const freePoolNodes = executionNodes.filter((node) => !node.assigned_client);
+    const assignedPoolNodes = executionNodes.filter((node) => node.assigned_client);
 
     const resetNodeForm = () => {
         setNodeForm({
@@ -217,10 +219,10 @@ const ClientView = () => {
             proxy_port: '',
             proxy_username: '',
             proxy_password: '',
-            status: 'assigned',
+            status: 'free',
             is_active: true,
             is_verified_with_broker: true,
-            assign_now: true,
+            assign_now: false,
         });
     };
 
@@ -256,6 +258,17 @@ const ClientView = () => {
         }
     };
 
+    const handleVerifyProxyNode = async (nodeId) => {
+        try {
+            const response = await verifyExecutionNodeProxy(nodeId);
+            const result = response?.result;
+            toast.success(result?.message || 'Proxy IP verification completed.');
+            fetchExecutionNodes();
+        } catch (error) {
+            toast.error(error.message || 'Failed to verify proxy IP.');
+        }
+    };
+
     const handleCreateNode = async () => {
         const isProxy = nodeForm.execution_type === 'proxy';
         const requiredFields = isProxy
@@ -274,7 +287,7 @@ const ClientView = () => {
                 execution_type: nodeForm.execution_type,
                 ip_address: nodeForm.ip_address.trim(),
                 provider: nodeForm.provider.trim(),
-                status: nodeForm.status,
+                status: 'free',
                 is_active: nodeForm.is_active,
                 is_verified_with_broker: nodeForm.is_verified_with_broker,
             };
@@ -620,16 +633,16 @@ const ClientView = () => {
                                     >
                                         <div className="d-flex justify-content-between align-items-center mb-3">
                                             <div>
-                                                <h4 className="mb-1">Static Execution IP</h4>
+                                                <h4 className="mb-1">IP Pool</h4>
                                                 <p className="mb-0" style={{ color: '#6b7280' }}>
-                                                    Assign the client to the VPS/IP that will place broker orders.
+                                                    Create VPS/proxy IPs in the pool, keep them free, and assign one to this client when ready.
                                                 </p>
                                             </div>
                                             <Button
                                                 className="btn btn-primary search-btn-clr"
                                                 onClick={() => setIsNodeModalOpen(true)}
                                             >
-                                                Add IP
+                                                Add IP to Pool
                                             </Button>
                                         </div>
 
@@ -673,7 +686,7 @@ const ClientView = () => {
                                                         <option value="">Select execution IP</option>
                                                         {assignableExecutionNodes.map((node) => (
                                                             <option key={node.id} value={node.id}>
-                                                                {node.name} - {node.ip_address} ({node.status})
+                                                                {node.name} - {node.ip_address} ({node.execution_type === 'proxy' ? 'Proxy' : 'VPS'} / {node.status})
                                                             </option>
                                                         ))}
                                                     </Input>
@@ -695,6 +708,102 @@ const ClientView = () => {
                                                 </Col>
                                             </Row>
                                         )}
+
+                                        <div className="mt-4">
+                                            <div className="d-flex justify-content-between align-items-center mb-2">
+                                                <h5 className="mb-0">Available Pool</h5>
+                                                <span style={{ color: '#6b7280', fontWeight: 600 }}>
+                                                    {freePoolNodes.length} free / {assignedPoolNodes.length} assigned
+                                                </span>
+                                            </div>
+                                            <div style={{ overflowX: 'auto' }}>
+                                                <table className="table table-bordered table-hover mb-0">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Name</th>
+                                                            <th>Type</th>
+                                                            <th>Static IP</th>
+                                                            <th>Provider</th>
+                                                            <th>Status</th>
+                                                            <th>Proxy Check</th>
+                                                            <th>Assigned Client</th>
+                                                            <th>Action</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {executionNodes.length > 0 ? (
+                                                            executionNodes.map((node) => {
+                                                                const isAssignedToThisClient = Number(node.assigned_client) === Number(clientId);
+                                                                const isFree = !node.assigned_client;
+                                                                return (
+                                                                    <tr key={node.id}>
+                                                                        <td>{node.name || '-'}</td>
+                                                                        <td>{node.execution_type === 'proxy' ? 'Proxy' : 'VPS'}</td>
+                                                                        <td>{node.ip_address || '-'}</td>
+                                                                        <td>{node.provider || '-'}</td>
+                                                                        <td>
+                                                                            {node.status || '-'}
+                                                                            {node.is_active ? '' : ' / inactive'}
+                                                                            {node.is_verified_with_broker ? ' / broker verified' : ' / broker pending'}
+                                                                        </td>
+                                                                        <td>
+                                                                            {node.execution_type === 'proxy' ? (
+                                                                                <>
+                                                                                    <div>{node.proxy_public_ip_verified ? 'Verified' : 'Not verified'}</div>
+                                                                                    {node.proxy_last_seen_ip && (
+                                                                                        <small style={{ color: '#6b7280' }}>{node.proxy_last_seen_ip}</small>
+                                                                                    )}
+                                                                                </>
+                                                                            ) : (
+                                                                                'Not applicable'
+                                                                            )}
+                                                                        </td>
+                                                                        <td>{node.assigned_client_email || (isFree ? 'Free' : `Client #${node.assigned_client}`)}</td>
+                                                                        <td>
+                                                                            <div className="d-flex" style={{ gap: '8px', flexWrap: 'wrap' }}>
+                                                                                {node.execution_type === 'proxy' && (
+                                                                                    <Button
+                                                                                        size="sm"
+                                                                                        color="secondary"
+                                                                                        outline
+                                                                                        onClick={() => handleVerifyProxyNode(node.id)}
+                                                                                    >
+                                                                                        Verify
+                                                                                    </Button>
+                                                                                )}
+                                                                                {isFree && (
+                                                                                    <Button
+                                                                                        size="sm"
+                                                                                        className="search-btn-clr"
+                                                                                        onClick={async () => {
+                                                                                            setSelectedExecutionNodeId(String(node.id));
+                                                                                            await assignExecutionNodeToClient(clientId, node.id);
+                                                                                            toast.success('Execution IP assigned to client.');
+                                                                                            fetchExecutionNodes();
+                                                                                        }}
+                                                                                    >
+                                                                                        Assign
+                                                                                    </Button>
+                                                                                )}
+                                                                                {isAssignedToThisClient && (
+                                                                                    <Button size="sm" color="danger" outline onClick={handleReleaseNode}>
+                                                                                        Release
+                                                                                    </Button>
+                                                                                )}
+                                                                            </div>
+                                                                        </td>
+                                                                    </tr>
+                                                                );
+                                                            })
+                                                        ) : (
+                                                            <tr>
+                                                                <td colSpan="8" className="text-center">No IPs are available in the pool.</td>
+                                                            </tr>
+                                                        )}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
                                     </div>
                                 </Col>
                             </Row>
@@ -869,7 +978,7 @@ const ClientView = () => {
                 </Col>
             </Row>
             <Modal isOpen={isNodeModalOpen} toggle={() => setIsNodeModalOpen(false)} size="lg">
-                <ModalHeader toggle={() => setIsNodeModalOpen(false)}>Add Static Execution IP</ModalHeader>
+                <ModalHeader toggle={() => setIsNodeModalOpen(false)}>Add IP to Pool</ModalHeader>
                 <ModalBody>
                     <Form>
                         <Row>
@@ -1012,10 +1121,15 @@ const ClientView = () => {
                                         checked={nodeForm.assign_now}
                                         onChange={handleNodeFormChange}
                                     />
-                                    <Label check>Assign to this client</Label>
+                                    <Label check>Assign to this client now</Label>
                                 </FormGroup>
                             </Col>
                         </Row>
+                        {!nodeForm.assign_now && (
+                            <p className="mt-3 mb-0" style={{ color: '#6b7280' }}>
+                                This IP will be saved as Free in the pool and can be assigned later.
+                            </p>
+                        )}
                     </Form>
                 </ModalBody>
                 <ModalFooter>
@@ -1023,7 +1137,7 @@ const ClientView = () => {
                         Cancel
                     </Button>
                     <Button className="btn btn-primary search-btn-clr" onClick={handleCreateNode} disabled={isNodeSaving}>
-                        {isNodeSaving ? 'Saving...' : 'Add IP'}
+                        {isNodeSaving ? 'Saving...' : 'Save IP'}
                     </Button>
                 </ModalFooter>
             </Modal>
