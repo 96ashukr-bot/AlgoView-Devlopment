@@ -89,6 +89,20 @@ export const MENUITEMS = [
       },
 
       {
+        title: "IP Pool",
+        icon: "others",
+        type: "sub",
+        bookmark: true,
+        active: false,
+        superadminOnly: true,
+        children: [
+          { path: `/ip-pool/create`, title: "Create IP", type: "link" },
+          { path: `/ip-pool/assigned`, title: "Assigned IP", type: "link" },
+          { path: `/ip-pool/unassigned`, title: "Unassigned IP", type: "link" },
+        ],
+      },
+
+      {
         title: "License",
         icon: "chat",
         // path: `/table/datatable/signals`,

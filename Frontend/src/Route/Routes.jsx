@@ -181,6 +181,7 @@ import WebSocket from "../Components/Tables/DataTable/MasterSettings/WebSocket";
 import CompleteTradeHistory from "../Components/Tables/DataTable/TradeDetails/CompleteTrade";
 import WebhookDiagnostics from "../Components/Tables/DataTable/TradeDetails/WebhookDiagnostics";
 import SLTPWatcher from "../Components/Tables/DataTable/TradeDetails/SLTPWatcher";
+import IPPool from "../Components/Application/IPPool/IPPool";
 
 export const routes = [
   { path: `/dashboard/algoviewtech/user`, Component: <Default /> },
@@ -233,6 +234,9 @@ export const routes = [
   { path: `/service-manage/clientstrategies`, Component: <StrategiesClient />},
   { path: `/service-manage/client-group-service`, Component: <StrategiesClient />},
   { path: `/service-manage/client-strategies/view-strategies/:id`, Component: <StrategiesClientView />},
+  { path: `/ip-pool/create`, Component: <IPPool mode="create" />},
+  { path: `/ip-pool/assigned`, Component: <IPPool mode="assigned" />},
+  { path: `/ip-pool/unassigned`, Component: <IPPool mode="unassigned" />},
   { path: `/dashboard/optionchain`, Component: <OptionChain />},
   { path: `/openposition/optionchainlist`, Component: <OpenPosition />},
   { path: `/license/transactionlicense`, Component: <TransactionLicense />},

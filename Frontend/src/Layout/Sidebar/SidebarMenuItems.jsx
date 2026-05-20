@@ -53,7 +53,17 @@ const SidebarMenuItems = ({ setMainMenu, sidebartoogle, setNavActive, activeClas
   let menuItems;
 
   if (isAdmin || isSuperAdmin ) {
-      menuItems = MENUITEMS;
+      menuItems = MENUITEMS.map((section) => ({
+        ...section,
+        Items: section.Items
+          .filter((item) => isSuperAdmin || !item.superadminOnly)
+          .map((item) => ({
+            ...item,
+            children: item.children
+              ? item.children.filter((child) => isSuperAdmin || !child.superadminOnly)
+              : item.children,
+          })),
+      }));
   } else if (issubAdmin) {
       menuItems = MENUITEMSNEWNEW; 
   } else {
