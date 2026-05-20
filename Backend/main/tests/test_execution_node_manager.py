@@ -11,7 +11,7 @@ from django.utils import timezone
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from main.brokers.base import get_broker_adapter
-from main.models import Broker, ClientBrokerdetails, ExecutionNode, ExecutionOrderJob, User
+from main.models import Broker, ClientBrokerdetails, ExecutionNode, ExecutionOrderJob, Role, User
 from main.services.execution_nodes import assign_execution_node_to_client, release_execution_node
 from main.services.execution_router import route_order_to_execution_node
 from main.services.egress_guard import _is_broker_url, _is_public_instrument_master_url
@@ -160,6 +160,39 @@ class ExecutionNodeManagerTests(TestCase):
     def test_broker_adapter_selection(self):
         adapter = get_broker_adapter(self.broker_details)
         self.assertEqual(adapter.broker_name, "angel one")
+
+    def test_subadmin_cannot_access_ip_pool_api(self):
+        subadmin_role, _ = Role.objects.get_or_create(name="Sub-Admin", defaults={"status": "active"})
+        subadmin = User.objects.create_user(
+            email="subadmin-ip-pool@example.com",
+            firstName="Sub",
+            lastName="Admin",
+            phoneNumber="9999999997",
+            password="Pass@123",
+            role=subadmin_role,
+        )
+        access_token = str(RefreshToken.for_user(subadmin).access_token)
+
+        response = self.client.get("/api/execution-nodes/", HTTP_AUTHORIZATION=f"Bearer {access_token}")
+
+        self.assertEqual(response.status_code, 403)
+        self.assertIn("Only superadmin users can manage the IP pool", str(response.json()))
+
+    def test_superadmin_can_access_ip_pool_api(self):
+        superadmin = User.objects.create_user(
+            email="superadmin-ip-pool@example.com",
+            firstName="Super",
+            lastName="Admin",
+            phoneNumber="9999999996",
+            password="Pass@123",
+            is_superuser=True,
+        )
+        access_token = str(RefreshToken.for_user(superadmin).access_token)
+
+        response = self.client.get("/api/execution-nodes/", HTTP_AUTHORIZATION=f"Bearer {access_token}")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("results", response.json())
 
     @mock.patch("main.brokers.angelone.place_angel_one_order")
     def test_angel_one_adapter_supports_proxy_and_passes_config(self, mock_place_order):

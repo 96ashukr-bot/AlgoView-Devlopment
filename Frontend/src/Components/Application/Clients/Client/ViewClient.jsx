@@ -8,6 +8,7 @@ import {
     getClientApiStatusById,
     getClientBrokerDetailsById,
     getBrokerLoginActivity,
+    fetchUserProfile,
     getExecutionNodes,
     createExecutionNode,
     assignExecutionNodeToClient,
@@ -47,6 +48,7 @@ const ClientView = () => {
     });
     const [brokerDetails, setBrokerDetails] = useState(null);
     const [brokerLogin, setBrokerLogin] = useState(null);
+    const [userRole, setUserRole] = useState('');
     const [executionNodes, setExecutionNodes] = useState([]);
     const [selectedExecutionNodeId, setSelectedExecutionNodeId] = useState('');
     const [isNodeModalOpen, setIsNodeModalOpen] = useState(false);
@@ -76,9 +78,24 @@ const ClientView = () => {
             fetchClientApiStatus(clientId);
             fetchBrokerDetails(clientId);
             fetchBrokerLoginActivity(clientId)
-            fetchExecutionNodes();
         }
     }, [clientId]);
+
+    useEffect(() => {
+        fetchCurrentUserRole();
+    }, []);
+
+    const normalizedRole = String(userRole || '').trim().toLowerCase();
+    const isSuperAdmin = normalizedRole === 'super-admin' || normalizedRole === 'superadmin';
+
+    useEffect(() => {
+        if (clientId && isSuperAdmin) {
+            fetchExecutionNodes();
+        } else {
+            setExecutionNodes([]);
+            setSelectedExecutionNodeId('');
+        }
+    }, [clientId, isSuperAdmin]);
 
     const formatDate = (dateString) => {
         if (!dateString) return '';
@@ -180,6 +197,16 @@ const ClientView = () => {
             setBrokerLogin(response?.data || null);
         } catch (error) {
             console.error('Error fetching broker login activity:', error);
+        }
+    };
+
+    const fetchCurrentUserRole = async () => {
+        try {
+            const profile = await fetchUserProfile();
+            setUserRole(profile?.role?.name || '');
+        } catch (error) {
+            console.error('Error fetching current user role:', error);
+            setUserRole('');
         }
     };
 
@@ -621,6 +648,7 @@ const ClientView = () => {
                                     </Form>
                                 </Col>
                             </Row>
+                            {isSuperAdmin && (
                             <Row className='mt-4'>
                                 <Col md="12" className="mb-4">
                                     <div
@@ -807,6 +835,7 @@ const ClientView = () => {
                                     </div>
                                 </Col>
                             </Row>
+                            )}
                             <Row className='mt-4'>
                                 {/* Left Column - Tabs */}
                                 <Col xs="12" sm="6" md="5" style={{ paddingRight: '30px' }}>
@@ -977,6 +1006,7 @@ const ClientView = () => {
                     </Card>
                 </Col>
             </Row>
+            {isSuperAdmin && (
             <Modal isOpen={isNodeModalOpen} toggle={() => setIsNodeModalOpen(false)} size="lg">
                 <ModalHeader toggle={() => setIsNodeModalOpen(false)}>Add IP to Pool</ModalHeader>
                 <ModalBody>
@@ -1141,6 +1171,7 @@ const ClientView = () => {
                     </Button>
                 </ModalFooter>
             </Modal>
+            )}
         </Container>
     );
 };

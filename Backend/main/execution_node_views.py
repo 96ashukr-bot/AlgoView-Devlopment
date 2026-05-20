@@ -17,7 +17,7 @@ from rest_framework.views import APIView
 
 from main.brokers import get_broker_adapter
 from main.models import ClientBrokerdetails, ExecutionNode, ExecutionNodeLog, ExecutionOrderJob, User
-from main.permissions import can_access_client_record, is_admin_or_superadmin, is_subadmin_user
+from main.permissions import is_superadmin_user
 from main.services.execution_nodes import assign_execution_node_to_client, release_execution_node
 from main.services.execution_router import route_order_to_execution_node
 from main.services.node_security import verify_node_signature
@@ -233,14 +233,12 @@ class ExecutionOrderJobSerializer(serializers.ModelSerializer):
 
 
 def _require_node_admin(user):
-    if not (is_admin_or_superadmin(user) or is_subadmin_user(user)):
-        raise PermissionDenied("Only admin or subadmin users can manage execution nodes.")
+    if not is_superadmin_user(user):
+        raise PermissionDenied("Only superadmin users can manage the IP pool.")
 
 
 def _require_client_node_access(user, client):
     _require_node_admin(user)
-    if is_subadmin_user(user) and not can_access_client_record(user, client):
-        raise PermissionDenied("You can only assign execution IPs to your own clients.")
 
 
 class ExecutionNodeListAPIView(APIView):
