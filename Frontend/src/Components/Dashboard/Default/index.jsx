@@ -4,7 +4,6 @@ import { Breadcrumbs } from "../../../AbstractElements";
 import { RotatingLines } from "react-loader-spinner";
 import ClientHeader from "../../Application/Clients/Client/ClientHeader";
 import GreetingCard from "./GreetingCard";
-import WidgetsWrapper from "./WidgetsWraper";
 import ClientAlert from "../../Application/Clients/Client/ClientAlert";
 
 const Dashboard = () => {
@@ -50,7 +49,6 @@ const Dashboard = () => {
           <Row className="widget-grid">
             <ClientHeader />
             {isClient && <GreetingCard userProfile={userProfile} />}
-            <WidgetsWrapper />
             <ClientAlert />
           </Row>
         )}
