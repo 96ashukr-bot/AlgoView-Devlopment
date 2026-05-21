@@ -32,11 +32,11 @@ export const LogoProvider = ({ children }) => {
 
   const refreshLogo = useCallback(async () => {
     const token = getAccessToken();
-    if (!token) return;
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
     try {
       const response = await axios.get(`${baseUrl}/get-company-profile/`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers,
       });
       const logoUrl = resolveAssetUrl(response.data?.data?.company_logo);
       if (logoUrl) {

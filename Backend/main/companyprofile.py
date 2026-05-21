@@ -4,6 +4,7 @@ from rest_framework.views import APIView
 from main.serializers import *
 from rest_framework import status
 from rest_framework.parsers import FormParser, MultiPartParser
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
 from main.serializers import *#CompanyProfileSerializer
@@ -228,14 +229,24 @@ def _get_company_profile_for_user(user, *, create=False):
 
 
 class CompanyProfileDetailView(APIView):
+    permission_classes = [AllowAny]
 
     def get(self, request, *args, **kwargs):
-        user=request.user
+        user = request.user if request.user and request.user.is_authenticated else None
         """Retrieve a single company by ID or all companies if no ID is provided."""
         try:
-            company = _get_company_profile_for_user(user)
+            company = _get_company_profile_for_user(user) if user else None
             if company is None:
-                company = CompanyProfileDetails.objects.order_by("id").first()
+                company = (
+                    CompanyProfileDetails.objects.filter(user__role__name__iexact="Super-Admin")
+                    .exclude(company_logo="")
+                    .order_by("id")
+                    .first()
+                    or CompanyProfileDetails.objects.exclude(company_logo="")
+                    .order_by("id")
+                    .first()
+                    or CompanyProfileDetails.objects.order_by("id").first()
+                )
             if company is None:
                 raise CompanyProfileDetails.DoesNotExist
             serializer = CompanyProfileSerializer(company)
