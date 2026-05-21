@@ -11,7 +11,12 @@ const LICENSE_NAME_SET = new Set(LICENSE_NAMES.map((name) => name.toLowerCase())
 const DEMO_LICENSE_DAYS = 5;
 const MONTH_OPTIONS = Array.from({ length: 12 }, (_, index) => index + 1);
 
-const formatDateInput = (date) => date.toISOString().split('T')[0];
+const formatDateInput = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
 const getLicenseDates = (licenseName, monthsValue) => {
   if (!licenseName) {
