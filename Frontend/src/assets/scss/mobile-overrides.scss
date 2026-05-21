@@ -1,0 +1,365 @@
+/* Shared mobile fixes for all roles. Keep this file loaded after the template CSS. */
+
+html,
+body,
+#root,
+.App {
+  min-width: 0;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+.page-wrapper,
+.page-body-wrapper,
+.page-body,
+.container,
+.container-fluid {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.page-wrapper .page-body-wrapper .page-body {
+  overflow-x: hidden;
+}
+
+.table-responsive,
+.rdt_Table,
+.dataTables_wrapper {
+  width: 100%;
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-responsive table,
+.rdt_Table,
+.custom-table-design {
+  min-width: 760px;
+}
+
+.card,
+.modal-content,
+.swal2-popup {
+  max-width: 100%;
+}
+
+img,
+svg,
+canvas {
+  max-width: 100%;
+}
+
+@media only screen and (max-width: 991.98px) {
+  body.sidebar-open {
+    overflow: hidden;
+  }
+
+  .page-wrapper.compact-wrapper .page-header,
+  .page-wrapper .page-header {
+    left: 0 !important;
+    right: 0 !important;
+    margin-left: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 68px;
+    z-index: 1000;
+  }
+
+  .page-wrapper .page-header .header-wrapper {
+    min-height: 68px;
+    padding: 10px 14px !important;
+    gap: 10px;
+    flex-wrap: nowrap;
+  }
+
+  .page-wrapper .page-header .header-logo-wrapper {
+    display: flex !important;
+    align-items: center;
+    flex: 0 0 auto;
+    max-width: 58%;
+  }
+
+  .page-wrapper .page-header .header-logo-wrapper .logo-wrapper {
+    display: flex !important;
+    align-items: center;
+    min-width: 0;
+    padding: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .page-wrapper .page-header .header-company-logo {
+    width: clamp(118px, 34vw, 170px) !important;
+    height: 44px !important;
+    object-fit: contain;
+  }
+
+  .page-wrapper .page-header .header-logo-wrapper .toggle-sidebar {
+    position: relative !important;
+    top: auto !important;
+    right: auto !important;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    margin-left: 8px;
+  }
+
+  .page-wrapper .page-header .header-logo-wrapper .toggle-sidebar::before {
+    left: 1px;
+    top: 1px;
+    transform: scale(1);
+  }
+
+  .page-wrapper .page-header .right-header {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex: 1 1 auto;
+    max-width: 42%;
+    width: auto !important;
+  }
+
+  .page-wrapper .page-header .header-wrapper .nav-right > ul > li {
+    padding: 0 4px;
+  }
+
+  .page-wrapper .page-header .header-wrapper .nav-right.right-header ul li .profile-media {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    min-width: 0;
+  }
+
+  .page-wrapper .page-header .header-wrapper .nav-right.right-header ul li .profile-media .media-body {
+    min-width: 0;
+    margin-left: 8px;
+  }
+
+  .page-wrapper .page-header .header-wrapper .nav-right.right-header ul li .profile-media .media-body span,
+  .page-wrapper .page-header .header-wrapper .nav-right.right-header ul li .profile-media .media-body p {
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .page-wrapper.compact-wrapper .page-body-wrapper .page-body,
+  .page-wrapper .page-body-wrapper .page-body {
+    margin-left: 0 !important;
+    margin-top: 68px !important;
+    padding: 14px !important;
+    min-height: calc(100vh - 68px);
+  }
+
+  .page-wrapper .page-body-wrapper .page-title {
+    margin: 0 0 16px !important;
+    padding: 16px !important;
+    border-radius: 0 !important;
+  }
+
+  .page-wrapper .page-body-wrapper .page-title .row {
+    gap: 8px;
+  }
+
+  .page-wrapper .page-body-wrapper .page-title .col-6 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+
+  .page-wrapper .page-body-wrapper .page-title .breadcrumb {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .page-wrapper.compact-wrapper .page-body-wrapper div.sidebar-wrapper,
+  .page-wrapper .page-body-wrapper div.sidebar-wrapper {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    bottom: 0 !important;
+    width: min(86vw, 320px) !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    overflow-y: auto !important;
+    transform: translateX(0) !important;
+    z-index: 1002 !important;
+    box-shadow: 12px 0 28px rgba(16, 24, 40, 0.18) !important;
+  }
+
+  .page-wrapper.compact-wrapper .page-body-wrapper div.sidebar-wrapper.close_icon,
+  .page-wrapper .page-body-wrapper div.sidebar-wrapper.close_icon {
+    transform: translateX(-105%) !important;
+  }
+
+  .page-wrapper.compact-wrapper .page-body-wrapper div.sidebar-wrapper ~ .page-body,
+  .page-wrapper.compact-wrapper .page-body-wrapper div.sidebar-wrapper ~ footer {
+    margin-left: 0 !important;
+  }
+
+  .page-wrapper .page-body-wrapper div.sidebar-wrapper .logo-wrapper.responsive-logo-wrapper {
+    height: 92px !important;
+    min-height: 92px !important;
+    padding: 14px 18px !important;
+    margin-top: 0 !important;
+  }
+
+  .page-wrapper .page-body-wrapper div.sidebar-wrapper .logo-wrapper.responsive-logo-wrapper a {
+    width: calc(100% - 54px) !important;
+    height: 70px !important;
+    min-height: 70px !important;
+  }
+
+  .page-wrapper .page-body-wrapper div.sidebar-wrapper .custom-logo-style {
+    width: 100% !important;
+    height: 68px !important;
+    transform: none !important;
+    object-position: left center !important;
+  }
+
+  .page-wrapper .page-body-wrapper div.sidebar-wrapper .sidebar-main .sidebar-links {
+    height: auto !important;
+    max-height: calc(100vh - 112px) !important;
+    margin: 0 0 18px !important;
+    overflow-y: auto !important;
+  }
+
+  .bg-overlay1 {
+    display: none;
+  }
+
+  .bg-overlay1.active {
+    display: block !important;
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 1001;
+    background: rgba(15, 23, 42, 0.38);
+  }
+
+  .container-fluid,
+  .container {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  .card {
+    margin-bottom: 16px;
+  }
+
+  .card .card-body,
+  .client-strategy-card .card-body {
+    padding: 16px !important;
+  }
+
+  .row {
+    --bs-gutter-x: 14px;
+    --bs-gutter-y: 14px;
+  }
+
+  .modal-dialog {
+    width: calc(100vw - 24px);
+    max-width: calc(100vw - 24px);
+    margin: 12px auto;
+  }
+
+  .modal-body,
+  .modal-header,
+  .modal-footer {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .form-control,
+  .form-select,
+  input,
+  select,
+  textarea {
+    max-width: 100%;
+  }
+
+  .custom-responsive-style,
+  .custom-responsive-modal-style,
+  .header-actions {
+    width: 100% !important;
+    display: flex !important;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .custom-responsive-style-btn,
+  .custom-search-btn,
+  .custom-responsive-style-search {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+  }
+
+  .client-header {
+    min-height: auto;
+    padding: 14px !important;
+  }
+
+  .client-header-action-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+  }
+}
+
+@media only screen and (max-width: 575.98px) {
+  .page-wrapper .page-header .header-wrapper {
+    padding: 8px 10px !important;
+  }
+
+  .page-wrapper .page-header .header-logo-wrapper {
+    max-width: 64%;
+  }
+
+  .page-wrapper .page-header .right-header {
+    max-width: 36%;
+  }
+
+  .page-wrapper .page-header .header-wrapper .nav-right.right-header ul li .profile-media .media-body {
+    display: none !important;
+  }
+
+  .page-wrapper.compact-wrapper .page-body-wrapper .page-body,
+  .page-wrapper .page-body-wrapper .page-body {
+    padding: 10px !important;
+  }
+
+  .page-wrapper .page-body-wrapper .page-title {
+    padding: 12px !important;
+  }
+
+  .page-wrapper .page-body-wrapper .page-title h3,
+  .card h3,
+  .card h4 {
+    font-size: 22px;
+    line-height: 1.25;
+  }
+
+  .client-header-action-row {
+    grid-template-columns: 1fr !important;
+  }
+
+  .client-dashboard-tabs {
+    justify-content: center;
+  }
+
+  .client-dashboard-tabs .nav-link {
+    padding: 10px 14px;
+  }
+
+  .client-script-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .table-responsive table,
+  .rdt_Table,
+  .custom-table-design {
+    min-width: 680px;
+  }
+}

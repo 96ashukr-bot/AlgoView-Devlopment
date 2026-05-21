@@ -30,16 +30,21 @@ const Leftbar = () => {
     const overlay = document.querySelector(".bg-overlay1");
 
     if (width <= 991) {
-      if (toggle) {
-        sidebarWrapper?.classList.add("close_icon");
-        overlay?.classList.remove("active");
-      } else {
+      const isClosed = sidebarWrapper?.classList.contains("close_icon");
+
+      if (isClosed) {
         sidebarWrapper?.classList.remove("close_icon");
         overlay?.classList.add("active");
+        document.body.classList.add("sidebar-open");
+        toggleSidebar(false);
+        setSidebartoggle(false);
+      } else {
+        sidebarWrapper?.classList.add("close_icon");
+        overlay?.classList.remove("active");
+        document.body.classList.remove("sidebar-open");
+        toggleSidebar(true);
+        setSidebartoggle(true);
       }
-
-      toggleSidebar(!toggle);
-      setSidebartoggle(!toggle);
     } else {
       if (toggle) {
         sidebarWrapper?.classList.add("close_icon");

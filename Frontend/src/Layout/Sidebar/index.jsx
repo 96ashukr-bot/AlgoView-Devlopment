@@ -106,6 +106,7 @@ const Sidebar = (props) => {
 
   const closeOverlay = () => {
     document.querySelector(".bg-overlay1").classList.remove("active");
+    document.body.classList.remove("sidebar-open");
     document.querySelector(".sidebar-links").classList.remove("active");
   };
 

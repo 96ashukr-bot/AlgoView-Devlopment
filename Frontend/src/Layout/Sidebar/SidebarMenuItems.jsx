@@ -69,10 +69,14 @@ const SidebarMenuItems = ({ setMainMenu, sidebartoogle, setNavActive, activeClas
     if (window.innerWidth <= 991) {
       document.querySelector(".page-header").className = "page-header close_icon";
       document.querySelector(".sidebar-wrapper").className = "sidebar-wrapper close_icon ";
+      document.querySelector(".bg-overlay1")?.classList.remove("active");
+      document.body.classList.remove("sidebar-open");
       // document.querySelector('.mega-menu-container').classList.remove('d-block');
       if (item.type === "sub") {
         document.querySelector(".page-header").className = "page-header";
         document.querySelector(".sidebar-wrapper").className = "sidebar-wrapper";
+        document.querySelector(".bg-overlay1")?.classList.add("active");
+        document.body.classList.add("sidebar-open");
       }
     }
     if (!item.active) {

@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import ReactDOM from "react-dom/client";
 import "./index.scss";
 import App from "./App";
+import "./assets/scss/mobile-overrides.scss";
 import "./i18n";
 import reportWebVitals from "./reportWebVitals";
 import { LogoProvider } from "./Components/UiKits/Logo/LogoContext";
