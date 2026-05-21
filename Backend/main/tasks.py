@@ -53,6 +53,69 @@ def route_execution_order_task(self, *, client_id, broker_details_id, order_payl
         payload.setdefault("idempotency_key", correlation_id)
     return route_order_to_execution_node(client, broker_details, payload)
 
+
+@shared_task(
+    bind=True,
+    autoretry_for=(),
+    max_retries=0,
+    acks_late=True,
+    reject_on_worker_lost=True,
+    soft_time_limit=240,
+    time_limit=300,
+)
+def process_webhook_signal_task(self, *, trade_ids, context, history_mode="default"):
+    """Execute webhook-matched trades outside the request/response path."""
+    from django.utils import timezone
+    from main.models import ClientTradeSetting
+    from main.views import _process_webhook_trade
+
+    trade_ids = list(trade_ids or [])
+    context = dict(context or {})
+    results = []
+
+    trades_by_id = ClientTradeSetting.objects.select_related(
+        "client",
+        "segment",
+        "sub_segment",
+    ).in_bulk(trade_ids)
+
+    for index, trade_id in enumerate(trade_ids, start=1):
+        trade = trades_by_id.get(trade_id)
+        if not trade:
+            results.append({
+                "trade_setting_id": trade_id,
+                "status": "skipped",
+                "reason": "Trade setting was not found when the webhook task executed.",
+            })
+            continue
+
+        history_id = None
+        if history_mode == "legacy":
+            history_id = f"{timezone.now().strftime('%Y%m%d%H%M%S%f')}_{trade.client_id}_{trade.id}"
+
+        try:
+            results.append(_process_webhook_trade(trade, index, context, history_id=history_id))
+        except Exception as exc:
+            logger.exception(
+                "Webhook Celery task failed for trade_setting=%s task_id=%s",
+                trade_id,
+                getattr(self.request, "id", None),
+            )
+            results.append({
+                "trade_setting_id": trade_id,
+                "status": "failed",
+                "reason": str(exc),
+            })
+
+    summary = {
+        "total": len(results),
+        "successful": sum(1 for item in results if item.get("status") == "success"),
+        "skipped": sum(1 for item in results if item.get("status") == "skipped"),
+        "failed": sum(1 for item in results if item.get("status") == "failed"),
+    }
+    logger.info("Webhook Celery task completed task_id=%s summary=%s", getattr(self.request, "id", None), summary)
+    return {"summary": summary, "results": results}
+
 company_profile=company_profile if company_profile else None
 
 support_email = company_profile.company_support_email if company_profile else "support@example.com"

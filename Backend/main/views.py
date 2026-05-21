@@ -4095,20 +4095,23 @@ class PlaceOrderWebhookView(APIView):
         symbols = context["symbols"]
         save_webhook_signals_logs(context["buy_sell"], symbols, context["default_price"], context["strategy_tag"], json=alert_data)
         candidate_trades, strategy_id = _get_matching_webhook_trades(alert_data, symbols.upper())
+        trade_ids = list(candidate_trades.values_list("id", flat=True))
+        from main.tasks import process_webhook_signal_task
 
-        results = []
-        for index, trade in enumerate(candidate_trades, start=1):
-            results.append(_process_webhook_trade(trade, index, context))
+        async_result = process_webhook_signal_task.delay(
+            trade_ids=trade_ids,
+            context=serialize_to_json(context),
+            history_mode="default",
+        )
 
         summary = {
-            "total": len(results),
-            "successful": sum(1 for item in results if item["status"] == "success"),
-            "skipped": sum(1 for item in results if item["status"] == "skipped"),
-            "failed": sum(1 for item in results if item["status"] == "failed"),
+            "total": len(trade_ids),
+            "queued": len(trade_ids),
             "group_service": strategy_id,
             "symbol": symbols,
+            "task_id": async_result.id,
         }
-        return Response({"status": "success", "summary": summary, "results": results}, status=status.HTTP_200_OK)
+        return Response({"status": "accepted", "summary": summary}, status=status.HTTP_200_OK)
 
 class MyPlaceOrderWebhookView(APIView):
 
@@ -4146,38 +4149,23 @@ class MyPlaceOrderWebhookView(APIView):
         symbols = context["symbols"]
         save_webhook_signals_logs(context["buy_sell"], symbols, context["default_price"], context["strategy_tag"], json=alert_data)
         candidate_trades, strategy_id = _get_matching_webhook_trades(alert_data, symbols.upper())
+        trade_ids = list(candidate_trades.values_list("id", flat=True))
+        from main.tasks import process_webhook_signal_task
 
-        results = []
-        for index, trade in enumerate(candidate_trades, start=1):
-            history_id = f"{datetime.now().strftime('%Y%m%d%H%M%S%f')}_{trade.client.id}_{trade.id}"
-            results.append(self.handle_single_trade(
-                trade,
-                index,
-                symbols,
-                context["exch_seg"],
-                context["default_price"],
-                strategy_id,
-                alert_data,
-                context["transaction_type"],
-                context["buy_sell"],
-                context["default_ordertype"],
-                context["limit_price"],
-                context["default_quantity"],
-                context["live_price"],
-                context["lots"],
-                context["trigger_price"],
-                history_id,
-            ))
+        async_result = process_webhook_signal_task.delay(
+            trade_ids=trade_ids,
+            context=serialize_to_json(context),
+            history_mode="legacy",
+        )
 
         summary = {
-            "total": len(results),
-            "successful": sum(1 for item in results if item["status"] == "success"),
-            "skipped": sum(1 for item in results if item["status"] == "skipped"),
-            "failed": sum(1 for item in results if item["status"] == "failed"),
+            "total": len(trade_ids),
+            "queued": len(trade_ids),
             "group_service": strategy_id,
             "symbol": symbols,
+            "task_id": async_result.id,
         }
-        return Response({"status": "success", "summary": summary, "results": results}, status=status.HTTP_200_OK)
+        return Response({"status": "accepted", "summary": summary}, status=status.HTTP_200_OK)
 
 #token Sesiion id for alice blue order
 from datetime import datetime, timedelta
