@@ -22,6 +22,9 @@ REGISTRATION_EMAIL_SUBJECT = "Registration Successful"
 REGISTRATION_LOGIN_LINK = "https://app.sparkstechnologies.co.in/login"
 REGISTRATION_SUPPORT_EMAIL = "support@bridgesparkinnovation.com"
 REGISTRATION_SENDER_NAME = "SparksRegistration"
+PASSWORD_RESET_APP_URL = "https://app.sparkstechnologies.co.in"
+PASSWORD_RESET_SUPPORT_EMAIL = "support@bridgesparkinnovation.com"
+PASSWORD_RESET_SENDER_NAME = "SparksResetPassword"
 
 from main.models import *
 from main.utils import get_smtp_connection
@@ -305,7 +308,7 @@ def send_password_reset_email(uid, email, username, token):
     if not smtp_connection:
         print("SMTP connection could not be established!")
         return
-    reset_link = f'{settings.FRONTEND_APP_URL}/pages/authentication/reset-password/:{uid}/:{token}/:layout'
+    reset_link = f'{PASSWORD_RESET_APP_URL}/pages/authentication/reset-password/{uid}/{token}/layout'
     
     subject = "Password Reset Request"
     context = {
@@ -313,14 +316,14 @@ def send_password_reset_email(uid, email, username, token):
         'reset_link': reset_link,
         'company_name': company_name, 
         'company_url': company_website,
-        'support_email': support_email,
+        'support_email': PASSWORD_RESET_SUPPORT_EMAIL,
         'logo_url':logo_url
     }
     
     html_message = render_to_string('password_reset_email.html', context)
     from_email = _get_default_from_email()
     try:
-        email_message = EmailMultiAlternatives(subject, "", f"{company_sender_name} <{from_email}>", [email],connection=smtp_connection)
+        email_message = EmailMultiAlternatives(subject, "", f"{PASSWORD_RESET_SENDER_NAME} <{from_email}>", [email],connection=smtp_connection)
       
         email_message.attach_alternative(html_message, "text/html")
         email_message.send()
