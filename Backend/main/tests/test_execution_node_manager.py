@@ -1136,6 +1136,80 @@ class ExecutionNodeManagerTests(TestCase):
         )
         self.assertEqual(dhan.session.proxies, proxy_config)
 
+    @mock.patch("main.dhanapi.sleep")
+    @mock.patch("main.dhanapi.requests.post")
+    @mock.patch("main.dhanapi.get_trading_symbol_security_id")
+    @mock.patch("main.dhanapi.dhanhq")
+    def test_dhan_order_polls_transit_until_rejected_message(self, mock_dhan_class, mock_security_lookup, mock_post, mock_sleep):
+        from main.dhanapi import place_dhan_orders
+
+        proxy_config = {"http": "http://proxy.example.com:8080", "https": "http://proxy.example.com:8080"}
+        dhan = mock_dhan_class.return_value
+        dhan.session.proxies = {}
+        dhan.NSE_FNO = "NSE_FNO"
+        dhan.NSE = "NSE"
+        dhan.NORMAL = "NORMAL"
+        dhan.INTRA = "INTRA"
+        dhan.CNC = "CNC"
+        dhan.BUY = "BUY"
+        dhan.SELL = "SELL"
+        dhan.MARKET = "MARKET"
+        dhan.LIMIT = "LIMIT"
+        dhan.SL = "SL"
+        dhan.get_ltp_data.return_value = {"data": {"NSE_FNO": {"12345": {"last_price": 10}}}}
+        mock_post.return_value = SimpleNamespace(status_code=200, content=b"{}", json=lambda: {"data": {"NSE_FNO": {"12345": {"last_price": 10}}}})
+        dhan.place_order.return_value = {"status": "success", "data": {"orderId": "dhan-order-2"}}
+        dhan.get_order_by_id.side_effect = [
+            {"status": "success", "data": [{"orderStatus": "TRANSIT", "transactionType": "BUY", "quantity": 65}]},
+            {
+                "status": "success",
+                "data": [{
+                    "orderStatus": "REJECTED",
+                    "transactionType": "BUY",
+                    "quantity": 65,
+                    "omsErrorDescription": "rms: insufficient funds",
+                }],
+            },
+        ]
+        mock_security_lookup.return_value = {"status": "success", "SECURITY_ID": 12345}
+
+        response = place_dhan_orders(
+            "2026-05-12",
+            10,
+            "Lite",
+            "dhan-access",
+            "dhan-client",
+            "NIFTY24400CE",
+            "BUY",
+            "NIFTY",
+            65,
+            "strategy",
+            "LIMIT",
+            "MIS",
+            10,
+            self.client_user,
+            1,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            "NFO",
+            "FNO",
+            "NIFTY",
+            None,
+            "OPEN",
+            "dhan-history-poll",
+            proxy_config=proxy_config,
+        )
+
+        self.assertEqual(response["data"]["status"], "rejected")
+        self.assertEqual(response["data"]["message"], "rms: insufficient funds")
+        self.assertEqual(dhan.get_order_by_id.call_count, 2)
+        self.assertEqual(mock_sleep.call_count, 1)
+
     @mock.patch("main.dhanapi.fetch_nse_option_chain_ltp", return_value=None)
     @mock.patch("main.dhanapi.requests.post")
     @mock.patch("main.dhanapi.get_trading_symbol_security_id")

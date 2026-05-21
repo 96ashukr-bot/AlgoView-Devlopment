@@ -1,5 +1,6 @@
 from datetime import datetime
 import os
+from time import sleep
 from dhanhq import dhanhq 
 import logging
 from django.conf import settings
@@ -14,6 +15,7 @@ from main.services.option_ltp_fallback import fetch_nse_option_chain_ltp
 from main.trade_history_service import save_trade_order_history
 logger = logging.getLogger('main')
 DHAN_LTP_URL = "https://api.dhan.co/v2/marketfeed/ltp"
+DHAN_NON_FINAL_STATUSES = {"transit", "pending"}
 
 
 def fetch_dhan_option_ltp(
@@ -92,6 +94,59 @@ def fetch_order_details(order_id,dhan, user=None):
             logger.info(f"{user} : Failed to fetch order details: {response['remarks']['error_message']}")
     except Exception as e:
         logger.info(f"{user} : Error while fetching order details: {str(e)}")
+
+
+def _dhan_order_record(order_history_response):
+    if not isinstance(order_history_response, dict):
+        return None
+    data = order_history_response.get("data")
+    if isinstance(data, list):
+        return data[0] if data else None
+    if isinstance(data, dict):
+        return data
+    return None
+
+
+def _dhan_order_status(order_record):
+    if not isinstance(order_record, dict):
+        return ""
+    return str(order_record.get("orderStatus") or order_record.get("status") or "").strip().lower()
+
+
+def _dhan_order_message(order_record, default_message=""):
+    if not isinstance(order_record, dict):
+        return default_message
+    for key in (
+        "omsErrorDescription",
+        "errorDescription",
+        "errorMessage",
+        "error_message",
+        "message",
+        "remarks",
+        "reason",
+    ):
+        value = order_record.get(key)
+        if isinstance(value, dict):
+            nested = value.get("error_message") or value.get("message")
+            if nested:
+                return str(nested)
+        elif value not in (None, "", [], {}):
+            return str(value)
+    return default_message
+
+
+def _fetch_dhan_order_details_with_poll(order_id, dhan, user=None, attempts=4, delay_seconds=1):
+    latest_response = None
+    latest_record = None
+    for attempt in range(attempts):
+        latest_response = fetch_order_details(order_id, dhan, user)
+        latest_record = _dhan_order_record(latest_response)
+        status = _dhan_order_status(latest_record)
+        if status and status not in DHAN_NON_FINAL_STATUSES:
+            return latest_response, latest_record
+        if attempt < attempts - 1:
+            sleep(delay_seconds)
+    return latest_response, latest_record
         
 def get_trading_symbol_security_id(symbol, segment, Exch,expiry_date, user=None):
     logger.info(f"{user}: the get_trading_symbol_security_id is calling now !")
@@ -323,15 +378,21 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
                             webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan", history_id=history_id)
                 return response
 
-            # Ensure that get_order_details is defined or handled properly
             logger.info(f"{user} : order id {order_id}")
-            order_history_response = fetch_order_details(order_id, dhan, user)
+            order_history_response, res_data = _fetch_dhan_order_details_with_poll(order_id, dhan, user)
             logger.info(f"{user} : Order history response: {order_history_response}")
 
-            # Assuming order_history_response['data'] is a list, we need to access the first element
-            res_data = order_history_response['data'][0] if isinstance(order_history_response['data'], list) else order_history_response['data']
+            if not res_data:
+                status = "Failed"
+                message = "Dhan order was placed, but broker order details could not be fetched. Please check Dhan order book before retrying."
+                response = {"data": {"status": status, "message": message, "order_id": order_id}}
+                save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, trade_symbol, order_id, status, order_history_response, message,
+                                        strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
+                                        webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan", history_id=history_id)
+                return response
+
             # TRANSIT PENDING REJECTED CANCELLED TRADED EXPIRED
-            status = res_data.get('orderStatus', 'UNKNOWN').lower()
+            status = _dhan_order_status(res_data) or "unknown"
             logger.info(f"{user} : status dhan api res _data {status}")
             
             if not status or status==None:
@@ -347,7 +408,7 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
                 return response
             
             elif status.lower() == 'complete' or status.lower()=="traded" or status.upper()=="TRADED":
-                message = res_data.get('omsErrorDescription', "Order complete")
+                message = _dhan_order_message(res_data, "Order complete")
                 logger.info(f"{user} : Order placed successfully. Order ID: {order_id}")
                 transaction_type = res_data.get('transactionType', '')
                 status=status.lower()
@@ -380,7 +441,7 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
                                         webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan", history_id=history_id)
                 return response
             elif status.lower() == "rejected":
-                message = res_data.get('omsErrorDescription', 'not any reason get').lower()
+                message = _dhan_order_message(res_data, "Dhan rejected the order.")
                 transaction_type = res_data.get('transactionType', '')
                 if transaction_type == "BUY":
                     Entry_type = "LE"
@@ -398,7 +459,7 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
                                         webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan", history_id=history_id)
                 return response
             elif status.lower() == "pending":
-                message = res_data.get('omsErrorDescription', 'not any reason get').lower()
+                message = _dhan_order_message(res_data, "Dhan order is pending.")
                 transaction_type = res_data.get('transactionType', '')
                 
                 if transaction_type == "BUY":
@@ -417,7 +478,7 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
                                         webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan", history_id=history_id)
                 return response
             elif status.lower() == "transit" or status == "TRANSIT":
-                message = res_data.get('omsErrorDescription', 'not any reason get').lower()
+                message = _dhan_order_message(res_data, "Dhan accepted the order and it is in transit.")
                 transaction_type = res_data.get('transactionType', '')
                 if transaction_type == "BUY":
                     Entry_type = "LE"
@@ -435,7 +496,7 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
                                         webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan", history_id=history_id)
                 return response
             else:
-                message = res_data.get('omsErrorDescription', 'not any reason get').lower()
+                message = _dhan_order_message(res_data, "Dhan order status could not be resolved.")
                 response = {"data": {"status": status,"message":message}}
                 if status:
                     status="Failed"
