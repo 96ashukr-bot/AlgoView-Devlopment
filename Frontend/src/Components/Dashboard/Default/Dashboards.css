@@ -45,6 +45,18 @@
     background: #fff;
 }
 
+.client-script-card-locked {
+    background: #f8f9fb;
+    border-style: dashed;
+}
+
+.client-script-card-locked .client-script-title,
+.client-script-card-locked .client-script-meta,
+.client-script-card-locked .client-script-limits,
+.client-script-card-locked .client-script-change {
+    color: #8a93a3;
+}
+
 .client-script-title {
     color: #1f2a44;
     font-weight: 700;

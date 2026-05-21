@@ -3160,6 +3160,7 @@ class UpdateTradeSettingStatusView(APIView):
             
             # Get the 'segment' parameter from the query string
             segment_name = request.query_params.get('segment', None)
+            _sync_client_trade_settings_from_group_service(client)
             
             # Filter trade settings associated with the client
             client_list = ClientTradeSetting.objects.filter(client=client)
@@ -3170,9 +3171,95 @@ class UpdateTradeSettingStatusView(APIView):
             
             # Serialize the data
             serializer = ClientSegementsSerializer(client_list, many=True)
+            serialized_client_segments = list(serializer.data)
+            visible_aliases = set()
+            for segment_data in serialized_client_segments:
+                segment_data["is_locked"] = False
+                sub_segment_data = segment_data.get("sub_segment") or {}
+                for value in (
+                    segment_data.get("script_name"),
+                    segment_data.get("symbol"),
+                    sub_segment_data.get("name"),
+                    sub_segment_data.get("short_name"),
+                ):
+                    if value:
+                        visible_aliases.add(str(value).strip().casefold())
+
+            services_queryset = Services.objects.filter(status=True).select_related("segment").order_by("id")
+            normalized_segment_name = str(segment_name or "").strip()
+            if normalized_segment_name:
+                services_queryset = services_queryset.filter(segment__name__iexact=normalized_segment_name)
+            else:
+                option_segment = Segment.objects.filter(name__iexact="Option").first()
+                if option_segment:
+                    services_queryset = services_queryset.filter(segment=option_segment)
+
+            locked_segments = []
+            for service in services_queryset:
+                service_name = str(service.service_name or "").strip()
+                if not service_name:
+                    continue
+
+                sub_segment = None
+                if service.segment_id:
+                    sub_segment = SubSegment.objects.filter(segment_id=service.segment_id).filter(
+                        Q(name__iexact=service_name) | Q(short_name__iexact=service_name)
+                    ).first()
+
+                aliases = {
+                    service_name.casefold(),
+                    str(getattr(sub_segment, "name", "") or "").strip().casefold(),
+                    str(getattr(sub_segment, "short_name", "") or "").strip().casefold(),
+                }
+                aliases.discard("")
+                if aliases & visible_aliases:
+                    continue
+
+                segment_payload = SegmentSerializer(service.segment).data if service.segment else None
+                sub_segment_payload = (
+                    SubSegmentSerializer(sub_segment).data
+                    if sub_segment
+                    else {
+                        "id": None,
+                        "segment": service.segment_id,
+                        "name": service_name,
+                        "short_name": service_name,
+                        "status": bool(service.status),
+                        "token": None,
+                        "Exchange": None,
+                    }
+                )
+                locked_segments.append({
+                    "id": None,
+                    "client": client.id,
+                    "segment": segment_payload,
+                    "sub_segment": sub_segment_payload,
+                    "symbol": sub_segment_payload.get("short_name") or service_name,
+                    "group_service": getattr(getattr(client, "Group_service", None), "group_name", None),
+                    "script_name": service_name,
+                    "group_lot_size": None,
+                    "group_qty_limit": None,
+                    "strategy": None,
+                    "broker": None,
+                    "product_type": None,
+                    "order_type": None,
+                    "buffer_percentage": None,
+                    "buy_sell": None,
+                    "quantity": None,
+                    "trade_limit": None,
+                    "max_loss_for_day": None,
+                    "max_profit_for_day": None,
+                    "expiry_date": None,
+                    "is_tread_status": False,
+                    "sl_type": None,
+                    "stop_loss": None,
+                    "target": None,
+                    "is_locked": True,
+                    "lock_reason": "This script is not included in the client's assigned group service.",
+                })
             
             return Response(
-                {"client_segment_list": serializer.data},
+                {"client_segment_list": serialized_client_segments + locked_segments},
                 status=status.HTTP_200_OK
             )
         

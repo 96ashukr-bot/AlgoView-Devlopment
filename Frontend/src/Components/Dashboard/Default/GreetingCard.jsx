@@ -109,6 +109,11 @@ const GreetingCard = ({ userProfile }) => {
   };
 
   const handleToggle = async (segment) => {
+    if (segment?.is_locked) {
+      Swal.fire("Locked", "This script is not included in your assigned group service.", "info");
+      return;
+    }
+
     const payload = {
       segment: segment.segment.id,
       sub_segment: segment.sub_segment.id,
@@ -136,6 +141,11 @@ const GreetingCard = ({ userProfile }) => {
   };
 
   const handleEdit = (segment) => {
+    if (segment?.is_locked) {
+      Swal.fire("Locked", "This script is not included in your assigned group service.", "info");
+      return;
+    }
+
     const clientId = segment?.client;
     const segmentId = segment?.segment?.id;
     const subSegmentId = segment?.sub_segment?.id;
@@ -223,7 +233,7 @@ const GreetingCard = ({ userProfile }) => {
                   {clientSegments.map((segment, index) => (
                     <div
                       key={index}
-                      className="client-script-card position-relative"
+                      className={`client-script-card position-relative ${segment?.is_locked ? 'client-script-card-locked' : ''}`}
                       onMouseEnter={() => setHoveredIndex(index)}
                       onMouseLeave={() => setHoveredIndex(null)}
                     >
@@ -234,6 +244,12 @@ const GreetingCard = ({ userProfile }) => {
                       >
                         <div className="client-script-title">
                           {getDisplayScriptName(segment)}
+                          {segment?.is_locked ? (
+                            <span className="badge bg-secondary ms-2">
+                              <FaLock size={10} className="me-1" />
+                              Locked
+                            </span>
+                          ) : null}
                         </div>
                         <div className="client-script-meta">
                           Group Service: {segment?.group_service || 'Not Assigned'}
@@ -302,7 +318,9 @@ const GreetingCard = ({ userProfile }) => {
                             title="Toggle On/Off"
                             onClick={() => handleToggle(segment)}
                           >
-                            {segment.is_tread_status ? (
+                            {segment?.is_locked ? (
+                              <FaLock color="#adb5bd" />
+                            ) : segment.is_tread_status ? (
                               <FaToggleOn color="primary" />
                             ) : (
                               <FaToggleOff color="gray" />
@@ -314,7 +332,7 @@ const GreetingCard = ({ userProfile }) => {
                             style={{ padding: '0 12px', fontSize: '22px' }}
                             onClick={() => handleEdit(segment)}
                           >
-                            <FaEdit />
+                            {segment?.is_locked ? <FaLock color="#adb5bd" /> : <FaEdit />}
                           </Button>
                         </div>
                       )}
