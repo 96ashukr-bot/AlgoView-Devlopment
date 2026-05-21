@@ -18,6 +18,9 @@ logger = logging.getLogger('main')
 OTP_EMAIL_SUBJECT = "Your Login Otp (Don't Share with anyone)"
 OTP_SUPPORT_EMAIL = "support@bridgesparkinnovation.com"
 OTP_SENDER_NAME = "SparksOtp"
+REGISTRATION_EMAIL_SUBJECT = "Registration Successful"
+REGISTRATION_LOGIN_LINK = "https://app.sparkstechnologies.co.in/login"
+REGISTRATION_SUPPORT_EMAIL = "support@bridgesparkinnovation.com"
 
 from main.models import *
 from main.utils import get_smtp_connection
@@ -136,7 +139,7 @@ def send_email_pass_async(email, password, user_name, login_link, support_email,
         if not smtp_connection:
             print("SMTP connection could not be established!")
             return
-        subject = f'Welcome to {company_name}! Your Registration is Complete'
+        subject = REGISTRATION_EMAIL_SUBJECT
         # subject = "Welcome to AlgoView Technologies"
         print("email sentdd")
         from_email = _get_default_from_email()
@@ -144,8 +147,8 @@ def send_email_pass_async(email, password, user_name, login_link, support_email,
         context = {
             'user_name': user_name,
             'password': password,
-            'login_link': login_link,
-            'support_email': support_email,
+            'login_link': REGISTRATION_LOGIN_LINK,
+            'support_email': REGISTRATION_SUPPORT_EMAIL,
             'help_center': help_center_link,
             'company_website': company_website,
             'contact_number': contact_number,

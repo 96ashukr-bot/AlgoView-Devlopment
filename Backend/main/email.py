@@ -10,6 +10,9 @@ logger = logging.getLogger(__name__)
 OTP_EMAIL_SUBJECT = "Your Login Otp (Don't Share with anyone)"
 OTP_SUPPORT_EMAIL = "support@bridgesparkinnovation.com"
 OTP_SENDER_NAME = "SparksOtp"
+REGISTRATION_EMAIL_SUBJECT = "Registration Successful"
+REGISTRATION_LOGIN_LINK = "https://app.sparkstechnologies.co.in/login"
+REGISTRATION_SUPPORT_EMAIL = "support@bridgesparkinnovation.com"
 company_profile = get_company_profile()
 smtp_details = get_smtp_details()
 
@@ -55,7 +58,7 @@ class EmailServicesss:
     
     @staticmethod
     def send_password_email(email, password, user_name, login_link, support_email, help_center_link, company_website, contact_number):
-            subject = 'Welcome to AlgoView Technologies! Your Registration is Complete'
+            subject = REGISTRATION_EMAIL_SUBJECT
             message = f"""
             Dear {user_name},
 
@@ -64,24 +67,22 @@ class EmailServicesss:
             To help you get started, here is your default password and a link to proceed with your first login:
             
             Default Password: {password}
-            Login Link: {login_link}
+            Login Link: {REGISTRATION_LOGIN_LINK}
             
             We recommend changing your password after your first login for enhanced security. You can update your password by navigating to the settings section within your dashboard.
 
             What’s next?
             - Click the login link above to sign into your account.
             - After logging in, take a moment to explore the platform and familiarize yourself with our features.
-            - If you need assistance, feel free to reach out to our support team at {support_email}.
+            - If you need assistance, feel free to reach out to our support team at {REGISTRATION_SUPPORT_EMAIL}.
 
             Need help?
-            For any questions or support, don’t hesitate to contact us at {support_email} or visit our help center: {help_center_link}.
+            For any questions or support, don’t hesitate to contact us at {REGISTRATION_SUPPORT_EMAIL}.
 
             We’re excited to have you on board and look forward to supporting your journey with us!
 
             Best regards,
-            The AlgoView Technologies Team
-            {company_website}
-            {support_email} | {contact_number}
+            {REGISTRATION_SUPPORT_EMAIL}
             """
             from_email = default_from_email
             send_mail(subject, message, from_email, [email])
@@ -98,13 +99,13 @@ class EmailService:
             raise RuntimeError("SMTP connection could not be established.")
 
         defaults = _get_email_context_defaults()
-        subject = 'Welcome to AlgoView Technologies! Your Registration is Complete'
+        subject = REGISTRATION_EMAIL_SUBJECT
         # Render the HTML template with context data
         context = {
             'user_name': user_name,
             'password': password,
-            'login_link': login_link or defaults['login_link'],
-            'support_email': support_email or defaults['support_email'],
+            'login_link': REGISTRATION_LOGIN_LINK,
+            'support_email': REGISTRATION_SUPPORT_EMAIL,
             'help_center': help_center_link or defaults['help_center_link'],
             'company_website': company_website or defaults['company_website'],
             'contact_number': contact_number or defaults['contact_number']
