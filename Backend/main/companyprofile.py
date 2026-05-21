@@ -175,23 +175,67 @@ class WebsocketTokenViewww(APIView):
             status=status.HTTP_200_OK if not created else status.HTTP_201_CREATED
         )
 
+def _company_profile_has_branding_data(company):
+    if not company:
+        return False
+    fields = (
+        "company_name",
+        "company_email",
+        "company_support_email",
+        "company_phone_number",
+        "company_logo",
+        "company_favicon",
+        "login_link",
+        "help_center_link",
+        "company_website",
+        "company_sender_name",
+    )
+    return any(bool(getattr(company, field, None)) for field in fields)
+
+
+def _get_company_profile_for_user(user, *, create=False):
+    user_company = CompanyProfileDetails.objects.filter(user=user).first()
+    role_name = getattr(getattr(user, "role", None), "name", "") or ""
+    is_super_admin = role_name.lower() == "super-admin" or getattr(user, "is_superuser", False)
+
+    if user_company and (not is_super_admin or _company_profile_has_branding_data(user_company)):
+        return user_company
+
+    if is_super_admin:
+        canonical_company = (
+            CompanyProfileDetails.objects.filter(user__role__name__iexact="Super-Admin")
+            .exclude(company_email__isnull=True)
+            .exclude(company_email="")
+            .order_by("id")
+            .first()
+            or CompanyProfileDetails.objects.exclude(company_email__isnull=True)
+            .exclude(company_email="")
+            .order_by("id")
+            .first()
+            or CompanyProfileDetails.objects.exclude(company_logo="")
+            .order_by("id")
+            .first()
+            or user_company
+        )
+        if canonical_company:
+            return canonical_company
+
+    if user_company:
+        return user_company
+    if create:
+        return CompanyProfileDetails.objects.create(user=user)
+    return None
+
+
 class CompanyProfileDetailView(APIView):
 
     def get(self, request, *args, **kwargs):
         user=request.user
         """Retrieve a single company by ID or all companies if no ID is provided."""
         try:
-            company = CompanyProfileDetails.objects.filter(user=user).first()
+            company = _get_company_profile_for_user(user)
             if company is None:
-                company = (
-                    CompanyProfileDetails.objects.filter(user__role__name__iexact="Super-Admin")
-                    .order_by("id")
-                    .first()
-                    or CompanyProfileDetails.objects.exclude(company_logo="")
-                    .order_by("id")
-                    .first()
-                    or CompanyProfileDetails.objects.order_by("id").first()
-                )
+                company = CompanyProfileDetails.objects.order_by("id").first()
             if company is None:
                 raise CompanyProfileDetails.DoesNotExist
             serializer = CompanyProfileSerializer(company)
@@ -220,8 +264,8 @@ class CompanyProfileUpdateView(APIView):
         """
         user = request.user
 
-        # Retrieve or create a company profile for the user
-        company, created = CompanyProfileDetails.objects.get_or_create(user=user)
+        company = _get_company_profile_for_user(user, create=True)
+        created = company.created_at == company.updated_at if hasattr(company, "created_at") else False
 
         serializer = CompanyProfileSerializer(company, data=request.data, partial=True)
 
