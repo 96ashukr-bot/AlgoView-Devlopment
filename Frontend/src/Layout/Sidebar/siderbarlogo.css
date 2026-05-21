@@ -1,6 +1,6 @@
 .logo-wrapper.responsive-logo-wrapper {
-    min-height: 96px !important;
-    padding: 14px 18px 12px !important;
+    min-height: 106px !important;
+    padding: 24px 18px 10px !important;
     display: flex !important;
     align-items: center !important;
 }
@@ -13,9 +13,9 @@
 }
 
 .custom-logo-style{
-    width: 220px !important;
+    width: 210px !important;
     max-width: 100% !important;
-    height: 74px !important;
+    height: 66px !important;
     object-fit: contain !important;
     object-position: left center !important;
     padding-top: 0 !important;
@@ -27,18 +27,18 @@
     .custom-logo-style{
         padding-top: 0px !important;
         width: 150px !important;
-        height: 58px !important;
+        height: 54px !important;
     }
 
     .img-fluid-responsive{
         max-width: 100% !important;
-        height: 58px !important;
+        height: 54px !important;
         margin-bottom: 0px !important;
     }
     
     .responsive-logo-wrapper{
-        min-height: 78px !important;
-        padding: 10px 16px !important;
+        min-height: 82px !important;
+        padding: 18px 16px 10px !important;
     }
 
   }
