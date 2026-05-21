@@ -321,7 +321,7 @@ def _collect_trade_skip_reasons(trade, *, webhook_symbol=None, strategy_identifi
             if missing_fields:
                 reasons.append(f"Broker credentials are incomplete: {', '.join(missing_fields)}")
 
-        if normalized_broker_name not in {"alice blue", "angel one"}:
+        if normalized_broker_name != "angel one":
             access_token = None
             access_token_getter = getattr(broker_detail, "get_access_token_secure", None)
             if callable(access_token_getter):

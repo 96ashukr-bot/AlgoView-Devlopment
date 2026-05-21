@@ -18,7 +18,7 @@ from urllib.parse import urlparse
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
-from pya3 import Aliceblue, TransactionType, OrderType, ProductType
+from pya3 import Aliceblue
 from pya3.alicebluepy import encrypt_string
 
 from main.models import *
@@ -563,96 +563,13 @@ def get_alice_a3_orderbook(session_id, proxy_config=None):
 
 
 def get_alice_session(user_id, api_key=None, proxy_config=None, api_secret=None, auth_code=None, return_error=False):
-    try:
-        api_key = str(api_key or "").strip()
-        api_secret = str(api_secret or "").strip()
-        auth_code = str(auth_code or "").strip()
-
-        if not user_id:
-            logger.error("Missing Alice Blue USER_ID")
-            return (None, "Missing Alice Blue User ID.") if return_error else None
-        if not api_key and not api_secret:
-            logger.error("Missing Alice Blue login credentials")
-            return (
-                None,
-                "Missing Alice Blue login credentials. Save User ID and App/API Key. App Secret is optional fallback; Vendor Auth Code is not required for individual trader login.",
-            ) if return_error else None
-
-        candidates = []
-        if api_key:
-            candidates.append(("api_key", api_key))
-        if api_secret and api_secret != api_key:
-            candidates.append(("api_secret", api_secret))
-
-        last_response = None
-        for credential_label, credential_value in candidates:
-            cache_key = _alice_proxy_cache_key(user_id, proxy_config, credential_label=credential_label)
-            if cache_key in alice_sessions:
-                session_data = alice_sessions[cache_key]
-                if datetime.now().date() == session_data["time"].date():
-                    return (session_data["client"], None) if return_error else session_data["client"]
-
-            try:
-                alice, session = _build_alice_session(user_id, credential_value, proxy_config=proxy_config)
-            except Exception as e:
-                logger.error(f"Alice Blue login exception using {credential_label}: {str(e)}")
-                continue
-
-            last_response = session
-            if alice:
-                alice.alice_credential_label = credential_label
-                alice_sessions[cache_key] = {
-                    "client": alice,
-                    "session": session,
-                    "time": datetime.now()
-                }
-                return (alice, None) if return_error else alice
-
-            logger.error(f"Alice Blue login failed using {credential_label}: {session}")
-
-        if candidates:
-            # Individual trader login must not fall through to stale vendor auth-code values.
-            logger.error(f"Alice Blue individual login failed for all configured credentials. Last response: {last_response}")
-            error_message = _describe_alice_login_failure(last_response)
-            return (None, error_message) if return_error else None
-
-        if auth_code and api_secret:
-            cache_key = _alice_proxy_cache_key(user_id, proxy_config, credential_label="vendor_auth_code")
-            if cache_key in alice_sessions:
-                session_data = alice_sessions[cache_key]
-                if datetime.now().date() == session_data["time"].date():
-                    return (session_data["client"], None) if return_error else session_data["client"]
-
-            try:
-                alice, session = _build_alice_vendor_session(
-                    user_id,
-                    auth_code,
-                    api_secret,
-                    proxy_config=proxy_config,
-                )
-            except Exception as e:
-                logger.error(f"Alice Blue vendor auth-code login exception: {str(e)}")
-                alice, session = None, {"stat": "Not_ok", "emsg": str(e)}
-
-            last_response = session
-            if alice:
-                alice.alice_credential_label = "vendor_auth_code"
-                alice_sessions[cache_key] = {
-                    "client": alice,
-                    "session": session,
-                    "time": datetime.now()
-                }
-                return (alice, None) if return_error else alice
-
-            logger.error(f"Alice Blue vendor auth-code login failed: {session}")
-
-        logger.error(f"Alice Blue login failed for all configured credentials. Last response: {last_response}")
-        error_message = _describe_alice_login_failure(last_response)
-        return (None, error_message) if return_error else None
-
-    except Exception as e:
-        logger.error(f"Login Error: {str(e)}")
-        return (None, str(e)) if return_error else None
+    message = (
+        "Legacy Alice Blue API-key session generation is disabled. Use Connect to Alice Blue "
+        "so ANT returns authCode, then exchange it through A3 vendor/getUserDetails and save "
+        "the returned A3 session token before trading."
+    )
+    logger.error(message)
+    return (None, message) if return_error else None
 
 
 # ==============================
@@ -739,11 +656,10 @@ def place_alice_orders(
                 return_error=True,
             )
         else:
-            alice, session_error = get_alice_session(
-                api_uid,
-                api_skey,
-                proxy_config=proxy_config,
-                return_error=True,
+            alice = None
+            session_error = (
+                "Alice Blue A3 session token is missing. Connect to Alice Blue through ANT "
+                "authCode login before placing orders."
             )
 
         if not alice:

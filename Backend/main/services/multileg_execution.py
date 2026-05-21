@@ -22,7 +22,7 @@ from main.angelone.constants import MARKET_CLOSE_HOUR, MARKET_CLOSE_MINUTE, MARK
 from main.angelone.managers.contract_manager import ContractMasterManager
 from main.angelone.services.auth_service import AuthService
 from main.angelone.utils.logging_utils import TradingLogger
-from main.Alice_Blue_Api import fetch_instrument_data, get_alice_session
+from main.Alice_Blue_Api import fetch_instrument_data, get_alice_saved_session
 from main.broker_instrument_cache import ensure_dhan_instruments_file, ensure_fivepaisa_scrip_master_file, ensure_fyers_instruments_file, load_upstox_instruments
 from main.broker_order_utils import extract_ltp_from_quote_payload
 from main.broker_registry import normalize_broker_name
@@ -581,7 +581,13 @@ class MultiLegContractResolver:
         file_path = self._find_alice_contract_master_file("NFO")
 
         if not file_path and broker_details:
-            alice = get_alice_session(broker_details.broker_API_UID, broker_details.broker_API_KEY, proxy_config=self._proxy_config_for_broker(broker_details))
+            session_id = self._get_broker_access_token(broker_details)
+            alice = get_alice_saved_session(
+                broker_details.broker_API_UID,
+                broker_details.broker_API_KEY,
+                session_id,
+                proxy_config=self._proxy_config_for_broker(broker_details),
+            )
             if alice:
                 fetch_instrument_data(alice, "NFO")
                 file_path = self._find_alice_contract_master_file("NFO")
@@ -839,7 +845,13 @@ class MultiLegContractResolver:
 
     def _fetch_alice_blue_ltp(self, broker_details: ClientBrokerdetails, contract: ResolvedContract) -> Optional[float]:
         try:
-            alice = get_alice_session(broker_details.broker_API_UID, broker_details.broker_API_KEY, proxy_config=self._proxy_config_for_broker(broker_details))
+            session_id = self._get_broker_access_token(broker_details)
+            alice = get_alice_saved_session(
+                broker_details.broker_API_UID,
+                broker_details.broker_API_KEY,
+                session_id,
+                proxy_config=self._proxy_config_for_broker(broker_details),
+            )
             if not alice:
                 return None
             instrument = alice.get_instrument_by_symbol(contract.exchange, contract.symbol)
@@ -1455,22 +1467,21 @@ class MultiLegRiskManager:
                 error_code="MISSING_CREDENTIALS",
             )
 
-        if broker_name not in {"alice blue", "aliceblue"}:
-            access_token = self._get_broker_access_token(broker_details)
-            if not access_token:
-                raise MultiLegExecutionError(
-                    f"Access token not found for this {plan.broker} client.",
-                    error_code="MISSING_ACCESS_TOKEN",
-                )
+        access_token = self._get_broker_access_token(broker_details)
+        if not access_token:
+            raise MultiLegExecutionError(
+                f"Access token not found for this {plan.broker} client.",
+                error_code="MISSING_ACCESS_TOKEN",
+            )
 
-            expiry = getattr(broker_details, "access_token_expiry", None)
-            if expiry and timezone.is_naive(expiry):
-                expiry = timezone.make_aware(expiry)
-            if expiry and expiry <= timezone.now():
-                raise MultiLegExecutionError(
-                    f"{plan.broker} access token has expired. Please login again.",
-                    error_code="ACCESS_TOKEN_EXPIRED",
-                )
+        expiry = getattr(broker_details, "access_token_expiry", None)
+        if expiry and timezone.is_naive(expiry):
+            expiry = timezone.make_aware(expiry)
+        if expiry and expiry <= timezone.now():
+            raise MultiLegExecutionError(
+                f"{plan.broker} access token has expired. Please login again.",
+                error_code="ACCESS_TOKEN_EXPIRED",
+            )
 
     @staticmethod
     def _get_broker_access_token(broker_details: ClientBrokerdetails) -> Optional[str]:

@@ -441,13 +441,8 @@ class ExecutionNodeManagerTests(TestCase):
 
     @mock.patch("main.Alice_Blue_Api._build_alice_vendor_session")
     @mock.patch("main.Alice_Blue_Api._build_alice_session")
-    def test_alice_blue_individual_login_does_not_use_stale_vendor_auth_code(self, mock_build_session, mock_vendor_session):
+    def test_alice_blue_legacy_login_is_disabled(self, mock_build_session, mock_vendor_session):
         from main.Alice_Blue_Api import get_alice_session
-
-        mock_build_session.return_value = (
-            None,
-            {"stat": "Not_ok", "emsg": "Invalid Input", "alice_step": "get_session_data"},
-        )
 
         alice, error = get_alice_session(
             "alice-user-id",
@@ -458,8 +453,8 @@ class ExecutionNodeManagerTests(TestCase):
         )
 
         self.assertIsNone(alice)
-        self.assertIn("Alice Blue accepted the User ID but rejected the saved ANT API_KEY", error)
-        self.assertEqual(mock_build_session.call_count, 2)
+        self.assertIn("Legacy Alice Blue API-key session generation is disabled", error)
+        mock_build_session.assert_not_called()
         mock_vendor_session.assert_not_called()
 
     def test_alice_blue_invalid_input_message_identifies_failed_login_step(self):

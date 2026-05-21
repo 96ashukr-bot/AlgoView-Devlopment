@@ -65,6 +65,7 @@ from main.models import ClientBrokerdetails
 from main.broker_registry import normalize_broker_name
 from main.risk_manager import get_risk_manager
 from main.services.execution_router import route_order_to_execution_node
+from main.services.proxy_utils import build_requests_proxy_config
 from main.upstock import place_upstox_orders
 from main.zerodha import place_zerodha_orders
 from main.trade_history_service import save_trade_order_history
@@ -603,24 +604,23 @@ class ExecutionEngine:
                 "error_code": "MISSING_BROKER",
             }
 
-        if request.broker_name != "alice blue":
-            access_token = self._get_access_token(client_broker)
-            if not access_token:
-                return {
-                    "status": "error",
-                    "message": f"Access token not found for this {request.trade.broker} client.",
-                    "error_code": "MISSING_ACCESS_TOKEN",
-                }
+        access_token = self._get_access_token(client_broker)
+        if not access_token:
+            return {
+                "status": "error",
+                "message": f"Access token not found for this {request.trade.broker} client.",
+                "error_code": "MISSING_ACCESS_TOKEN",
+            }
 
-            expiry = getattr(client_broker, "access_token_expiry", None)
-            if expiry and timezone.is_naive(expiry):
-                expiry = timezone.make_aware(expiry)
-            if expiry and expiry <= timezone.now():
-                return {
-                    "status": "error",
-                    "message": f"{request.trade.broker} access token has expired. Please login again.",
-                    "error_code": "ACCESS_TOKEN_EXPIRED",
-                }
+        expiry = getattr(client_broker, "access_token_expiry", None)
+        if expiry and timezone.is_naive(expiry):
+            expiry = timezone.make_aware(expiry)
+        if expiry and expiry <= timezone.now():
+            return {
+                "status": "error",
+                "message": f"{request.trade.broker} access token has expired. Please login again.",
+                "error_code": "ACCESS_TOKEN_EXPIRED",
+            }
 
         required_fields = {
             "fyers": ("broker_API_KEY",),
@@ -1134,6 +1134,13 @@ class ExecutionEngine:
         api_uid = client_broker.broker_API_UID
         if not api_skey or not api_uid:
             return self._failed_response("API credentials not found for this Alice Blue client.")
+        access_token = self._get_access_token(client_broker)
+        if not access_token:
+            return self._failed_response("Alice Blue A3 session token is missing. Connect to Alice Blue before trading.")
+        proxy_config = None
+        execution_node = getattr(client_broker, "execution_node", None)
+        if execution_node:
+            proxy_config = build_requests_proxy_config(execution_node)
 
         trade_symbol = self._resolved_trade_symbol(
             request,
@@ -1157,7 +1164,9 @@ class ExecutionEngine:
             request.trade_order_status, request.Entry_type, request.Exit_type, request.Entry_price,
             request.Exit_price, request.EntryQty, request.ExitQty, request.webhook_signal,
             request.exchange_name, request.Segment, request.Index_Symbol, request.history_id,
-            request.triggerPrice
+            request.triggerPrice,
+            proxy_config=proxy_config,
+            session_id=access_token,
         )
 
     def _execute_angel_one(self, request: ExecutionRequest, validation_context: Dict[str, Any]) -> Dict[str, Any]:
