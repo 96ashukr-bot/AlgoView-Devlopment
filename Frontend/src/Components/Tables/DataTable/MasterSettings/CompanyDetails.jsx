@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import { Col, Card, CardHeader, CardBody, Form, Label, Row, Input, Button, Spinner } from 'reactstrap';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -6,8 +6,20 @@ import Swal from 'sweetalert2';
 import { baseUrl } from '../../../../ConfigUrl/config';
 import { AiOutlineCloseCircle } from 'react-icons/ai';
 import { updateCompanyDetails, getCompanyDetails } from '../../../../Services/Authentication';
+import { LogoContext } from '../../../UiKits/Logo/LogoContext';
+
+const resolveAssetUrl = (assetPath) => {
+    if (!assetPath) return null;
+    if (/^https?:\/\//i.test(assetPath) || assetPath.startsWith('data:') || assetPath.startsWith('blob:')) {
+        return assetPath;
+    }
+    const normalizedPath = assetPath.startsWith('/') ? assetPath : `/${assetPath}`;
+    const mediaBase = String(baseUrl || '').replace(/\/$/, '').replace(/\/api$/, '');
+    return `${mediaBase}${normalizedPath}`;
+};
 
 const CompanyDetails = () => {
+    const { setLogo, refreshLogo } = useContext(LogoContext);
     const [formData, setFormData] = useState({
         companyName: '',
         companyEmail: '',
@@ -54,18 +66,20 @@ const CompanyDetails = () => {
                 });
 
                 if (response.data.company_logo) {
-                    const logoUrl = `${baseUrl}${response.data.company_logo}`;
+                    const logoUrl = resolveAssetUrl(response.data.company_logo);
                     setPreviewLogo(logoUrl);
+                    localStorage.setItem('companyLogo', logoUrl);
+                    setLogo?.(logoUrl);
                 }
 
                 if (response.data.company_favicon) {
-                    const faviconUrl = `${baseUrl}${response.data.company_favicon}`;
+                    const faviconUrl = resolveAssetUrl(response.data.company_favicon);
                     setPreviewFavicon(faviconUrl);
                     localStorage.setItem('companyFavicon', faviconUrl); // Store favicon URL in local storage
                     updateFavicon(faviconUrl);
                 }
                 if (response.data.company_favicon) {
-                    setPreviewFavicon(`${baseUrl}${response.data.company_favicon}`);
+                    setPreviewFavicon(resolveAssetUrl(response.data.company_favicon));
                 }
             } else {
                 console.error(response.message || 'Failed to fetch company details');
@@ -94,7 +108,7 @@ const CompanyDetails = () => {
     };
 
     const removeImage = () => {
-        setFormData((prevData) => ({ ...prevData, companyLogo: null, companyFavicon: null }));
+        setFormData((prevData) => ({ ...prevData, companyLogo: null }));
         setPreviewLogo(null);
     };
 
@@ -133,18 +147,21 @@ const CompanyDetails = () => {
             return;
         }
 
-        const payload = {
-            company_name: formData.companyName,
-            company_email: formData.companyEmail,
-            company_support_email: formData.supportEmail,
-            company_phone_number: parseInt(formData.phoneNumber),
-            company_sender_name: formData.senderName,
-            company_logo: formData.companyLogo || {},
-            company_favicon: formData.companyFavicon || {},
-            login_link: formData.loginLink,
-            help_center_link: formData.helpCenterLink,
-            company_website: formData.companyWebsite
-        };
+        const payload = new FormData();
+        payload.append('company_name', formData.companyName);
+        payload.append('company_email', formData.companyEmail);
+        payload.append('company_support_email', formData.supportEmail);
+        payload.append('company_phone_number', parseInt(formData.phoneNumber, 10));
+        payload.append('company_sender_name', formData.senderName);
+        payload.append('login_link', formData.loginLink);
+        payload.append('help_center_link', formData.helpCenterLink);
+        payload.append('company_website', formData.companyWebsite);
+        if (formData.companyLogo instanceof File) {
+            payload.append('company_logo', formData.companyLogo);
+        }
+        if (formData.companyFavicon instanceof File) {
+            payload.append('company_favicon', formData.companyFavicon);
+        }
 
         setLoading(true);
 
@@ -153,30 +170,36 @@ const CompanyDetails = () => {
             if (response.status === 'success') {
                 toast.success(response.message);
 
-                if (formData.companyLogo) {
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        const logoUrl = e.target.result;
-                        localStorage.setItem('companyLogo', logoUrl);
-                    };
-                    reader.readAsDataURL(formData.companyLogo);
+                const savedLogoUrl = resolveAssetUrl(response.data?.company_logo || response.data?.data?.company_logo);
+                if (savedLogoUrl) {
+                    setPreviewLogo(savedLogoUrl);
+                    localStorage.setItem('companyLogo', savedLogoUrl);
+                    setLogo?.(savedLogoUrl);
+                } else if (formData.companyLogo instanceof File) {
+                    const objectUrl = URL.createObjectURL(formData.companyLogo);
+                    setPreviewLogo(objectUrl);
+                    localStorage.setItem('companyLogo', objectUrl);
+                    setLogo?.(objectUrl);
                 }
+                refreshLogo?.();
 
                 // Update favicon only after successful save
-                if (formData.companyFavicon) {
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        const faviconUrl = e.target.result;
-                        localStorage.setItem('companyFavicon', faviconUrl); // Store favicon URL in local storage
-                        updateFavicon(faviconUrl); // Update favicon in the DOM
-                    };
-                    reader.readAsDataURL(formData.companyFavicon);
+                const savedFaviconUrl = resolveAssetUrl(response.data?.company_favicon || response.data?.data?.company_favicon);
+                if (savedFaviconUrl) {
+                    setPreviewFavicon(savedFaviconUrl);
+                    localStorage.setItem('companyFavicon', savedFaviconUrl);
+                    updateFavicon(savedFaviconUrl);
+                } else if (formData.companyFavicon instanceof File) {
+                    const faviconUrl = URL.createObjectURL(formData.companyFavicon);
+                    localStorage.setItem('companyFavicon', faviconUrl);
+                    updateFavicon(faviconUrl);
                 }
             } else {
                 toast.error(response.message || 'Error updating company details');
             }
         } catch (error) {
             console.error(error.message || 'Something went wrong');
+            toast.error(error.message || 'Something went wrong');
         } finally {
             setLoading(false);
         }

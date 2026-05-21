@@ -3,6 +3,7 @@ from main.models import *
 from rest_framework.views import APIView
 from main.serializers import *
 from rest_framework import status
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
 from main.serializers import *#CompanyProfileSerializer
@@ -209,7 +210,9 @@ class CompanyProfileDetailView(APIView):
                 {"status": "error", "message": "An unexpected error occurred.", "error": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-class CompanyProfileUpdateView(APIView):            
+class CompanyProfileUpdateView(APIView):
+    parser_classes = (MultiPartParser, FormParser)
+
     def put(self, request, *args, **kwargs):
         """
         Retrieve or create the company profile for the authenticated user.
