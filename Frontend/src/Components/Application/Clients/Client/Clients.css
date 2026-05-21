@@ -108,11 +108,12 @@ input:checked+.toggle-slider:before {
 .client-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   background-color: #fff;
   padding: 20px 20px;
   border-bottom: 1px solid #ccc;
   font-family: Arial, sans-serif;
+  min-height: 104px;
 }
 
 .nifty-data {
@@ -191,9 +192,8 @@ input:checked+.toggle-slider:before {
 }
 
 .header-controls {
-  position: absolute;
-  top: 10px;
-  right: 10px;
+  position: static;
+  width: 100%;
 }
 
 .toggle-button {
@@ -242,6 +242,27 @@ input:checked+.toggle-slider:before {
 .header-custom-control {
   display: flex;
   align-items: center;
+  justify-content: stretch;
+}
+
+.client-header-action-row {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.35fr) minmax(180px, 1.1fr) minmax(160px, 0.9fr) minmax(120px, 0.6fr);
+  gap: 18px;
+  align-items: center;
+  width: 100%;
+}
+
+.client-header-action,
+.client-header-status {
+  width: 100%;
+  min-height: 48px;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  white-space: normal;
+  line-height: 1.2;
 }
 
 .head-style{
@@ -356,20 +377,24 @@ input:checked+.toggle-slider:before {
   }
 
   .header-controls {
-    position: absolute;
-    top: 22px;
-    right: 15px;
+    position: static;
+    width: 100%;
   }
 
   .header-custom-control {
-    display: block;
+    display: flex;
     align-items: center;
   }
 
-  .header-controls {
-    position: absolute;
-    top: 22px;
-    right: 16px;
+  .client-header-action-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .client-header-action,
+  .client-header-status {
+    min-height: 44px;
+    font-size: 13px;
   }
 
   .head-style{

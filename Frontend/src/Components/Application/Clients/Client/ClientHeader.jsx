@@ -726,21 +726,22 @@ const ClientHeader = () => {
         className="header-controls header-custom-control"
 
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-          <Button className="search-btn-clr" onClick={openBrokerSetupModal}>
+        <div className="client-header-action-row">
+          <Button className="search-btn-clr client-header-action" onClick={openBrokerSetupModal}>
             {currentBrokerDisplayName ? `Choose Broker (${currentBrokerDisplayName})` : "Choose Broker"}
           </Button>
           <Button
             color="info"
+            className="client-header-action"
             onClick={handleDashboardBrokerConnect}
             disabled={isSubmitting || !currentBrokerDisplayName || (!currentBrokerSchema?.connect_path && currentBrokerSchema?.auth_mode !== "direct_credentials")}
           >
             {dashboardConnectLabel}
           </Button>
-          <Button color="secondary" outline onClick={openExecutionModal}>
+          <Button color="secondary" outline className="client-header-action" onClick={openExecutionModal}>
             Execution IP
           </Button>
-          <span style={runtimeBadgeStyles}>
+          <span className="client-header-status" style={runtimeBadgeStyles}>
             {isRuntimeActive ? "Active" : "Inactive"}
           </span>
         </div>
