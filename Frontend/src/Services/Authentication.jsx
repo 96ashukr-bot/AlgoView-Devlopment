@@ -4072,6 +4072,9 @@ export const updateCompanyDetails = async (companyData) => {
     });
     return response.data;
   } catch (error) {
+    if (error.response?.status === 413) {
+      throw new Error("Logo or favicon file is too large. Please upload an image smaller than 20 MB.");
+    }
     const errorData = error.response?.data;
     const validationErrors = errorData?.errors
       ? Object.entries(errorData.errors)

@@ -8,6 +8,9 @@ import { AiOutlineCloseCircle } from 'react-icons/ai';
 import { updateCompanyDetails, getCompanyDetails } from '../../../../Services/Authentication';
 import { LogoContext } from '../../../UiKits/Logo/LogoContext';
 
+const MAX_BRANDING_FILE_SIZE_MB = 20;
+const MAX_BRANDING_FILE_SIZE = MAX_BRANDING_FILE_SIZE_MB * 1024 * 1024;
+
 const resolveAssetUrl = (assetPath) => {
     if (!assetPath) return null;
     if (/^https?:\/\//i.test(assetPath) || assetPath.startsWith('data:') || assetPath.startsWith('blob:')) {
@@ -91,6 +94,11 @@ const CompanyDetails = () => {
         if (type === 'file') {
             const file = files[0];
             if (file) {
+                if (file.size > MAX_BRANDING_FILE_SIZE) {
+                    toast.error(`Please upload an image smaller than ${MAX_BRANDING_FILE_SIZE_MB} MB.`);
+                    e.target.value = '';
+                    return;
+                }
                 setFormData((prevData) => ({ ...prevData, [name]: file }));
                 if (name === 'companyLogo') {
                     setPreviewLogo(URL.createObjectURL(file));
