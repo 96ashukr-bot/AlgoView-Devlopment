@@ -1,22 +1,27 @@
 .logo-wrapper.responsive-logo-wrapper {
-    min-height: 104px !important;
-    padding: 6px 14px !important;
+    height: 116px !important;
+    min-height: 116px !important;
+    padding: 16px 10px 16px 20px !important;
     display: flex !important;
     align-items: center !important;
+    overflow: visible !important;
 }
 
 .logo-wrapper.responsive-logo-wrapper a {
     display: flex !important;
     align-items: center !important;
-    width: 280px !important;
-    max-width: calc(100% - 34px) !important;
-    min-height: 92px !important;
+    width: 310px !important;
+    max-width: calc(100% - 44px) !important;
+    height: 84px !important;
+    min-height: 84px !important;
+    overflow: visible !important;
 }
 
 .custom-logo-style{
-    width: 260px !important;
+    display: block !important;
+    width: 290px !important;
     max-width: 100% !important;
-    height: 90px !important;
+    height: 78px !important;
     object-fit: contain !important;
     object-position: left center !important;
     padding-top: 0 !important;
@@ -27,19 +32,20 @@
 
     .custom-logo-style{
         padding-top: 0px !important;
-        width: 180px !important;
-        height: 64px !important;
+        width: 190px !important;
+        height: 58px !important;
     }
 
     .img-fluid-responsive{
         max-width: 100% !important;
-        height: 64px !important;
+        height: 58px !important;
         margin-bottom: 0px !important;
     }
     
     .responsive-logo-wrapper{
-        min-height: 84px !important;
-        padding: 8px 14px !important;
+        height: 88px !important;
+        min-height: 88px !important;
+        padding: 14px 12px !important;
     }
 
   }
