@@ -7,6 +7,8 @@ from main.utils import get_smtp_connection
 import logging
 
 logger = logging.getLogger(__name__)
+OTP_EMAIL_SUBJECT = "Your Login Otp (Don't Share with anyone)"
+OTP_SUPPORT_EMAIL = "support@bridgesparkinnovation.com"
 company_profile = get_company_profile()
 smtp_details = get_smtp_details()
 
@@ -128,13 +130,13 @@ class EmailService:
             raise RuntimeError("SMTP connection could not be established.")
 
         defaults = _get_email_context_defaults()
-        subject='Your Login OTP for AlgoView Technologies'
+        subject = OTP_EMAIL_SUBJECT
         # Define the context for the email template
         context = {
             'user_name': user_name,           # User's name
             'otp_code': otp_code,             # One-Time Password
             'valid_for_minutes': 2,  # OTP expiration time
-            'support_email': defaults['support_email'],
+            'support_email': OTP_SUPPORT_EMAIL,
             'company_website': defaults['company_website'],
             'help_center': defaults['help_center_link'],
             'contact_number': defaults['contact_number'],

@@ -15,6 +15,8 @@ from django.core.mail import send_mail
 from django.conf import settings
 import logging
 logger = logging.getLogger('main')
+OTP_EMAIL_SUBJECT = "Your Login Otp (Don't Share with anyone)"
+OTP_SUPPORT_EMAIL = "support@bridgesparkinnovation.com"
 
 from main.models import *
 from main.utils import get_smtp_connection
@@ -99,7 +101,7 @@ def send_email_async(user_name, otp_code, email):
     if not smtp_connection:
         print(f"SMTP connection could not be established!")
         return
-    subject=f"Your OTP for {company_name} Login"
+    subject = OTP_EMAIL_SUBJECT
     from_email = _get_default_from_email()
     # Define the context for the email template
     print("logo_url**************",logo_url)
@@ -107,7 +109,7 @@ def send_email_async(user_name, otp_code, email):
         'user_name': user_name,
         'otp_code': otp_code,            
         'valid_for_minutes': 2, 
-        'support_email': support_email,  
+        'support_email': OTP_SUPPORT_EMAIL,  
         'company_website':company_website, 
         'logo_url':logo_url,
         'help_center': help_center_link,
@@ -244,7 +246,7 @@ def resend_otp_email_async(user_email, otp_code):
     # Render the HTML message from the template
     html_message = render_to_string('resend_email.html', context)
     
-    subject = 'Your OTP Code for Login'
+    subject = OTP_EMAIL_SUBJECT
     from_email = _get_default_from_email()
     
     try:

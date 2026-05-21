@@ -27,8 +27,10 @@
            border-top-left-radius: 5px;
            border-top-right-radius: 5px;
        }
-       .header img {
-           max-height: 40px;
+       .header h2 {
+           margin: 0;
+           font-size: 20px;
+           font-weight: 600;
        }
        .content {
            padding: 20px;
@@ -71,9 +73,8 @@
 </head>
 <body>
    <div class="email-container">
-       <!-- Header -->
        <div class="header">
-        <img src="https://sparksadmin.algoview.in{{logo_url}}" alt="AlgoView Logo" width="150" height="80"/>
+           <h2>Your Login Otp (Don't Share with anyone)</h2>
        </div>
 
        <!-- Content -->
@@ -86,8 +87,7 @@
 
            <h3>Need help?</h3>
            <p>For any questions or support, don’t hesitate to contact us at 
-              <a href="mailto:{{ support_email }}">{{ support_email }}</a> or visit our help center: 
-              <a href="{{help_center}}">{{help_center}}</a>.
+              <a href="mailto:support@bridgesparkinnovation.com">support@bridgesparkinnovation.com</a>.
            </p>
            <p>We’re excited to have you on board and look forward to supporting your journey with us!</p>
        </div>
@@ -95,10 +95,9 @@
        <!-- Footer -->
        <div class="footer">
            <p>Thank you,</p>
-           <p>The {{company_name}} Team</p>
+           <p>The team</p>
            <p>
-               <a href="mailto:{{support_email}}">{{support_email}}</a> | 
-               <a href="{{company_website}}">{{company_website}}</a>
+               <a href="mailto:support@bridgesparkinnovation.com">support@bridgesparkinnovation.com</a>
            </p>
        </div>
    </div>
