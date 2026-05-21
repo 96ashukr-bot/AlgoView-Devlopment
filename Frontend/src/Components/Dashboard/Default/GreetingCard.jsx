@@ -192,10 +192,10 @@ const GreetingCard = ({ userProfile }) => {
   };
 
   return (
-    <Col className="col-xxl-4 col-sm-6 box-col-6 mt-4">
-      <Card className='bg-white dark'>
+    <Col className="col-xxl-12 col-sm-12 box-col-12 mt-4 client-strategy-section">
+      <Card className='bg-white dark client-strategy-card'>
         <CardBody>
-          <Nav tabs>
+          <Nav tabs className="client-dashboard-tabs justify-content-center">
             <NavItem>
               <NavLink
                 className={classnames({ active: activeTab === '1' })}
@@ -219,133 +219,108 @@ const GreetingCard = ({ userProfile }) => {
               {loading ? (
                 <div>Loading...</div>
               ) : clientSegments.length > 0 ? (
-                clientSegments.map((segment, index) => (
-                  <div
-                    key={index}
-                    className="d-flex justify-content-between align-items-center py-4 position-relative"
-                    style={{
-                      borderBottom:
-                        index !== clientSegments.length - 1
-                          ? '1px solid #eee'
-                          : 'none',
-                      fontSize: '14px',
-                    }}
-                    onMouseEnter={() => setHoveredIndex(index)}
-                    onMouseLeave={() => setHoveredIndex(null)}
-                  >
+                <div className="client-script-grid">
+                  {clientSegments.map((segment, index) => (
                     <div
-                      onClick={() => handleEdit(segment)}
-                      style={{ cursor: 'pointer' }}
-                      title="Edit trade setting"
+                      key={index}
+                      className="client-script-card position-relative"
+                      onMouseEnter={() => setHoveredIndex(index)}
+                      onMouseLeave={() => setHoveredIndex(null)}
                     >
-                      <div style={{ fontWeight: 700, color: '#1f2a44' }}>
-                        {getDisplayScriptName(segment)}
-                      </div>
-                      <div style={{ fontSize: '12px', color: '#6c757d', marginTop: '4px' }}>
-                        Group Service: {segment?.group_service || 'Not Assigned'}
-                      </div>
-                      <div style={{ fontSize: '12px', color: '#6c757d', marginTop: '2px' }}>
-                        Segment: {segment?.segment?.name || 'Not Assigned'}
-                      </div>
-                    </div>
-                    <div className="d-flex align-items-center">
-                      {/* Price : */}
-                      <span className="ms-3">
-                        {tokenPrices[segment?.sub_segment?.token] ? (
-                          <span
-                            style={{
-                              color: priceChanges[segment.sub_segment.token]?.trend === '+' ? 'green' : 'red',
-                              display: 'flex',
-                              alignItems: 'center',
-                            }}
-                          >
-                            {tokenPrices[segment.sub_segment.token].toFixed(2)}
-                            {priceChanges[segment.sub_segment.token]?.trend === '+' ? (
-                              <FaArrowUp className='arrows' style={{ color: 'green' }} />
-                            ) : (
-                              <FaArrowDown className='arrows' style={{ color: 'red' }} />
-                            )}
-                          </span>
-
-                        ) : (
-                          '00.0'
-                        )}
-                      </span>
-                      <div className="ms-3 text-end">
-                        {segment?.group_qty_limit ? (
-                          <div style={{ fontSize: '12px', color: '#6c757d' }}>
-                            Max Qty: {segment.group_qty_limit}
-                          </div>
-                        ) : null}
-                        {segment?.group_lot_size ? (
-                          <div style={{ fontSize: '12px', color: '#6c757d' }}>
-                            Lot Size: {segment.group_lot_size}
-                          </div>
-                        ) : null}
-                      </div>
-                      {/* Display the Difference and Percentage */}
-                      <div className="ms-3">
-                        {priceChanges[segment.sub_segment.token] && (
-                          <>
-                            <span
-                              style={{
-                                color: priceChanges[segment.sub_segment.token]?.difference.startsWith('+') ? 'green' : 'red',
-                              }}
-                            >
-                              {priceChanges[segment.sub_segment.token]?.difference || '0.00'}
-                            </span>
-                            <span
-                              style={{
-                                color: parseFloat(priceChanges[segment.sub_segment.token]?.percentage.replace(/[()%]/g, '')) > 0 ? 'green' : 'red',
-                                marginLeft: '5px',
-                              }}
-                            >
-                              {priceChanges[segment.sub_segment.token]?.percentage || '(+0.00%)'}
-                            </span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-
-                    {hoveredIndex === index && (
                       <div
-                        className="hover-options d-flex position-absolute hover-stripe"
-                        style={{
-                          background: '#f8f9fa',
-                          padding: '10px',
-                          border: '1px solid #ccc',
-                          borderRadius: '8px',
-                          top: '50%',
-                          paddingTop: '12px',
-                          paddingBottom: '3px',
-                          transform: 'translateY(-50%)',
-                          boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
-                        }}
+                        onClick={() => handleEdit(segment)}
+                        style={{ cursor: 'pointer' }}
+                        title="Edit trade setting"
                       >
-                        <Button
-                          style={{ padding: '0 18px', fontSize: '35px' }}
-                          color="link"
-                          title="Toggle On/Off"
-                          onClick={() => handleToggle(segment)}
-                        >
-                          {segment.is_tread_status ? (
-                            <FaToggleOn color="primary" />
-                          ) : (
-                            <FaToggleOff color="gray" />
-                          )}
-                        </Button>
-                        <Button
-                          color="link"
-                          title="Edit"
-                          style={{ padding: '0 18px', fontSize: '25px' }}
-                          onClick={() => handleEdit(segment)}
-                        >
-                          <FaEdit />
-                        </Button>
+                        <div className="client-script-title">
+                          {getDisplayScriptName(segment)}
+                        </div>
+                        <div className="client-script-meta">
+                          Group Service: {segment?.group_service || 'Not Assigned'}
+                        </div>
+                        <div className="client-script-meta">
+                          Segment: {segment?.segment?.name || 'Not Assigned'}
+                        </div>
                       </div>
-                    )}
-                  </div>
-                ))
+                      <div className="client-script-info">
+                        <span>
+                          {tokenPrices[segment?.sub_segment?.token] ? (
+                            <span
+                              style={{
+                                color: priceChanges[segment.sub_segment.token]?.trend === '+' ? 'green' : 'red',
+                                display: 'flex',
+                                alignItems: 'center',
+                              }}
+                            >
+                              {tokenPrices[segment.sub_segment.token].toFixed(2)}
+                              {priceChanges[segment.sub_segment.token]?.trend === '+' ? (
+                                <FaArrowUp className='arrows' style={{ color: 'green' }} />
+                              ) : (
+                                <FaArrowDown className='arrows' style={{ color: 'red' }} />
+                              )}
+                            </span>
+                          ) : (
+                            '00.0'
+                          )}
+                        </span>
+                        <div className="client-script-limits">
+                          {segment?.group_qty_limit ? (
+                            <div>Max Qty: {segment.group_qty_limit}</div>
+                          ) : null}
+                          {segment?.group_lot_size ? (
+                            <div>Lot Size: {segment.group_lot_size}</div>
+                          ) : null}
+                        </div>
+                        <div className="client-script-change">
+                          {priceChanges[segment.sub_segment.token] && (
+                            <>
+                              <span
+                                style={{
+                                  color: priceChanges[segment.sub_segment.token]?.difference.startsWith('+') ? 'green' : 'red',
+                                }}
+                              >
+                                {priceChanges[segment.sub_segment.token]?.difference || '0.00'}
+                              </span>
+                              <span
+                                style={{
+                                  color: parseFloat(priceChanges[segment.sub_segment.token]?.percentage.replace(/[()%]/g, '')) > 0 ? 'green' : 'red',
+                                  marginLeft: '5px',
+                                }}
+                              >
+                                {priceChanges[segment.sub_segment.token]?.percentage || '(+0.00%)'}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      {hoveredIndex === index && (
+                        <div className="hover-options d-flex position-absolute hover-stripe client-script-actions">
+                          <Button
+                            style={{ padding: '0 12px', fontSize: '30px' }}
+                            color="link"
+                            title="Toggle On/Off"
+                            onClick={() => handleToggle(segment)}
+                          >
+                            {segment.is_tread_status ? (
+                              <FaToggleOn color="primary" />
+                            ) : (
+                              <FaToggleOff color="gray" />
+                            )}
+                          </Button>
+                          <Button
+                            color="link"
+                            title="Edit"
+                            style={{ padding: '0 12px', fontSize: '22px' }}
+                            onClick={() => handleEdit(segment)}
+                          >
+                            <FaEdit />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
               ) : (
                 <div>No allotted scripts found.</div>
               )}
@@ -354,17 +329,11 @@ const GreetingCard = ({ userProfile }) => {
               {loading ? (
                 <div>Loading...</div>
               ) : multiLegStrategies.length > 0 ? (
-                multiLegStrategies.map((strategy, index) => (
+                <div className="client-script-grid">
+                {multiLegStrategies.map((strategy, index) => (
                   <div
                     key={strategy.id}
-                    className="d-flex justify-content-between align-items-center py-4 position-relative"
-                    style={{
-                      borderBottom:
-                        index !== multiLegStrategies.length - 1
-                          ? '1px solid #eee'
-                          : 'none',
-                      fontSize: '14px',
-                    }}
+                    className="client-script-card client-multileg-card position-relative"
                   >
                     <div
                       onClick={() => handleMultiLegEdit(strategy)}
@@ -429,7 +398,8 @@ const GreetingCard = ({ userProfile }) => {
                       </div>
                     </div>
                   </div>
-                ))
+                ))}
+                </div>
               ) : (
                 <div>No allotted multi leg strategies found.</div>
               )}
