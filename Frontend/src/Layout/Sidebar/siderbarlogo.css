@@ -1,6 +1,6 @@
 .logo-wrapper.responsive-logo-wrapper {
-    min-height: 106px !important;
-    padding: 24px 18px 10px !important;
+    min-height: 104px !important;
+    padding: 6px 14px !important;
     display: flex !important;
     align-items: center !important;
 }
@@ -8,14 +8,15 @@
 .logo-wrapper.responsive-logo-wrapper a {
     display: flex !important;
     align-items: center !important;
-    width: 100% !important;
-    min-height: 70px !important;
+    width: 280px !important;
+    max-width: calc(100% - 34px) !important;
+    min-height: 92px !important;
 }
 
 .custom-logo-style{
-    width: 210px !important;
+    width: 260px !important;
     max-width: 100% !important;
-    height: 66px !important;
+    height: 90px !important;
     object-fit: contain !important;
     object-position: left center !important;
     padding-top: 0 !important;
@@ -26,19 +27,19 @@
 
     .custom-logo-style{
         padding-top: 0px !important;
-        width: 150px !important;
-        height: 54px !important;
+        width: 180px !important;
+        height: 64px !important;
     }
 
     .img-fluid-responsive{
         max-width: 100% !important;
-        height: 54px !important;
+        height: 64px !important;
         margin-bottom: 0px !important;
     }
     
     .responsive-logo-wrapper{
-        min-height: 82px !important;
-        padding: 18px 16px 10px !important;
+        min-height: 84px !important;
+        padding: 8px 14px !important;
     }
 
   }
