@@ -1,7 +1,7 @@
 .logo-wrapper.responsive-logo-wrapper {
-    height: 116px !important;
-    min-height: 116px !important;
-    padding: 16px 10px 16px 20px !important;
+    height: 128px !important;
+    min-height: 128px !important;
+    padding: 18px 8px 14px 24px !important;
     display: flex !important;
     align-items: center !important;
     overflow: visible !important;
@@ -10,21 +10,22 @@
 .logo-wrapper.responsive-logo-wrapper a {
     display: flex !important;
     align-items: center !important;
-    width: 310px !important;
-    max-width: calc(100% - 44px) !important;
-    height: 84px !important;
-    min-height: 84px !important;
+    width: 320px !important;
+    max-width: calc(100% - 70px) !important;
+    height: 100px !important;
+    min-height: 100px !important;
     overflow: visible !important;
 }
 
 .custom-logo-style{
     display: block !important;
-    width: 290px !important;
-    max-width: 100% !important;
-    height: 78px !important;
+    width: 310px !important;
+    max-width: none !important;
+    height: 96px !important;
     object-fit: contain !important;
     object-position: left center !important;
     padding-top: 0 !important;
+    transform: translateY(10px) !important;
     margin-bottom: 0px !important;
 }
 
@@ -32,20 +33,21 @@
 
     .custom-logo-style{
         padding-top: 0px !important;
-        width: 190px !important;
-        height: 58px !important;
+        width: 210px !important;
+        height: 70px !important;
+        transform: translateY(6px) !important;
     }
 
     .img-fluid-responsive{
         max-width: 100% !important;
-        height: 58px !important;
+        height: 70px !important;
         margin-bottom: 0px !important;
     }
     
     .responsive-logo-wrapper{
-        height: 88px !important;
-        min-height: 88px !important;
-        padding: 14px 12px !important;
+        height: 100px !important;
+        min-height: 100px !important;
+        padding: 14px 12px 10px !important;
     }
 
   }
