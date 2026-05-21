@@ -21,6 +21,7 @@ OTP_SENDER_NAME = "SparksOtp"
 REGISTRATION_EMAIL_SUBJECT = "Registration Successful"
 REGISTRATION_LOGIN_LINK = "https://app.sparkstechnologies.co.in/login"
 REGISTRATION_SUPPORT_EMAIL = "support@bridgesparkinnovation.com"
+REGISTRATION_SENDER_NAME = "SparksRegistration"
 
 from main.models import *
 from main.utils import get_smtp_connection
@@ -160,7 +161,7 @@ def send_email_pass_async(email, password, user_name, login_link, support_email,
         from_email = _get_default_from_email()
         
         # Create the email
-        email_message = EmailMultiAlternatives(subject, "", f"{company_sender_name} <{from_email}>", [email],connection=smtp_connection)
+        email_message = EmailMultiAlternatives(subject, "", f"{REGISTRATION_SENDER_NAME} <{from_email}>", [email],connection=smtp_connection)
         email_message.attach_alternative(html_message, "text/html")  # Attach the HTML version
 
         # Send the email

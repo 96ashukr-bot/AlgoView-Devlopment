@@ -13,6 +13,7 @@ OTP_SENDER_NAME = "SparksOtp"
 REGISTRATION_EMAIL_SUBJECT = "Registration Successful"
 REGISTRATION_LOGIN_LINK = "https://app.sparkstechnologies.co.in/login"
 REGISTRATION_SUPPORT_EMAIL = "support@bridgesparkinnovation.com"
+REGISTRATION_SENDER_NAME = "SparksRegistration"
 company_profile = get_company_profile()
 smtp_details = get_smtp_details()
 
@@ -116,7 +117,7 @@ class EmailService:
         email_message = EmailMultiAlternatives(
             subject,
             "",
-            f"{defaults['company_sender_name']} <{defaults['from_email']}>",
+            f"{REGISTRATION_SENDER_NAME} <{defaults['from_email']}>",
             [email],
             connection=smtp_connection,
         )
