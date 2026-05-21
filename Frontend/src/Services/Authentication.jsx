@@ -4072,7 +4072,13 @@ export const updateCompanyDetails = async (companyData) => {
     });
     return response.data;
   } catch (error) {
-    const errorMessage = error.response?.data?.detail || "Failed to update Company Details";
+    const errorData = error.response?.data;
+    const validationErrors = errorData?.errors
+      ? Object.entries(errorData.errors)
+        .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
+        .join(' | ')
+      : "";
+    const errorMessage = errorData?.detail || validationErrors || errorData?.message || "Failed to update Company Details";
     if (error.response?.data?.code === "token_not_valid") {
       alert("Your session has expired. Please log in again.");
     }

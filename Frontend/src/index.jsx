@@ -20,12 +20,10 @@ const Root = () => {
     const existingFavicons = document.querySelectorAll("link[rel~='icon']");
     existingFavicons.forEach(link => link.parentNode.removeChild(link));
   
-    if (faviconUrl) {
-      const newLink = document.createElement('link');
-      newLink.rel = 'icon';
-      newLink.href = faviconUrl;
-      document.head.appendChild(newLink);
-    }
+    const newLink = document.createElement('link');
+    newLink.rel = 'icon';
+    newLink.href = faviconUrl || '/favicon.png';
+    document.head.appendChild(newLink);
   };
 
   return (

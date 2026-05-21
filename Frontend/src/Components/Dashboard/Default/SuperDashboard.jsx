@@ -13,7 +13,7 @@ const SuperDashboard = () => {
           <Media>
             <Media body>
               <div className='greeting-user'>
-                <H4 attrH4={{ className: 'f-w-600' }}>Welcome To AlgoView</H4>
+                <H4 attrH4={{ className: 'f-w-600' }}>Welcome To Sparks</H4>
                 <P>{WelcomeMessage}</P>
                 <div className='whatsnew-btn'>
                   <Btn attrBtn={{ color: 'transparent', outline: true, className: 'btn btn-outline-white' }}>{WhatsNew}</Btn>

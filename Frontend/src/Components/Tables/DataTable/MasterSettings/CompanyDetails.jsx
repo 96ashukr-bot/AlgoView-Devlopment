@@ -78,9 +78,6 @@ const CompanyDetails = () => {
                     localStorage.setItem('companyFavicon', faviconUrl); // Store favicon URL in local storage
                     updateFavicon(faviconUrl);
                 }
-                if (response.data.company_favicon) {
-                    setPreviewFavicon(resolveAssetUrl(response.data.company_favicon));
-                }
             } else {
                 console.error(response.message || 'Failed to fetch company details');
             }
@@ -210,12 +207,10 @@ const CompanyDetails = () => {
         const existingFavicons = document.querySelectorAll("link[rel~='icon']");
         existingFavicons.forEach(link => link.parentNode.removeChild(link));
 
-        if (faviconUrl) {
-            const newLink = document.createElement('link');
-            newLink.rel = 'icon';
-            newLink.href = faviconUrl;
-            document.head.appendChild(newLink);
-        }
+        const newLink = document.createElement('link');
+        newLink.rel = 'icon';
+        newLink.href = faviconUrl || '/favicon.png';
+        document.head.appendChild(newLink);
     };
 
     return (

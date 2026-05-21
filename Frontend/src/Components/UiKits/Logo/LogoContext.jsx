@@ -5,16 +5,26 @@ import { getAccessToken } from '../../../Services/authStorage';
 
 export const LogoContext = createContext();
 
-const resolveLogoUrl = (logoPath) => {
-  if (!logoPath) return '';
-  if (/^https?:\/\//i.test(logoPath) || logoPath.startsWith('data:')) {
-    return logoPath;
+const resolveAssetUrl = (assetPath) => {
+  if (!assetPath) return '';
+  if (/^https?:\/\//i.test(assetPath) || assetPath.startsWith('data:') || assetPath.startsWith('blob:')) {
+    return assetPath;
   }
 
-  const normalizedPath = logoPath.startsWith('/') ? logoPath : `/${logoPath}`;
+  const normalizedPath = assetPath.startsWith('/') ? assetPath : `/${assetPath}`;
   const apiBase = String(baseUrl || '').replace(/\/$/, '');
   const mediaBase = apiBase.replace(/\/api$/, '');
   return `${mediaBase}${normalizedPath}`;
+};
+
+const updateFavicon = (faviconUrl) => {
+  const existingFavicons = document.querySelectorAll("link[rel~='icon']");
+  existingFavicons.forEach((link) => link.parentNode.removeChild(link));
+
+  const newLink = document.createElement('link');
+  newLink.rel = 'icon';
+  newLink.href = faviconUrl || '/favicon.png';
+  document.head.appendChild(newLink);
 };
 
 export const LogoProvider = ({ children }) => {
@@ -28,17 +38,23 @@ export const LogoProvider = ({ children }) => {
       const response = await axios.get(`${baseUrl}/get-company-profile/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const logoUrl = resolveLogoUrl(response.data?.data?.company_logo);
+      const logoUrl = resolveAssetUrl(response.data?.data?.company_logo);
       if (logoUrl) {
         localStorage.setItem('companyLogo', logoUrl);
         setLogo(logoUrl);
       }
+      const faviconUrl = resolveAssetUrl(response.data?.data?.company_favicon);
+      if (faviconUrl) {
+        localStorage.setItem('companyFavicon', faviconUrl);
+        updateFavicon(faviconUrl);
+      }
     } catch (error) {
-      console.error('Error refreshing company logo:', error.response?.data?.message || error.message);
+      console.error('Error refreshing company branding:', error.response?.data?.message || error.message);
     }
   }, []);
 
   useEffect(() => {
+    updateFavicon(localStorage.getItem('companyFavicon'));
     refreshLogo();
     window.addEventListener('focus', refreshLogo);
     return () => window.removeEventListener('focus', refreshLogo);
