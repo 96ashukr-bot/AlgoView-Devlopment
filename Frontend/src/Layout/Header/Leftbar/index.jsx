@@ -4,10 +4,12 @@ import { AlignCenter } from "react-feather";
 import { Link } from "react-router-dom";
 import { Image } from "../../../AbstractElements";
 import CustomizerContext from "../../../_helper/Customizer";
+import { LogoContext } from "../../../Components/UiKits/Logo/LogoContext";
 // import NotificationSlider from "./NotificationSlider";
 
 const Leftbar = () => {
   const { layoutURL, setToggleIcon, toggleSidebar } = useContext(CustomizerContext);
+  const { logo } = useContext(LogoContext);
   const [sidebartoggle, setSidebartoggle] = useState(true);
   const [width, setWidth] = useState(window.innerWidth);
 
@@ -57,16 +59,10 @@ const Leftbar = () => {
           <Link to={`/dashboard/algoviewtech/admin`}>
             <Image
               attrImage={{
-                className: "img-fluid for-light",
-                src: `${require("../../../assets/images/logo/logo.png")}`,
-                alt: "",
-              }}
-            />
-            <Image
-              attrImage={{
-                className: "img-fluid for-dark",
-                src: `${require("../../../assets/images/logo/logo_dark.png")}`,
-                alt: "",
+                className: "img-fluid header-company-logo",
+                src: logo || `${require("../../../assets/images/logo/logo.png")}`,
+                alt: "Company Logo",
+                style: { maxWidth: "180px", height: "56px", objectFit: "contain", objectPosition: "left center" },
               }}
             />
           </Link>
