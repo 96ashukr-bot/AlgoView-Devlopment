@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "./Clients.css";
 import {
-  getClientSegmentsList,
   getBroker,
-  getClientApiStatus,
   UpdateClientBroker,
   getClientBrokerDetail,
   startBrokerConnectFlow,
@@ -15,8 +13,6 @@ import {
   verifyMyExecutionProxy,
 } from "../../../../Services/Authentication";
 import Swal from 'sweetalert2';
-import { getWebSocketUrl } from "../../../../ConfigUrl/config";
-import useWebSocket from "react-use-websocket";
 import {
   FormGroup, Label, Input, Modal, ModalHeader, ModalBody, ModalFooter, Button,
 } from "reactstrap";
@@ -146,12 +142,6 @@ const normalizeBrokerName = (name) => {
 };
 
 const ClientHeader = () => {
-  const [segData, setSegData] = useState([]);
-  const [visibleSegData, setVisibleSegData] = useState([]);
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [webSocketUrl, setWebSocketUrl] = useState("");
-  const [tokenPrices, setTokenPrices] = useState({});
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [brokerList, setBrokerList] = useState([]);
   const [selectedBroker, setSelectedBroker] = useState("");
@@ -188,108 +178,11 @@ const ClientHeader = () => {
     is_active: true,
   });
   const [isExecutionSaving, setIsExecutionSaving] = useState(false);
-  const { lastMessage } = useWebSocket(webSocketUrl || null, {
-    shouldReconnect: () => true,
-    onError: (error) => console.error("WebSocket error:", error),
-    onOpen: () => console.log('Header WebSocket connected'),
-    onClose: () => console.log('Header WebSocket disconnected'),
-  });
 
   useEffect(() => {
-    fetchApiStatus();
-    fetchClientSegments();
     fetchBrokerList();
     fetchClientExecutionNode();
   }, []);
-
-  useEffect(() => {
-    if (lastMessage !== null) {
-      const messageData = JSON.parse(lastMessage.data);
-      console.log('Received WebSocket header message :', messageData);
-      if (messageData.token) {
-        setTokenPrices((prevPrices) => ({
-          ...prevPrices,
-          [messageData.token]: {
-            price: parseFloat(messageData.price.replace(/,/g, "")),
-            trend: messageData.trend,
-            difference: messageData.difference,
-            percentage: messageData.percentage,
-          },
-        }));
-      }
-    }
-  }, [lastMessage]);
-
-  const fetchApiStatus = async () => {
-    try {
-      const status = await getClientApiStatus();
-      console.log("API Status:", status);
-    } catch (error) {
-      console.error("Error fetching API status:", error);
-    }
-  };
-
-  const fetchClientSegments = async () => {
-    try {
-      const response = await getClientSegmentsList();
-      if (response.client_segment_list && response.client_segment_list.length > 0) {
-        const transformedData = response.client_segment_list.map((item) => ({
-          name: item.sub_segment.name,
-          token: item.sub_segment.token,
-          change:
-            parseFloat(item.max_profit_for_day) -
-            parseFloat(item.min_profit_for_day),
-        }));
-        setSegData(transformedData);
-        setVisibleSegData(transformedData.slice(0, 3));
-      } else {
-        // Set default values if no data is returned
-        if (!isExpanded) {
-          setSegData([
-            { name: "Nifty Fin Service", token: "NIFTY_FIN_SERVICE", change: 0 },
-            { name: "Nifty 50", token: "NIFTY_50", change: 0 },
-          ]);
-        }
-      }
-
-      const Exchange = response.client_segment_list[0]?.sub_segment?.Exchange;
-      const token = response.client_segment_list
-        .map((item) => item.sub_segment.token)
-        .join(",");
-      // setWebSocketUrl(getWebSocketUrl(Exchange, token));
-
-      const webSocketParams = [];
-      if (Exchange) webSocketParams.push(Exchange);
-      if (token) webSocketParams.push(token);
-
-      if (webSocketParams.length > 0) {
-        setWebSocketUrl(getWebSocketUrl(...webSocketParams));
-      }
-
-    } catch (error) {
-      console.error("Error fetching client segments:", error);
-      // Optionally set default values in case of an error
-      if (!isExpanded) {
-        setSegData([
-          { name: "Nifty Fin Service", token: "NIFTY_FIN_SERVICE", change: 0 },
-          { name: "Nifty 50", token: "NIFTY_50", change: 0 },
-        ]);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleToggleMore = () => {
-    if (!isExpanded) {
-      // Show all unique items
-      setVisibleSegData(segData);
-    } else {
-      // Show only the first 3 items
-      setVisibleSegData(segData.slice(0, 3));
-    }
-    setIsExpanded(!isExpanded);
-  };
 
   const fetchBrokerList = async () => {
     try {
@@ -806,12 +699,6 @@ const ClientHeader = () => {
     setIsSubmitting(false);
   };
 
-  const getColor = (trend) => {
-    if (trend === "+") return "text-success";
-    if (trend === "-") return "text-danger";
-    return "text-muted";
-  };
-
   const currentBrokerDisplayName = existingSelectedBroker || selectedBroker || "";
   const currentBrokerDefinition = currentBrokerDisplayName
     ? getBrokerDefinition(currentBrokerDisplayName)
@@ -839,16 +726,6 @@ const ClientHeader = () => {
         className="header-controls header-custom-control"
 
       >
-        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-          <h4 className="bold head-style" style={{ marginBottom: 0 }}>
-            Broker
-          </h4>
-          <div style={{ color: "#6b7280", fontSize: "13px" }}>
-            {currentBrokerDisplayName
-              ? `Saved broker: ${currentBrokerDisplayName}`
-              : "No broker selected yet"}
-          </div>
-        </div>
         <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
           <Button className="search-btn-clr" onClick={openBrokerSetupModal}>
             {currentBrokerDisplayName ? `Choose Broker (${currentBrokerDisplayName})` : "Choose Broker"}
@@ -868,70 +745,6 @@ const ClientHeader = () => {
           </span>
         </div>
       </div>
-      {loading ? (
-        <p>Loading...</p>
-      ) : (
-
-        <div className="nifty-data">
-          {/* First row for default visible items */}
-          <div className="nifty-visible">
-            {visibleSegData.slice(0, 3).map((item, index) => {
-              const tokenData = tokenPrices[item.token] || {};
-              const { price, trend, difference, percentage } = tokenData;
-              const colorClass = getColor(trend);
-
-              return (
-                <div key={index} className="nifty-item">
-                  <span className="nifty-name bold">{item.name}</span>
-                  <span className={`nifty-value bold ${colorClass}`}>
-                    {price ? price.toFixed(2) : "00.0"}
-                  </span>
-                  <span className={`nifty-difference bold ${colorClass}`}>
-                    {difference || "0"}
-                  </span>
-                  <span className={`nifty-percentage bold ${colorClass}`}>
-                    {percentage || "(0%)"}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Second row for expanded items */}
-          {isExpanded && (
-            <div className="nifty-hidden">
-              {visibleSegData.slice(3).map((item, index) => {
-                const tokenData = tokenPrices[item.token] || {};
-                const { price, trend, difference, percentage } = tokenData;
-                const colorClass = getColor(trend);
-
-                return (
-                  <div key={index + 3} className="nifty-item">
-                    <span className="nifty-name bold">{item.name}</span>
-                    <span className={`nifty-value bold ${colorClass}`}>
-                      {price ? price.toFixed(2) : "00.0"}
-                    </span>
-                    <span className={`nifty-difference bold ${colorClass}`}>
-                      {difference || "0"}
-                    </span>
-                    <span className={`nifty-percentage bold ${colorClass}`}>
-                      {percentage || "(0%)"}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Button to toggle more/less */}
-          {segData.length > 3 && (
-            <button onClick={handleToggleMore} className="toggle-button">
-              {isExpanded ? "Show Less" : "Show More"}
-            </button>
-          )}
-        </div>
-
-      )}
 
       {/* Modal Component */}
       <Modal isOpen={isModalOpen} toggle={closeModal}>
