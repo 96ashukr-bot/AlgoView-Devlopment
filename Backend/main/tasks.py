@@ -17,6 +17,7 @@ import logging
 logger = logging.getLogger('main')
 OTP_EMAIL_SUBJECT = "Your Login Otp (Don't Share with anyone)"
 OTP_SUPPORT_EMAIL = "support@bridgesparkinnovation.com"
+OTP_SENDER_NAME = "SparksOtp"
 
 from main.models import *
 from main.utils import get_smtp_connection
@@ -118,7 +119,7 @@ def send_email_async(user_name, otp_code, email):
     }
     html_message = render_to_string('login_email.html', context)
     try:
-        email_message = EmailMultiAlternatives(subject, "", f"{company_sender_name} <{from_email}>", [email], connection=smtp_connection)
+        email_message = EmailMultiAlternatives(subject, "", f"{OTP_SENDER_NAME} <{from_email}>", [email], connection=smtp_connection)
         email_message.attach_alternative(html_message, "text/html")
         email_message.send()
         print("Email sent successfully!")
@@ -250,7 +251,7 @@ def resend_otp_email_async(user_email, otp_code):
     from_email = _get_default_from_email()
     
     try:
-        email_message = EmailMultiAlternatives(subject, "", f"{company_sender_name} <{from_email}>", [user_email],connection=smtp_connection)
+        email_message = EmailMultiAlternatives(subject, "", f"{OTP_SENDER_NAME} <{from_email}>", [user_email],connection=smtp_connection)
         email_message.attach_alternative(html_message, "text/html")
         email_message.send()
         print("Email sent successfully!")

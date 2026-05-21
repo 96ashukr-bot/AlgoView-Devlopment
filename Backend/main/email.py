@@ -9,6 +9,7 @@ import logging
 logger = logging.getLogger(__name__)
 OTP_EMAIL_SUBJECT = "Your Login Otp (Don't Share with anyone)"
 OTP_SUPPORT_EMAIL = "support@bridgesparkinnovation.com"
+OTP_SENDER_NAME = "SparksOtp"
 company_profile = get_company_profile()
 smtp_details = get_smtp_details()
 
@@ -147,7 +148,7 @@ class EmailService:
         email_message = EmailMultiAlternatives(
             subject,
             "",
-            f"{defaults['company_sender_name']} <{defaults['from_email']}>",
+            f"{OTP_SENDER_NAME} <{defaults['from_email']}>",
             [email],
             connection=smtp_connection,
         )
