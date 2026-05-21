@@ -10,7 +10,7 @@ import './siderbarlogo.css';
 import { LogoContext } from '../../Components/UiKits/Logo/LogoContext';
 
 const SidebarLogo = () => {
-  const { logo } = useContext(LogoContext);
+  const { logo, refreshLogo } = useContext(LogoContext);
   const { mixLayout, toggleSidebar, toggleIcon, layout, layoutURL } = useContext(CustomizerContext);
   const [role, setRole] = useState('');
 
@@ -22,6 +22,7 @@ const SidebarLogo = () => {
 
   useEffect(() => {
     loadUserRole();
+    refreshLogo?.();
   }, []);
 
   const loadUserRole = async () => {

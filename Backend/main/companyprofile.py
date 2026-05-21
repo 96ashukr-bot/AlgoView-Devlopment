@@ -180,8 +180,19 @@ class CompanyProfileDetailView(APIView):
         user=request.user
         """Retrieve a single company by ID or all companies if no ID is provided."""
         try:
-
-            company = CompanyProfileDetails.objects.get(user=user)
+            company = CompanyProfileDetails.objects.filter(user=user).first()
+            if company is None:
+                company = (
+                    CompanyProfileDetails.objects.filter(user__role__name__iexact="Super-Admin")
+                    .order_by("id")
+                    .first()
+                    or CompanyProfileDetails.objects.exclude(company_logo="")
+                    .order_by("id")
+                    .first()
+                    or CompanyProfileDetails.objects.order_by("id").first()
+                )
+            if company is None:
+                raise CompanyProfileDetails.DoesNotExist
             serializer = CompanyProfileSerializer(company)
             return Response(
                 {"status": "success", "message": "Company retrieved successfully.", "data": serializer.data},
