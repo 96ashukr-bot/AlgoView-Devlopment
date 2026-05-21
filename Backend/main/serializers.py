@@ -1214,7 +1214,7 @@ class ClientListSerializer(serializers.ModelSerializer):
                   'created_at','client_expiry_status']
 
     def get_client_expiry_status(self, obj):
-        if obj.end_date_client and obj.end_date_client < date.today():
+        if obj.end_date_client and obj.end_date_client < get_business_local_date():
             return False
         return True
         

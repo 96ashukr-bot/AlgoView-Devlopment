@@ -1,5 +1,7 @@
 import datetime
 import random
+from zoneinfo import ZoneInfo
+from django.conf import settings
 from django.utils.timezone import now
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
@@ -18,6 +20,14 @@ def get_ist_time():
     # Convert the current UTC time to IST
     ist_timezone = pytz_timezone('Asia/Kolkata')
     return now().astimezone(ist_timezone)
+
+
+def get_business_local_date():
+    """Return today's date in the configured business timezone."""
+    business_timezone = ZoneInfo(getattr(settings, "TIME_ZONE", "Asia/Kolkata"))
+    return timezone.now().astimezone(business_timezone).date()
+
+
 class Role(models.Model):
     ACTIVE = 'active'
     INACTIVE = 'inactive'
@@ -147,7 +157,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     
     def calculate_dates(self):
         """Calculate client service dates from the selected license."""
-        today = timezone.localdate()
+        today = get_business_local_date()
         license_type = (getattr(self.license, 'name', '') or '').strip().lower()
 
         if license_type == "live":
