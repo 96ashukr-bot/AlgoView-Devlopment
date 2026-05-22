@@ -230,9 +230,16 @@ def _get_matching_webhook_trades(alert_data, webhook_symbol):
         group_service__iexact=strategy_identifier,
     ).select_related("client", "segment", "sub_segment")
 
+    matching_trade_ids = []
     ready_count = 0
     blocked_count = 0
+    symbol_mismatch_count = 0
     for trade in candidate_queryset:
+        if not _trade_matches_webhook_symbol(trade, webhook_symbol):
+            symbol_mismatch_count += 1
+            continue
+
+        matching_trade_ids.append(trade.id)
         reasons = _collect_trade_skip_reasons(
             trade,
             webhook_symbol=webhook_symbol,
@@ -244,15 +251,17 @@ def _get_matching_webhook_trades(alert_data, webhook_symbol):
             ready_count += 1
 
     logger.info(
-        "Webhook trade scan completed for strategy '%s' and symbol '%s': total=%s ready=%s blocked=%s",
+        "Webhook trade scan completed for strategy '%s' and symbol '%s': total=%s matching=%s symbol_mismatch=%s ready=%s blocked=%s",
         strategy_identifier,
         webhook_symbol,
         candidate_queryset.count(),
+        len(matching_trade_ids),
+        symbol_mismatch_count,
         ready_count,
         blocked_count,
     )
 
-    return candidate_queryset, strategy_identifier
+    return candidate_queryset.filter(id__in=matching_trade_ids), strategy_identifier
 
 
 def _get_trade_execution_symbol(trade):
