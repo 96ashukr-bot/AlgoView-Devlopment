@@ -1404,7 +1404,7 @@ class ClientTradeSettingSerializer(serializers.ModelSerializer):
 
         for numeric_field in ("stop_loss", "target"):
             raw_value = attrs.get(numeric_field, getattr(self.instance, numeric_field, None))
-            if raw_value in (None, ""):
+            if raw_value in (None, "", 0, "0", 0.0, "0.0"):
                 attrs[numeric_field] = None
                 continue
 

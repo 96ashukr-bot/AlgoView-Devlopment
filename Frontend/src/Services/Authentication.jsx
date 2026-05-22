@@ -2744,8 +2744,14 @@ export const updateTradeClient = async (clientId, payload) => {
     return response.data;
   } catch (error) {
     console.error(`Error updating client:`, error.response);
+    const responseData = error.response?.data;
+    const fieldErrors = responseData && typeof responseData === "object"
+      ? Object.entries(responseData)
+          .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(", ") : messages}`)
+          .join("\n")
+      : "";
     throw new Error(
-      error.response?.data?.detail || "Failed to update client."
+      responseData?.detail || fieldErrors || "Failed to update client."
     );
   }
 };

@@ -307,6 +307,14 @@ const EditPage = () => {
         }
       }
 
+      const optionalPositiveNumber = (value) => {
+        if (value === "" || value === null || value === undefined) {
+          return null;
+        }
+        const numericValue = Number(value);
+        return numericValue > 0 ? numericValue : null;
+      };
+
       const payload = {
         segment: parseInt(segmentId, 10),
         sub_segment: parseInt(subSegmentId, 10),
@@ -319,8 +327,8 @@ const EditPage = () => {
         sl_type: (formData.slType),
         buy_sell: apiData[0]?.buy_sell || "Buy",
         quantity: formData.quantity || 0,
-        stop_loss: formData.stopLoss || 0,
-        target: formData.target || 0,
+        stop_loss: optionalPositiveNumber(formData.stopLoss),
+        target: optionalPositiveNumber(formData.target),
         trade_limit: formData.tradeLimit || 0,
         max_loss_for_day: formData.maxLoss || 0,
         max_profit_for_day: formData.maxProfit || 0,
