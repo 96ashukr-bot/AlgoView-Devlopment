@@ -15,12 +15,14 @@ from main.models import ExecutionNode
 logger = logging.getLogger("main.execution_proxy")
 
 PUBLIC_IP_ENDPOINTS = (
-    "https://api64.ipify.org?format=json",
-    "https://api6.ipify.org?format=json",
     "https://api.ipify.org?format=json",
+    "https://api64.ipify.org?format=json",
     "https://ifconfig.me/ip",
     "https://checkip.amazonaws.com",
 )
+
+PROXY_VERIFY_CONNECT_TIMEOUT_SECONDS = 3
+PROXY_VERIFY_READ_TIMEOUT_SECONDS = 5
 
 
 def _clean_proxy_value(value: str | None) -> str:
@@ -124,7 +126,11 @@ def verify_proxy_public_ip(execution_node: ExecutionNode) -> dict[str, Any]:
         execution_node.save(update_fields=["proxy_public_ip_verified", "proxy_last_error", "proxy_last_verified_at", "updated_at"])
         return result
 
-    timeout = getattr(settings, "NODE_REQUEST_TIMEOUT", 10)
+    configured_timeout = getattr(settings, "NODE_REQUEST_TIMEOUT", 10)
+    timeout = (
+        min(PROXY_VERIFY_CONNECT_TIMEOUT_SECONDS, configured_timeout),
+        min(PROXY_VERIFY_READ_TIMEOUT_SECONDS, configured_timeout),
+    )
     last_error = ""
     for url in PUBLIC_IP_ENDPOINTS:
         try:
