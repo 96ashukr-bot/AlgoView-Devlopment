@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Button, Card, CardBody, Col, Container, Form, FormGroup, Input, Label, Row, Table } from 'reactstrap';
+import { Button, Card, CardBody, Col, Container, Form, FormGroup, Input, Label, Modal, ModalBody, ModalFooter, ModalHeader, Row, Table } from 'reactstrap';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import {
@@ -8,6 +8,7 @@ import {
   getClients,
   getExecutionNodes,
   releaseExecutionNodeFromClient,
+  updateExecutionNode,
   verifyExecutionNodeProxy,
 } from '../../../Services/Authentication';
 
@@ -35,6 +36,8 @@ const IPPool = ({ mode = 'unassigned' }) => {
   const [clientByNode, setClientByNode] = useState({});
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [editingNode, setEditingNode] = useState(null);
+  const [editForm, setEditForm] = useState(blankForm);
 
   const pageTitle = mode === 'create' ? 'Create IP' : mode === 'assigned' ? 'Assigned IP' : 'Unassigned IP';
   const isCreateMode = mode === 'create';
@@ -92,12 +95,50 @@ const IPPool = ({ mode = 'unassigned' }) => {
     }));
   };
 
-  const handleCreate = async () => {
-    const isProxy = form.execution_type === 'proxy';
+  const validateNodeForm = (values, { requireSecrets = true } = {}) => {
+    const isProxy = values.execution_type === 'proxy';
     const requiredFields = isProxy
       ? ['name', 'ip_address', 'proxy_protocol', 'proxy_host', 'proxy_port']
-      : ['name', 'ip_address', 'server_url', 'node_id', 'node_secret'];
-    const missingField = requiredFields.find((field) => !String(form[field] || '').trim());
+      : ['name', 'ip_address', 'server_url', 'node_id', ...(requireSecrets ? ['node_secret'] : [])];
+    return requiredFields.find((field) => !String(values[field] || '').trim());
+  };
+
+  const buildNodePayload = (values, { includeSecrets = true } = {}) => {
+    const isProxy = values.execution_type === 'proxy';
+    const payload = {
+      name: values.name.trim(),
+      execution_type: values.execution_type,
+      ip_address: values.ip_address.trim(),
+      provider: values.provider.trim(),
+      is_active: values.is_active,
+      is_verified_with_broker: values.is_verified_with_broker,
+    };
+    if (isProxy) {
+      payload.proxy_protocol = values.proxy_protocol;
+      payload.proxy_host = values.proxy_host.trim();
+      payload.proxy_port = values.proxy_port;
+      payload.proxy_username = values.proxy_username.trim();
+      if (includeSecrets && values.proxy_password) {
+        payload.proxy_password = values.proxy_password;
+      }
+      payload.server_url = null;
+      payload.node_id = null;
+    } else {
+      payload.server_url = values.server_url.trim();
+      payload.node_id = values.node_id.trim();
+      if (includeSecrets && values.node_secret) {
+        payload.node_secret = values.node_secret;
+      }
+      payload.proxy_protocol = null;
+      payload.proxy_host = null;
+      payload.proxy_port = null;
+      payload.proxy_username = null;
+    }
+    return payload;
+  };
+
+  const handleCreate = async () => {
+    const missingField = validateNodeForm(form);
     if (missingField) {
       toast.error('Please fill all required IP details.');
       return;
@@ -105,28 +146,7 @@ const IPPool = ({ mode = 'unassigned' }) => {
 
     setSaving(true);
     try {
-      const payload = {
-        name: form.name.trim(),
-        execution_type: form.execution_type,
-        ip_address: form.ip_address.trim(),
-        provider: form.provider.trim(),
-        status: 'free',
-        is_active: form.is_active,
-        is_verified_with_broker: form.is_verified_with_broker,
-      };
-      if (isProxy) {
-        payload.proxy_protocol = form.proxy_protocol;
-        payload.proxy_host = form.proxy_host.trim();
-        payload.proxy_port = form.proxy_port;
-        payload.proxy_username = form.proxy_username.trim();
-        if (form.proxy_password) {
-          payload.proxy_password = form.proxy_password;
-        }
-      } else {
-        payload.server_url = form.server_url.trim();
-        payload.node_id = form.node_id.trim();
-        payload.node_secret = form.node_secret;
-      }
+      const payload = { ...buildNodePayload(form), status: 'free' };
 
       await createExecutionNode(payload);
       toast.success('IP saved in unassigned pool.');
@@ -134,6 +154,63 @@ const IPPool = ({ mode = 'unassigned' }) => {
       fetchNodes();
     } catch (error) {
       toast.error(error.message || 'Failed to create IP.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const openEditModal = (node) => {
+    setEditingNode(node);
+    setEditForm({
+      ...blankForm,
+      name: node.name || '',
+      execution_type: node.execution_type || 'proxy',
+      ip_address: node.ip_address || '',
+      provider: node.provider || '',
+      server_url: node.server_url || '',
+      node_id: node.node_id || '',
+      node_secret: '',
+      proxy_protocol: node.proxy_protocol || 'http',
+      proxy_host: node.proxy_host || '',
+      proxy_port: node.proxy_port || '',
+      proxy_username: node.proxy_username || '',
+      proxy_password: '',
+      is_active: Boolean(node.is_active),
+      is_verified_with_broker: Boolean(node.is_verified_with_broker),
+    });
+  };
+
+  const closeEditModal = () => {
+    setEditingNode(null);
+    setEditForm(blankForm);
+  };
+
+  const handleEditChange = (event) => {
+    const { name, value, type, checked } = event.target;
+    setEditForm((previous) => ({
+      ...previous,
+      [name]: type === 'checkbox' ? checked : value,
+    }));
+  };
+
+  const handleUpdate = async () => {
+    if (!editingNode) {
+      return;
+    }
+    const missingField = validateNodeForm(editForm, { requireSecrets: false });
+    if (missingField) {
+      toast.error('Please fill all required IP details.');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await updateExecutionNode(editingNode.id, buildNodePayload(editForm));
+      toast.success('IP details updated.');
+      closeEditModal();
+      fetchNodes();
+    } catch (error) {
+      toast.error(error.message || 'Failed to update IP.');
     } finally {
       setSaving(false);
     }
@@ -342,6 +419,9 @@ const IPPool = ({ mode = 'unassigned' }) => {
                             Verify
                           </Button>
                         )}
+                        <Button size="sm" color="primary" outline onClick={() => openEditModal(node)}>
+                          Edit
+                        </Button>
                         {node.assigned_client ? (
                           <Button size="sm" color="danger" outline onClick={() => handleRelease(node)}>
                             Release
@@ -399,6 +479,127 @@ const IPPool = ({ mode = 'unassigned' }) => {
           {isCreateMode ? renderCreateForm() : renderList()}
         </Col>
       </Row>
+      <Modal isOpen={Boolean(editingNode)} toggle={closeEditModal} size="lg">
+        <ModalHeader toggle={closeEditModal}>Edit IP Details</ModalHeader>
+        <ModalBody>
+          <Form>
+            <Row>
+              <Col md="3">
+                <FormGroup>
+                  <Label>Execution Type *</Label>
+                  <Input type="select" name="execution_type" value={editForm.execution_type} onChange={handleEditChange}>
+                    <option value="proxy">Proxy IP</option>
+                    <option value="vps_node">VPS Node</option>
+                  </Input>
+                </FormGroup>
+              </Col>
+              <Col md="3">
+                <FormGroup>
+                  <Label>Name *</Label>
+                  <Input name="name" value={editForm.name} onChange={handleEditChange} />
+                </FormGroup>
+              </Col>
+              <Col md="3">
+                <FormGroup>
+                  <Label>Static IP *</Label>
+                  <Input name="ip_address" value={editForm.ip_address} onChange={handleEditChange} />
+                </FormGroup>
+              </Col>
+              <Col md="3">
+                <FormGroup>
+                  <Label>Provider</Label>
+                  <Input name="provider" value={editForm.provider} onChange={handleEditChange} />
+                </FormGroup>
+              </Col>
+            </Row>
+
+            {editForm.execution_type === 'proxy' ? (
+              <>
+                <Row>
+                  <Col md="3">
+                    <FormGroup>
+                      <Label>Proxy Protocol *</Label>
+                      <Input type="select" name="proxy_protocol" value={editForm.proxy_protocol} onChange={handleEditChange}>
+                        <option value="http">HTTP</option>
+                        <option value="https">HTTPS</option>
+                        <option value="socks5">SOCKS5</option>
+                      </Input>
+                    </FormGroup>
+                  </Col>
+                  <Col md="4">
+                    <FormGroup>
+                      <Label>Proxy Host *</Label>
+                      <Input name="proxy_host" value={editForm.proxy_host} onChange={handleEditChange} />
+                    </FormGroup>
+                  </Col>
+                  <Col md="2">
+                    <FormGroup>
+                      <Label>Proxy Port *</Label>
+                      <Input name="proxy_port" value={editForm.proxy_port} onChange={handleEditChange} />
+                    </FormGroup>
+                  </Col>
+                  <Col md="3">
+                    <FormGroup>
+                      <Label>Proxy Username</Label>
+                      <Input name="proxy_username" value={editForm.proxy_username} onChange={handleEditChange} autoComplete="off" />
+                    </FormGroup>
+                  </Col>
+                </Row>
+                <Row>
+                  <Col md="4">
+                    <FormGroup>
+                      <Label>Proxy Password</Label>
+                      <Input type="password" name="proxy_password" value={editForm.proxy_password} onChange={handleEditChange} autoComplete="off" placeholder="Leave blank to keep current" />
+                    </FormGroup>
+                  </Col>
+                </Row>
+              </>
+            ) : (
+              <Row>
+                <Col md="4">
+                  <FormGroup>
+                    <Label>Node ID *</Label>
+                    <Input name="node_id" value={editForm.node_id} onChange={handleEditChange} />
+                  </FormGroup>
+                </Col>
+                <Col md="4">
+                  <FormGroup>
+                    <Label>Server URL *</Label>
+                    <Input name="server_url" value={editForm.server_url} onChange={handleEditChange} />
+                  </FormGroup>
+                </Col>
+                <Col md="4">
+                  <FormGroup>
+                    <Label>Node Secret</Label>
+                    <Input type="password" name="node_secret" value={editForm.node_secret} onChange={handleEditChange} placeholder="Leave blank to keep current" />
+                  </FormGroup>
+                </Col>
+              </Row>
+            )}
+
+            <Row>
+              <Col md="3">
+                <FormGroup check>
+                  <Input type="checkbox" name="is_active" checked={editForm.is_active} onChange={handleEditChange} />
+                  <Label check>Active</Label>
+                </FormGroup>
+              </Col>
+              <Col md="3">
+                <FormGroup check>
+                  <Input type="checkbox" name="is_verified_with_broker" checked={editForm.is_verified_with_broker} onChange={handleEditChange} />
+                  <Label check>Broker IP verified</Label>
+                </FormGroup>
+              </Col>
+            </Row>
+          </Form>
+        </ModalBody>
+        <ModalFooter>
+          <Button color="secondary" outline onClick={closeEditModal} disabled={saving}>Cancel</Button>
+          <Button className="search-btn-clr" onClick={handleUpdate} disabled={saving}>
+            {saving ? 'Saving...' : 'Save Changes'}
+          </Button>
+        </ModalFooter>
+      </Modal>
     </Container>
   );
 };

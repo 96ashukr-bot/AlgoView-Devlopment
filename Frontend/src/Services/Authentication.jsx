@@ -4639,6 +4639,32 @@ export const createExecutionNode = async (payload) => {
   }
 };
 
+export const updateExecutionNode = async (nodeId, payload) => {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error("No authentication token found.");
+  }
+
+  try {
+    const response = await axios.patch(`${baseUrl}/execution-nodes/${nodeId}/`, payload, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error updating execution node:', error);
+    const responseData = error.response?.data;
+    const fieldErrors = responseData && typeof responseData === "object"
+      ? Object.entries(responseData)
+          .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(", ") : messages}`)
+          .join("\n")
+      : "";
+    throw new Error(responseData?.message || responseData?.detail || fieldErrors || "Failed to update execution node.");
+  }
+};
+
 export const assignExecutionNodeToClient = async (clientId, nodeId) => {
   const token = getAuthToken();
   if (!token) {

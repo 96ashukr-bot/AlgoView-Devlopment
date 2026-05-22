@@ -96,6 +96,11 @@ class ExecutionNodeSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         node_secret = validated_data.pop("node_secret", None)
         proxy_password = validated_data.pop("proxy_password", None)
+        proxy_fields = ("ip_address", "proxy_host", "proxy_port", "proxy_username", "proxy_protocol")
+        proxy_details_changed = instance.execution_type == ExecutionNode.EXECUTION_TYPE_PROXY and any(
+            field in validated_data and str(validated_data.get(field) or "") != str(getattr(instance, field, "") or "")
+            for field in proxy_fields
+        )
         node = super().update(instance, validated_data)
         update_fields = []
         if node_secret:
@@ -104,8 +109,14 @@ class ExecutionNodeSerializer(serializers.ModelSerializer):
         if proxy_password:
             node.set_proxy_password(proxy_password)
             update_fields.append("proxy_password")
+            proxy_details_changed = node.execution_type == ExecutionNode.EXECUTION_TYPE_PROXY
+        if proxy_details_changed:
+            node.proxy_public_ip_verified = False
+            node.proxy_last_seen_ip = None
+            node.proxy_last_error = "Proxy details changed. Please verify the proxy IP again."
+            update_fields.extend(["proxy_public_ip_verified", "proxy_last_seen_ip", "proxy_last_error"])
         if update_fields:
-            node.save(update_fields=[*update_fields, "updated_at"])
+            node.save(update_fields=[*dict.fromkeys(update_fields), "updated_at"])
         return node
 
 
