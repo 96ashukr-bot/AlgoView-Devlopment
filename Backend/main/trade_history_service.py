@@ -1,5 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
+import re
 
 from django.utils import timezone
 
@@ -23,6 +24,65 @@ def _first_non_empty(*values):
         if value not in (None, "", [], {}, ()):
             return value
     return None
+
+
+def _compact_symbol(value):
+    return re.sub(r"[^A-Z0-9]", "", str(value or "").upper())
+
+
+def _format_compact_contract_symbol(value):
+    compact = _compact_symbol(value)
+    if not compact:
+        return None
+
+    spaced_match = re.match(r"^([A-Z]+)(\d+)(CE|PE)(\d{2})([A-Z]{3})(\d{2,4})$", compact)
+    if spaced_match:
+        symbol, strike, option_type, day, month, year = spaced_match.groups()
+        return f"{symbol}{strike}{option_type}{day}{month}{year[-2:]}"
+
+    broker_match = re.match(r"^([A-Z]+)(\d{2})([A-Z]{3})(\d+)(CE|PE)$", compact)
+    if broker_match:
+        symbol, day, month, strike, option_type = broker_match.groups()
+        return f"{symbol}{strike}{option_type}{day}{month}"
+
+    if "CE" in compact or "PE" in compact:
+        return compact
+    return None
+
+
+def _extract_response_contract_symbol(response_payload):
+    if not isinstance(response_payload, dict):
+        return None
+
+    candidates = []
+    data = response_payload.get("data")
+    if isinstance(data, list):
+        candidates.extend(item for item in data if isinstance(item, dict))
+    elif isinstance(data, dict):
+        candidates.append(data)
+
+    meta = response_payload.get("meta")
+    if isinstance(meta, dict):
+        candidates.append(meta)
+
+    for candidate in candidates:
+        for key in ("trading_symbol", "tradingsymbol", "tradingsymbol_name", "symbol"):
+            contract_symbol = _format_compact_contract_symbol(candidate.get(key))
+            if contract_symbol:
+                return contract_symbol
+    return None
+
+
+def _resolved_contract_symbol(trade_symbol, response_payload, order_payload, fallback_symbol):
+    return _first_non_empty(
+        _format_compact_contract_symbol(trade_symbol),
+        _extract_response_contract_symbol(response_payload),
+        _format_compact_contract_symbol(order_payload.get("tradingsymbol") if isinstance(order_payload, dict) else None),
+        _format_compact_contract_symbol(order_payload.get("trading_symbol") if isinstance(order_payload, dict) else None),
+        _format_compact_contract_symbol(order_payload.get("trade_symbol") if isinstance(order_payload, dict) else None),
+        trade_symbol,
+        fallback_symbol,
+    )
 
 
 def _to_decimal(value):
@@ -107,6 +167,7 @@ def save_trade_order_history(*args, **kwargs):
         order_payload = _serialize_trade_history_value(order_params if isinstance(order_params, dict) else {})
         nested_response = response_payload.get("data", {}) if isinstance(response_payload, dict) else {}
         meta_response = response_payload.get("meta", {}) if isinstance(response_payload, dict) else {}
+        contract_symbol = _resolved_contract_symbol(trade_symbol, response_payload, order_payload, Index_Symbol)
 
         normalized_transaction_type = str(transaction_type or "").upper()
         is_exit_signal = "SELL" in normalized_transaction_type
@@ -183,7 +244,7 @@ def save_trade_order_history(*args, **kwargs):
             "client": user,
             "GroupService": group_service,
             "trading_symbol": trade_symbol,
-            "Index_Symbol": Index_Symbol or trade_symbol,
+            "Index_Symbol": contract_symbol,
             "order_id": str(resolved_order_id) if resolved_order_id not in (None, "", "0", 0) else None,
             "order_status": str(resolved_status),
             "response_data": response_payload,
@@ -213,11 +274,13 @@ def save_trade_order_history(*args, **kwargs):
             defaults["ExitQty"] = effective_quantity or _to_int(ExitQty)
             defaults["Exit_status"] = str(resolved_status)
             defaults["SignalExit_time"] = signal_exit_time or timezone.now()
+            defaults["SignalEntry_time"] = None
         else:
             defaults["Entry_Price"] = effective_price or _to_decimal(Entry_price)
             defaults["EntryQty"] = effective_quantity or _to_int(EntryQty)
             defaults["Entry_status"] = str(resolved_status)
             defaults["SignalEntry_time"] = signal_entry_time
+            defaults["SignalExit_time"] = None
 
         if history_id:
             history, _ = Tradeorderhistory.objects.get_or_create(
@@ -225,9 +288,10 @@ def save_trade_order_history(*args, **kwargs):
                 defaults=defaults,
             )
             for field_name, field_value in defaults.items():
-                if field_value in (None, "", {}, []):
+                if field_name in {"SignalEntry_time", "SignalExit_time"}:
+                    setattr(history, field_name, field_value)
                     continue
-                if field_name == "SignalEntry_time" and getattr(history, field_name, None):
+                if field_value in (None, "", {}, []):
                     continue
                 setattr(history, field_name, field_value)
             history.save()

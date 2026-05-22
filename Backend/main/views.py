@@ -4891,7 +4891,7 @@ class TradeOrderHistoryFilterView(APIView):
             if trade_type:
                 filters &= Q(Entry_type__iexact=trade_type) | Q(Exit_type__iexact=trade_type)
             if index_symbol:
-                filters &= Q(Index_Symbol__iexact=index_symbol)
+                filters &= Q(Index_Symbol__icontains=index_symbol) | Q(trading_symbol__iexact=index_symbol)
             if symbol:
                 filters &= Q(trading_symbol__iexact=symbol)
             if start_date and end_date:
@@ -5087,7 +5087,7 @@ class TradeorderhistoryListView(APIView):
 
             # Apply index_symbol filter
             if Index_Symbol and Index_Symbol.lower() != 'all':
-                filters &= Q(Index_Symbol__iexact=Index_Symbol)
+                filters &= Q(Index_Symbol__icontains=Index_Symbol) | Q(trading_symbol__iexact=Index_Symbol)
 
             # Apply broker filter
             if broker and broker.lower() != 'all':
@@ -5187,7 +5187,7 @@ class TradeCompleteListView(APIView):
 
             # Apply index_symbol filter
             if Index_Symbol and Index_Symbol.lower() != 'all':
-                filters &= Q(Index_Symbol__iexact=Index_Symbol)
+                filters &= Q(Index_Symbol__icontains=Index_Symbol) | Q(trading_symbol__iexact=Index_Symbol)
 
             # Apply broker filter
             if broker and broker.lower() != 'all':
@@ -5280,7 +5280,7 @@ class ClientTradeListView(APIView):
 
             # Apply index_symbol filter
             if Index_Symbol and Index_Symbol.lower() != 'all':
-                filters &= Q(Index_Symbol__iexact=Index_Symbol)
+                filters &= Q(Index_Symbol__icontains=Index_Symbol) | Q(trading_symbol__iexact=Index_Symbol)
 
             # Apply strategy filter
             if strategy and strategy.lower() != 'all':
