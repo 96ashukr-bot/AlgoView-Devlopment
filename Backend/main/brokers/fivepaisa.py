@@ -3,6 +3,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 from main.brokers.base import BaseBroker
+from main.brokers.position_guard import mark_open_position_closed, prepare_close_order_from_open_position
 from main.brokers.utils import build_trade_symbol, common_order_kwargs, get_access_token, get_order_payload
 from main.fivepaisa import place_5paisa_order
 
@@ -20,9 +21,14 @@ class FivePaisaBroker(BaseBroker):
 
     def place_order(self, payload, proxy_config=None):
         order = get_order_payload(payload)
+        order, open_position, close_error = prepare_close_order_from_open_position(
+            self.broker_details.client, order, self.broker_name
+        )
+        if close_error:
+            return close_error
         values = common_order_kwargs(order)
         trade_context = SimpleNamespace(symbol=values["symbol"], broker=self.broker_name)
-        return place_5paisa_order(
+        response = place_5paisa_order(
             values["LivePrice"],
             values["group_service"],
             self.broker_details.broker_API_KEY,
@@ -53,3 +59,5 @@ class FivePaisaBroker(BaseBroker):
             values["history_id"],
             proxy_config=proxy_config,
         )
+        mark_open_position_closed(open_position, response)
+        return response

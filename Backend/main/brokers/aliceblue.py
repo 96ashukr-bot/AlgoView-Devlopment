@@ -4,6 +4,7 @@ from django.utils import timezone
 
 from main.Alice_Blue_Api import get_alice_a3_orderbook, get_alice_saved_session, place_alice_orders
 from main.brokers.base import BaseBroker
+from main.brokers.position_guard import mark_open_position_closed, prepare_close_order_from_open_position
 from main.brokers.utils import build_trade_symbol, get_access_token
 
 
@@ -27,13 +28,18 @@ class AliceBlueBroker(BaseBroker):
 
     def place_order(self, payload, proxy_config=None):
         order = payload.get("order", payload)
+        order, open_position, close_error = prepare_close_order_from_open_position(
+            self.broker_details.client, order, self.broker_name
+        )
+        if close_error:
+            return close_error
         trade_symbol = (
             order.get("trade_symbol")
             or order.get("trading_symbol")
             or order.get("tradingsymbol")
             or build_trade_symbol(order, self.broker_name)
         )
-        return place_alice_orders(
+        response = place_alice_orders(
             order.get("LivePrice"),
             order.get("group_service"),
             self.broker_details.broker_API_KEY,
@@ -65,6 +71,8 @@ class AliceBlueBroker(BaseBroker):
             session_id=get_access_token(self.broker_details),
             allow_direct_node_execution=bool(payload.get("_allow_direct_node_execution")),
         )
+        mark_open_position_closed(open_position, response)
+        return response
 
     def get_orderbook(self, proxy_config=None):
         validation = self.validate_credentials(proxy_config=proxy_config)

@@ -10,6 +10,7 @@ from main.angleapi_upgraded import (
     place_angel_one_order,
 )
 from main.brokers.base import BaseBroker
+from main.brokers.position_guard import mark_open_position_closed, prepare_close_order_from_open_position
 
 
 def _parse_expiry_override(order):
@@ -46,7 +47,12 @@ class AngelOneBroker(BaseBroker):
 
     def place_order(self, payload, proxy_config=None):
         order = payload.get("order", payload)
-        return place_angel_one_order(
+        order, open_position, close_error = prepare_close_order_from_open_position(
+            self.broker_details.client, order, self.broker_name
+        )
+        if close_error:
+            return close_error
+        response = place_angel_one_order(
             broker_details=self.broker_details,
             symbol=order.get("symbol") or order.get("underlying") or order.get("Index_Symbol"),
             strike=str(order.get("strike") or order.get("strike_price") or ""),
@@ -62,6 +68,8 @@ class AngelOneBroker(BaseBroker):
             expiry_override=_parse_expiry_override(order),
             proxy_config=proxy_config,
         )
+        mark_open_position_closed(open_position, response)
+        return response
 
     def cancel_order(self, payload, proxy_config=None):
         order_id = payload.get("order_id") or payload.get("orderid")
