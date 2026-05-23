@@ -4665,6 +4665,26 @@ export const updateExecutionNode = async (nodeId, payload) => {
   }
 };
 
+export const deleteExecutionNode = async (nodeId) => {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error("No authentication token found.");
+  }
+
+  try {
+    const response = await axios.delete(`${baseUrl}/execution-nodes/${nodeId}/`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting execution node:', error);
+    throw new Error(error.response?.data?.message || error.response?.data?.detail || "Failed to delete execution node.");
+  }
+};
+
 export const assignExecutionNodeToClient = async (clientId, nodeId) => {
   const token = getAuthToken();
   if (!token) {

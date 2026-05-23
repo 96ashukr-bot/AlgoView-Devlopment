@@ -5,6 +5,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import {
   assignExecutionNodeToClient,
   createExecutionNode,
+  deleteExecutionNode,
   getClients,
   getExecutionNodes,
   releaseExecutionNodeFromClient,
@@ -36,6 +37,7 @@ const IPPool = ({ mode = 'unassigned' }) => {
   const [clientByNode, setClientByNode] = useState({});
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
   const [editingNode, setEditingNode] = useState(null);
   const [editForm, setEditForm] = useState(blankForm);
 
@@ -255,6 +257,29 @@ const IPPool = ({ mode = 'unassigned' }) => {
     }
   };
 
+  const handleDelete = async (node) => {
+    if (!node || node.assigned_client) {
+      toast.error('Release this IP from the assigned client before deleting it.');
+      return;
+    }
+
+    const confirmed = window.confirm(`Delete IP "${node.name || node.ip_address || node.id}"? This action cannot be undone.`);
+    if (!confirmed) {
+      return;
+    }
+
+    setDeletingId(node.id);
+    try {
+      await deleteExecutionNode(node.id);
+      toast.success('IP deleted.');
+      fetchNodes();
+    } catch (error) {
+      toast.error(error.message || 'Failed to delete IP.');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   const renderCreateForm = () => (
     <Card>
       <CardBody>
@@ -428,6 +453,16 @@ const IPPool = ({ mode = 'unassigned' }) => {
                           </Button>
                         ) : (
                           <>
+                            <Button
+                              size="sm"
+                              color="danger"
+                              outline
+                              onClick={() => handleDelete(node)}
+                              disabled={deletingId === node.id}
+                              title="Delete IP"
+                            >
+                              {deletingId === node.id ? 'Deleting...' : 'Delete'}
+                            </Button>
                             <Input
                               type="select"
                               bsSize="sm"

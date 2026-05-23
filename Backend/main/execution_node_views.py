@@ -9,6 +9,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
+from django.db.models.deletion import ProtectedError
 from django.utils import timezone
 from rest_framework import serializers, status
 from rest_framework.permissions import IsAuthenticated
@@ -319,6 +320,23 @@ class ExecutionNodeDetailAPIView(APIView):
             node.save(update_fields=["node_secret", "updated_at"])
         node.mark_log("updated", "Execution node updated via API.")
         return Response(ExecutionNodeSerializer(node).data)
+
+    def delete(self, request, node_id):
+        _require_node_admin(request.user)
+        node = ExecutionNode.objects.get(pk=node_id)
+        if node.assigned_client_id:
+            return Response(
+                {"message": "Release this IP from the assigned client before deleting it."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            node.delete()
+        except ProtectedError:
+            return Response(
+                {"message": "This IP has execution history and cannot be deleted. Disable it instead."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class ExecutionNodeReleaseAPIView(APIView):

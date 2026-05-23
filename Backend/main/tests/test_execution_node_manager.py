@@ -194,6 +194,39 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("results", response.json())
 
+    def test_superadmin_can_delete_unassigned_ip_pool_node(self):
+        superadmin = User.objects.create_user(
+            email="superadmin-delete-ip-pool@example.com",
+            firstName="Super",
+            lastName="Admin",
+            phoneNumber="9999999995",
+            password="Pass@123",
+            is_superuser=True,
+        )
+        access_token = str(RefreshToken.for_user(superadmin).access_token)
+
+        response = self.client.delete(f"/api/execution-nodes/{self.node.id}/", HTTP_AUTHORIZATION=f"Bearer {access_token}")
+
+        self.assertEqual(response.status_code, 204)
+        self.assertFalse(ExecutionNode.objects.filter(id=self.node.id).exists())
+
+    def test_superadmin_cannot_delete_assigned_ip_pool_node(self):
+        assign_execution_node_to_client(self.client_user, self.node)
+        superadmin = User.objects.create_user(
+            email="superadmin-delete-assigned-ip-pool@example.com",
+            firstName="Super",
+            lastName="Admin",
+            phoneNumber="9999999994",
+            password="Pass@123",
+            is_superuser=True,
+        )
+        access_token = str(RefreshToken.for_user(superadmin).access_token)
+
+        response = self.client.delete(f"/api/execution-nodes/{self.node.id}/", HTTP_AUTHORIZATION=f"Bearer {access_token}")
+
+        self.assertEqual(response.status_code, 400)
+        self.assertTrue(ExecutionNode.objects.filter(id=self.node.id).exists())
+
     @mock.patch("main.brokers.angelone.place_angel_one_order")
     def test_angel_one_adapter_supports_proxy_and_passes_config(self, mock_place_order):
         adapter = get_broker_adapter(self.broker_details)
