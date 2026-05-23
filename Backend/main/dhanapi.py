@@ -8,6 +8,7 @@ import pandas as pd
 import requests
 
 from main.broker_instrument_cache import ensure_dhan_instruments_file
+from main.brokers.exchange_mapping import normalize_broker_exchange
 from main.models import CompanySmtpDetails
 from main.tasks import send_trade_email_async
 from main.broker_order_utils import extract_ltp_from_quote_payload, normalize_order_type, resolve_limit_price, resolve_limit_reference_price
@@ -237,10 +238,13 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
         logger.info(f"{user} : webhooks Fetched dhan trading_symbol: {trading_symbol}")
         security_id = trading_symbol.get('SECURITY_ID', 0) 
         quantity = int(quantity) 
+        Exchange = normalize_broker_exchange("dhan", exchange=Exchange, underlying=symbol)
         if Exchange=="NFO":
             Exchange=dhan.NSE_FNO
         elif Exchange=="NSE":
             Exchange= dhan.NSE
+        elif Exchange in {"BSE", "BFO", "BSE_FO", "BSE_FNO"}:
+            Exchange = getattr(dhan, "BSE_FNO", "BSE_FNO")
         if product_type.upper() in ["NRML", "NORMAL"]:
             product_type = dhan.NORMAL
         elif product_type.upper() in ["MIS", "INTRADAY"]:

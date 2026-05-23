@@ -63,6 +63,7 @@ from main.fivepaisa import place_5paisa_order
 from main.fyersapi import place_fyers_orders
 from main.models import ClientBrokerdetails
 from main.broker_registry import normalize_broker_name
+from main.brokers.exchange_mapping import normalize_broker_exchange
 from main.risk_manager import get_risk_manager
 from main.services.execution_router import route_order_to_execution_node
 from main.services.proxy_utils import build_requests_proxy_config
@@ -676,6 +677,7 @@ class ExecutionEngine:
         client_broker = self._get_client_broker(request)
         if not client_broker:
             return {"status": "error", "message": "No broker details found for this Angel One client.", "error_code": "MISSING_BROKER"}
+        broker_exchange = self._broker_exchange_name(request)
 
         api_key = client_broker.broker_API_KEY
         client_code = client_broker.broker_Demate_User_Name or client_broker.broker_API_UID
@@ -706,7 +708,7 @@ class ExecutionEngine:
             underlying=request.underlying_symbol,
             strike=request.strike_value,
             option_type=request.option_type_value,
-            exchange=request.exchange_name,
+            exchange=broker_exchange,
             expiry=expiry,
             prefer_weekly=True,
             allow_strike_fallback=ALLOW_STRIKE_FALLBACK,
@@ -718,7 +720,7 @@ class ExecutionEngine:
                 symbol=request.underlying_symbol,
                 strike=request.strike_value,
                 option_type=request.option_type_value,
-                exchange=request.exchange_name,
+                exchange=broker_exchange,
                 request_id=request.request_id,
                 contract_resolution=contract_resolution,
             )
@@ -778,7 +780,7 @@ class ExecutionEngine:
             smart_connect = session.smart_connect if session else None
             ltp = self._ltp_service.get_ltp(
                 smart_connect=smart_connect,
-                exchange=request.exchange_name,
+                exchange=broker_exchange,
                 token=contract.token,
                 symbol=contract.symbol,
             )
@@ -890,6 +892,7 @@ class ExecutionEngine:
             return self._failed_response("No verified execution node/proxy is assigned. Direct broker execution is blocked.")
         contract = validation_context.get("contract")
         contract_expiry = getattr(contract, "expiry", None)
+        broker_exchange = self._broker_exchange_name(request)
         order_payload = {
             "idempotency_key": request.history_id or request.request_id,
             "history_id": request.history_id,
@@ -899,8 +902,8 @@ class ExecutionEngine:
             "symbol": request.underlying_symbol,
             "strike": request.strike_value,
             "option_type": request.option_type_value,
-            "exchange": request.exchange_name,
-            "Exchange": request.exchange_name,
+            "exchange": broker_exchange,
+            "Exchange": broker_exchange,
             "Segment": request.Segment,
             "Index_Symbol": request.Index_Symbol,
             "product_type": request.product_type_name,
@@ -944,6 +947,14 @@ class ExecutionEngine:
         if status_value in {"placed", "accepted_by_node", "sent_to_node", "duplicate"}:
             return {"data": {"status": "open", "message": "Order routed to execution node.", "job_id": result.get("job_id")}}
         return {"data": {"status": "Failed", "message": result.get("message") or "Execution node routing failed.", "job_id": result.get("job_id")}}
+
+    @staticmethod
+    def _broker_exchange_name(request: ExecutionRequest) -> str:
+        return normalize_broker_exchange(
+            request.broker_name,
+            exchange=request.exchange_name,
+            underlying=request.underlying_symbol,
+        )
 
     def _execute_fyers(self, request: ExecutionRequest) -> Dict[str, Any]:
         trade_symbol = self._resolved_trade_symbol(

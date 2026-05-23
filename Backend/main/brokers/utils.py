@@ -3,6 +3,8 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
+from main.brokers.exchange_mapping import normalize_broker_exchange
+
 
 def get_order_payload(payload: dict[str, Any]) -> dict[str, Any]:
     return payload.get("order", payload)
@@ -44,11 +46,13 @@ def upper_value(value: Any, default: str = "") -> str:
 
 
 def common_order_kwargs(order: dict[str, Any]) -> dict[str, Any]:
+    exchange = upper_value(order_value(order, "Exchange", "exchange"), "NFO")
+    symbol = upper_value(order_value(order, "symbol", "underlying", "Index_Symbol"))
     return {
         "LivePrice": order.get("LivePrice"),
         "group_service": order.get("group_service"),
         "transaction_type": upper_value(order.get("transaction_type")),
-        "symbol": upper_value(order_value(order, "symbol", "underlying", "Index_Symbol")),
+        "symbol": symbol,
         "quantity": int_value(order.get("quantity")),
         "strategy": order.get("strategy"),
         "ordertype": upper_value(order_value(order, "order_type", "ordertype"), "LIMIT"),
@@ -64,12 +68,18 @@ def common_order_kwargs(order: dict[str, Any]) -> dict[str, Any]:
         "EntryQty": order.get("EntryQty"),
         "ExitQty": order.get("ExitQty"),
         "webhook_signal": order.get("webhook_signal"),
-        "Exchange": upper_value(order_value(order, "Exchange", "exchange"), "NFO"),
+        "Exchange": exchange,
         "Segment": order.get("Segment"),
         "Index_Symbol": order.get("Index_Symbol"),
         "triggerPrice": order_value(order, "triggerPrice", "trigger_price"),
         "history_id": order_value(order, "history_id", "request_id", "idempotency_key"),
     }
+
+
+def broker_order_exchange(order: dict[str, Any], broker_name: str) -> str:
+    symbol = upper_value(order_value(order, "symbol", "underlying", "Index_Symbol"))
+    exchange = upper_value(order_value(order, "Exchange", "exchange"), "NFO")
+    return normalize_broker_exchange(broker_name, exchange=exchange, underlying=symbol)
 
 
 def _strike_component(order: dict[str, Any], decimal: bool = False) -> str:

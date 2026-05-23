@@ -5,7 +5,7 @@ from django.utils import timezone
 from main.Alice_Blue_Api import get_alice_a3_orderbook, get_alice_saved_session, place_alice_orders
 from main.brokers.base import BaseBroker
 from main.brokers.position_guard import mark_open_position_closed, prepare_close_order_from_open_position
-from main.brokers.utils import build_trade_symbol, get_access_token
+from main.brokers.utils import broker_order_exchange, build_trade_symbol, get_access_token
 
 
 class AliceBlueBroker(BaseBroker):
@@ -62,7 +62,7 @@ class AliceBlueBroker(BaseBroker):
             order.get("EntryQty"),
             order.get("ExitQty"),
             order.get("webhook_signal"),
-            order.get("Exchange") or order.get("exchange"),
+            broker_order_exchange(order, self.broker_name),
             order.get("Segment"),
             order.get("Index_Symbol"),
             order.get("history_id"),

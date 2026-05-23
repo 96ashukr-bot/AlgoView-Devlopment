@@ -4,6 +4,7 @@ import pandas as pd
 from main.models import *
 from main.tasks import send_trade_email_async
 from main.broker_order_utils import extract_ltp_from_quote_payload, normalize_order_type, resolve_limit_price
+from main.brokers.exchange_mapping import normalize_fivepaisa_exchange
 from main.trade_history_service import save_trade_order_history
 from main.broker_instrument_cache import ensure_fivepaisa_scrip_master_file
 import logging
@@ -216,9 +217,7 @@ def place_5paisa_order(LivePrice,group_service,api_key,access_token,trade_symbol
         EntryQty=quantity
         smtp_details=CompanySmtpDetails.objects.first()
         default_from_email=smtp_details.email_host_user if smtp_details else "no-reply@example.com" 
-        segment="nse_fo"
-        if Exchange=="NSE" or Exchange=="NFO":
-            Exch="N"
+        segment, Exch = normalize_fivepaisa_exchange(exchange=Exchange, underlying=symbol)
         order_id=0
         status="Failed"
         message="Failed no reason"
@@ -265,7 +264,7 @@ def place_5paisa_order(LivePrice,group_service,api_key,access_token,trade_symbol
                     "head": {"key": api_key},
                     "body": {
                         "MarketFeedData": [
-                            {"Exch": "N", "ExchType": "D", "ScripCode": token}
+                            {"Exch": Exch, "ExchType": "D", "ScripCode": token}
                         ],
                         "LastRequestTime": "/Date(0)/",
                         "RefreshRate": "H",
@@ -293,7 +292,7 @@ def place_5paisa_order(LivePrice,group_service,api_key,access_token,trade_symbol
                     "key": api_key
                 },
                 "body": {
-                    "Exchange": "N",  # NSE (National Stock Exchange)
+                    "Exchange": Exch,
                     "ExchangeType": "D",  # Derivatives
                     "ScripCode": token,  # Numeric Scrip Code from token
                     "OrderType": transaction_type,  # Order type (Buy or Sell)

@@ -10,6 +10,7 @@ from main.angleapi_upgraded import (
     place_angel_one_order,
 )
 from main.brokers.base import BaseBroker
+from main.brokers.exchange_mapping import normalize_broker_exchange
 from main.brokers.position_guard import mark_open_position_closed, prepare_close_order_from_open_position
 
 
@@ -62,7 +63,11 @@ class AngelOneBroker(BaseBroker):
             buffer_percentage=float(order.get("buffer_percentage") or self.broker_details.buffer_percentage or 2.5),
             order_type=order.get("order_type") or order.get("ordertype") or "LIMIT",
             price=order.get("price"),
-            exchange=order.get("exchange") or order.get("Exchange") or "NFO",
+            exchange=normalize_broker_exchange(
+                self.broker_name,
+                exchange=order.get("exchange") or order.get("Exchange"),
+                underlying=order.get("symbol") or order.get("underlying") or order.get("Index_Symbol"),
+            ),
             product_type=order.get("product_type") or order.get("product") or "INTRADAY",
             request_id=order.get("request_id") or order.get("idempotency_key"),
             expiry_override=_parse_expiry_override(order),

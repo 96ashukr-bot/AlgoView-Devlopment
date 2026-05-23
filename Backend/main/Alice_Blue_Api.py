@@ -668,7 +668,7 @@ def place_alice_orders(
         # Instrument
         exchange = str(Exchange or "NFO").strip().upper()
         try:
-            fetch_exchange = exchange if exchange in {"NFO", "NSE", "BSE", "MCX"} else "NFO"
+            fetch_exchange = exchange if exchange in {"NFO", "NSE", "BSE", "BFO", "MCX"} else "NFO"
             fetch_instrument_data(alice, fetch_exchange)
             instrument = alice.get_instrument_by_symbol(fetch_exchange, trading_symbol_aliceblue)
         except Exception as e:

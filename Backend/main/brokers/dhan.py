@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from main.brokers.base import BaseBroker
 from main.brokers.position_guard import mark_open_position_closed, prepare_close_order_from_open_position
-from main.brokers.utils import build_dhan_expiry_date, build_trade_symbol, common_order_kwargs, get_access_token, get_order_payload
+from main.brokers.utils import broker_order_exchange, build_dhan_expiry_date, build_trade_symbol, common_order_kwargs, get_access_token, get_order_payload
 from main.dhanapi import place_dhan_orders
 
 
@@ -49,7 +49,7 @@ class DhanBroker(BaseBroker):
             values["EntryQty"],
             values["ExitQty"],
             values["webhook_signal"],
-            values["Exchange"],
+            broker_order_exchange(order, self.broker_name),
             values["Segment"],
             values["Index_Symbol"],
             values["triggerPrice"],

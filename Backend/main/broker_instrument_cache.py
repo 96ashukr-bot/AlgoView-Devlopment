@@ -147,6 +147,10 @@ def _resolve_fyers_source(exchange: str = None, segment: str = None):
 
     if exchange_value in {"MCX", "MCX_COM"} or "COMMODITY" in segment_value or "MCX" in segment_value or segment_value == "COM":
         return ("MCX_COM", "https://public.fyers.in/sym_details/MCX_COM.csv", "fyers_mcx_com.csv")
+    if exchange_value in {"BFO", "BSE_FO", "BSE_FNO"} or (
+        "BSE" in segment_value and ("FNO" in segment_value or "FO" in segment_value)
+    ):
+        return ("BSE_FO", "https://public.fyers.in/sym_details/BSE_FO.csv", "fyers_bse_fo.csv")
     if exchange_value in {"NFO", "NSE_FO"} or "FNO" in segment_value or segment_value == "FO":
         return ("NSE_FO", "https://public.fyers.in/sym_details/NSE_FO.csv", "fyers_nse_fo.csv")
     if exchange_value in {"BSE", "BSE_EQ"}:

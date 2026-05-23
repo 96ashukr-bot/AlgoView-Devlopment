@@ -28,6 +28,7 @@ from main.dematemodule import _broker_proxy_config_or_none, _save_session_tokens
 from main.dematemodule import BrokerCallbackView
 from main.broker_registry import get_broker_setup_spec
 from main.broker_order_utils import extract_ltp_from_quote_payload
+from main.brokers.exchange_mapping import normalize_broker_exchange, normalize_fivepaisa_exchange
 from main.services.option_ltp_fallback import cache_option_ltp, fetch_nse_option_chain_ltp, get_cached_option_ltp
 from main.serializers import ClientBrokerDetailsUpdateSerializer
 
@@ -75,6 +76,56 @@ class ExecutionNodeManagerTests(TestCase):
         )
         self.node.set_node_secret("node-secret")
         self.node.save(update_fields=["node_secret"])
+
+    def test_sensex_exchange_mapping_is_broker_specific(self):
+        self.assertEqual(normalize_broker_exchange("Angel One", "BSE", "SENSEX"), "BFO")
+        self.assertEqual(normalize_broker_exchange("Alice Blue", "BSE", "SENSEX"), "BFO")
+        self.assertEqual(normalize_broker_exchange("Zerodha", "BSE", "SENSEX"), "BFO")
+        self.assertEqual(normalize_broker_exchange("Dhan", "BSE", "SENSEX"), "BSE_FNO")
+        self.assertEqual(normalize_broker_exchange("Fyers", "BSE", "SENSEX"), "BSE_FO")
+        self.assertEqual(normalize_broker_exchange("Upstox", "BSE", "SENSEX"), "BSE")
+        self.assertEqual(normalize_fivepaisa_exchange("BSE", "SENSEX"), ("bse_fo", "B"))
+
+    def test_nse_index_exchange_mapping_stays_unchanged(self):
+        for underlying in ("NIFTY", "BANKNIFTY", "FINNIFTY"):
+            self.assertEqual(normalize_broker_exchange("Angel One", "NFO", underlying), "NFO")
+            self.assertEqual(normalize_broker_exchange("Dhan", "NFO", underlying), "NFO")
+            self.assertEqual(normalize_broker_exchange("Fyers", "NFO", underlying), "NFO")
+            self.assertEqual(normalize_fivepaisa_exchange("NFO", underlying), ("nse_fo", "N"))
+
+    @mock.patch("main.brokers.angelone.place_angel_one_order")
+    def test_angel_one_adapter_maps_sensex_to_bfo(self, mock_place_order):
+        mock_place_order.return_value = {"data": {"status": "completed", "order_id": "angel-sensex-1"}}
+        adapter = get_broker_adapter(self.broker_details)
+        adapter.place_order(
+            {
+                "symbol": "SENSEX",
+                "strike": "80000",
+                "option_type": "CE",
+                "quantity": 20,
+                "transaction_type": "BUY",
+                "order_type": "LIMIT",
+                "Exchange": "BSE",
+            }
+        )
+        self.assertEqual(mock_place_order.call_args.kwargs["exchange"], "BFO")
+
+    @mock.patch("main.brokers.angelone.place_angel_one_order")
+    def test_angel_one_adapter_keeps_nifty_on_nfo(self, mock_place_order):
+        mock_place_order.return_value = {"data": {"status": "completed", "order_id": "angel-nifty-1"}}
+        adapter = get_broker_adapter(self.broker_details)
+        adapter.place_order(
+            {
+                "symbol": "NIFTY",
+                "strike": "24400",
+                "option_type": "CE",
+                "quantity": 75,
+                "transaction_type": "BUY",
+                "order_type": "LIMIT",
+                "Exchange": "NFO",
+            }
+        )
+        self.assertEqual(mock_place_order.call_args.kwargs["exchange"], "NFO")
 
     def test_duplicate_ip_prevention(self):
         with self.assertRaises(Exception):
@@ -249,6 +300,30 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertEqual(mock_place_order.call_args.kwargs["proxy_config"], proxy_config)
         self.assertEqual(mock_place_order.call_args.kwargs["expiry_override"].date().isoformat(), "2026-05-26")
 
+    @mock.patch("main.brokers.dhan.place_dhan_orders")
+    def test_dhan_adapter_maps_sensex_to_bse_fno(self, mock_place_order):
+        broker = Broker.objects.create(broker_name="Dhan", is_active=True)
+        broker_details = ClientBrokerdetails.objects.create(
+            client=self.client_user,
+            broker_name=broker,
+            broker_API_UID="dhan-client",
+            access_token="dhan-access",
+        )
+        adapter = get_broker_adapter(broker_details)
+        mock_place_order.return_value = {"data": {"status": "completed", "order_id": "dhan-sensex-1"}}
+        adapter.place_order(
+            {
+                "symbol": "SENSEX",
+                "strike": "80000",
+                "option_type": "CE",
+                "quantity": 20,
+                "transaction_type": "BUY",
+                "order_type": "LIMIT",
+                "Exchange": "BSE",
+            }
+        )
+        self.assertEqual(mock_place_order.call_args.args[22], "BSE_FNO")
+
     @mock.patch("main.brokers.aliceblue.place_alice_orders")
     def test_alice_blue_adapter_supports_proxy_and_passes_config(self, mock_place_order):
         broker = Broker.objects.create(broker_name="Alice Blue", is_active=True)
@@ -274,6 +349,7 @@ class ExecutionNodeManagerTests(TestCase):
             proxy_config=proxy_config,
         )
         self.assertEqual(mock_place_order.call_args.kwargs["proxy_config"], proxy_config)
+        self.assertEqual(mock_place_order.call_args.args[22], "NFO")
         self.assertEqual(mock_place_order.call_args.args[4], "NIFTY19MAY26C24400")
 
     @mock.patch("main.brokers.aliceblue.place_alice_orders")
@@ -539,6 +615,7 @@ class ExecutionNodeManagerTests(TestCase):
             211.65,
             self.client_user,
             1,
+            None,
             None,
             None,
             None,
