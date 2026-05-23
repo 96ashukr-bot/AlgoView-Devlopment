@@ -248,10 +248,10 @@ const IPPool = ({ mode = 'unassigned' }) => {
   const handleVerify = async (nodeId) => {
     try {
       const response = await verifyExecutionNodeProxy(nodeId);
-      toast.success(response?.result?.message || 'Proxy verification completed.');
+      toast.success(response?.result?.message || 'Executional Client IP verification completed.');
       fetchNodes();
     } catch (error) {
-      toast.error(error.message || 'Failed to verify proxy.');
+      toast.error(error.message || 'Failed to verify executional client IP.');
     }
   };
 
@@ -264,7 +264,7 @@ const IPPool = ({ mode = 'unassigned' }) => {
               <FormGroup>
                 <Label>Execution Type *</Label>
                 <Input type="select" name="execution_type" value={form.execution_type} onChange={handleChange}>
-                  <option value="proxy">Proxy IP</option>
+                  <option value="proxy">Executional Client IP</option>
                   <option value="vps_node">VPS Node</option>
                 </Input>
               </FormGroup>
@@ -272,7 +272,7 @@ const IPPool = ({ mode = 'unassigned' }) => {
             <Col md="3">
               <FormGroup>
                 <Label>Name *</Label>
-                <Input name="name" value={form.name} onChange={handleChange} placeholder="Alice Proxy Mumbai 1" />
+                <Input name="name" value={form.name} onChange={handleChange} placeholder="Alice Client IP Mumbai 1" />
               </FormGroup>
             </Col>
             <Col md="3">
@@ -284,7 +284,7 @@ const IPPool = ({ mode = 'unassigned' }) => {
             <Col md="3">
               <FormGroup>
                 <Label>Provider</Label>
-                <Input name="provider" value={form.provider} onChange={handleChange} placeholder="AWS / Proxy vendor" />
+                <Input name="provider" value={form.provider} onChange={handleChange} placeholder="AWS / IP vendor" />
               </FormGroup>
             </Col>
           </Row>
@@ -294,7 +294,7 @@ const IPPool = ({ mode = 'unassigned' }) => {
               <Row>
                 <Col md="3">
                   <FormGroup>
-                    <Label>Proxy Protocol *</Label>
+                    <Label>Protocol *</Label>
                     <Input type="select" name="proxy_protocol" value={form.proxy_protocol} onChange={handleChange}>
                       <option value="http">HTTP</option>
                       <option value="https">HTTPS</option>
@@ -304,19 +304,19 @@ const IPPool = ({ mode = 'unassigned' }) => {
                 </Col>
                 <Col md="4">
                   <FormGroup>
-                    <Label>Proxy Host *</Label>
-                    <Input name="proxy_host" value={form.proxy_host} onChange={handleChange} placeholder="proxy.vendor.com" />
+                    <Label>Host *</Label>
+                    <Input name="proxy_host" value={form.proxy_host} onChange={handleChange} placeholder="host.example.com" />
                   </FormGroup>
                 </Col>
                 <Col md="2">
                   <FormGroup>
-                    <Label>Proxy Port *</Label>
+                    <Label>Port *</Label>
                     <Input name="proxy_port" value={form.proxy_port} onChange={handleChange} placeholder="8080" />
                   </FormGroup>
                 </Col>
                 <Col md="3">
                   <FormGroup>
-                    <Label>Proxy Username</Label>
+                    <Label>Username</Label>
                     <Input name="proxy_username" value={form.proxy_username} onChange={handleChange} autoComplete="off" />
                   </FormGroup>
                 </Col>
@@ -324,7 +324,7 @@ const IPPool = ({ mode = 'unassigned' }) => {
               <Row>
                 <Col md="4">
                   <FormGroup>
-                    <Label>Proxy Password</Label>
+                    <Label>Password</Label>
                     <Input type="password" name="proxy_password" value={form.proxy_password} onChange={handleChange} autoComplete="off" />
                   </FormGroup>
                 </Col>
@@ -389,7 +389,7 @@ const IPPool = ({ mode = 'unassigned' }) => {
                 <th>Static IP</th>
                 <th>Provider</th>
                 <th>Status</th>
-                <th>Proxy Check</th>
+                <th>Client IP Check</th>
                 <th>Assigned Client</th>
                 <th>Action</th>
               </tr>
@@ -399,7 +399,7 @@ const IPPool = ({ mode = 'unassigned' }) => {
                 filteredNodes.map((node) => (
                   <tr key={node.id}>
                     <td>{node.name || '-'}</td>
-                    <td>{node.execution_type === 'proxy' ? 'Proxy' : 'VPS'}</td>
+                    <td>{node.execution_type === 'proxy' ? 'Executional Client IP' : 'VPS'}</td>
                     <td>{node.ip_address || '-'}</td>
                     <td>{node.provider || '-'}</td>
                     <td>{node.status || '-'}{node.is_active ? '' : ' / inactive'}{node.is_verified_with_broker ? ' / broker verified' : ' / broker pending'}</td>
@@ -488,7 +488,7 @@ const IPPool = ({ mode = 'unassigned' }) => {
                 <FormGroup>
                   <Label>Execution Type *</Label>
                   <Input type="select" name="execution_type" value={editForm.execution_type} onChange={handleEditChange}>
-                    <option value="proxy">Proxy IP</option>
+                    <option value="proxy">Executional Client IP</option>
                     <option value="vps_node">VPS Node</option>
                   </Input>
                 </FormGroup>
@@ -518,7 +518,7 @@ const IPPool = ({ mode = 'unassigned' }) => {
                 <Row>
                   <Col md="3">
                     <FormGroup>
-                      <Label>Proxy Protocol *</Label>
+                      <Label>Protocol *</Label>
                       <Input type="select" name="proxy_protocol" value={editForm.proxy_protocol} onChange={handleEditChange}>
                         <option value="http">HTTP</option>
                         <option value="https">HTTPS</option>
@@ -528,19 +528,19 @@ const IPPool = ({ mode = 'unassigned' }) => {
                   </Col>
                   <Col md="4">
                     <FormGroup>
-                      <Label>Proxy Host *</Label>
+                      <Label>Host *</Label>
                       <Input name="proxy_host" value={editForm.proxy_host} onChange={handleEditChange} />
                     </FormGroup>
                   </Col>
                   <Col md="2">
                     <FormGroup>
-                      <Label>Proxy Port *</Label>
+                      <Label>Port *</Label>
                       <Input name="proxy_port" value={editForm.proxy_port} onChange={handleEditChange} />
                     </FormGroup>
                   </Col>
                   <Col md="3">
                     <FormGroup>
-                      <Label>Proxy Username</Label>
+                      <Label>Username</Label>
                       <Input name="proxy_username" value={editForm.proxy_username} onChange={handleEditChange} autoComplete="off" />
                     </FormGroup>
                   </Col>
@@ -548,7 +548,7 @@ const IPPool = ({ mode = 'unassigned' }) => {
                 <Row>
                   <Col md="4">
                     <FormGroup>
-                      <Label>Proxy Password</Label>
+                      <Label>Password</Label>
                       <Input type="password" name="proxy_password" value={editForm.proxy_password} onChange={handleEditChange} autoComplete="off" placeholder="Leave blank to keep current" />
                     </FormGroup>
                   </Col>

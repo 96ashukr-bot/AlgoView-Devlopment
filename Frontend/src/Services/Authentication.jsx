@@ -4787,7 +4787,7 @@ export const verifyMyExecutionProxy = async () => {
     return response.data;
   } catch (error) {
     console.error('Error verifying client execution proxy:', error);
-    throw new Error(error.response?.data?.message || error.response?.data?.detail || "Failed to verify proxy IP.");
+    throw new Error(error.response?.data?.message || error.response?.data?.detail || "Failed to verify executional client IP.");
   }
 };
 
@@ -4807,7 +4807,7 @@ export const verifyExecutionNodeProxy = async (nodeId) => {
     return response.data;
   } catch (error) {
     console.error('Error verifying execution proxy:', error);
-    throw new Error(error.response?.data?.message || error.response?.data?.detail || "Failed to verify proxy IP.");
+    throw new Error(error.response?.data?.message || error.response?.data?.detail || "Failed to verify executional client IP.");
   }
 };
 

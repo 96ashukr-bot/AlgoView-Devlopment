@@ -65,7 +65,7 @@ const brokerSchemaFallbacks = {
   "alice blue": {
     display_name: "Alice Blue",
     auth_mode: "redirect_oauth",
-    description: "Save Alice Blue User ID, App Code/API Key, and App Secret, then complete Alice's ANT auth-code flow through the assigned execution proxy/static IP.",
+    description: "Save Alice Blue User ID, App Code/API Key, and App Secret, then complete Alice's ANT auth-code flow through the assigned execution client/static IP.",
     save_action_label: "Save Broker Name API Details",
     connect_action_label: "Connect to Alice Blue",
     connect_path: "/broker_auth_login/?broker=alice%20blue",
@@ -76,7 +76,7 @@ const brokerSchemaFallbacks = {
       { key: "broker_API_KEY", label: "App Code / API Key", type: "password", required: true, secret: true },
       { key: "broker_API_SKEY", label: "App Secret / API Secret", type: "password", required: true, secret: true },
     ],
-    requirement_note: "Click Connect to Alice Blue after saving credentials. Alice opens ANT login with appcode, returns authCode to AlgoView, and AlgoView exchanges it for the daily session through the assigned proxy/static IP.",
+    requirement_note: "Click Connect to Alice Blue after saving credentials. Alice opens ANT login with appcode, returns authCode to AlgoView, and AlgoView exchanges it for the daily session through the assigned execution client/static IP.",
   },
   "5paisa": {
     display_name: "5Paisa",
@@ -343,9 +343,9 @@ const ClientHeader = () => {
       const response = await verifyMyExecutionProxy();
       await fetchClientExecutionNode();
       const result = response?.result || {};
-      Swal.fire(result.status === "success" ? "Success" : "Error", result.message || "Proxy verification completed.", result.status === "success" ? "success" : "error");
+      Swal.fire(result.status === "success" ? "Success" : "Error", result.message || "Executional Client IP verification completed.", result.status === "success" ? "success" : "error");
     } catch (error) {
-      Swal.fire("Error", error.message || "Failed to verify proxy IP.", "error");
+      Swal.fire("Error", error.message || "Failed to verify executional client IP.", "error");
     } finally {
       setIsExecutionSaving(false);
     }
@@ -938,7 +938,7 @@ const ClientHeader = () => {
             </div>
             <div style={{ color: "#4b5563", fontSize: "14px" }}>
               {executionNode
-                ? `Broker verification: ${executionNode.is_verified_with_broker ? "Verified" : "Pending admin verification"}${executionNode.execution_type === "proxy" ? ` | Proxy IP: ${executionNode.proxy_public_ip_verified ? "Verified" : "Not verified"}` : ""}`
+                ? `Broker verification: ${executionNode.is_verified_with_broker ? "Verified" : "Pending admin verification"}${executionNode.execution_type === "proxy" ? ` | Executional Client IP: ${executionNode.proxy_public_ip_verified ? "Verified" : "Not verified"}` : ""}`
                 : "Add the VPS/static IP that should place broker orders for your account."}
             </div>
           </div>
@@ -952,7 +952,7 @@ const ClientHeader = () => {
               onChange={handleExecutionInputChange}
             >
               <option value="vps_node">VPS Node</option>
-              <option value="proxy">Proxy IP</option>
+              <option value="proxy">Executional Client IP</option>
             </Input>
           </FormGroup>
           <div className="row">
@@ -985,7 +985,7 @@ const ClientHeader = () => {
               name="provider"
               value={executionNodeInput.provider}
               onChange={handleExecutionInputChange}
-              placeholder={executionNodeInput.execution_type === "proxy" ? "Proxy vendor" : "AWS"}
+              placeholder={executionNodeInput.execution_type === "proxy" ? "IP vendor" : "AWS"}
             />
           </FormGroup>
           {executionNodeInput.execution_type === "vps_node" ? (
@@ -1031,7 +1031,7 @@ const ClientHeader = () => {
               <div className="row">
                 <div className="col-md-4">
                   <FormGroup>
-                    <Label>Proxy Protocol *</Label>
+                    <Label>Protocol *</Label>
                     <Input type="select" name="proxy_protocol" value={executionNodeInput.proxy_protocol} onChange={handleExecutionInputChange}>
                       <option value="http">HTTP</option>
                       <option value="https">HTTPS</option>
@@ -1041,13 +1041,13 @@ const ClientHeader = () => {
                 </div>
                 <div className="col-md-5">
                   <FormGroup>
-                    <Label>Proxy Host / Hostname *</Label>
-                    <Input name="proxy_host" value={executionNodeInput.proxy_host} onChange={handleExecutionInputChange} placeholder="proxy.vendor.com" />
+                    <Label>Host *</Label>
+                    <Input name="proxy_host" value={executionNodeInput.proxy_host} onChange={handleExecutionInputChange} placeholder="host.example.com" />
                   </FormGroup>
                 </div>
                 <div className="col-md-3">
                   <FormGroup>
-                    <Label>Proxy Port *</Label>
+                    <Label>Port *</Label>
                     <Input name="proxy_port" value={executionNodeInput.proxy_port} onChange={handleExecutionInputChange} placeholder="8080" />
                   </FormGroup>
                 </div>
@@ -1055,13 +1055,13 @@ const ClientHeader = () => {
               <div className="row">
                 <div className="col-md-6">
                   <FormGroup>
-                    <Label>Proxy Username</Label>
+                    <Label>Username</Label>
                     <Input name="proxy_username" value={executionNodeInput.proxy_username} onChange={handleExecutionInputChange} autoComplete="off" />
                   </FormGroup>
                 </div>
                 <div className="col-md-6">
                   <FormGroup>
-                    <Label>{executionNode ? "New Proxy Password" : "Proxy Password"}</Label>
+                    <Label>{executionNode ? "New Password" : "Password"}</Label>
                     <Input type="password" name="proxy_password" value={executionNodeInput.proxy_password} onChange={handleExecutionInputChange} placeholder={executionNode ? "Leave blank to keep existing password" : "Optional"} autoComplete="off" />
                   </FormGroup>
                 </div>
@@ -1086,7 +1086,7 @@ const ClientHeader = () => {
           )}
           {executionNode?.execution_type === "proxy" && (
             <Button color="info" outline onClick={handleVerifyExecutionProxy} disabled={isExecutionSaving}>
-              Verify Proxy IP
+              Verify Executional Client IP
             </Button>
           )}
           <Button color="secondary" outline onClick={closeExecutionModal} disabled={isExecutionSaving}>
