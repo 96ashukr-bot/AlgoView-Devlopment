@@ -5,7 +5,8 @@ import { FaArrowUp, FaArrowDown, } from 'react-icons/fa';
 import 'react-toastify/dist/ReactToastify.css';
 import { RotatingLines } from 'react-loader-spinner';
 import './ActiveInactive.css';
-import { getInactiveClient, SearchInactiveUsers } from '../../../../../Services/Authentication';
+import { fetchUserProfile, getInactiveClient, SearchInactiveUsers } from '../../../../../Services/Authentication';
+import { maskEmail, maskLastFiveDigits } from '../../../../../Utils/masking';
 
 const InActiveClient = () => {
     const [userData, setUserData] = useState([]);
@@ -18,6 +19,8 @@ const InActiveClient = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [pageBatch, setPageBatch] = useState(0);
     const [isMobile, setIsMobile] = useState(false);
+    const [userRole, setUserRole] = useState('');
+    const isSubAdmin = userRole.toLowerCase() === 'sub-admin';
 
     useEffect(() => {
         if (searchQuery) {
@@ -38,6 +41,21 @@ const InActiveClient = () => {
     }, [currentPage, itemsPerPage, searchQuery]);
 
     const pagesPerBatch = isMobile ? 2 : 4;
+
+    useEffect(() => {
+        fetchUserRole();
+    }, []);
+
+    const fetchUserRole = async () => {
+        try {
+            const data = await fetchUserProfile();
+            if (data?.role?.name) {
+                setUserRole(data.role.name);
+            }
+        } catch (error) {
+            console.error('Error fetching user profile:', error);
+        }
+    };
 
     const getUserData = async () => {
         try {
@@ -212,8 +230,8 @@ const InActiveClient = () => {
                                                     <td>{indexOfFirstUser + index + 1}</td>
                                                     <td>{client.firstName}</td>
                                                     <td>{client.lastName}</td>
-                                                    <td>{client.email}</td>
-                                                    <td>{client.phoneNumber}</td>
+                                                    <td>{isSubAdmin ? maskEmail(client.email) : client.email}</td>
+                                                    <td>{isSubAdmin ? maskLastFiveDigits(client.phoneNumber) : client.phoneNumber}</td>
                                                     <td>{client.start_date_client}</td>
                                                     <td>{client.end_date_client}</td>
                                                 </tr>

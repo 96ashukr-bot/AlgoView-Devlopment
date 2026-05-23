@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { RotatingLines } from 'react-loader-spinner';
 import Swal from 'sweetalert2';
 import { getClients, deleteClient, fetchUserProfile, updateClientStatus, getLicence, getClientsFilter, SearchAllClients, getTradeCounts } from '../../../../Services/Authentication';
+import { maskEmail, maskLastFiveDigits } from '../../../../Utils/masking';
 import './Clients.css';
 
 const AllClients = () => {
@@ -30,6 +31,7 @@ const AllClients = () => {
     const [inactiveClients, setInactiveClients] = useState(0);
 
     const navigate = useNavigate();
+    const isSubAdmin = userRole.toLowerCase() === "sub-admin";
 
     useEffect(() => {
         if (searchQuery) {
@@ -415,7 +417,7 @@ const AllClients = () => {
                                             <th className='custom-col-design'>Status</th>
                                             <th className='custom-col-design'>Trading Status</th>
                                             <th className='custom-col-design'>View Client</th>
-                                            {userRole.toLowerCase() !== "sub-admin" && <th style={{ backgroundColor: '#283F7B', color: 'white' }}>Actions</th>}
+                                            {!isSubAdmin && <th style={{ backgroundColor: '#283F7B', color: 'white' }}>Actions</th>}
                                         </tr>
                                     </thead>
 
@@ -439,8 +441,8 @@ const AllClients = () => {
                                                 <td>{indexOfFirstClient + index + 1}</td>
                                                 <td>{client.userName}</td>
                                                 <td>{client.fullName}</td>
-                                                <td>{client.email}</td>
-                                                <td>{client.phoneNumber}</td>
+                                                <td>{isSubAdmin ? maskEmail(client.email) : client.email}</td>
+                                                <td>{isSubAdmin ? maskLastFiveDigits(client.phoneNumber) : client.phoneNumber}</td>
                                                 <td>{client.license ? client.license.name : 'N/A'}</td>
                                                 <td>{client.to_month ? client.to_month : 'Demo'}</td>
                                                 <td>
@@ -471,7 +473,7 @@ const AllClients = () => {
                                                         style={{ cursor: 'pointer', marginLeft: '20px', fontSize: '18px' }}
                                                     />
                                                 </td>
-                                                {userRole.toLowerCase() !== "sub-admin" && (
+                                                {!isSubAdmin && (
                                                     <td>
                                                         <FaPencilAlt onClick={() => handleEdit(client)} style={{ cursor: 'pointer', marginRight: '10px', color: '#6d62e7' }} />
                                                         <FaTrashAlt onClick={() => handleDelete(client)} style={{ cursor: 'pointer', color: '#ef3636' }} />

@@ -7,7 +7,8 @@ import { useParams } from 'react-router-dom';
 import { H3 } from '../../../../../AbstractElements';
 import './UserList.css';
 import { FaArrowUp, FaArrowDown } from 'react-icons/fa';
-import { getActiveInactiveClient } from '../../../../../Services/Authentication';
+import { fetchUserProfile, getActiveInactiveClient } from '../../../../../Services/Authentication';
+import { maskLastFiveDigits } from '../../../../../Utils/masking';
 
 const UsersView = () => {
     const { userId } = useParams();
@@ -18,6 +19,8 @@ const UsersView = () => {
     const [sortConfig, setSortConfig] = useState({ key: '', direction: '' });
     const [pageBatch, setPageBatch] = useState(0);
     const [isMobile, setIsMobile] = useState(false);
+    const [userRole, setUserRole] = useState('');
+    const isSubAdmin = userRole.toLowerCase() === 'sub-admin';
 
     useEffect(() => {
         fetchClients();
@@ -34,6 +37,21 @@ const UsersView = () => {
     }, [userId]);
 
     const pagesPerBatch = isMobile ? 2 : 4;
+
+    useEffect(() => {
+        fetchUserRole();
+    }, []);
+
+    const fetchUserRole = async () => {
+        try {
+            const data = await fetchUserProfile();
+            if (data?.role?.name) {
+                setUserRole(data.role.name);
+            }
+        } catch (error) {
+            console.error('Error fetching user profile:', error);
+        }
+    };
 
     const fetchClients = async () => {
         const storedUserId = localStorage.getItem("userId") || userId;
@@ -168,7 +186,7 @@ const UsersView = () => {
                                                             {client.client_status ? 'Active' : 'Inactive'}
                                                         </Badge>
                                                     </td>
-                                                    <td>{client.client_phone}</td>
+                                                    <td>{isSubAdmin ? maskLastFiveDigits(client.client_phone) : client.client_phone}</td>
                                                     <td>{client.start_date_client}</td>
                                                     <td>{client.end_date_client}</td>
                                                 </tr>
