@@ -2,7 +2,6 @@ import React, { useContext, useState } from 'react';
 import { Grid } from 'react-feather';
 import { Link } from 'react-router-dom';
 import { Image } from '../../AbstractElements';
-import CubaIcon from '../../assets/images/logo/logo (1).png';
 import CustomizerContext from '../../_helper/Customizer';
 import { fetchUserProfile } from '../../Services/Authentication';
 import { useEffect } from 'react';
@@ -52,11 +51,15 @@ const SidebarLogo = () => {
     <div className='logo-wrapper responsive-logo-wrapper '>
       {layout1 !== 'compact-wrapper dark-sidebar' && layout1 !== 'compact-wrapper color-sidebar' && mixLayout ? (
         <Link to={getDashboardURL()}>
-          <Image attrImage={{ className: 'imgs-fluid custom-logo-style img-fluid-responsive d-inline', src: logo || CubaIcon, alt: 'Company Logo' }} />
+          {logo && (
+            <Image attrImage={{ className: 'imgs-fluid custom-logo-style img-fluid-responsive d-inline', src: logo, alt: 'Company Logo' }} />
+          )}
         </Link>
       ) : (
         <Link to={getDashboardURL()}>
-          <Image attrImage={{ className: 'imgs-fluid custom-logo-style img-fluid-responsive d-inline', src: logo || CubaIcon, alt: 'Company Logo' }} />
+          {logo && (
+            <Image attrImage={{ className: 'imgs-fluid custom-logo-style img-fluid-responsive d-inline', src: logo, alt: 'Company Logo' }} />
+          )}
         </Link>
       )}
       <div className='back-btn' onClick={() => openCloseSidebar()}>

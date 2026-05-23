@@ -1,11 +1,11 @@
-import React, { Fragment, useState } from 'react';
+import React, { Fragment, useContext, useState } from 'react';
 import { Col, Container, Form, FormGroup, Input, Label, Row } from 'reactstrap';
 import { Btn, H4, P, Image } from '../../../AbstractElements';
 import { Link } from 'react-router-dom';
-import logoWhite from '../../../assets/images/logo/logo.png';
-import logoDark from '../../../assets/images/logo/logo_dark.png';
+import { LogoContext } from '../../UiKits/Logo/LogoContext';
 
 const UnlockUser = ({ logoClassMain }) => {
+  const { logo } = useContext(LogoContext);
   const [togglePassword, setTogglePassword] = useState(false);
   return (
     <Fragment>
@@ -17,8 +17,12 @@ const UnlockUser = ({ logoClassMain }) => {
                 <div>
                   <div>
                     <Link className={`logo ${logoClassMain ? logoClassMain : ''}`} to={process.env.PUBLIC_URL}>
-                      <Image attrImage={{ className: 'img-fluid for-light', src: logoWhite, alt: 'looginpage' }} />
-                      <Image attrImage={{ className: 'img-fluid for-dark', src: logoDark, alt: 'looginpage' }} />
+                      {logo && (
+                        <>
+                          <Image attrImage={{ className: 'img-fluid for-light', src: logo, alt: 'Company Logo' }} />
+                          <Image attrImage={{ className: 'img-fluid for-dark', src: logo, alt: 'Company Logo' }} />
+                        </>
+                      )}
                     </Link>
                   </div>
                   <div className='login-main unlock-user'>

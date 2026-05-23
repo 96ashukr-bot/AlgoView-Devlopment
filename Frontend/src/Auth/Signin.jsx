@@ -3,8 +3,6 @@ import { Col, Container, Form, FormGroup, Input, Label, Row } from "reactstrap";
 import { Btn, H4, P, Image } from "../AbstractElements";
 import { Link, useNavigate } from "react-router-dom";
 import man from "../assets/images/dashboard/profile.png";
-import logoWhite from "../assets/images/logo/logo (1).png";
-import logoDark from "../assets/images/logo/logo (1).png";
 import { LogoContext } from "../Components/UiKits/Logo/LogoContext";
 import CustomizerContext from "../_helper/Customizer";
 import OtherWay from "./OtherWay";
@@ -125,13 +123,12 @@ const Signin = ({ selected }) => {
               <div className="login-card login-card-responsive">
                 <div>
                   <Link className="logo" to={process.env}>
-                    {/* <img
-                      className="img-fluids for-light img-fluids-responsive"
-                      src={logoWhite}
-                      alt="loginpage"
-                    /> */}
-                    <Image attrImage={{ className: 'img-fluids for-light img-fluids-responsive', src: logo || logoWhite, alt: 'Company Logo' }} />
-                    <Image attrImage={{ className: 'img-fluids for-dark img-fluids-responsive', src: logo || logoDark, alt: 'Company Logo' }} />
+                    {logo && (
+                      <>
+                        <Image attrImage={{ className: 'img-fluids for-light img-fluids-responsive', src: logo, alt: 'Company Logo' }} />
+                        <Image attrImage={{ className: 'img-fluids for-dark img-fluids-responsive', src: logo, alt: 'Company Logo' }} />
+                      </>
+                    )}
                   </Link>
                 </div>
                 <div className="login-main login-tab">

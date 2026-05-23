@@ -62,14 +62,16 @@ const Leftbar = () => {
       <Col className="header-logo-wrapper col-auto p-0" id="out_side_click">
         <div className="logo-wrapper">
           <Link to={`/dashboard/algoviewtech/admin`}>
-            <Image
-              attrImage={{
-                className: "img-fluid header-company-logo",
-                src: logo || `${require("../../../assets/images/logo/logo.png")}`,
-                alt: "Company Logo",
-                style: { maxWidth: "180px", height: "56px", objectFit: "contain", objectPosition: "left center" },
-              }}
-            />
+            {logo && (
+              <Image
+                attrImage={{
+                  className: "img-fluid header-company-logo",
+                  src: logo,
+                  alt: "Company Logo",
+                  style: { maxWidth: "180px", height: "56px", objectFit: "contain", objectPosition: "left center" },
+                }}
+              />
+            )}
           </Link>
         </div>
         <div className="toggle-sidebar" onClick={() => responsive_openCloseSidebar(sidebartoggle)}

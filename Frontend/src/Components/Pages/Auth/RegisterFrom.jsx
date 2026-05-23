@@ -2,8 +2,6 @@ import React, { Fragment, useState, useContext } from 'react';
 import { Form, FormGroup, Input, Label, Row, Col } from 'reactstrap';
 import { Btn, H4, P, Image } from '../../../AbstractElements';
 import { Link, useNavigate } from 'react-router-dom';
-import logoWhite from '../../../assets/images/logo/logo (1).png';
-import logoDark from '../../../assets/images/logo/logo (1).png';
 import { LogoContext } from '../../UiKits/Logo/LogoContext';
 import { signupUser } from '../../../Services/Authentication';
 import { toast, ToastContainer } from 'react-toastify';
@@ -154,8 +152,12 @@ const RegisterFrom = ({ logoClassMain }) => {
       <div className='login-card login-card-responsive'>
         <div>
           <Link className={`logo ${logoClassMain ? logoClassMain : ''}`} to={process.env.PUBLIC_URL}>
-            <Image attrImage={{ className: 'img-fluids for-light img-fluids-responsive', src: logo || logoWhite, alt: 'Company Logo' }} />
-            <Image attrImage={{ className: 'img-fluids for-dark img-fluids-responsive ', src: logo || logoDark, alt: 'Company Logo' }} />
+            {logo && (
+              <>
+                <Image attrImage={{ className: 'img-fluids for-light img-fluids-responsive', src: logo, alt: 'Company Logo' }} />
+                <Image attrImage={{ className: 'img-fluids for-dark img-fluids-responsive ', src: logo, alt: 'Company Logo' }} />
+              </>
+            )}
           </Link>
           <div className='login-main'>
             <Form className='theme-form login-form' onSubmit={handleSubmit}>

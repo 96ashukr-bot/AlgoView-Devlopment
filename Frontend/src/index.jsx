@@ -23,7 +23,7 @@ const Root = () => {
   
     const newLink = document.createElement('link');
     newLink.rel = 'icon';
-    newLink.href = faviconUrl || '/favicon.png';
+    newLink.href = faviconUrl || '/Algoview-favicon.png';
     document.head.appendChild(newLink);
   };
 

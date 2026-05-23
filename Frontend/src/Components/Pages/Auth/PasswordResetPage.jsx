@@ -3,7 +3,6 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { Col, Container, Form, FormGroup, Input, Label, Row, Progress } from "reactstrap";
 import { Btn, H4, P, Image } from "../../../AbstractElements";
 import { Eye, EyeOff } from 'react-feather';
-import logoWhite from "../../../assets/images/logo/logo (1).png";
 import { LogoContext } from "../../UiKits/Logo/LogoContext";
 import { resetPassword } from "../../../Services/Authentication";
 import './Auths.css';
@@ -118,14 +117,9 @@ const PasswordResetPage = ({ logoClassMain }) => {
                       className={`logo ${logoClassMain ? logoClassMain : ""}`}
                       to={process.env.PUBLIC_URL}
                     >
-                      {/* <Image
-                        attrImage={{
-                          className: "img-fluids img-fluids-responsive for-light",
-                          src: logoWhite,
-                          alt: "loginpage",
-                        }}
-                      /> */}
-                      <Image attrImage={{ className: 'img-fluids for-light img-fluids-responsive', src: logo || logoWhite, alt: 'Company Logo' }} />
+                      {logo && (
+                        <Image attrImage={{ className: 'img-fluids for-light img-fluids-responsive', src: logo, alt: 'Company Logo' }} />
+                      )}
 
                     </Link>
                   </div>

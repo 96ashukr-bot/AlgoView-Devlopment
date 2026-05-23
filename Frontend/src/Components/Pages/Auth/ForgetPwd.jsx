@@ -2,8 +2,6 @@ import React, { Fragment, useState, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { Col, Container, Form, FormGroup, Input, Label, Row } from 'reactstrap';
 import { Btn, H4, P, Image } from '../../../AbstractElements';
-import logoWhite from '../../../assets/images/logo/logo (1).png';
-import logoDark from '../../../assets/images/logo/logo (1).png';
 import { LogoContext } from '../../UiKits/Logo/LogoContext';
 import { toast, ToastContainer } from 'react-toastify';
 import { requestPasswordReset } from '../../../Services/Authentication';
@@ -58,8 +56,12 @@ const ForgetPwd = ({ logoClassMain }) => {
                 <div>
                   <div>
                     <Link className={`logo ${logoClassMain ? logoClassMain : ''}`} to={process.env.PUBLIC_URL}>
-                      <Image attrImage={{ className: 'img-fluids for-light', src: logo || logoWhite, alt: 'Company Logo'}} />
-                      <Image attrImage={{ className: 'img-fluids for-dark', src: logo || logoDark, alt: 'Company Logo'}} />
+                      {logo && (
+                        <>
+                          <Image attrImage={{ className: 'img-fluids for-light', src: logo, alt: 'Company Logo'}} />
+                          <Image attrImage={{ className: 'img-fluids for-dark', src: logo, alt: 'Company Logo'}} />
+                        </>
+                      )}
                     </Link>
                   </div>
                   <div className='login-main'>

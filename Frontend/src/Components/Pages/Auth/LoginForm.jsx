@@ -1,14 +1,13 @@
-import React, { Fragment, useState } from 'react';
+import React, { Fragment, useContext, useState } from 'react';
 import { Btn, H4, P, Image } from '../../../AbstractElements';
 import { Form, FormGroup, Input, Label } from 'reactstrap';
 import { Link } from 'react-router-dom';
 // import { Facebook, Linkedin, Twitter } from 'react-feather';
-
-import logoWhite from '../../../assets/images/logo/Algotradelogo.png';
-import logoDark from '../../../assets/images/logo/Algotradelogo.png';
+import { LogoContext } from '../../UiKits/Logo/LogoContext';
 
 const LoginForm = ({ logoClassMain }) => {
   console.log(logoClassMain,'logoClassMain')
+  const { logo } = useContext(LogoContext);
   const [togglePassword, setTogglePassword] = useState(false);
   return (
     <Fragment>
@@ -16,8 +15,12 @@ const LoginForm = ({ logoClassMain }) => {
         <div>
           <div>
             <Link className={`logo ${logoClassMain ? logoClassMain : ''}`} to={process.env.PUBLIC_URL}>
-              <Image attrImage={{ className: 'img-fluids for-light', src: logoWhite, alt: 'looginpage' }} />
-              <Image attrImage={{ className: 'img-fluids for-dark', src: logoDark, alt: 'looginpage' }} />
+              {logo && (
+                <>
+                  <Image attrImage={{ className: 'img-fluids for-light', src: logo, alt: 'Company Logo' }} />
+                  <Image attrImage={{ className: 'img-fluids for-dark', src: logo, alt: 'Company Logo' }} />
+                </>
+              )}
             </Link>
           </div>
 

@@ -1,8 +1,8 @@
-import React, { Fragment, useState } from 'react';
+import React, { Fragment, useContext, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Col, Container, Form, FormGroup, Input, Label, Row, Progress, Spinner } from 'reactstrap';
 import { Btn, H4, Image } from '../../../AbstractElements';
-import logoWhite from '../../../assets/images/logo/logo (1).png';
+import { LogoContext } from '../../UiKits/Logo/LogoContext';
 import { changePassword } from '../../../Services/Authentication';
 import './Auths.css';
 import { ToastContainer, toast } from 'react-toastify';
@@ -10,6 +10,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import { Eye, EyeOff } from 'react-feather';
 
 const CreatePwd = ({ logoClassMain }) => {
+  const { logo } = useContext(LogoContext);
   const [toggleOldPassword, setToggleOldPassword] = useState(false);
   const [toggleNewPassword, setToggleNewPassword] = useState(false);
   const [oldPassword, setOldPassword] = useState('');
@@ -137,7 +138,9 @@ const CreatePwd = ({ logoClassMain }) => {
                 <div>
                   <div>
                     <Link className={`logo ${logoClassMain ? logoClassMain : ''}`} to={process.env.PUBLIC_URL}>
-                      <Image attrImage={{ className: 'img-fluids img-fluids-responsive for-light', src: logoWhite, alt: 'loginpage' }} />
+                      {logo && (
+                        <Image attrImage={{ className: 'img-fluids img-fluids-responsive for-light', src: logo, alt: 'Company Logo' }} />
+                      )}
                     </Link>
                   </div>
                   <div className="login-main">
