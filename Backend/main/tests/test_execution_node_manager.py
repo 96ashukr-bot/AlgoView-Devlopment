@@ -167,6 +167,7 @@ class ExecutionNodeManagerTests(TestCase):
             Index_Symbol="BANKNIFTY",
             order_id=None,
             order_status="Failed",
+            response_data={"data": {"status": "Failed", "message": "Insufficient margin"}},
         )
 
         access_token = str(RefreshToken.for_user(superadmin).access_token)
@@ -180,6 +181,10 @@ class ExecutionNodeManagerTests(TestCase):
         emails = {item["client"]["email"] for item in response.data["results"]}
         self.assertIn("assigned-history@example.com", emails)
         self.assertIn("unassigned-history@example.com", emails)
+        failed_trade = next(
+            item for item in response.data["results"] if item["client"]["email"] == "unassigned-history@example.com"
+        )
+        self.assertEqual(failed_trade["failure_reason"], "Insufficient margin")
 
     def test_subadmin_trade_history_is_limited_to_assigned_clients(self):
         subadmin_role, _ = Role.objects.get_or_create(name="Sub-Admin", defaults={"status": "active"})
@@ -210,7 +215,13 @@ class ExecutionNodeManagerTests(TestCase):
             type_of_user="is_client",
             is_client="True",
         )
-        Tradeorderhistory.objects.create(client=assigned_client, trading_symbol="NIFTY", order_status="completed")
+        Tradeorderhistory.objects.create(
+            client=assigned_client,
+            trading_symbol="NIFTY",
+            order_id=None,
+            order_status="Failed",
+            response_data={"data": {"status": "Failed", "skip_reasons": ["Broker access token is missing"]}},
+        )
         Tradeorderhistory.objects.create(client=other_client, trading_symbol="BANKNIFTY", order_status="completed")
 
         access_token = str(RefreshToken.for_user(subadmin).access_token)
@@ -224,6 +235,10 @@ class ExecutionNodeManagerTests(TestCase):
         emails = {item["client"]["email"] for item in response.data["results"]}
         self.assertIn("sub-assigned-history@example.com", emails)
         self.assertNotIn("sub-other-history@example.com", emails)
+        assigned_trade = next(
+            item for item in response.data["results"] if item["client"]["email"] == "sub-assigned-history@example.com"
+        )
+        self.assertEqual(assigned_trade["failure_reason"], "Broker access token is missing")
 
     def test_client_trade_history_is_limited_to_self(self):
         self_client = User.objects.create_user(

@@ -1923,8 +1923,53 @@ class ClientnameSerializer(serializers.ModelSerializer):
             names.append(obj.lastName)
         return " ".join(names)
 
+def _extract_trade_failure_reason(response_data):
+    if not isinstance(response_data, dict):
+        return None
+
+    candidates = []
+    data = response_data.get("data")
+    if isinstance(data, dict):
+        candidates.extend(
+            [
+                data.get("message"),
+                data.get("reason"),
+                data.get("error"),
+                data.get("emsg"),
+                data.get("remarks"),
+            ]
+        )
+        skip_reasons = data.get("skip_reasons")
+        if isinstance(skip_reasons, list):
+            candidates.append("; ".join(str(reason) for reason in skip_reasons if reason))
+
+    candidates.extend(
+        [
+            response_data.get("message"),
+            response_data.get("reason"),
+            response_data.get("error"),
+            response_data.get("emsg"),
+            response_data.get("remarks"),
+        ]
+    )
+
+    for candidate in candidates:
+        if candidate in (None, "", [], {}):
+            continue
+        if isinstance(candidate, (dict, list)):
+            return str(candidate)
+        return str(candidate)
+    return None
+
+
 class TradeorderhistorySerializer(serializers.ModelSerializer):
     client = ClientnameSerializer(read_only=True)  # Use the nested serializer
+    failure_reason = serializers.SerializerMethodField()
+
+    def get_failure_reason(self, obj):
+        if obj.failure_reason:
+            return obj.failure_reason
+        return _extract_trade_failure_reason(obj.response_data)
 
     class Meta:
         model = Tradeorderhistory
@@ -1958,10 +2003,17 @@ class ClientdashboardSerializer(serializers.Serializer):
         }
         
 class TradeOrderHistoryFilterSerializer(serializers.ModelSerializer):
+    failure_reason = serializers.SerializerMethodField()
+
+    def get_failure_reason(self, obj):
+        if obj.failure_reason:
+            return obj.failure_reason
+        return _extract_trade_failure_reason(obj.response_data)
+
     class Meta:
         model = Tradeorderhistory
         fields = ['id', 'client', 'date', 'trading_symbol', 'GroupService','Index_Symbol', 'order_id','transaction_type',
-                'broker', 'order_status', 'strategy', 'Entry_type', 'Entry_Price', 
+                'broker', 'order_status', 'failure_reason', 'strategy', 'Entry_type', 'Entry_Price', 
                 'Exit_Price','Exit_type','EntryQty','ExitQty','trade_order_status',
                 'SignalEntry_time', 'SignalExit_time', 'Exchange', 'Segment','webhook_signal']
         
