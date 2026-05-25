@@ -22,6 +22,8 @@ media/
 # ========================
 node_modules/
 build/
+!Frontend/build/
+!Frontend/build/**
 
 # ========================
 # OS / Misc
