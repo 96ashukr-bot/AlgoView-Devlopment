@@ -721,15 +721,6 @@ const TradeHistory = () => {
                                             currentSignals.map((signal, index) => {
                                                 const total = calculateTotal(signal.Exit_Price, signal.ExitQty, signal.Entry_Price, signal.EntryQty, signal.order_status);
                                                 const totalValue = total !== null ? parseFloat(total) : null;
-                                                const convertedSymbol = convertTradingSymbolToLiveSymbol(signal.trading_symbol);
-                                                const liveData = convertedSymbol ? livePrices[convertedSymbol] : null;
-
-                                                console.log('Original symbol:', signal.trading_symbol);
-                                                console.log('Converted symbol:', convertedSymbol);
-                                                console.log('Live data:', liveData);
-
-                                                const isSymbolMatched = liveData && liveData.symbol === convertedSymbol;
-                                                console.log('isSymbolMatched', isSymbolMatched);
 
                                                 return (
                                                     <tr key={signal.id}>
@@ -748,49 +739,7 @@ const TradeHistory = () => {
                                                         <td style={{ color: totalValue < 0 ? 'red' : 'green', fontWeight: 'bold' }}>
                                                             {total !== null ? total : '-'}
                                                         </td>
-                                                        <td>
-                                                            {liveData ? (
-                                                                liveData.status === 'data' ? (
-                                                                    <span
-                                                                        style={{
-                                                                            color:
-                                                                                parseFloat(liveData.ltp) > 0
-                                                                                    ? 'green'
-                                                                                    : parseFloat(liveData.ltp) < 0
-                                                                                        ? 'red'
-                                                                                        : 'inherit',
-                                                                        }}
-                                                                    >
-                                                                        {`${liveData.strikePrice ?? 'N/A'} (${liveData.ltp ?? 'N/A'})`}
-                                                                    </span>
-                                                                ) : liveData.status === 'error' ? (
-                                                                    <span className="text-danger">Error: {liveData.message}</span>
-                                                                ) : liveData.status === 'disconnected' && liveData.ltp && liveData.strikePrice ? (
-                                                                    // Show last known data if available
-                                                                    <span
-                                                                        style={{
-                                                                            color:
-                                                                                parseFloat(liveData.ltp) > 0
-                                                                                    ? 'green'
-                                                                                    : parseFloat(liveData.ltp) < 0
-                                                                                        ? 'red'
-                                                                                        : 'inherit',
-                                                                        }}
-                                                                    >
-                                                                        {`${liveData.strikePrice} (${liveData.ltp})`}
-                                                                        <span className="text-muted"> (Last known)</span>
-                                                                    </span>
-                                                                ) : liveData.status === 'disconnected' ? (
-                                                                    <span className="text-muted">Disconnected</span>
-                                                                ) : (
-                                                                    <span style={{ color: 'orange' }}>
-                                                                        {liveData.message || 'Waiting for data...'}
-                                                                    </span>
-                                                                )
-                                                            ) : (
-                                                                <span className="text-muted">Invalid symbol</span>
-                                                            )}
-                                                        </td>
+                                                        <td></td>
                                                         <td>{signal.order_status || '-'}</td>
                                                         <td>{signal.client?.full_name || '-'}</td>
                                                         <td>{signal.failure_reason || '-'}</td>
