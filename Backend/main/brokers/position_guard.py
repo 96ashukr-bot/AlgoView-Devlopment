@@ -9,6 +9,7 @@ from main.models import Tradeorderhistory
 OPEN_BUY_ORDER_STATUSES = {"complete", "completed", "open", "put order req received", "success"}
 CLOSED_TRADE_STATUSES = {"close", "closed"}
 SUCCESS_CLOSE_STATUSES = {"completed", "complete", "success", "open", "put order req received"}
+KNOWN_UNDERLYINGS = ("MIDCPNIFTY", "BANKNIFTY", "FINNIFTY", "SENSEX", "BANKEX", "NIFTY")
 
 
 def compact_symbol(value):
@@ -24,6 +25,14 @@ def extract_option_type(value):
     return ""
 
 
+def extract_underlying(value):
+    compact = compact_symbol(value)
+    for underlying in KNOWN_UNDERLYINGS:
+        if compact.startswith(underlying):
+            return underlying
+    return compact
+
+
 def round_strike_from_signal_price(value):
     try:
         price = float(value)
@@ -36,7 +45,7 @@ def round_strike_from_signal_price(value):
 
 
 def _extract_history_contract_symbol(history):
-    candidates = [getattr(history, "trading_symbol", None)]
+    candidates = [getattr(history, "trading_symbol", None), getattr(history, "Index_Symbol", None)]
     response_data = getattr(history, "response_data", None)
 
     if isinstance(response_data, dict):
@@ -96,9 +105,34 @@ def _history_signal_price(history):
 
 def history_strike(history):
     contract_symbol = compact_symbol(_extract_history_contract_symbol(history))
-    match = re.search(r"(?:NIFTY|BANKNIFTY|FINNIFTY|SENSEX|MIDCPNIFTY|BANKEX)?(?:\d{2}[A-Z]{3})?(\d{4,6})(?:CE|PE)", contract_symbol)
-    if match:
-        return match.group(1)
+    underlying = extract_underlying(contract_symbol)
+    if underlying and contract_symbol.startswith(underlying):
+        contract_body = contract_symbol[len(underlying):]
+    else:
+        contract_body = contract_symbol
+
+    option_match = re.search(r"(CE|PE)", contract_body)
+    if option_match:
+        contract_body = contract_body[: option_match.start()]
+
+    expiry_prefixed_patterns = (
+        r"^\d{2}[A-Z]{3}\d{2}(\d{4,6})$",
+        r"^\d{2}[A-Z]{3}\d{4}(\d{4,6})$",
+        r"^\d{2}[A-Z]{3}(\d{4,6})$",
+        r"^[A-Z]{3}\d{2}(\d{4,6})$",
+        r"^[A-Z]{3}\d{4}(\d{4,6})$",
+    )
+    for pattern in expiry_prefixed_patterns:
+        match = re.match(pattern, contract_body)
+        if match:
+            return match.group(1)
+
+    digit_groups = re.findall(r"\d+", contract_body)
+    for group in reversed(digit_groups):
+        if 4 <= len(group) <= 6:
+            return group
+        if len(group) > 6:
+            return group[-5:]
     return round_strike_from_signal_price(_history_signal_price(history))
 
 
@@ -110,6 +144,22 @@ def _history_matches_open_buy(history, option_type):
     if trade_status in CLOSED_TRADE_STATUSES:
         return False
     return history_option_type(history) == option_type
+
+
+def _history_matches_underlying(history, symbol):
+    expected_underlying = extract_underlying(symbol)
+    if not expected_underlying:
+        return True
+
+    candidates = [
+        _extract_history_contract_symbol(history),
+        getattr(history, "Index_Symbol", None),
+        getattr(history, "trading_symbol", None),
+    ]
+    for candidate in candidates:
+        if extract_underlying(candidate) == expected_underlying:
+            return True
+    return False
 
 
 def find_matching_open_buy_position(client, order):
@@ -124,7 +174,6 @@ def find_matching_open_buy_position(client, order):
         Tradeorderhistory.objects.filter(
             client=client,
             transaction_type__iexact="BUY",
-            Index_Symbol__iexact=values["symbol"],
             GroupService=values["group_service"],
         )
         .exclude(order_id__isnull=True)
@@ -133,7 +182,7 @@ def find_matching_open_buy_position(client, order):
         .order_by("-id")
     )
     for history in qs:
-        if _history_matches_open_buy(history, option_type):
+        if _history_matches_underlying(history, values["symbol"]) and _history_matches_open_buy(history, option_type):
             return history
     return None
 

@@ -29,6 +29,7 @@ from main.dematemodule import BrokerCallbackView
 from main.broker_registry import get_broker_setup_spec
 from main.broker_order_utils import extract_ltp_from_quote_payload
 from main.brokers.exchange_mapping import normalize_broker_exchange, normalize_fivepaisa_exchange
+from main.brokers.position_guard import find_matching_open_buy_position, prepare_close_order_from_open_position
 from main.services.option_ltp_fallback import cache_option_ltp, fetch_nse_option_chain_ltp, get_cached_option_ltp
 from main.serializers import ClientBrokerDetailsUpdateSerializer
 from main.views import _process_webhook_trade
@@ -317,6 +318,80 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertFalse(result["recorded_in_trade_history"])
         self.assertIn("Client trading is disabled", result["skip_reasons"])
         self.assertFalse(Tradeorderhistory.objects.filter(client=disabled_client).exists())
+
+    def test_exit_position_matches_open_buy_when_index_symbol_is_full_contract(self):
+        Tradeorderhistory.objects.create(
+            client=self.client_user,
+            GroupService="Lite",
+            trading_symbol="NIFTY26MAY2624000PE",
+            Index_Symbol="NIFTY2624000PE26MAY",
+            transaction_type="BUY",
+            trade_order_status="complete",
+            order_status="complete",
+            order_id="260525000362199",
+            Entry_type="BUY",
+            EntryQty=65,
+            Entry_Price=105,
+            order_params={"transaction_type": "PE", "symbol": "NIFTY"},
+        )
+
+        match = find_matching_open_buy_position(
+            self.client_user,
+            {
+                "symbol": "NIFTY",
+                "group_service": "Lite",
+                "transaction_type": "SELL",
+                "option_type": "PE",
+                "quantity": 65,
+            },
+        )
+
+        self.assertIsNotNone(match)
+        self.assertEqual(match.order_id, "260525000362199")
+
+        close_order, open_position, close_error = prepare_close_order_from_open_position(
+            self.client_user,
+            {
+                "symbol": "NIFTY",
+                "group_service": "Lite",
+                "transaction_type": "SELL",
+                "option_type": "PE",
+                "quantity": 65,
+            },
+            "angel one",
+        )
+        self.assertIsNone(close_error)
+        self.assertEqual(open_position.order_id, "260525000362199")
+        self.assertEqual(close_order["strike"], "24000")
+        self.assertEqual(close_order["option_type"], "PE")
+        self.assertEqual(close_order["quantity"], 65)
+
+    def test_exit_position_does_not_match_banknifty_when_closing_nifty(self):
+        Tradeorderhistory.objects.create(
+            client=self.client_user,
+            GroupService="Lite",
+            trading_symbol="BANKNIFTY26MAY2654000PE",
+            Index_Symbol="BANKNIFTY2654000PE26MAY",
+            transaction_type="BUY",
+            trade_order_status="complete",
+            order_status="complete",
+            order_id="banknifty-open",
+            EntryQty=30,
+            order_params={"transaction_type": "PE", "symbol": "BANKNIFTY"},
+        )
+
+        match = find_matching_open_buy_position(
+            self.client_user,
+            {
+                "symbol": "NIFTY",
+                "group_service": "Lite",
+                "transaction_type": "SELL",
+                "option_type": "PE",
+                "quantity": 65,
+            },
+        )
+
+        self.assertIsNone(match)
 
     def test_duplicate_ip_prevention(self):
         with self.assertRaises(Exception):
