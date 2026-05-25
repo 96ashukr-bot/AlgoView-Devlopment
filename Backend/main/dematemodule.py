@@ -797,6 +797,14 @@ def _next_session_cutoff(hour, minute):
     return datetime.combine(expiry_date, datetime.min.time(), tzinfo=now_time.tzinfo) + timedelta(hours=hour, minutes=minute)
 
 
+def _end_of_trading_day_session_cutoff():
+    now_time = timezone.localtime(now())
+    cutoff_time = datetime.min.time().replace(hour=23, minute=59)
+    expiry_date = now_time.date() if now_time.time() < cutoff_time else now_time.date() + timedelta(days=1)
+    local_expiry = datetime.combine(expiry_date, cutoff_time, tzinfo=now_time.tzinfo)
+    return local_expiry.astimezone(timezone.utc)
+
+
 def _get_active_broker_details_for_user(user, normalized_broker_name=None):
     queryset = (
         ClientBrokerdetails.objects.filter(client=user)
@@ -1322,7 +1330,7 @@ class BrokerCallbackView(APIView):
             session_data = kite.generate_session(request_token, api_secret=broker_details.broker_API_SKEY)
             access_token = session_data['access_token']
             if access_token:
-                expiry_time = _next_session_cutoff(6, 0)
+                expiry_time = _end_of_trading_day_session_cutoff()
                 _save_session_tokens_compat(broker_details, request_token, access_token, expiry=expiry_time)
          
                 return JsonResponse({"message": "success", "token_saved": True})
@@ -1389,7 +1397,7 @@ class BrokerCallbackView(APIView):
                 return JsonResponse({"message": "Failed", "error": error or "Alice Blue auth-code exchange failed."}, status=400)
 
             access_token = getattr(alice, "alice_session_id", None) or request_token
-            expiry_time = _next_session_cutoff(6, 0)
+            expiry_time = _end_of_trading_day_session_cutoff()
             _save_session_tokens_compat(broker_details, request_token, access_token, expiry=expiry_time)
 
             return JsonResponse({"message": "success", "token_saved": True})

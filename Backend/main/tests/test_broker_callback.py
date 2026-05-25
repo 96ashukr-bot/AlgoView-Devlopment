@@ -22,6 +22,7 @@ TEST_CACHES = {
     CACHES=TEST_CACHES,
     ANGELONE_STATE_CACHE_PREFIX="test:broker-callback:state",
     ANGELONE_CALLBACK_STATE_TTL_SECONDS=60,
+    TIME_ZONE="Asia/Kolkata",
 )
 class BrokerCallbackRoutingTests(TestCase):
     def _attach_verified_proxy(self, broker_details, *, node_id="callback-node"):
@@ -179,6 +180,9 @@ class BrokerCallbackRoutingTests(TestCase):
         self.assertEqual(mock_vendor_session.call_args.args[1], "alice-auth-code")
         broker_details.refresh_from_db()
         self.assertEqual(broker_details.access_token, "alice-session-token")
+        expiry = timezone.localtime(broker_details.access_token_expiry)
+        self.assertEqual(expiry.hour, 23)
+        self.assertEqual(expiry.minute, 59)
 
     @mock.patch("main.dematemodule.requests.post")
     def test_browser_broker_callback_redirects_without_token_json(self, mock_post):
@@ -301,6 +305,9 @@ class BrokerCallbackRoutingTests(TestCase):
         kite.generate_session.assert_called_once_with("kite-request-token", api_secret="kite-secret")
         broker_details.refresh_from_db()
         self.assertEqual(broker_details.access_token, "kite-access-token")
+        expiry = timezone.localtime(broker_details.access_token_expiry)
+        self.assertEqual(expiry.hour, 23)
+        self.assertEqual(expiry.minute, 59)
 
     @mock.patch("main.dematemodule.fetch_access_token_5paisa")
     def test_fivepaisa_request_token_callback_is_exchanged_without_state(self, mock_fetch):
