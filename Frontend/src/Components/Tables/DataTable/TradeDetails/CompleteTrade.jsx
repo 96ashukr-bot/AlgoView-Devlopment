@@ -533,7 +533,7 @@ const CompleteTradeHistory = () => {
                                 
                                 <Col md={2}>
                                     <FormGroup>
-                                        <Label for="indexSymbol">Index Symbol</Label>
+                                        <Label for="indexSymbol">Script</Label>
                                         <Input
                                             type="select"
                                             name="indexSymbol"

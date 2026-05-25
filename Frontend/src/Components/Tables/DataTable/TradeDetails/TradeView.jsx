@@ -426,7 +426,7 @@ const TradeView = () => {
                                 </Col>
                                 <Col md={2}>
                                     <FormGroup>
-                                        <Label for="indexSymbol">Index Symbol</Label>
+                                        <Label for="indexSymbol">Script</Label>
                                         <Input
                                             type="select"
                                             name="indexSymbol"
@@ -472,10 +472,6 @@ const TradeView = () => {
                                             </th>
                                             <th onClick={() => handleSort('trading_symbol')} className="custom-col-design">
                                                 Trading Symbol
-                                                <FaArrowUp className="sort-arrow-left" />
-                                                <FaArrowDown className="sort-arrow-right" />
-                                            </th>
-                                            <th onClick={() => handleSort('Index_Symbol')} className='custom-col-design'>Index Symbol
                                                 <FaArrowUp className="sort-arrow-left" />
                                                 <FaArrowDown className="sort-arrow-right" />
                                             </th>
@@ -533,7 +529,7 @@ const TradeView = () => {
                                     <tbody>
                                         {loading ? (
                                             <tr>
-                                                <td colSpan="9" style={{ textAlign: 'center', height: '100px' }}>
+                                                <td colSpan="14" style={{ textAlign: 'center', height: '100px' }}>
                                                     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
                                                         <RotatingLines
                                                             strokeColor="#283F7B"
@@ -555,7 +551,6 @@ const TradeView = () => {
                                                         <td>{formatDateTime(signal.SignalEntry_time)}</td>
                                                         <td>{formatDateTime(signal.SignalExit_time)}</td>
                                                         <td>{getTradeSymbolDisplay(signal)}</td>
-                                                        <td>{signal.Index_Symbol || '-'}</td>
                                                         <td>{signal.GroupService || '-'}</td>
                                                         {/* <td>{signal.strategy || '-'}</td> */}
                                                         <td>{signal.broker || '-'}</td>
@@ -574,7 +569,7 @@ const TradeView = () => {
                                             })
                                         ) : (
                                             <tr>
-                                                <td colSpan="10" style={{ textAlign: 'center' }}>No Client Trade Found</td>
+                                                <td colSpan="14" style={{ textAlign: 'center' }}>No Client Trade Found</td>
                                             </tr>
                                         )}
                                     </tbody>
