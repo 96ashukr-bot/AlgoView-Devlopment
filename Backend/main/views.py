@@ -5061,7 +5061,7 @@ class TradeorderhistoryListView(APIView):
             
             # Determine which clients to include based on user role
             clients = get_accessible_clients_queryset(user)
-            trade_history = Tradeorderhistory.objects.exclude(order_id=0).exclude(order_id__isnull=True).filter(client__in=clients).order_by('-id')
+            trade_history = Tradeorderhistory.objects.filter(client__in=clients).order_by('-id')
 
             # Dynamically apply filters based on the provided parameters
             filters = Q()

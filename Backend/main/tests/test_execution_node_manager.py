@@ -11,7 +11,7 @@ from django.utils import timezone
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from main.brokers.base import get_broker_adapter
-from main.models import Broker, ClientBrokerdetails, ExecutionNode, ExecutionOrderJob, Role, User
+from main.models import Broker, ClientBrokerdetails, ExecutionNode, ExecutionOrderJob, Role, Tradeorderhistory, User
 from main.services.execution_nodes import assign_execution_node_to_client, release_execution_node
 from main.services.execution_router import route_order_to_execution_node
 from main.services.egress_guard import _is_broker_url, _is_public_instrument_master_url
@@ -126,6 +126,138 @@ class ExecutionNodeManagerTests(TestCase):
             }
         )
         self.assertEqual(mock_place_order.call_args.kwargs["exchange"], "NFO")
+
+    def test_superadmin_trade_history_includes_all_clients_and_failed_rows(self):
+        superadmin = User.objects.create_user(
+            email="trade-superadmin@example.com",
+            firstName="Trade",
+            lastName="Super",
+            phoneNumber="9999999901",
+            password="Pass@123",
+            is_superuser=True,
+        )
+        assigned_client = User.objects.create_user(
+            email="assigned-history@example.com",
+            firstName="Assigned",
+            lastName="History",
+            phoneNumber="9999999902",
+            password="Pass@123",
+            type_of_user="is_client",
+            is_client="True",
+        )
+        unassigned_client = User.objects.create_user(
+            email="unassigned-history@example.com",
+            firstName="Unassigned",
+            lastName="History",
+            phoneNumber="9999999903",
+            password="Pass@123",
+            type_of_user="is_client",
+            is_client="True",
+        )
+        Tradeorderhistory.objects.create(
+            client=assigned_client,
+            trading_symbol="NIFTY",
+            Index_Symbol="NIFTY",
+            order_id="order-1",
+            order_status="completed",
+        )
+        Tradeorderhistory.objects.create(
+            client=unassigned_client,
+            trading_symbol="BANKNIFTY",
+            Index_Symbol="BANKNIFTY",
+            order_id=None,
+            order_status="Failed",
+        )
+
+        access_token = str(RefreshToken.for_user(superadmin).access_token)
+        response = self.client.get(
+            "/api/get-trade-history/",
+            {"page_size": 50},
+            HTTP_AUTHORIZATION=f"Bearer {access_token}",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        emails = {item["client"]["email"] for item in response.data["results"]}
+        self.assertIn("assigned-history@example.com", emails)
+        self.assertIn("unassigned-history@example.com", emails)
+
+    def test_subadmin_trade_history_is_limited_to_assigned_clients(self):
+        subadmin_role, _ = Role.objects.get_or_create(name="Sub-Admin", defaults={"status": "active"})
+        subadmin = User.objects.create_user(
+            email="trade-subadmin@example.com",
+            firstName="Trade",
+            lastName="Sub",
+            phoneNumber="9999999904",
+            password="Pass@123",
+            role=subadmin_role,
+        )
+        assigned_client = User.objects.create_user(
+            email="sub-assigned-history@example.com",
+            firstName="Sub",
+            lastName="Assigned",
+            phoneNumber="9999999905",
+            password="Pass@123",
+            type_of_user="is_client",
+            is_client="True",
+            assigned_client=subadmin,
+        )
+        other_client = User.objects.create_user(
+            email="sub-other-history@example.com",
+            firstName="Sub",
+            lastName="Other",
+            phoneNumber="9999999906",
+            password="Pass@123",
+            type_of_user="is_client",
+            is_client="True",
+        )
+        Tradeorderhistory.objects.create(client=assigned_client, trading_symbol="NIFTY", order_status="completed")
+        Tradeorderhistory.objects.create(client=other_client, trading_symbol="BANKNIFTY", order_status="completed")
+
+        access_token = str(RefreshToken.for_user(subadmin).access_token)
+        response = self.client.get(
+            "/api/get-trade-history/",
+            {"page_size": 50},
+            HTTP_AUTHORIZATION=f"Bearer {access_token}",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        emails = {item["client"]["email"] for item in response.data["results"]}
+        self.assertIn("sub-assigned-history@example.com", emails)
+        self.assertNotIn("sub-other-history@example.com", emails)
+
+    def test_client_trade_history_is_limited_to_self(self):
+        self_client = User.objects.create_user(
+            email="self-history@example.com",
+            firstName="Self",
+            lastName="History",
+            phoneNumber="9999999907",
+            password="Pass@123",
+            type_of_user="is_client",
+            is_client="True",
+        )
+        other_client = User.objects.create_user(
+            email="other-history@example.com",
+            firstName="Other",
+            lastName="History",
+            phoneNumber="9999999908",
+            password="Pass@123",
+            type_of_user="is_client",
+            is_client="True",
+        )
+        Tradeorderhistory.objects.create(client=self_client, trading_symbol="NIFTY", order_status="completed")
+        Tradeorderhistory.objects.create(client=other_client, trading_symbol="BANKNIFTY", order_status="completed")
+
+        access_token = str(RefreshToken.for_user(self_client).access_token)
+        response = self.client.get(
+            "/api/get-client-trade-history/",
+            {"page_size": 50},
+            HTTP_AUTHORIZATION=f"Bearer {access_token}",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        emails = {item["client"]["email"] for item in response.data["results"]}
+        self.assertIn("self-history@example.com", emails)
+        self.assertNotIn("other-history@example.com", emails)
 
     def test_duplicate_ip_prevention(self):
         with self.assertRaises(Exception):
