@@ -366,6 +366,45 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertEqual(close_order["option_type"], "PE")
         self.assertEqual(close_order["quantity"], 65)
 
+    def test_exit_uses_existing_open_buy_contract_when_signal_reference_price_changes(self):
+        Tradeorderhistory.objects.create(
+            client=self.client_user,
+            GroupService="Lite",
+            trading_symbol="NIFTY26MAY2624000CE",
+            Index_Symbol="NIFTY",
+            transaction_type="BUY",
+            trade_order_status="complete",
+            order_status="complete",
+            order_id="nifty-ce-open",
+            Entry_type="BUY",
+            EntryQty=65,
+            Entry_Price=110,
+            LivePrice=24049,
+            webhook_signal={"ordertype": "BUY-O", "price": 24049},
+            order_params={"transaction_type": "CE", "symbol": "NIFTY", "strike": 24000},
+        )
+
+        close_order, open_position, close_error = prepare_close_order_from_open_position(
+            self.client_user,
+            {
+                "symbol": "NIFTY",
+                "group_service": "Lite",
+                "transaction_type": "SELL",
+                "option_type": "CE",
+                "quantity": 65,
+                "strike": 24100,
+                "LivePrice": 24085,
+                "webhook_signal": {"ordertype": "SELL-C", "price": 24085},
+            },
+            "angel one",
+        )
+
+        self.assertIsNone(close_error)
+        self.assertEqual(open_position.order_id, "nifty-ce-open")
+        self.assertEqual(close_order["strike"], "24000")
+        self.assertEqual(close_order["option_type"], "CE")
+        self.assertEqual(close_order["quantity"], 65)
+
     def test_exit_position_does_not_match_banknifty_when_closing_nifty(self):
         Tradeorderhistory.objects.create(
             client=self.client_user,
