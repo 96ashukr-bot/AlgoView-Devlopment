@@ -78,6 +78,18 @@ ALLOWED_ORDER_TYPES = {"LIMIT", "MARKET", "SL", "SL-M"}
 ALLOWED_TRANSACTION_TYPES = {"BUY", "SELL"}
 
 
+def _optional_positive_float(value: Any) -> Optional[float]:
+    if value in (None, ""):
+        return None
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return None
+    if parsed <= 0:
+        return None
+    return parsed
+
+
 @dataclass(frozen=True)
 class ContractInfo:
     """Grouped contract metadata for cleaner request construction."""
@@ -208,16 +220,12 @@ class ExecutionRequest:
     @property
     def limit_price(self) -> Optional[float]:
         price = self.order_config.price if self.order_config and self.order_config.price is not None else self.price
-        if price in (None, "", 0, "0"):
-            return None
-        return float(price)
+        return _optional_positive_float(price)
 
     @property
     def trigger_price_value(self) -> Optional[float]:
         trigger = self.order_config.trigger_price if self.order_config and self.order_config.trigger_price is not None else self.triggerPrice
-        if trigger in (None, "", 0, "0"):
-            return None
-        return float(trigger)
+        return _optional_positive_float(trigger)
 
     @property
     def resolved_expiry(self) -> Optional[datetime]:

@@ -25,9 +25,10 @@ def _decimal_or_none(value):
     if value in (None, ""):
         return None
     try:
-        return Decimal(str(value))
+        parsed = Decimal(str(value))
     except Exception:
         return None
+    return parsed if parsed > 0 else None
 
 
 def _safe_job_payload(order_payload: dict[str, Any], broker_details: ClientBrokerdetails) -> dict[str, Any]:

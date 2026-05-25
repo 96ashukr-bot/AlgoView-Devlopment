@@ -38,6 +38,18 @@ from ..constants import (
 logger = TradingLogger("order_service")
 
 
+def _optional_positive_float(value: Any) -> Optional[float]:
+    if value in (None, ""):
+        return None
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return None
+    if parsed <= 0:
+        return None
+    return parsed
+
+
 class OrderService:
     """
     Main order service for Angel One trading.
@@ -140,6 +152,7 @@ class OrderService:
             side=side,
             quantity=quantity,
         )
+        price = _optional_positive_float(price)
 
         existing = None
 

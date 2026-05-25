@@ -20,7 +20,7 @@ from main.angelone.constants import MARKET_CLOSE_HOUR, MARKET_CLOSE_MINUTE, TIME
 from main.angelone.services.state_service import CallbackStateService
 from main.angelone_views import angelone_callback
 from main.execution_engine import ContractInfo, ExecutionEngine, ExecutionRequest
-from main.angelone.services.order_service import OrderService
+from main.angelone.services.order_service import OrderService, _optional_positive_float as angel_one_optional_price
 from main.models import Broker, ClientBrokerdetails, OTP, Tradeorderhistory, User, UserActivityLog
 from main.serializers import ClientBrokerDetailsSerializer, ClientBrokerDetailsUpdateSerializer, OTPVerifySerializer
 from main.services.login_activity_service import LoginActivityService
@@ -651,6 +651,64 @@ class AngelOneExecutionValidationTests(TestCase):
                 expiry=datetime(2026, 5, 19),
             ),
         )
+
+    def test_zero_like_limit_price_is_treated_as_auto_buffer_price(self):
+        request = self._request()
+        request = ExecutionRequest(
+            **{
+                **request.__dict__,
+                "price": "0.0",
+                "order_params": {
+                    **request.order_params,
+                    "price": "0.0",
+                    "ordertype": "LIMIT",
+                    "order_type": "LIMIT",
+                },
+            }
+        )
+        engine = ExecutionEngine.__new__(ExecutionEngine)
+        engine._auth_service = mock.Mock()
+        engine._auth_service.ensure_valid_session.return_value = {
+            "status": "success",
+            "session": SimpleNamespace(smart_connect=mock.Mock()),
+        }
+        engine._contract_manager = mock.Mock()
+        engine._contract_manager.initialize.return_value = None
+        engine._contract_manager.resolve_option_contract.return_value = (
+            Contract(
+                token="12345",
+                symbol="NIFTY19MAY2623700PE",
+                name="NIFTY",
+                expiry=datetime(2026, 5, 19),
+                strike=23700,
+                lot_size=65,
+                instrument_type="OPTIDX",
+                exchange="NFO",
+                tick_size=0.05,
+                option_type="PE",
+            ),
+            {"tradingsymbol": "NIFTY19MAY2623700PE", "expiry": "2026-05-19"},
+        )
+        engine._ltp_service = mock.Mock()
+        engine._ltp_service.get_ltp.return_value = 100
+        engine._ltp_service.calculate_limit_price.return_value = 102.5
+        engine._get_client_broker = mock.Mock(return_value=self.broker_details)
+
+        fixed_now = datetime(2026, 5, 19, 14, 37, tzinfo=ZoneInfo(TIMEZONE))
+        with mock.patch("main.execution_engine.datetime", wraps=datetime) as mock_datetime:
+            mock_datetime.now.return_value = fixed_now
+            result = engine._validate_angel_one_request(request)
+
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["validated_price"], 102.5)
+        engine._ltp_service.calculate_limit_price.assert_called_once()
+        engine._ltp_service.round_to_tick.assert_not_called()
+
+    def test_angel_one_order_service_treats_zero_like_price_as_missing(self):
+        self.assertIsNone(angel_one_optional_price("0.0"))
+        self.assertIsNone(angel_one_optional_price("0.00"))
+        self.assertIsNone(angel_one_optional_price(0))
+        self.assertEqual(angel_one_optional_price("101.25"), 101.25)
 
     def test_same_day_midnight_contract_expiry_is_tradable_until_market_close(self):
         engine = ExecutionEngine.__new__(ExecutionEngine)
