@@ -543,27 +543,29 @@ def _process_webhook_trade(trade, index, context, *, history_id=None):
 
     if base_skip_reasons:
         reason_message = "; ".join(base_skip_reasons)
+        should_record_skip = "Client trading is disabled" not in base_skip_reasons
         logger.warning(
             "Skipping webhook trade for client=%s trade_setting=%s reasons=%s",
             getattr(user, "id", None),
             trade.id,
             base_skip_reasons,
         )
-        _save_webhook_trade_skip(
-            trade=trade,
-            history_id=history_id,
-            live_price=live_price,
-            group_service=group_service,
-            transaction_type=transaction_type,
-            strategy=strategy,
-            webhook_signal=alert_data,
-            exchange=exchange,
-            segment=segment,
-            index_symbol=index_symbol,
-            order_params=order_params,
-            reason_message=reason_message,
-            skip_reasons=base_skip_reasons,
-        )
+        if should_record_skip:
+            _save_webhook_trade_skip(
+                trade=trade,
+                history_id=history_id,
+                live_price=live_price,
+                group_service=group_service,
+                transaction_type=transaction_type,
+                strategy=strategy,
+                webhook_signal=alert_data,
+                exchange=exchange,
+                segment=segment,
+                index_symbol=index_symbol,
+                order_params=order_params,
+                reason_message=reason_message,
+                skip_reasons=base_skip_reasons,
+            )
         return {
             "history_id": history_id,
             "client_id": trade.client_id,
@@ -573,6 +575,7 @@ def _process_webhook_trade(trade, index, context, *, history_id=None):
             "status": "skipped",
             "reason": reason_message,
             "skip_reasons": base_skip_reasons,
+            "recorded_in_trade_history": should_record_skip,
         }
 
     save_trade_order_history(

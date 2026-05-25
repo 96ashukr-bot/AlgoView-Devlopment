@@ -11,7 +11,7 @@ from django.utils import timezone
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from main.brokers.base import get_broker_adapter
-from main.models import Broker, ClientBrokerdetails, ExecutionNode, ExecutionOrderJob, Role, Tradeorderhistory, User
+from main.models import Broker, ClientBrokerdetails, ClientTradeSetting, ExecutionNode, ExecutionOrderJob, Role, Tradeorderhistory, User
 from main.services.execution_nodes import assign_execution_node_to_client, release_execution_node
 from main.services.execution_router import route_order_to_execution_node
 from main.services.egress_guard import _is_broker_url, _is_public_instrument_master_url
@@ -31,6 +31,7 @@ from main.broker_order_utils import extract_ltp_from_quote_payload
 from main.brokers.exchange_mapping import normalize_broker_exchange, normalize_fivepaisa_exchange
 from main.services.option_ltp_fallback import cache_option_ltp, fetch_nse_option_chain_ltp, get_cached_option_ltp
 from main.serializers import ClientBrokerDetailsUpdateSerializer
+from main.views import _process_webhook_trade
 
 
 TEST_CACHES = {
@@ -273,6 +274,49 @@ class ExecutionNodeManagerTests(TestCase):
         emails = {item["client"]["email"] for item in response.data["results"]}
         self.assertIn("self-history@example.com", emails)
         self.assertNotIn("other-history@example.com", emails)
+
+    def test_disabled_client_webhook_skip_does_not_reach_trade_history(self):
+        disabled_client = User.objects.create_user(
+            email="disabled-history@example.com",
+            firstName="Disabled",
+            lastName="History",
+            phoneNumber="9999999909",
+            password="Pass@123",
+            type_of_user="is_client",
+            is_client="True",
+            is_enable=False,
+        )
+        trade = ClientTradeSetting.objects.create(
+            client=disabled_client,
+            symbol="NIFTY",
+            group_service="NIFTY",
+            broker="Angel One",
+            product_type="INTRADAY",
+            quantity=1,
+            trade_limit=10,
+            is_tread_status=True,
+        )
+        context = {
+            "alert_data": {"symbol": "NIFTY"},
+            "symbols": "NIFTY",
+            "exch_seg": "NFO",
+            "default_price": 10,
+            "default_quantity": 1,
+            "live_price": 10,
+            "lots": 1,
+            "trigger_price": 0,
+            "transaction_type": "BUY",
+            "buy_sell": "CE",
+            "limit_price": 10,
+            "strategy_id": "NIFTY",
+        }
+
+        result = _process_webhook_trade(trade, 0, context, history_id="disabled-client-skip")
+
+        self.assertEqual(result["status"], "skipped")
+        self.assertFalse(result["recorded_in_trade_history"])
+        self.assertIn("Client trading is disabled", result["skip_reasons"])
+        self.assertFalse(Tradeorderhistory.objects.filter(client=disabled_client).exists())
 
     def test_duplicate_ip_prevention(self):
         with self.assertRaises(Exception):
