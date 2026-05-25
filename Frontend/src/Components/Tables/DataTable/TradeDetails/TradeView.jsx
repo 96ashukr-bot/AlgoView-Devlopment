@@ -10,6 +10,7 @@ import { RotatingLines } from 'react-loader-spinner';
 import { getClientTradeHistory, getTradeStrategy, getBroker, TradeViewSearch } from '../../../../Services/Authentication';
 import { H3 } from '../../../../AbstractElements';
 import { FaArrowUp, FaArrowDown } from 'react-icons/fa';
+import { getTradeSymbolDisplay } from '../../../../Utils/tradeSymbolDisplay';
 
 const TradeView = () => {
     const [currentPage, setCurrentPage] = useState(1);
@@ -185,7 +186,7 @@ const TradeView = () => {
             'S. No.': index + 1,
             'Signal Entry Time': signal.SignalEntry_time || '-',
             'Signal Exit Time': signal.SignalExit_time || '-',
-            Symbol: signal.trading_symbol || '-',
+            Symbol: getTradeSymbolDisplay(signal),
             Strategy: signal.strategy || '-',
             'Entry Qty': signal.EntryQty || '-',
             'Exit Qty': signal.ExitQty || '-',
@@ -553,7 +554,7 @@ const TradeView = () => {
                                                         <td>{indexOfFirstSignal + index + 1}</td>
                                                         <td>{formatDateTime(signal.SignalEntry_time)}</td>
                                                         <td>{formatDateTime(signal.SignalExit_time)}</td>
-                                                        <td>{signal.trading_symbol || '-'}</td>
+                                                        <td>{getTradeSymbolDisplay(signal)}</td>
                                                         <td>{signal.Index_Symbol || '-'}</td>
                                                         <td>{signal.GroupService || '-'}</td>
                                                         {/* <td>{signal.strategy || '-'}</td> */}

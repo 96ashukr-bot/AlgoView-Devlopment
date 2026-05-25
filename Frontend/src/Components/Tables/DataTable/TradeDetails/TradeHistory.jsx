@@ -11,6 +11,7 @@ import { getTradeHistory, getTradeStrategy, getBroker, getTradeResponse } from '
 import './TradeDetails.css';
 import { Modal, ModalHeader, ModalBody, ModalFooter } from 'reactstrap';
 import { getStockSymbolLivePriceSocketUrl } from '../../../../ConfigUrl/config';
+import { getTradeSymbolDisplay } from '../../../../Utils/tradeSymbolDisplay';
 
 const TradeHistory = () => {
     const [currentPage, setCurrentPage] = useState(1);
@@ -375,7 +376,7 @@ const TradeHistory = () => {
             'S. No.': index + 1,
             'Signal Entry Time': signal.SignalEntry_time || '-',
             'Signal Exit Time': signal.SignalExit_time || '-',
-            Symbol: signal.trading_symbol || '-',
+            Symbol: getTradeSymbolDisplay(signal),
             Strategy: signal.strategy || '-',
             'Entry Qty': signal.EntryQty || '-',
             'Exit Qty': signal.ExitQty || '-',
@@ -735,7 +736,7 @@ const TradeHistory = () => {
                                                         <td>{indexOfFirstSignal + index + 1}</td>
                                                         <td>{formatDateTime(signal.SignalEntry_time)}</td>
                                                         <td>{formatDateTime(signal.SignalExit_time)}</td>
-                                                        <td>{signal.trading_symbol || '-'}</td>
+                                                        <td>{getTradeSymbolDisplay(signal)}</td>
                                                         <td>{signal.Index_Symbol || '-'}</td>
                                                         <td>{signal.GroupService || '-'}</td>
                                                         {/* <td>{signal.strategy || '-'}</td> */}
