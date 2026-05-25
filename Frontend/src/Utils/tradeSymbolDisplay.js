@@ -60,6 +60,11 @@ const normalizeStrike = (value) => {
   return String(Number(numeric[0]));
 };
 
+const normalizeStrikePrice = (value) => {
+  const strike = normalizeStrike(value);
+  return strike === '0' ? '' : strike;
+};
+
 const normalizeYear = (value) => {
   const year = cleanText(value).match(/\d{2,4}/)?.[0] || '';
   if (!year) return '';
@@ -82,7 +87,7 @@ const normalizeDay = (value) => {
 };
 
 const parseExpiry = (signal, orderParams, contractMatch) => {
-  const expiry = firstPresent(contractMatch.expiry, orderParams.expiry, orderParams.expiry_date);
+  const expiry = firstPresent(contractMatch.expiry, orderParams.expiry, orderParams.expiry_date, signal?.expiry);
   if (expiry) {
     const isoMatch = cleanText(expiry).match(/^(\d{4})-(\d{2})-(\d{2})/);
     if (isoMatch) {
@@ -129,6 +134,7 @@ export const getTradeSymbolDisplay = (signal) => {
     return cleanText(completeSymbol).toUpperCase();
   }
 
+  const transactionType = cleanText(signal?.transaction_type).toUpperCase();
   const underlying = normalizeUnderlying(firstPresent(
     signal?.Index_Symbol,
     orderParams.underlying,
@@ -136,12 +142,15 @@ export const getTradeSymbolDisplay = (signal) => {
     webhookSignal.underlying,
     signal?.trading_symbol,
   ));
-  const strike = normalizeStrike(firstPresent(
+  const strike = normalizeStrikePrice(firstPresent(
     orderParams.strike,
     orderParams.strike_price,
+    orderParams.default_price,
     contractMatch.strike,
     webhookSignal.strike,
     webhookSignal.strike_price,
+    webhookSignal.price,
+    signal?.LivePrice,
   ));
   const optionType = normalizeOptionType(firstPresent(
     orderParams.option_type,
@@ -150,12 +159,14 @@ export const getTradeSymbolDisplay = (signal) => {
     contractMatch.option_type,
     webhookSignal.option_type,
     webhookSignal.Type,
+    transactionType.includes('CE') ? 'CE' : '',
+    transactionType.includes('PE') ? 'PE' : '',
   ));
   const expiry = parseExpiry(signal, orderParams, contractMatch);
   const expiryText = expiry.day && expiry.month && expiry.year ? `${expiry.day}${expiry.month}${expiry.year}` : '';
 
   if (underlying && strike && optionType) {
-    return [underlying, expiryText, strike, optionType].filter(Boolean).join(' ');
+    return [underlying, expiryText, strike, optionType].filter(Boolean).join('');
   }
 
   return cleanText(signal?.trading_symbol || signal?.Index_Symbol) || '-';

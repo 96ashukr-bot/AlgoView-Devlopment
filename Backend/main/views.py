@@ -508,6 +508,7 @@ def _process_webhook_trade(trade, index, context, *, history_id=None):
     trade_symbol = _get_trade_execution_symbol(trade) or symbols
     index_symbol = trade_symbol or None
     resolved_order_type, resolved_buffer_percentage = _resolve_order_preferences(alert_data, trade)
+    resolved_option_type = buy_sell if buy_sell in {"CE", "PE"} else ""
     order_params = serialize_to_json(
         {
             "symbol": trade_symbol,
@@ -516,6 +517,10 @@ def _process_webhook_trade(trade, index, context, *, history_id=None):
             "product_type": trade.product_type,
             "transaction_type": buy_sell,
             "price": limit_price or 0,
+            "strike": default_price,
+            "strike_price": default_price,
+            "default_price": default_price,
+            "option_type": resolved_option_type,
             "ordertype": resolved_order_type,
             "order_type": resolved_order_type,
             "buffer_percentage": resolved_buffer_percentage,
@@ -614,6 +619,14 @@ def _process_webhook_trade(trade, index, context, *, history_id=None):
             month = expiry_date.strftime("%b").upper()
             year = expiry_date.strftime("%y")
             fullyear = expiry_date.strftime("%Y")
+            if isinstance(order_params, dict):
+                order_params.update({
+                    "day": day,
+                    "month": month,
+                    "year": year,
+                    "fullyear": fullyear,
+                    "expiry": expiry_date.strftime("%Y-%m-%d"),
+                })
 
         quantity = trade.quantity or default_quantity
         product_type = trade.product_type
@@ -3756,7 +3769,13 @@ def _parse_trade_history_contract(trade_history):
     if option_type in {"P", "PUT"}:
         option_type = "PE"
 
-    strike = order_params.get("strike") or order_params.get("strike_price") or contract_match.get("strike")
+    strike = (
+        order_params.get("strike")
+        or order_params.get("strike_price")
+        or order_params.get("default_price")
+        or contract_match.get("strike")
+        or trade_history.LivePrice
+    )
     day = order_params.get("day") or ""
     month = order_params.get("month") or ""
     year = order_params.get("year") or ""

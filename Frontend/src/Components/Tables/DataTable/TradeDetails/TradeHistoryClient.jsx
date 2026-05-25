@@ -701,10 +701,6 @@ const TradeHistoryClient = () => {
                                                 <FaArrowUp className="sort-arrow-left" />
                                                 <FaArrowDown className="sort-arrow-right" />
                                             </th>
-                                            <th onClick={() => handleSort('Index_Symbol')} className='custom-col-design'>Index Symbol
-                                                <FaArrowUp className="sort-arrow-left" />
-                                                <FaArrowDown className="sort-arrow-right" />
-                                            </th>
                                             <th onClick={() => handleSort('GroupService')} className='custom-col-design'>Group Service
                                                 <FaArrowUp className="sort-arrow-left" />
                                                 <FaArrowDown className="sort-arrow-right" />
@@ -754,7 +750,7 @@ const TradeHistoryClient = () => {
                                     <tbody>
                                         {loading ? (
                                             <tr>
-                                                <td colSpan="9" style={{ textAlign: 'center', height: '100px' }}>
+                                                <td colSpan="15" style={{ textAlign: 'center', height: '100px' }}>
                                                     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
                                                         <RotatingLines
                                                             strokeColor="#283F7B"
@@ -777,7 +773,6 @@ const TradeHistoryClient = () => {
                                                         <td>{formatDateTime(signal.SignalEntry_time)}</td>
                                                         <td>{formatDateTime(signal.SignalExit_time)}</td>
                                                         <td>{getTradeSymbolDisplay(signal)}</td>
-                                                        <td>{signal.Index_Symbol || '-'}</td>
                                                         <td>{signal.GroupService || '-'}</td>
                                                         {/* <td>{signal.strategy || '-'}</td> */}
                                                         <td>{signal.broker || '-'}</td>

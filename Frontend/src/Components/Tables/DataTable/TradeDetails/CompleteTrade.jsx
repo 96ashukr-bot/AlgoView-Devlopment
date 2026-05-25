@@ -11,6 +11,7 @@ import { getCompleteTrade, getTradeStrategy, getBroker, getTradeResponse } from 
 import './TradeDetails.css';
 import { Modal, ModalHeader, ModalBody, ModalFooter } from 'reactstrap';
 import { getStockSymbolLivePriceSocketUrl } from '../../../../ConfigUrl/config';
+import { getTradeSymbolDisplay } from '../../../../Utils/tradeSymbolDisplay';
 
 const CompleteTradeHistory = () => {
     const [currentPage, setCurrentPage] = useState(1);
@@ -344,7 +345,7 @@ const CompleteTradeHistory = () => {
             'S. No.': index + 1,
             'Signal Entry Time': signal.SignalEntry_time || '-',
             'Signal Exit Time': signal.SignalExit_time || '-',
-            Symbol: signal.trading_symbol || '-',
+            Symbol: getTradeSymbolDisplay(signal),
             Strategy: signal.strategy || '-',
             'Entry Qty': signal.EntryQty || '-',
             'Exit Qty': signal.ExitQty || '-',
@@ -578,10 +579,6 @@ const CompleteTradeHistory = () => {
                                                 <FaArrowUp className="sort-arrow-left" />
                                                 <FaArrowDown className="sort-arrow-right" />
                                             </th>
-                                            <th onClick={() => handleSort('Index_Symbol')} className='custom-col-design'>Index Symbol
-                                                <FaArrowUp className="sort-arrow-left" />
-                                                <FaArrowDown className="sort-arrow-right" />
-                                            </th>
                                             <th onClick={() => handleSort('GroupService')} className='custom-col-design'>Group Service
                                                 <FaArrowUp className="sort-arrow-left" />
                                                 <FaArrowDown className="sort-arrow-right" />
@@ -635,7 +632,7 @@ const CompleteTradeHistory = () => {
                                     <tbody>
                                         {loading ? (
                                             <tr>
-                                                <td colSpan="20" style={{ textAlign: 'center', height: '100px' }}>
+                                                <td colSpan="16" style={{ textAlign: 'center', height: '100px' }}>
                                                     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
                                                         <RotatingLines
                                                             strokeColor="#283F7B"
@@ -657,8 +654,7 @@ const CompleteTradeHistory = () => {
                                                         <td>{indexOfFirstSignal + index + 1}</td>
                                                         <td>{formatDateTime(signal.SignalEntry_time)}</td>
                                                         <td>{formatDateTime(signal.SignalExit_time)}</td>
-                                                        <td>{signal.trading_symbol || '-'}</td>
-                                                        <td>{signal.Index_Symbol || '-'}</td>
+                                                        <td>{getTradeSymbolDisplay(signal)}</td>
                                                         <td>{signal.GroupService || '-'}</td>
                                                         {/* <td>{signal.strategy || '-'}</td> */}
                                                         <td>{signal.broker || '-'}</td>
@@ -686,7 +682,7 @@ const CompleteTradeHistory = () => {
                                             })
                                         ) : (
                                             <tr>
-                                                <td colSpan="20" style={{ textAlign: 'center', padding: '10px' }}>
+                                                <td colSpan="16" style={{ textAlign: 'center', padding: '10px' }}>
                                                     No Complete Trade Found
                                                 </td>
                                             </tr>

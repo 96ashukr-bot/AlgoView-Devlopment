@@ -1965,17 +1965,32 @@ def _extract_trade_failure_reason(response_data):
 class TradeorderhistorySerializer(serializers.ModelSerializer):
     client = ClientnameSerializer(read_only=True)  # Use the nested serializer
     failure_reason = serializers.SerializerMethodField()
+    expiry = serializers.SerializerMethodField()
 
     def get_failure_reason(self, obj):
         if obj.failure_reason:
             return obj.failure_reason
         return _extract_trade_failure_reason(obj.response_data)
 
+    def get_expiry(self, obj):
+        order_params = obj.order_params if isinstance(obj.order_params, dict) else {}
+        expiry = order_params.get("expiry") or order_params.get("expiry_date")
+        if expiry:
+            return str(expiry)
+        trade_setting = ClientTradeSetting.objects.filter(
+            client=obj.client,
+            symbol__iexact=obj.Index_Symbol or obj.trading_symbol or "",
+            strategy__iexact=obj.strategy or "",
+        ).order_by("-updated_at", "-id").first()
+        if trade_setting and trade_setting.expiry_date:
+            return trade_setting.expiry_date.date().isoformat()
+        return None
+
     class Meta:
         model = Tradeorderhistory
         fields = ['id', 'client', 'date', 'trading_symbol','GroupService' ,'Index_Symbol', 'order_id', 'order_status','transaction_type'
                 , 'failure_reason', 'broker', 'order_params', 'strategy', 'Entry_type', 'Entry_Price', 
-                'Exit_Price','Exit_type','EntryQty','ExitQty','trade_order_status', 'SignalEntry_time', 'SignalExit_time', 'Exchange', 'Segment','webhook_signal']
+                'Exit_Price','Exit_type','EntryQty','ExitQty','trade_order_status', 'SignalEntry_time', 'SignalExit_time', 'Exchange', 'Segment','webhook_signal', 'LivePrice', 'expiry']
 
 
 from rest_framework.exceptions import AuthenticationFailed
@@ -2004,18 +2019,22 @@ class ClientdashboardSerializer(serializers.Serializer):
         
 class TradeOrderHistoryFilterSerializer(serializers.ModelSerializer):
     failure_reason = serializers.SerializerMethodField()
+    expiry = serializers.SerializerMethodField()
 
     def get_failure_reason(self, obj):
         if obj.failure_reason:
             return obj.failure_reason
         return _extract_trade_failure_reason(obj.response_data)
 
+    def get_expiry(self, obj):
+        return TradeorderhistorySerializer().get_expiry(obj)
+
     class Meta:
         model = Tradeorderhistory
         fields = ['id', 'client', 'date', 'trading_symbol', 'GroupService','Index_Symbol', 'order_id','transaction_type',
                 'broker', 'order_status', 'failure_reason', 'strategy', 'Entry_type', 'Entry_Price', 
                 'Exit_Price','Exit_type','EntryQty','ExitQty','trade_order_status',
-                'SignalEntry_time', 'SignalExit_time', 'Exchange', 'Segment','webhook_signal']
+                'SignalEntry_time', 'SignalExit_time', 'Exchange', 'Segment','webhook_signal', 'LivePrice', 'expiry']
         
 import re
 class CompanyProfileDetailsSerializer(serializers.ModelSerializer):
