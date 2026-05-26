@@ -807,6 +807,7 @@ class ExecutionEngine:
 
         resolved_order_type = requested_order_type
         validated_price = request.limit_price
+        has_explicit_limit_price = validated_price is not None
         tick_size = float(contract.tick_size or DEFAULT_TICK_SIZE)
 
         if requested_order_type == "MARKET" and USE_LIMIT_WITH_BUFFER:
@@ -833,7 +834,7 @@ class ExecutionEngine:
                     direction="UP" if request.transaction_type.upper() == "BUY" else "DOWN",
                 )
 
-            if ltp and validated_price is not None:
+            if has_explicit_limit_price and ltp and validated_price is not None:
                 slippage_percent = abs(validated_price - ltp) / ltp * 100
                 if slippage_percent > MAX_SLIPPAGE_PERCENT:
                     return {

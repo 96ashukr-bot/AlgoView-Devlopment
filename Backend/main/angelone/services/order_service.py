@@ -153,6 +153,7 @@ class OrderService:
             quantity=quantity,
         )
         price = _optional_positive_float(price)
+        has_explicit_limit_price = price is not None
 
         existing = None
 
@@ -345,7 +346,7 @@ class OrderService:
             else:
                 price = None
 
-            if resolved_order_type == OrderType.LIMIT.value and ltp and price is not None:
+            if has_explicit_limit_price and resolved_order_type == OrderType.LIMIT.value and ltp and price is not None:
                 slippage_percent = abs(float(price) - ltp) / ltp * 100
                 if slippage_percent > MAX_SLIPPAGE_PERCENT:
                     if existing:

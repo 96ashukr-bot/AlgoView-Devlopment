@@ -704,6 +704,55 @@ class AngelOneExecutionValidationTests(TestCase):
         engine._ltp_service.calculate_limit_price.assert_called_once()
         engine._ltp_service.round_to_tick.assert_not_called()
 
+    def test_auto_buffer_price_does_not_fail_slippage_guard(self):
+        request = self._request()
+        request = ExecutionRequest(
+            **{
+                **request.__dict__,
+                "price": None,
+                "order_params": {
+                    **request.order_params,
+                    "ordertype": "LIMIT",
+                    "order_type": "LIMIT",
+                },
+            }
+        )
+        engine = ExecutionEngine.__new__(ExecutionEngine)
+        engine._auth_service = mock.Mock()
+        engine._auth_service.ensure_valid_session.return_value = {
+            "status": "success",
+            "session": SimpleNamespace(smart_connect=mock.Mock()),
+        }
+        engine._contract_manager = mock.Mock()
+        engine._contract_manager.initialize.return_value = None
+        engine._contract_manager.resolve_option_contract.return_value = (
+            Contract(
+                token="12345",
+                symbol="NIFTY19MAY2623700PE",
+                name="NIFTY",
+                expiry=datetime(2026, 5, 19),
+                strike=23700,
+                lot_size=65,
+                instrument_type="OPTIDX",
+                exchange="NFO",
+                tick_size=0.05,
+                option_type="PE",
+            ),
+            {"tradingsymbol": "NIFTY19MAY2623700PE", "expiry": "2026-05-19"},
+        )
+        engine._ltp_service = mock.Mock()
+        engine._ltp_service.get_ltp.return_value = 100
+        engine._ltp_service.calculate_limit_price.return_value = 120
+        engine._get_client_broker = mock.Mock(return_value=self.broker_details)
+
+        fixed_now = datetime(2026, 5, 19, 14, 37, tzinfo=ZoneInfo(TIMEZONE))
+        with mock.patch("main.execution_engine.datetime", wraps=datetime) as mock_datetime:
+            mock_datetime.now.return_value = fixed_now
+            result = engine._validate_angel_one_request(request)
+
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["validated_price"], 120)
+
     def test_angel_one_order_service_treats_zero_like_price_as_missing(self):
         self.assertIsNone(angel_one_optional_price("0.0"))
         self.assertIsNone(angel_one_optional_price("0.00"))
