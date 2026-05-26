@@ -22,6 +22,7 @@ from main.upstock import place_upstox_orders
 from main.fivepaisa import place_5paisa_order
 from main.dhanapi import place_dhan_orders
 from main.dhanapi import get_trading_symbol_security_id
+from main.groww import place_groww_orders, resolve_groww_trading_symbol
 from main.zerodha import place_zerodha_orders
 from main.Alice_Blue_Api import place_alice_orders
 from main.dematemodule import _broker_proxy_config_or_none, _save_session_tokens_compat
@@ -1168,6 +1169,43 @@ class ExecutionNodeManagerTests(TestCase):
         )
         self.assertEqual(mock_place_order.call_args.kwargs["proxy_config"], proxy_config)
 
+    @mock.patch("main.brokers.groww.place_groww_orders")
+    def test_groww_adapter_supports_proxy_and_passes_config(self, mock_place_order):
+        broker = Broker.objects.create(broker_name="Groww", is_active=True)
+        broker_details = ClientBrokerdetails.objects.create(
+            client=self.client_user,
+            broker_name=broker,
+            access_token="groww-token",
+        )
+        adapter = get_broker_adapter(broker_details)
+        proxy_config = {"http": "http://proxy.example.com:8080", "https": "http://proxy.example.com:8080"}
+        mock_place_order.return_value = {"data": {"status": "open", "message": "Groww order placed successfully."}}
+
+        response = adapter.place_order(
+            {
+                "symbol": "NIFTY",
+                "strike": "24000",
+                "option_type": "CE",
+                "quantity": 75,
+                "transaction_type": "BUY",
+                "order_type": "LIMIT",
+                "product_type": "INTRADAY",
+                "day": "26",
+                "month": "MAY",
+                "year": "26",
+                "fullyear": "2026",
+                "history_id": "groww-adapter",
+                "Exchange": "NFO",
+            },
+            proxy_config=proxy_config,
+        )
+
+        self.assertEqual(response["data"]["status"], "open")
+        self.assertEqual(mock_place_order.call_args.kwargs["proxy_config"], proxy_config)
+        args = mock_place_order.call_args.args
+        self.assertEqual(args[2], "groww-token")
+        self.assertEqual(args[3], "NIFTY26MAY24000CE")
+
     @mock.patch("main.zerodha.KiteConnect")
     def test_zerodha_order_client_receives_proxy_config(self, mock_kite_class):
         from main.zerodha import place_zerodha_orders
@@ -1213,6 +1251,124 @@ class ExecutionNodeManagerTests(TestCase):
         mock_kite_class.assert_called_once_with(api_key="kite-api", proxies=proxy_config)
         self.assertEqual(kite.place_order.call_args.kwargs["price"], 10.0)
         self.assertNotIn("reference_price", kite.place_order.call_args.kwargs)
+
+    @mock.patch("main.groww._iter_groww_instruments")
+    def test_groww_trading_symbol_resolves_from_instrument_master(self, mock_instruments):
+        mock_instruments.return_value = iter(
+            [
+                {
+                    "exchange": "NSE",
+                    "trading_symbol": "NIFTY25N1823400CE",
+                    "instrument_type": "CE",
+                    "segment": "FNO",
+                    "underlying_symbol": "NIFTY",
+                    "expiry_date": "2026-05-26",
+                    "strike_price": "24000",
+                    "buy_allowed": "1",
+                    "sell_allowed": "1",
+                }
+            ]
+        )
+
+        resolved_symbol = resolve_groww_trading_symbol(
+            exchange="NFO",
+            segment="FNO",
+            symbol="NIFTY",
+            trade_symbol="NIFTY26MAY24000CE",
+            strike=24000,
+            option_type="CE",
+            expiry_date="2026-05-26",
+            proxy_config={"https": "http://proxy.example.com:8080"},
+        )
+
+        self.assertEqual(resolved_symbol, "NIFTY25N1823400CE")
+
+    @mock.patch("main.groww.resolve_groww_trading_symbol", return_value="NIFTY25N1823400CE")
+    @mock.patch("main.groww.requests.get")
+    @mock.patch("main.groww.requests.post")
+    def test_groww_place_order_saves_successful_history(self, mock_post, mock_get, mock_resolve_symbol):
+        proxy_config = {"http": "http://proxy.example.com:8080", "https": "http://proxy.example.com:8080"}
+        mock_get.side_effect = [
+            SimpleNamespace(
+                status_code=200,
+                content=b"{}",
+                json=lambda: {"status": "SUCCESS", "payload": {"NSE_NIFTY25N1823400CE": 10}},
+            ),
+            SimpleNamespace(
+                status_code=200,
+                content=b"{}",
+                json=lambda: {
+                    "status": "SUCCESS",
+                    "payload": {
+                        "groww_order_id": "GROWWORDER1",
+                        "order_status": "EXECUTED",
+                        "remark": "Order executed successfully",
+                        "filled_quantity": 75,
+                        "average_fill_price": 10.25,
+                    },
+                },
+            ),
+        ]
+        mock_post.return_value = SimpleNamespace(
+            status_code=200,
+            content=b"{}",
+            json=lambda: {
+                "status": "SUCCESS",
+                "payload": {
+                    "groww_order_id": "GROWWORDER1",
+                    "order_status": "OPEN",
+                    "remark": "Order placed successfully",
+                },
+            },
+        )
+
+        response = place_groww_orders(
+            24049,
+            "Lite",
+            "groww-token",
+            "NIFTY26MAY24000CE",
+            "BUY",
+            "NIFTY",
+            75,
+            "strategy",
+            "LIMIT",
+            "INTRADAY",
+            None,
+            self.client_user,
+            1,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            "NFO",
+            "FNO",
+            "NIFTY",
+            None,
+            "OPEN",
+            "groww-history-success",
+            day="26",
+            month="MAY",
+            fullyear="2026",
+            strike=24000,
+            option_type="CE",
+            proxy_config=proxy_config,
+        )
+
+        self.assertEqual(response["data"]["status"], "complete")
+        order_payload = mock_post.call_args.kwargs["json"]
+        self.assertEqual(order_payload["trading_symbol"], "NIFTY25N1823400CE")
+        self.assertEqual(order_payload["exchange"], "NSE")
+        self.assertEqual(order_payload["segment"], "FNO")
+        self.assertEqual(order_payload["product"], "MIS")
+        self.assertEqual(order_payload["price"], 10.25)
+        history = Tradeorderhistory.objects.get(history_id="groww-history-success")
+        self.assertEqual(history.broker, "Groww")
+        self.assertEqual(history.order_id, "GROWWORDER1")
+        self.assertEqual(history.order_status, "complete")
+        self.assertIsNone(history.failure_reason)
 
     @mock.patch("main.zerodha.fetch_nse_option_chain_ltp", return_value=None)
     @mock.patch("main.zerodha.requests.get")
@@ -2094,6 +2250,7 @@ class ExecutionNodeManagerTests(TestCase):
         broker_names = {
             "Upstox": "upstox",
             "Zerodha": "zerodha",
+            "Groww": "groww",
             "Alice Blue": "alice blue",
             "5Paisa": "5paisa",
             "FYERS": "fyers",
@@ -2442,6 +2599,7 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertIn("Proxy/static-IP", place_upstox_orders(access_token="t", trade_symbol="NIFTY", **common)["data"]["message"])
         self.assertIn("Proxy/static-IP", place_dhan_orders(expiry_date="2026-05-12", access_token="t", client_id="c", trade_symbol="NIFTY", **common)["data"]["message"])
         self.assertIn("Proxy/static-IP", place_zerodha_orders(access_token="t", Api_key="k", trade_symbol="NIFTY", **common)["data"]["message"])
+        self.assertIn("Proxy/static-IP", place_groww_orders(access_token="t", trade_symbol="NIFTY", **common)["data"]["message"])
         self.assertIn(
             "Proxy/static-IP",
             place_5paisa_order(api_key="k", access_token="t", trade_symbol="NIFTY", trade=SimpleNamespace(), **common)["data"]["message"],

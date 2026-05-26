@@ -597,7 +597,7 @@ class ExecutionEngine:
         return None
 
     def _validate_generic_broker_access(self, request: ExecutionRequest) -> Optional[Dict[str, Any]]:
-        supported_brokers = {"fyers", "dhan", "5paisa", "zerodha", "upstox", "alice blue"}
+        supported_brokers = {"fyers", "dhan", "5paisa", "zerodha", "upstox", "alice blue", "groww"}
         if request.broker_name not in supported_brokers:
             return {
                 "status": "error",

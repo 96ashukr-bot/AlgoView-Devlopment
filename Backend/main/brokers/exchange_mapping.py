@@ -39,6 +39,7 @@ def normalize_broker_exchange(broker_name: Any, exchange: Any = None, underlying
         "dhan": "BSE_FNO",
         "fyers": "BSE_FO",
         "upstox": "BSE",
+        "groww": "BSE",
         "5paisa": "BSE",
         "five paisa": "BSE",
     }.get(normalized_broker, "BFO")

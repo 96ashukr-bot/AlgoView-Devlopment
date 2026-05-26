@@ -6,6 +6,7 @@ from main.brokers.angelone import AngelOneBroker
 from main.brokers.dhan import DhanBroker
 from main.brokers.fivepaisa import FivePaisaBroker
 from main.brokers.fyers import FyersBroker
+from main.brokers.groww import GrowwBroker
 from main.brokers.upstox import UpstoxBroker
 from main.brokers.zerodha import ZerodhaBroker
 
@@ -16,6 +17,8 @@ BROKER_ADAPTERS = {
     "aliceblue": AliceBlueBroker,
     "upstox": UpstoxBroker,
     "zerodha": ZerodhaBroker,
+    "groww": GrowwBroker,
+    "grow": GrowwBroker,
     "5paisa": FivePaisaBroker,
     "five paisa": FivePaisaBroker,
     "fyers": FyersBroker,

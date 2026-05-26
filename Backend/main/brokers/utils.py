@@ -118,6 +118,8 @@ def build_trade_symbol(order: dict[str, Any], broker_name: str) -> str:
         return f"{symbol}{_strike_component(order)}{option_type}{day}{month}{year}"
     if broker_name == "zerodha":
         return f"{symbol}{year}{month}{_strike_component(order)}{option_type}"
+    if broker_name == "groww":
+        return f"{symbol}{year}{month}{_strike_component(order)}{option_type}"
     if broker_name == "fyers":
         return f"{symbol}{year}{month}{day}{_strike_component(order)}{option_type}"
     if broker_name == "alice blue":
