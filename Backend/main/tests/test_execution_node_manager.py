@@ -960,7 +960,7 @@ class ExecutionNodeManagerTests(TestCase):
             proxy_config=proxy_config,
         )
         session.attach_smart_connect()
-        mock_smart_connect.assert_called_once_with(api_key="api-key", proxies=proxy_config)
+        mock_smart_connect.assert_called_once_with(api_key="api-key", proxies=proxy_config, timeout=15)
 
     @mock.patch("main.brokers.zerodha.place_zerodha_orders")
     def test_zerodha_adapter_supports_proxy_and_passes_config(self, mock_place_order):
@@ -1039,8 +1039,10 @@ class ExecutionNodeManagerTests(TestCase):
     @mock.patch("main.zerodha.requests.get")
     @mock.patch("main.zerodha.KiteConnect")
     def test_zerodha_option_limit_order_rejects_underlying_price_when_ltp_unavailable(self, mock_kite_class, mock_get, mock_fallback):
+        from django.core.cache import cache
         from main.zerodha import place_zerodha_orders
 
+        cache.clear()
         proxy_config = {"http": "http://proxy.example.com:8080", "https": "http://proxy.example.com:8080"}
         kite = mock_kite_class.return_value
         kite.VARIETY_REGULAR = "regular"
@@ -1088,8 +1090,10 @@ class ExecutionNodeManagerTests(TestCase):
     @mock.patch("main.zerodha.requests.get")
     @mock.patch("main.zerodha.KiteConnect")
     def test_zerodha_limit_order_uses_nse_option_chain_when_quote_permission_missing(self, mock_kite_class, mock_get, mock_fallback):
+        from django.core.cache import cache
         from main.zerodha import place_zerodha_orders
 
+        cache.clear()
         proxy_config = {"http": "http://proxy.example.com:8080", "https": "http://proxy.example.com:8080"}
         kite = mock_kite_class.return_value
         kite.VARIETY_REGULAR = "regular"
@@ -1137,13 +1141,75 @@ class ExecutionNodeManagerTests(TestCase):
 
         self.assertNotEqual(response["data"]["status"], "Failed")
         self.assertEqual(kite.place_order.call_args.kwargs["price"], 10.25)
-        mock_fallback.assert_called_once_with("NIFTY26MAY24400CE", proxy_config=proxy_config, user=self.client_user)
+        mock_fallback.assert_called_once_with(
+            "NIFTY26MAY24400CE",
+            expiry_date=None,
+            underlying="NIFTY",
+            proxy_config=proxy_config,
+            user=self.client_user,
+        )
+
+    @mock.patch("main.zerodha.fetch_nse_option_chain_ltp")
+    @mock.patch("main.zerodha.requests.get")
+    @mock.patch("main.zerodha.KiteConnect")
+    def test_zerodha_limit_order_uses_shared_cached_option_ltp_when_quote_permission_missing(self, mock_kite_class, mock_get, mock_fallback):
+        from django.core.cache import cache
+        from main.zerodha import place_zerodha_orders
+
+        cache.clear()
+        cache_option_ltp("FINNIFTY 26100 PE 26 MAY 26", 58.3, source="upstox")
+        proxy_config = {"http": "http://proxy.example.com:8080", "https": "http://proxy.example.com:8080"}
+        kite = mock_kite_class.return_value
+        kite.VARIETY_REGULAR = "regular"
+        kite.profile.return_value = {"user_id": "kite-user"}
+        kite.instruments.return_value = [{"tradingsymbol": "FINNIFTY26MAY26100PE"}]
+        kite.ltp.side_effect = Exception("Insufficient permission for that call.")
+        kite.place_order.return_value = "kite-order-cached-ltp"
+        kite.order_history.return_value = [{"status": "COMPLETE", "transaction_type": "BUY", "average_price": 58.3, "filled_quantity": 60}]
+
+        response = place_zerodha_orders(
+            26100,
+            "Lite",
+            "kite-access",
+            "kite-api",
+            "FINNIFTY26MAY26100PE",
+            "BUY",
+            "FINNIFTY",
+            60,
+            "strategy",
+            "LIMIT",
+            "MIS",
+            None,
+            self.client_user,
+            1,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            "NFO",
+            "FNO",
+            "FINNIFTY",
+            None,
+            "OPEN",
+            "kite-history-cached-ltp",
+            proxy_config=proxy_config,
+        )
+
+        self.assertNotEqual(response["data"]["status"], "Failed")
+        self.assertEqual(kite.place_order.call_args.kwargs["price"], 59.75)
+        mock_get.assert_not_called()
+        mock_fallback.assert_not_called()
 
     @mock.patch("main.zerodha.requests.get")
     @mock.patch("main.zerodha.KiteConnect")
     def test_zerodha_limit_order_uses_rest_ltp_fallback(self, mock_kite_class, mock_get):
+        from django.core.cache import cache
         from main.zerodha import place_zerodha_orders
 
+        cache.clear()
         proxy_config = {"http": "http://proxy.example.com:8080", "https": "http://proxy.example.com:8080"}
         kite = mock_kite_class.return_value
         kite.VARIETY_REGULAR = "regular"
