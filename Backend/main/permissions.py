@@ -72,7 +72,7 @@ def is_platform_admin(user) -> bool:
 def can_access_client_record(actor, client) -> bool:
     if not actor or not getattr(actor, "is_authenticated", False) or not client:
         return False
-    if isinstance(client, int) or str(client).isdigit():
+    if isinstance(client, int) or (isinstance(client, str) and client.isdigit()):
         from .models import User
 
         client = User.objects.filter(id=int(client)).only("id", "assigned_client_id").first()

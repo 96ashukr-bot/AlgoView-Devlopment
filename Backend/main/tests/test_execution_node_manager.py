@@ -30,6 +30,7 @@ from main.broker_registry import get_broker_setup_spec
 from main.broker_order_utils import extract_ltp_from_quote_payload
 from main.brokers.exchange_mapping import normalize_broker_exchange, normalize_fivepaisa_exchange
 from main.brokers.position_guard import find_matching_open_buy_position, prepare_close_order_from_open_position
+from main.permissions import can_access_client_record
 from main.services.option_ltp_fallback import cache_option_ltp, fetch_nse_option_chain_ltp, get_cached_option_ltp
 from main.serializers import ClientBrokerDetailsUpdateSerializer
 from main.views import _process_webhook_trade, _resolve_webhook_request_context
@@ -275,6 +276,31 @@ class ExecutionNodeManagerTests(TestCase):
         emails = {item["client"]["email"] for item in response.data["results"]}
         self.assertIn("self-history@example.com", emails)
         self.assertNotIn("other-history@example.com", emails)
+
+    def test_client_access_check_handles_client_with_missing_email(self):
+        superadmin = User.objects.create_user(
+            email="delete-superadmin@example.com",
+            firstName="Delete",
+            lastName="Admin",
+            phoneNumber="9999999910",
+            password="Pass@123",
+            is_superuser=True,
+        )
+        client = User.objects.create_user(
+            email="subhash-delete@example.com",
+            firstName="Subhash",
+            lastName="Varlani",
+            phoneNumber="9999999911",
+            password="Pass@123",
+            type_of_user="is_client",
+            is_client="True",
+        )
+        client.email = None
+        client.save(update_fields=["email"])
+
+        self.assertIsInstance(str(client), str)
+        self.assertTrue(str(client))
+        self.assertTrue(can_access_client_record(superadmin, client))
 
     def test_disabled_client_webhook_skip_does_not_reach_trade_history(self):
         disabled_client = User.objects.create_user(

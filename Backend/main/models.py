@@ -132,7 +132,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     REQUIRED_FIELDS = ['firstName','lastName', 'phoneNumber']
 
     def __str__(self):
-        return self.email
+        return str(self.email or self.fullName or self.userName or self.id or "")
     # def save(self, *args, **kwargs):
     #     # Automatically populate fullName if it is not already set
     #     if not self.fullName:
