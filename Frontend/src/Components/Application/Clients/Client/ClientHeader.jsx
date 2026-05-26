@@ -124,6 +124,21 @@ const brokerSchemaFallbacks = {
     ],
     requirement_note: "Provide either Access Token, or App/API Key + Secret + Dhan Client ID for consent login.",
   },
+  "groww": {
+    display_name: "Groww",
+    auth_mode: "api_key_secret",
+    description: "Save Groww API key and secret, then generate the daily Groww access token.",
+    save_action_label: "Save Broker Name API Details",
+    connect_action_label: "Generate Groww Token",
+    connect_path: "/broker_auth_login/?broker=groww",
+    supports_callback: false,
+    supports_redirect: true,
+    fields: [
+      { key: "broker_API_KEY", label: "API Key", type: "password", required: true, secret: true },
+      { key: "broker_API_SKEY", label: "API Secret Key", type: "password", required: true, secret: true },
+    ],
+    requirement_note: "Groww Trading API subscription must be active. Groww may require daily approval on the Groww Cloud API Keys page before token generation succeeds.",
+  },
 };
 
 const normalizeBrokerName = (name) => {
@@ -137,6 +152,9 @@ const normalizeBrokerName = (name) => {
   }
   if (["5 paisa", "five paisa"].includes(normalized)) {
     return "5paisa";
+  }
+  if (normalized === "grow") {
+    return "groww";
   }
   return normalized;
 };

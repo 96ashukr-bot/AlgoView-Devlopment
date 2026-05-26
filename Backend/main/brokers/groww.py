@@ -13,6 +13,8 @@ class GrowwBroker(BaseBroker):
     def validate_credentials(self, proxy_config=None):
         if not get_access_token(self.broker_details):
             return {"status": "failed", "message": "Missing Groww API auth token."}
+        if not self.broker_details.broker_API_KEY:
+            return {"status": "failed", "message": "Missing Groww API key."}
         return {"status": "success"}
 
     def place_order(self, payload, proxy_config=None):

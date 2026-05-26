@@ -22,7 +22,7 @@ from main.upstock import place_upstox_orders
 from main.fivepaisa import place_5paisa_order
 from main.dhanapi import place_dhan_orders
 from main.dhanapi import get_trading_symbol_security_id
-from main.groww import place_groww_orders, resolve_groww_trading_symbol
+from main.groww import generate_groww_access_token, generate_groww_checksum, place_groww_orders, resolve_groww_trading_symbol
 from main.zerodha import place_zerodha_orders
 from main.Alice_Blue_Api import place_alice_orders
 from main.dematemodule import _broker_proxy_config_or_none, _save_session_tokens_compat
@@ -1205,6 +1205,43 @@ class ExecutionNodeManagerTests(TestCase):
         args = mock_place_order.call_args.args
         self.assertEqual(args[2], "groww-token")
         self.assertEqual(args[3], "NIFTY26MAY24000CE")
+
+    def test_groww_setup_uses_api_key_and_secret_not_access_token_field(self):
+        spec = get_broker_setup_spec("Grow")
+
+        self.assertEqual(spec["display_name"], "Groww")
+        self.assertEqual(spec["auth_mode"], "api_key_secret")
+        self.assertEqual(spec["connect_path"], "/broker_auth_login/?broker=groww")
+        self.assertEqual([field["key"] for field in spec["fields"]], ["broker_API_KEY", "broker_API_SKEY"])
+
+    @mock.patch("main.groww.time.time", return_value=1716710400)
+    @mock.patch("main.groww.requests.post")
+    def test_groww_access_token_generation_uses_api_key_secret_checksum(self, mock_post, mock_time):
+        mock_post.return_value = SimpleNamespace(
+            status_code=200,
+            content=b"{}",
+            json=lambda: {
+                "status": "SUCCESS",
+                "token": "groww-access-token",
+                "tokenRefId": "token-ref-1",
+                "sessionName": "AlgoView",
+            },
+        )
+
+        result = generate_groww_access_token(
+            "groww-api-key",
+            "groww-secret",
+            proxy_config={"https": "http://proxy.example.com:8080"},
+        )
+
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["access_token"], "groww-access-token")
+        self.assertEqual(mock_post.call_args.kwargs["headers"]["Authorization"], "Bearer groww-api-key")
+        self.assertEqual(mock_post.call_args.kwargs["json"]["timestamp"], "1716710400")
+        self.assertEqual(
+            mock_post.call_args.kwargs["json"]["checksum"],
+            generate_groww_checksum("groww-secret", "1716710400"),
+        )
 
     @mock.patch("main.zerodha.KiteConnect")
     def test_zerodha_order_client_receives_proxy_config(self, mock_kite_class):

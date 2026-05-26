@@ -12,6 +12,7 @@ from main.Alice_Blue_Api import get_alice_vendor_session, place_alice_orders
 from main.dhanapi import place_dhan_orders
 from main.fivepaisa import fetch_access_token_5paisa, place_5paisa_order
 from main.fyersapi import place_fyers_orders
+from main.groww import generate_groww_access_token
 from main.models import ClientBrokerdetails, Tradeorderhistory
 from main.upstock import place_upstox_orders
 from main.zerodha import place_zerodha_orders
@@ -854,6 +855,9 @@ class BrokerLoginRedirectView(APIView):
             elif broker_name == "dhan":
                 response = self.redirect_to_dhan(request, broker_details)
 
+            elif broker_name == "groww":
+                response = self.generate_groww_token(request, broker_details)
+
             elif broker_name == "angel one":
                 response = self.redirect_to_angel_one(request, broker_details)
 
@@ -1028,6 +1032,53 @@ class BrokerLoginRedirectView(APIView):
         broker_details.tokenCreatedAt = now()
         broker_details.save(update_fields=["request_token", "tokenCreatedAt"])
         return Response({"redirect_url": login_url, "consent_app_id": consent_app_id})
+
+    def generate_groww_token(self, request, broker_details):
+        api_key = (broker_details.broker_API_KEY or "").strip()
+        api_secret = (broker_details.broker_API_SKEY or "").strip()
+        if not api_key or not api_secret:
+            return Response({"error": "Groww credentials are incomplete. API Key and API Secret Key are required."}, status=400)
+
+        proxy_config = _broker_proxy_config_or_none(broker_details, require_broker_verified=False)
+        if not proxy_config:
+            return _broker_proxy_required_response()
+
+        token_result = generate_groww_access_token(api_key, api_secret, proxy_config=proxy_config)
+        if token_result.get("status") != "success":
+            return Response(
+                {
+                    "message": "Failed",
+                    "error": token_result.get("message") or "Groww access token generation failed.",
+                    "response": token_result.get("response"),
+                },
+                status=token_result.get("status_code") or 400,
+            )
+
+        expiry_time = None
+        expiry_raw = token_result.get("expiry")
+        if expiry_raw:
+            try:
+                expiry_time = datetime.fromisoformat(str(expiry_raw).replace("Z", "+00:00"))
+                if timezone.is_naive(expiry_time):
+                    expiry_time = timezone.make_aware(expiry_time)
+            except (TypeError, ValueError):
+                expiry_time = None
+        if expiry_time is None:
+            expiry_time = _next_session_cutoff(6, 0)
+
+        _save_session_tokens_compat(
+            broker_details,
+            token_result.get("token_ref_id") or "",
+            token_result["access_token"],
+            expiry=expiry_time,
+        )
+        return Response(
+            {
+                "message": "success",
+                "token_saved": True,
+                "expiryTime": expiry_time.isoformat() if expiry_time else None,
+            }
+        )
 
     def redirect_to_angel_one(self, request, broker_details):
         from main.angelone_views import build_angelone_redirect_payload

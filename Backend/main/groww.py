@@ -45,6 +45,56 @@ def _headers(access_token):
     }
 
 
+def generate_groww_checksum(api_secret, timestamp):
+    return hashlib.sha256(f"{api_secret}{timestamp}".encode("utf-8")).hexdigest()
+
+
+def generate_groww_access_token(api_key, api_secret, proxy_config=None):
+    if not api_key or not api_secret:
+        return {"status": "failed", "message": "Groww API key and API secret are required."}
+
+    timestamp = str(int(time.time()))
+    checksum = generate_groww_checksum(api_secret, timestamp)
+    try:
+        response = requests.post(
+            f"{GROWW_API_BASE_URL}/token/api/access",
+            json={
+                "key_type": "approval",
+                "checksum": checksum,
+                "timestamp": timestamp,
+            },
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "X-API-VERSION": "1.0",
+            },
+            timeout=_request_timeout(),
+            proxies=proxy_config,
+        )
+        payload = response.json() if response.content else {}
+    except Exception as exc:
+        logger.exception("Groww access token generation failed")
+        return {"status": "failed", "message": str(exc)}
+
+    token = payload.get("token") or payload.get("access_token") or (payload.get("payload") or {}).get("token")
+    if response.status_code >= 400 or not token:
+        return {
+            "status": "failed",
+            "message": payload.get("message") or payload.get("error") or "Groww access token generation failed.",
+            "response": payload,
+            "status_code": response.status_code,
+        }
+    return {
+        "status": "success",
+        "access_token": token,
+        "token_ref_id": payload.get("tokenRefId") or payload.get("token_ref_id"),
+        "session_name": payload.get("sessionName") or payload.get("session_name"),
+        "expiry": payload.get("expiry") or payload.get("expires_at"),
+        "response": payload,
+    }
+
+
 def _request_timeout():
     return int(getattr(settings, "GROWW_API_TIMEOUT_SECONDS", 10) or 10)
 
