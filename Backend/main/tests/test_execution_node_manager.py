@@ -32,7 +32,8 @@ from main.brokers.exchange_mapping import normalize_broker_exchange, normalize_f
 from main.brokers.position_guard import find_matching_open_buy_position, prepare_close_order_from_open_position
 from main.permissions import can_access_client_record
 from main.services.option_ltp_fallback import cache_option_ltp, fetch_nse_option_chain_ltp, get_cached_option_ltp
-from main.serializers import ClientBrokerDetailsUpdateSerializer
+from main.serializers import ClientBrokerDetailsUpdateSerializer, TradeorderhistorySerializer
+from main.trade_history_service import save_trade_order_history
 from main.views import _process_webhook_trade, _resolve_webhook_request_context
 
 
@@ -188,6 +189,51 @@ class ExecutionNodeManagerTests(TestCase):
             item for item in response.data["results"] if item["client"]["email"] == "unassigned-history@example.com"
         )
         self.assertEqual(failed_trade["failure_reason"], "Insufficient margin")
+
+    def test_successful_trade_history_suppresses_internal_routing_failure_reason(self):
+        history = Tradeorderhistory.objects.create(
+            client=self.client_user,
+            trading_symbol="NIFTY26MAY2624000CE",
+            order_status="open",
+            trade_order_status="OPEN",
+            failure_reason="Order routed to execution node.",
+            response_data={"data": {"status": "open", "message": "Order routed to execution node."}},
+        )
+
+        data = TradeorderhistorySerializer(history).data
+
+        self.assertIsNone(data["failure_reason"])
+
+    def test_trade_history_placeholder_is_not_saved_as_failure_reason(self):
+        save_trade_order_history(
+            100,
+            "test",
+            "BUY",
+            "ENTRY",
+            self.client_user,
+            None,
+            0,
+            "Failed",
+            "Order is placing by place order broker !!",
+            "Order is placing by place order broker !!",
+            "test-strategy",
+            "BUY",
+            None,
+            None,
+            None,
+            75,
+            None,
+            {},
+            "NFO",
+            "OPT",
+            "NIFTY",
+            {"quantity": 75},
+            history_id="placeholder-history",
+        )
+
+        history = Tradeorderhistory.objects.get(history_id="placeholder-history")
+
+        self.assertIsNone(history.failure_reason)
 
     def test_subadmin_trade_history_is_limited_to_assigned_clients(self):
         subadmin_role, _ = Role.objects.get_or_create(name="Sub-Admin", defaults={"status": "active"})

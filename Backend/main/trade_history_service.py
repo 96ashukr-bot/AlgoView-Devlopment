@@ -6,6 +6,28 @@ from django.utils import timezone
 
 from main.models import Tradeorderhistory
 
+NON_FAILURE_ORDER_STATUSES = {
+    "accepted",
+    "accepted_by_node",
+    "amo req received",
+    "complete",
+    "completed",
+    "open",
+    "open pending",
+    "pending",
+    "placed",
+    "put order req received",
+    "success",
+    "sent_to_node",
+    "transit",
+    "validation pending",
+}
+
+TRANSIENT_ORDER_MESSAGES = {
+    "order is placing by place order broker !!",
+    "order routed to execution node.",
+}
+
 
 def _serialize_trade_history_value(value):
     if isinstance(value, dict):
@@ -24,6 +46,31 @@ def _first_non_empty(*values):
         if value not in (None, "", [], {}, ()):
             return value
     return None
+
+
+def _normalize_status_value(value):
+    return str(value or "").strip().lower()
+
+
+def _is_non_failure_status(*values):
+    return any(_normalize_status_value(value) in NON_FAILURE_ORDER_STATUSES for value in values)
+
+
+def _is_transient_order_message(value):
+    return _normalize_status_value(value) in TRANSIENT_ORDER_MESSAGES
+
+
+def resolve_trade_failure_reason(order_status, trade_order_status, reason):
+    if reason in (None, "", [], {}, ()):
+        return None
+    if isinstance(reason, (dict, list)):
+        reason = str(reason)
+
+    if _is_transient_order_message(reason):
+        return None
+    if _is_non_failure_status(order_status, trade_order_status):
+        return None
+    return str(reason)
 
 
 def _compact_symbol(value):
@@ -234,6 +281,11 @@ def save_trade_order_history(*args, **kwargs):
             nested_response.get("message") if isinstance(nested_response, dict) else None,
             response_payload.get("message") if isinstance(response_payload, dict) else None,
         )
+        resolved_failure_reason = resolve_trade_failure_reason(
+            resolved_status,
+            trade_order_status,
+            resolved_message,
+        )
         resolved_order_id = _first_non_empty(
             order_id,
             nested_response.get("order_id") if isinstance(nested_response, dict) else None,
@@ -248,7 +300,7 @@ def save_trade_order_history(*args, **kwargs):
             "order_id": str(resolved_order_id) if resolved_order_id not in (None, "", "0", 0) else None,
             "order_status": str(resolved_status),
             "response_data": response_payload,
-            "failure_reason": resolved_message,
+            "failure_reason": resolved_failure_reason,
             "broker": broker,
             "order_params": order_payload,
             "transaction_type": transaction_type,

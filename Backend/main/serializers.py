@@ -25,6 +25,7 @@ from main.broker_registry import (
     normalize_broker_name,
 )
 from main.permissions import is_end_user
+from main.trade_history_service import resolve_trade_failure_reason
 company_profile = get_company_profile()
 smtp_details=get_smtp_details()
 company_profile=company_profile if company_profile else None
@@ -1968,9 +1969,8 @@ class TradeorderhistorySerializer(serializers.ModelSerializer):
     expiry = serializers.SerializerMethodField()
 
     def get_failure_reason(self, obj):
-        if obj.failure_reason:
-            return obj.failure_reason
-        return _extract_trade_failure_reason(obj.response_data)
+        reason = obj.failure_reason or _extract_trade_failure_reason(obj.response_data)
+        return resolve_trade_failure_reason(obj.order_status, obj.trade_order_status, reason)
 
     def get_expiry(self, obj):
         order_params = obj.order_params if isinstance(obj.order_params, dict) else {}
@@ -2022,9 +2022,8 @@ class TradeOrderHistoryFilterSerializer(serializers.ModelSerializer):
     expiry = serializers.SerializerMethodField()
 
     def get_failure_reason(self, obj):
-        if obj.failure_reason:
-            return obj.failure_reason
-        return _extract_trade_failure_reason(obj.response_data)
+        reason = obj.failure_reason or _extract_trade_failure_reason(obj.response_data)
+        return resolve_trade_failure_reason(obj.order_status, obj.trade_order_status, reason)
 
     def get_expiry(self, obj):
         return TradeorderhistorySerializer().get_expiry(obj)
