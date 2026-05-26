@@ -483,6 +483,22 @@ def _resolve_webhook_request_context(request_data):
     }
 
 
+def _webhook_leg_history_id(history_id, leg_name):
+    if not history_id:
+        return None
+    return f"{history_id}_{leg_name}"
+
+
+def _webhook_leg_order_params(order_params, *, transaction_type, option_type):
+    if not isinstance(order_params, dict):
+        return order_params
+    leg_params = dict(order_params)
+    leg_params["transaction_type"] = transaction_type
+    leg_params["option_type"] = option_type
+    leg_params["Type"] = option_type
+    return leg_params
+
+
 def _process_webhook_trade(trade, index, context, *, history_id=None):
     history_id = history_id or f"{datetime.now().strftime('%Y%m%d%H%M%S%f')}_{trade.client_id}_{trade.id}"
     alert_data = context["alert_data"]
@@ -642,7 +658,9 @@ def _process_webhook_trade(trade, index, context, *, history_id=None):
                 live_price, group_service, trade, user, action, trade_symbol, quantity, strategy, ordertype,
                 product_type, price, lots, None, entry_type, exit_type, entry_price, exit_price, entry_qty, exit_qty,
                 alert_data, exchange, segment, index_symbol, trigger_price, day, month, year, fullyear, default_price,
-                option_type, order_params, history_id
+                option_type,
+                _webhook_leg_order_params(order_params, transaction_type=action, option_type=option_type),
+                _webhook_leg_history_id(history_id, "close_ce")
             )
             transaction_type = "SELL-O"
             action, option_type = manage_order(transaction_type, buy_sell, option_type)
@@ -650,7 +668,9 @@ def _process_webhook_trade(trade, index, context, *, history_id=None):
                 live_price, group_service, trade, user, action, trade_symbol, quantity, strategy, ordertype,
                 product_type, price, lots, None, entry_type, exit_type, entry_price, exit_price, entry_qty, exit_qty,
                 alert_data, exchange, segment, index_symbol, trigger_price, day, month, year, fullyear, default_price,
-                option_type, order_params, history_id
+                option_type,
+                _webhook_leg_order_params(order_params, transaction_type=action, option_type=option_type),
+                _webhook_leg_history_id(history_id, "open_pe")
             )
         elif transaction_type == "BUY-C_O":
             transaction_type = "BUY-C"
@@ -659,7 +679,9 @@ def _process_webhook_trade(trade, index, context, *, history_id=None):
                 live_price, group_service, trade, user, action, trade_symbol, quantity, strategy, ordertype,
                 product_type, price, lots, None, entry_type, exit_type, entry_price, exit_price, entry_qty, exit_qty,
                 alert_data, exchange, segment, index_symbol, trigger_price, day, month, year, fullyear, default_price,
-                option_type, order_params, history_id
+                option_type,
+                _webhook_leg_order_params(order_params, transaction_type=action, option_type=option_type),
+                _webhook_leg_history_id(history_id, "close_pe")
             )
             transaction_type = "BUY-O"
             action, option_type = manage_order(transaction_type, buy_sell, option_type)
@@ -667,7 +689,9 @@ def _process_webhook_trade(trade, index, context, *, history_id=None):
                 live_price, group_service, trade, user, action, trade_symbol, quantity, strategy, ordertype,
                 product_type, price, lots, None, entry_type, exit_type, entry_price, exit_price, entry_qty, exit_qty,
                 alert_data, exchange, segment, index_symbol, trigger_price, day, month, year, fullyear, default_price,
-                option_type, order_params, history_id
+                option_type,
+                _webhook_leg_order_params(order_params, transaction_type=action, option_type=option_type),
+                _webhook_leg_history_id(history_id, "open_ce")
             )
         else:
             action, option_type = manage_order(transaction_type, buy_sell, None)
@@ -675,7 +699,9 @@ def _process_webhook_trade(trade, index, context, *, history_id=None):
                 live_price, group_service, trade, user, action, trade_symbol, quantity, strategy, ordertype,
                 product_type, price, lots, None, entry_type, exit_type, entry_price, exit_price, entry_qty, exit_qty,
                 alert_data, exchange, segment, index_symbol, trigger_price, day, month, year, fullyear, default_price,
-                option_type, order_params, history_id
+                option_type,
+                _webhook_leg_order_params(order_params, transaction_type=action, option_type=option_type),
+                history_id
             )
 
         normalized_response = order_response or {"data": {"status": "Failed", "message": "No broker response received."}}
@@ -3647,28 +3673,26 @@ def round_price(price):
     
 # Transaction type mapping dictionary
 transaction_type_dict = {
-    "BUY-O": "Open a new BUY CE order",
-    "SELL-C": "Close an existing SELL CE order",
-    "SELL-C_O": "Close an existing SELL CE and open a new PE order",
-    "SELL-O": "Open a new SELL PE order",
-    "BUY-C": "Close an existing BUY PE order",
-    "BUY-C_O": "Close an existing BUY PE and open a new CE order",
-    "SELL-O_C": "Close an existing SELL PE and open a new CE order",
-    "BUY-O_C": "Close an existing BUY CE and open a new PE order"
+    "BUY-O": "Buy CE trade",
+    "SELL-C": "Close existing open CE trade",
+    "SELL-C_O": "Close CE and buy PE trade",
+    "SELL-O": "Buy PE trade",
+    "BUY-C": "Close existing open PE trade",
+    "BUY-C_O": "Close PE and buy CE trade",
 }
 
 def manage_order(transaction_type, buy_sell, Type):
     try:
-        if transaction_type == "BUY-O":  # Open a new BUY CE order
+        if transaction_type == "BUY-O":
             buy_sell = "BUY"
             Type = "CE"
-        elif transaction_type == "SELL-C":  # Close CE an existing SELL CE order
+        elif transaction_type == "SELL-C":
             buy_sell = "SELL"
             Type = "CE"
-        elif transaction_type == "SELL-O":  # BUY PE Open a new  BUY PE order
+        elif transaction_type == "SELL-O":
             buy_sell = "BUY"
             Type = "PE"
-        elif transaction_type == "BUY-C":  # Close PE an existing BUY PE order
+        elif transaction_type == "BUY-C":
             buy_sell = "SELL"
             Type = "PE"
         else:

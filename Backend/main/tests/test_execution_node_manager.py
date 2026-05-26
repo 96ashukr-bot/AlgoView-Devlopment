@@ -32,7 +32,7 @@ from main.brokers.exchange_mapping import normalize_broker_exchange, normalize_f
 from main.brokers.position_guard import find_matching_open_buy_position, prepare_close_order_from_open_position
 from main.services.option_ltp_fallback import cache_option_ltp, fetch_nse_option_chain_ltp, get_cached_option_ltp
 from main.serializers import ClientBrokerDetailsUpdateSerializer
-from main.views import _process_webhook_trade
+from main.views import _process_webhook_trade, _resolve_webhook_request_context
 
 
 TEST_CACHES = {
@@ -318,6 +318,113 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertFalse(result["recorded_in_trade_history"])
         self.assertIn("Client trading is disabled", result["skip_reasons"])
         self.assertFalse(Tradeorderhistory.objects.filter(client=disabled_client).exists())
+
+    def test_tradingview_webhook_language_decodes_expected_contracts(self):
+        cases = {
+            "BUY-O": ("CE", "Buy CE"),
+            "SELL-C": ("CE", "Close CE"),
+            "SELL-C_O": ("CE PE", "Close CE & Buy PE"),
+            "SELL-O": ("PE", "BUY PE"),
+            "BUY-C": ("PE", "Close PE"),
+            "BUY-C_O": ("PE CE", "Close PE & Buy CE"),
+        }
+
+        for ordertype, (buy_sell, _description) in cases.items():
+            context = _resolve_webhook_request_context(
+                {
+                    "text": "NIFTY FIN SERVICE",
+                    "ordertype": ordertype,
+                    "signalprice": "26115.60",
+                    "stratergyid": "Sparks Lite",
+                }
+            )
+            self.assertEqual(context["symbols"], "FINNIFTY")
+            self.assertEqual(context["transaction_type"], ordertype)
+            self.assertEqual(context["buy_sell"], buy_sell)
+
+    @mock.patch("main.views.place_order_broker")
+    def test_combined_sell_c_o_creates_distinct_close_ce_and_open_pe_legs(self, mock_place_order):
+        mock_place_order.return_value = {"data": {"status": "complete", "message": "ok"}}
+        self.broker_details.set_broker_password("trading-password")
+        self.broker_details.set_broker_totp_secret("BASE32SECRET")
+        self.broker_details.save()
+        trade = ClientTradeSetting.objects.create(
+            client=self.client_user,
+            symbol="FINNIFTY",
+            group_service="Sparks Lite",
+            broker="Angel One",
+            product_type="INTRADAY",
+            quantity=60,
+            trade_limit=10,
+            is_tread_status=True,
+            expiry_date=timezone.now(),
+        )
+        context = _resolve_webhook_request_context(
+            {
+                "text": "NIFTY FIN SERVICE",
+                "ordertype": "SELL-C_O",
+                "signalprice": "26115.60",
+                "stratergyid": "Sparks Lite",
+            }
+        )
+
+        _process_webhook_trade(trade, 0, context, history_id="combo-sell-c-o")
+
+        self.assertEqual(mock_place_order.call_count, 2)
+        close_call = mock_place_order.call_args_list[0].args
+        open_call = mock_place_order.call_args_list[1].args
+        self.assertEqual(close_call[4], "SELL")
+        self.assertEqual(close_call[29], "CE")
+        self.assertEqual(close_call[30]["transaction_type"], "SELL")
+        self.assertEqual(close_call[30]["option_type"], "CE")
+        self.assertEqual(close_call[31], "combo-sell-c-o_close_ce")
+        self.assertEqual(open_call[4], "BUY")
+        self.assertEqual(open_call[29], "PE")
+        self.assertEqual(open_call[30]["transaction_type"], "BUY")
+        self.assertEqual(open_call[30]["option_type"], "PE")
+        self.assertEqual(open_call[31], "combo-sell-c-o_open_pe")
+
+    @mock.patch("main.views.place_order_broker")
+    def test_combined_buy_c_o_creates_distinct_close_pe_and_open_ce_legs(self, mock_place_order):
+        mock_place_order.return_value = {"data": {"status": "complete", "message": "ok"}}
+        self.broker_details.set_broker_password("trading-password")
+        self.broker_details.set_broker_totp_secret("BASE32SECRET")
+        self.broker_details.save()
+        trade = ClientTradeSetting.objects.create(
+            client=self.client_user,
+            symbol="FINNIFTY",
+            group_service="Sparks Lite",
+            broker="Angel One",
+            product_type="INTRADAY",
+            quantity=60,
+            trade_limit=10,
+            is_tread_status=True,
+            expiry_date=timezone.now(),
+        )
+        context = _resolve_webhook_request_context(
+            {
+                "text": "NIFTY FIN SERVICE",
+                "ordertype": "BUY-C_O",
+                "signalprice": "26115.60",
+                "stratergyid": "Sparks Lite",
+            }
+        )
+
+        _process_webhook_trade(trade, 0, context, history_id="combo-buy-c-o")
+
+        self.assertEqual(mock_place_order.call_count, 2)
+        close_call = mock_place_order.call_args_list[0].args
+        open_call = mock_place_order.call_args_list[1].args
+        self.assertEqual(close_call[4], "SELL")
+        self.assertEqual(close_call[29], "PE")
+        self.assertEqual(close_call[30]["transaction_type"], "SELL")
+        self.assertEqual(close_call[30]["option_type"], "PE")
+        self.assertEqual(close_call[31], "combo-buy-c-o_close_pe")
+        self.assertEqual(open_call[4], "BUY")
+        self.assertEqual(open_call[29], "CE")
+        self.assertEqual(open_call[30]["transaction_type"], "BUY")
+        self.assertEqual(open_call[30]["option_type"], "CE")
+        self.assertEqual(open_call[31], "combo-buy-c-o_open_ce")
 
     def test_exit_position_matches_open_buy_when_index_symbol_is_full_contract(self):
         Tradeorderhistory.objects.create(
