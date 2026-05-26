@@ -688,10 +688,17 @@ const ClientHeader = () => {
         window.location.assign(connectResponse.redirect_url);
         return;
       }
-      if (connectResponse?.data?.token_saved || connectResponse?.data?.message === "success") {
+      const connectData = connectResponse?.data || {};
+      const nestedConnectData = connectData.data && typeof connectData.data === "object" ? connectData.data : {};
+      const tokenSaved =
+        connectData.token_saved === true ||
+        nestedConnectData.token_saved === true ||
+        String(connectData.status || "").toLowerCase() === "success" ||
+        String(connectData.message || "").toLowerCase() === "success";
+      if (tokenSaved) {
         await fetchSavedBrokerDetails();
         await fetchBrokerRuntime();
-        Swal.fire('Success', connectResponse?.data?.message || `${activeBrokerName} token generated successfully.`, 'success');
+        Swal.fire('Success', connectData.message || `${activeBrokerName} token generated successfully.`, 'success');
         return;
       }
       Swal.fire('Error', `${activeBrokerName} login did not return a redirect URL or token confirmation.`, 'error');

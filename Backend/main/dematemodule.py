@@ -1074,8 +1074,10 @@ class BrokerLoginRedirectView(APIView):
         )
         return Response(
             {
+                "status": "success",
                 "message": "success",
                 "token_saved": True,
+                "broker": "groww",
                 "expiryTime": expiry_time.isoformat() if expiry_time else None,
             }
         )

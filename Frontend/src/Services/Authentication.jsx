@@ -3855,6 +3855,19 @@ export const startBrokerConnectFlow = async (connectPath) => {
     );
   };
 
+  const isTokenSaveSuccess = (data) => {
+    if (!data || typeof data !== "object") return false;
+    const status = String(data.status || "").toLowerCase();
+    const message = String(data.message || "").toLowerCase();
+    const nestedData = data.data && typeof data.data === "object" ? data.data : {};
+    return (
+      data.token_saved === true ||
+      nestedData.token_saved === true ||
+      status === "success" ||
+      message === "success"
+    );
+  };
+
   const requestConnect = async (targetBaseUrl, authToken) => {
     const requestedUrl = new URL(`${targetBaseUrl}${connectPath}`, window.location.origin).href;
     authDebug("broker-connect:attempt", {
@@ -3876,7 +3889,7 @@ export const startBrokerConnectFlow = async (connectPath) => {
       return { redirect_url: response.data.redirect_url };
     }
 
-    if (response.data?.token_saved || response.data?.message === "success") {
+    if (isTokenSaveSuccess(response.data)) {
       return { data: response.data };
     }
 
