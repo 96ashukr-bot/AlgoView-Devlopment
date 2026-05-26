@@ -3873,15 +3873,19 @@ export const startBrokerConnectFlow = async (connectPath) => {
     });
 
     if (response.data?.redirect_url) {
-      return response.data.redirect_url;
+      return { redirect_url: response.data.redirect_url };
+    }
+
+    if (response.data?.token_saved || response.data?.message === "success") {
+      return { data: response.data };
     }
 
     if (typeof response.headers?.location === 'string') {
-      return response.headers.location;
+      return { redirect_url: response.headers.location };
     }
 
     if (response.request?.responseURL && response.request.responseURL !== requestedUrl) {
-      return response.request.responseURL;
+      return { redirect_url: response.request.responseURL };
     }
 
     return null;
@@ -3950,25 +3954,32 @@ export const startBrokerConnectFlow = async (connectPath) => {
       isAngelOneBrokerConnect,
     });
 
-    let redirectUrl = null;
+    let connectResult = null;
     let lastError = null;
     const attemptHistory = [];
     for (const candidateBaseUrl of candidateBaseUrls) {
       try {
         let candidateToken = getAuthToken() || initialAccessToken;
-        let nextRedirectUrl;
+        let nextConnectResult;
         try {
-          nextRedirectUrl = await requestConnect(candidateBaseUrl, candidateToken);
+          nextConnectResult = await requestConnect(candidateBaseUrl, candidateToken);
         } catch (candidateError) {
           if (candidateError.response?.status === 401 && storedRefreshToken) {
             candidateToken = await refreshForBackend(candidateBaseUrl);
-            nextRedirectUrl = await requestConnect(candidateBaseUrl, candidateToken);
+            nextConnectResult = await requestConnect(candidateBaseUrl, candidateToken);
           } else {
             throw candidateError;
           }
         }
-        if (!nextRedirectUrl) {
+        if (!nextConnectResult) {
           continue;
+        }
+        const nextRedirectUrl = nextConnectResult.redirect_url;
+        if (!nextRedirectUrl && nextConnectResult.data) {
+          connectResult = nextConnectResult;
+          persistBrokerBackend(candidateBaseUrl);
+          persistAuthenticatedBackend(candidateBaseUrl);
+          break;
         }
         if (nextRedirectUrl.includes("/broker_auth_login/")) {
           lastError = new Error("Broker login did not return the broker redirect URL. Please try again after refreshing the page.");
@@ -3978,7 +3989,7 @@ export const startBrokerConnectFlow = async (connectPath) => {
           lastError = new Error("Legacy Angel One login URL detected. Please restart the frontend and use the local Django backend for broker login.");
           continue;
         }
-        redirectUrl = nextRedirectUrl;
+        connectResult = nextConnectResult;
         persistBrokerBackend(candidateBaseUrl);
         persistAuthenticatedBackend(candidateBaseUrl);
         authDebug("broker-connect:success", {
@@ -4004,7 +4015,7 @@ export const startBrokerConnectFlow = async (connectPath) => {
       }
     }
 
-    if (!redirectUrl) {
+    if (!connectResult) {
       const historyMessage = attemptHistory.length
         ? ` Tried backends: ${attemptHistory.map((attempt) => `${attempt.backend} (${attempt.status || "error"})`).join(", ")}.`
         : "";
@@ -4014,7 +4025,7 @@ export const startBrokerConnectFlow = async (connectPath) => {
       throw lastError || new Error("Broker connect flow did not return a redirect URL.");
     }
 
-    return { redirect_url: redirectUrl };
+    return connectResult;
   } catch (error) {
     console.error('Error startBrokerConnectFlow:', error);
     if (error.message === "Network Error") {

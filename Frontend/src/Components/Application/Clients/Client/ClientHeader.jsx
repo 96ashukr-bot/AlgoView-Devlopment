@@ -622,14 +622,12 @@ const ClientHeader = () => {
       let activeSchema = brokerSetup;
       let activeBrokerName = existingSelectedBroker || selectedBroker;
 
-      if (!activeBrokerName || !activeSchema) {
-        const brokerDetails = await getClientBrokerDetail();
-        brokerData = brokerDetails?.data || {};
-        if (brokerData) {
-          applyBrokerDetails(brokerData);
-          activeSchema = brokerData?.broker_setup || brokerSetup;
-          activeBrokerName = brokerData?.selected_broker_name || existingSelectedBroker || selectedBroker;
-        }
+      const brokerDetails = await getClientBrokerDetail();
+      brokerData = brokerDetails?.data || {};
+      if (brokerData) {
+        applyBrokerDetails(brokerData);
+        activeSchema = brokerData?.broker_setup || activeSchema;
+        activeBrokerName = brokerData?.selected_broker_name || activeBrokerName;
       }
 
       const normalizedActiveBroker = normalizeBrokerName(activeBrokerName);
@@ -686,7 +684,17 @@ const ClientHeader = () => {
       }
 
       const connectResponse = await startBrokerConnectFlow(activeSchema.connect_path);
-      window.location.assign(connectResponse.redirect_url);
+      if (connectResponse?.redirect_url) {
+        window.location.assign(connectResponse.redirect_url);
+        return;
+      }
+      if (connectResponse?.data?.token_saved || connectResponse?.data?.message === "success") {
+        await fetchSavedBrokerDetails();
+        await fetchBrokerRuntime();
+        Swal.fire('Success', connectResponse?.data?.message || `${activeBrokerName} token generated successfully.`, 'success');
+        return;
+      }
+      Swal.fire('Error', `${activeBrokerName} login did not return a redirect URL or token confirmation.`, 'error');
     } catch (error) {
       Swal.fire('Error', error.message || 'Failed to start broker login.', 'error');
     } finally {
