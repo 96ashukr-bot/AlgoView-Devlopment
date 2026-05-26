@@ -907,6 +907,64 @@ class AngelOneExecutionValidationTests(TestCase):
         self.assertEqual(response["error_code"], "EMPTY_BROKER_RESPONSE")
         self.assertIn("check the Angel One order book before retrying", response["message"])
 
+    def test_order_service_maps_smartapi_timeout_to_unconfirmed_message(self):
+        service = OrderService.__new__(OrderService)
+
+        response = service._build_error_payload(
+            "HTTPSConnectionPool(host='apiconnect.angelone.in', port=443): Read timed out. (read timeout=7)"
+        )
+
+        self.assertEqual(response["error_code"], "BROKER_TIMEOUT_UNCONFIRMED")
+        self.assertIn("verify the broker order book before retrying", response["message"])
+
+    def test_order_service_finds_matching_order_for_timeout_reconciliation(self):
+        service = OrderService.__new__(OrderService)
+
+        smart_connect = mock.Mock()
+        smart_connect.orderBook.return_value = {
+            "status": True,
+            "data": [
+                {
+                    "orderid": "old-order",
+                    "tradingsymbol": "NIFTY26MAY2624000CE",
+                    "symboltoken": "111",
+                    "transactiontype": "BUY",
+                    "exchange": "NFO",
+                    "producttype": "INTRADAY",
+                    "ordertype": "LIMIT",
+                    "quantity": "65",
+                    "price": "40.00",
+                },
+                {
+                    "orderid": "matched-order",
+                    "tradingsymbol": "NIFTY26MAY2624100CE",
+                    "symboltoken": "222",
+                    "transactiontype": "BUY",
+                    "exchange": "NFO",
+                    "producttype": "INTRADAY",
+                    "ordertype": "LIMIT",
+                    "quantity": "65",
+                    "price": "40.00",
+                },
+            ],
+        }
+
+        order = service._find_matching_broker_order(
+            smart_connect,
+            {
+                "tradingsymbol": "NIFTY26MAY2624100CE",
+                "symboltoken": "222",
+                "transactiontype": "BUY",
+                "exchange": "NFO",
+                "producttype": "INTRADAY",
+                "ordertype": "LIMIT",
+                "quantity": "65",
+                "price": "40.0",
+            },
+        )
+
+        self.assertEqual(order["orderid"], "matched-order")
+
     def test_order_service_normalizes_product_type_aliases_for_angel_one(self):
         service = OrderService.__new__(OrderService)
 

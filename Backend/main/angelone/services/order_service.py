@@ -390,6 +390,7 @@ class OrderService:
 
             result = None
             last_error = None
+            reconciled_broker_order = None
             for attempt in range(1, 3):
                 try:
                     result = smart_connect.placeOrder(order_params)
@@ -398,6 +399,21 @@ class OrderService:
                     last_error = "Empty response from broker"
                 except Exception as exc:
                     last_error = str(exc)
+                    if self._is_transient_error(last_error):
+                        reconciled_broker_order = self._find_matching_broker_order(smart_connect, order_params)
+                        if reconciled_broker_order:
+                            result = self._extract_order_id(reconciled_broker_order)
+                            logger.warning(
+                                "Recovered Angel One order after transient placeOrder failure",
+                                user_id=client_id,
+                                symbol=contract.symbol,
+                                strike=strike_value,
+                                request_id=request_id,
+                                attempt=attempt,
+                                order_id=result,
+                                error=last_error,
+                            )
+                            break
                     if attempt == 1 and self._is_transient_error(last_error):
                         logger.warning(
                             "Retrying order after transient failure",
@@ -412,6 +428,19 @@ class OrderService:
                     raise
 
                 if attempt == 1 and self._is_transient_error(last_error or ""):
+                    reconciled_broker_order = self._find_matching_broker_order(smart_connect, order_params)
+                    if reconciled_broker_order:
+                        result = self._extract_order_id(reconciled_broker_order)
+                        logger.warning(
+                            "Recovered Angel One order after transient broker response",
+                            user_id=client_id,
+                            symbol=contract.symbol,
+                            strike=strike_value,
+                            request_id=request_id,
+                            order_id=result,
+                            error=last_error,
+                        )
+                        break
                     logger.warning(
                         "Retrying order after broker returned transient failure",
                         user_id=client_id,
@@ -421,9 +450,23 @@ class OrderService:
                         error=last_error,
                     )
 
+            if not result and self._is_transient_error(last_error or ""):
+                reconciled_broker_order = self._find_matching_broker_order(smart_connect, order_params)
+                if reconciled_broker_order:
+                    result = self._extract_order_id(reconciled_broker_order)
+                    logger.warning(
+                        "Recovered Angel One order after final transient broker response",
+                        user_id=client_id,
+                        symbol=contract.symbol,
+                        strike=strike_value,
+                        request_id=request_id,
+                        order_id=result,
+                        error=last_error,
+                    )
+
             if result:
                 order_id = self._extract_order_id(result)
-                broker_order = self._wait_for_broker_order_status(smart_connect, order_id)
+                broker_order = reconciled_broker_order or self._wait_for_broker_order_status(smart_connect, order_id)
                 broker_status = self._broker_order_status(broker_order)
                 broker_message = self._broker_order_message(broker_order)
                 if broker_status in {"rejected", "cancelled", "failed"}:
@@ -577,6 +620,10 @@ class OrderService:
         normalized = (message or "").lower()
         return any(marker in normalized for marker in self.TRANSIENT_ERROR_MARKERS)
 
+    def _is_timeout_error(self, message: str) -> bool:
+        normalized = (message or "").lower()
+        return "timeout" in normalized or "timed out" in normalized
+
     def _normalize_product_type(self, product_type: Optional[str]) -> Optional[str]:
         normalized = str(product_type or ProductType.INTRADAY.value).strip().upper()
         product_map = {
@@ -614,6 +661,11 @@ class OrderService:
             return {
                 "error_code": "EMPTY_BROKER_RESPONSE",
                 "message": "Angel One returned an empty response while placing the order. Please check the Angel One order book before retrying to avoid a duplicate order.",
+            }
+        if self._is_timeout_error(message):
+            return {
+                "error_code": "BROKER_TIMEOUT_UNCONFIRMED",
+                "message": "Angel One did not respond in time while placing the order. The system checked the Angel One order book but could not confirm the order, so please verify the broker order book before retrying.",
             }
         if "margin" in normalized or "rms" in normalized or "fund" in normalized:
             return {
@@ -687,6 +739,77 @@ class OrderService:
             if candidate == target:
                 return order
         return None
+
+    def _find_matching_broker_order(self, smart_connect, order_params: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        try:
+            response = smart_connect.orderBook()
+        except Exception as exc:
+            logger.warning(
+                "Could not fetch Angel One order book for timeout reconciliation",
+                symbol=order_params.get("tradingsymbol"),
+                transaction_type=order_params.get("transactiontype"),
+                error=str(exc),
+            )
+            return None
+
+        orders = response.get("data", []) if isinstance(response, dict) else []
+        if isinstance(orders, dict):
+            orders = [orders]
+        if not isinstance(orders, list):
+            return None
+
+        for order in reversed(orders):
+            if self._is_matching_broker_order(order, order_params):
+                return order
+        return None
+
+    def _is_matching_broker_order(self, order: Any, order_params: Dict[str, Any]) -> bool:
+        if not isinstance(order, dict):
+            return False
+
+        field_pairs = (
+            ("tradingsymbol", "tradingsymbol"),
+            ("symboltoken", "symboltoken"),
+            ("transactiontype", "transactiontype"),
+            ("exchange", "exchange"),
+            ("producttype", "producttype"),
+            ("ordertype", "ordertype"),
+        )
+        for order_key, params_key in field_pairs:
+            expected = order_params.get(params_key)
+            if expected in (None, ""):
+                continue
+            actual = order.get(order_key) or order.get(order_key.lower()) or order.get(order_key.upper())
+            if str(actual or "").strip().upper() != str(expected).strip().upper():
+                return False
+
+        expected_quantity = self._positive_float(order_params.get("quantity"))
+        actual_quantity = self._positive_float(
+            order.get("quantity")
+            or order.get("qty")
+            or order.get("ordertotalquantity")
+            or order.get("unfilledshares")
+            or order.get("filledshares")
+        )
+        if expected_quantity is not None and actual_quantity is not None and expected_quantity != actual_quantity:
+            return False
+
+        expected_price = self._positive_float(order_params.get("price"))
+        actual_price = self._positive_float(order.get("price") or order.get("orderprice"))
+        if str(order_params.get("ordertype") or "").strip().upper() == OrderType.LIMIT.value:
+            if expected_price is not None and actual_price is not None:
+                if abs(expected_price - actual_price) > DEFAULT_TICK_SIZE:
+                    return False
+
+        return bool(self._extract_order_id(order))
+
+    @staticmethod
+    def _positive_float(value: Any) -> Optional[float]:
+        try:
+            parsed = float(value)
+        except (TypeError, ValueError):
+            return None
+        return parsed if parsed > 0 else None
 
     @staticmethod
     def _broker_order_status(order: Optional[Dict[str, Any]]) -> str:

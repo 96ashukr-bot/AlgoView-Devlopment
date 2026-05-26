@@ -105,7 +105,11 @@ class ClientSession:
 
     def attach_smart_connect(self) -> SmartConnect:
         with self._lock:
-            obj = SmartConnect(api_key=self.api_key, proxies=self.proxy_config)
+            obj = SmartConnect(
+                api_key=self.api_key,
+                proxies=self.proxy_config,
+                timeout=getattr(settings, "ANGELONE_SMARTAPI_TIMEOUT_SECONDS", 15),
+            )
             if self.access_token:
                 obj.setAccessToken(self.access_token)
             if self.refresh_token:
@@ -643,7 +647,11 @@ class SessionManager:
                 }
 
         totp = pyotp.TOTP(totp_secret).now()
-        obj = SmartConnect(api_key=api_key, proxies=proxy_config)
+        obj = SmartConnect(
+            api_key=api_key,
+            proxies=proxy_config,
+            timeout=getattr(settings, "ANGELONE_SMARTAPI_TIMEOUT_SECONDS", 15),
+        )
         data = obj.generateSession(client_id, password, totp)
         if not isinstance(data, dict) or not data.get("status"):
             self._breaker.record_failure()

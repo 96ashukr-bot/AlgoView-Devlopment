@@ -14,6 +14,7 @@ from typing import Dict, Any, Optional
 
 import pyotp
 from SmartApi import SmartConnect
+from django.conf import settings
 
 from ..utils.logging_utils import TradingLogger
 from ..managers.session_manager import SessionManager, ClientSession
@@ -370,7 +371,11 @@ class AuthService:
             totp = pyotp.TOTP(totp_secret).now()
             
             # Try to create session
-            obj = SmartConnect(api_key=api_key, proxies=proxy_config)
+            obj = SmartConnect(
+                api_key=api_key,
+                proxies=proxy_config,
+                timeout=getattr(settings, "ANGELONE_SMARTAPI_TIMEOUT_SECONDS", 15),
+            )
             data = obj.generateSession(client_id, password, totp)
             
             if data.get("status"):
