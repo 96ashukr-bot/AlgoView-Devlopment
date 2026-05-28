@@ -16,7 +16,6 @@ import Swal from 'sweetalert2';
 import 'react-toastify/dist/ReactToastify.css';
 import {
     connectMarketDataUpstox,
-    getExecutionNodes,
     getMarketDataUpstoxSettings,
     updateMarketDataUpstoxSettings,
     updateWebSocket,
@@ -36,19 +35,16 @@ const WebSocket = () => {
         api_key: '',
         api_secret: '',
         api_secret_configured: false,
-        execution_node: '',
         token_status: '',
         token_configured: false,
         access_token_expiry: '',
         is_active: true,
     });
-    const [executionNodes, setExecutionNodes] = useState([]);
     const [marketLoading, setMarketLoading] = useState(false);
 
     useEffect(() => {
         fetchSocketDetails();
         fetchMarketDataSettings();
-        fetchExecutionNodes();
     }, []);
 
     const fetchSocketDetails = async () => {
@@ -66,15 +62,6 @@ const WebSocket = () => {
         }
     };
 
-    const fetchExecutionNodes = async () => {
-        try {
-            const response = await getExecutionNodes();
-            setExecutionNodes(response.results || []);
-        } catch (error) {
-            console.error('Error fetching execution routes:', error.message || error);
-        }
-    };
-
     const fetchMarketDataSettings = async () => {
         try {
             const response = await getMarketDataUpstoxSettings();
@@ -83,7 +70,6 @@ const WebSocket = () => {
                 api_key: data.api_key || '',
                 api_secret: '',
                 api_secret_configured: Boolean(data.api_secret_configured),
-                execution_node: data.execution_node || '',
                 token_status: data.token_status || '',
                 token_configured: Boolean(data.token_configured),
                 access_token_expiry: data.access_token_expiry || '',
@@ -169,16 +155,11 @@ const WebSocket = () => {
             Swal.fire('Validation Error', 'Upstox API Secret Key is required.', 'error');
             return;
         }
-        if (!marketData.execution_node) {
-            Swal.fire('Validation Error', 'Please select an execution route.', 'error');
-            return;
-        }
 
         setMarketLoading(true);
         try {
             const payload = {
                 api_key: marketData.api_key,
-                execution_node: marketData.execution_node,
                 is_active: marketData.is_active,
             };
             if (marketData.api_secret) {
@@ -323,23 +304,6 @@ const WebSocket = () => {
                             </Row>
                             <Row>
                                 <Col md="6" className="mb-3">
-                                    <Label htmlFor="market_execution_node">Execution Route <span style={{ color: 'red' }}>*</span></Label>
-                                    <Input
-                                        type="select"
-                                        name="execution_node"
-                                        id="market_execution_node"
-                                        value={marketData.execution_node}
-                                        onChange={handleMarketDataChange}
-                                    >
-                                        <option value="">Select route</option>
-                                        {executionNodes.map((node) => (
-                                            <option key={node.id} value={node.id}>
-                                                {node.name} - {node.execution_type || 'route'} {node.proxy_public_ip_verified ? '(verified)' : ''}
-                                            </option>
-                                        ))}
-                                    </Input>
-                                </Col>
-                                <Col md="3" className="mb-3">
                                     <Label>Token Status</Label>
                                     <Input
                                         type="text"
@@ -352,7 +316,7 @@ const WebSocket = () => {
                                         }}
                                     />
                                 </Col>
-                                <Col md="3" className="mb-3">
+                                <Col md="6" className="mb-3">
                                     <Label>Token Expiry</Label>
                                     <Input type="text" value={formatDateTime(marketData.access_token_expiry)} readOnly disabled />
                                 </Col>

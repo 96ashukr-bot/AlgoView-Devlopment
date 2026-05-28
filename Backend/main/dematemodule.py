@@ -809,10 +809,6 @@ def _handle_market_data_upstox_callback(request_token):
     if not credential or not credential.api_key or not credential.get_api_secret():
         return JsonResponse({"message": "Failed", "error": "Market data Upstox credentials are incomplete."}, status=400)
 
-    proxy_config = build_requests_proxy_config(credential.execution_node)
-    if not proxy_config:
-        return JsonResponse({"message": "Failed", "error": "Market data execution route/proxy is required."}, status=400)
-
     data = {
         "code": request_token,
         "client_id": credential.api_key,
@@ -820,7 +816,7 @@ def _handle_market_data_upstox_callback(request_token):
         "redirect_uri": _broker_callback_url(),
         "grant_type": "authorization_code",
     }
-    response = requests.post("https://api.upstox.com/v2/login/authorization/token", data=data, timeout=10, proxies=proxy_config)
+    response = requests.post("https://api.upstox.com/v2/login/authorization/token", data=data, timeout=10)
     payload = response.json() if response.content else {}
     if response.status_code != 200:
         return JsonResponse({"message": "Failed", "error": payload}, status=response.status_code)

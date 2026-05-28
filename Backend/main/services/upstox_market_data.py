@@ -275,14 +275,7 @@ def get_market_data_broker_details() -> Optional[ClientBrokerdetails]:
     if dedicated:
         token = get_access_token(dedicated)
         expiry = getattr(dedicated, "access_token_expiry", None)
-        node = getattr(dedicated, "execution_node", None)
-        if (
-            token
-            and (not expiry or expiry > timezone.now())
-            and node
-            and node.is_active
-            and (node.execution_type != node.EXECUTION_TYPE_PROXY or node.proxy_public_ip_verified)
-        ):
+        if token and (not expiry or expiry > timezone.now()):
             return dedicated
 
     client_id = str(getattr(settings, "MARKET_DATA_UPSTOX_CLIENT_ID", "") or "").strip()
@@ -326,11 +319,13 @@ class UpstoxMarketDataCollector:
         token = get_access_token(broker_details)
         version = "v3" if str(self.api_version).startswith("3") else "v2"
         url = f"https://api.upstox.com/{version}/feed/market-data-feed/authorize"
+        node = getattr(broker_details, "execution_node", None)
+        proxies = build_requests_proxy_config(node) if node else None
         response = requests.get(
             url,
             headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
             timeout=10,
-            proxies=build_requests_proxy_config(broker_details.execution_node),
+            proxies=proxies,
         )
         payload = response.json() if response.content else {}
         if response.status_code != 200:
@@ -411,12 +406,13 @@ class UpstoxMarketDataCollector:
     async def _run_once(self) -> None:
         broker_details = await sync_to_async(get_market_data_broker_details)()
         if not broker_details:
-            logger.warning("No active Upstox broker token/proxy is available for market-data collection.")
+            logger.warning("No active Upstox market-data token is available for market-data collection.")
             await asyncio.sleep(10)
             return
 
-        proxy_config = build_requests_proxy_config(broker_details.execution_node)
-        self.proxy_url = proxy_config.get("https") or proxy_config.get("http")
+        node = getattr(broker_details, "execution_node", None)
+        proxy_config = build_requests_proxy_config(node) if node else {}
+        self.proxy_url = proxy_config.get("https") or proxy_config.get("http") or None
         await self._refresh_instruments()
         if not self.instruments:
             logger.info("No open option trades require Upstox market-data subscription.")
