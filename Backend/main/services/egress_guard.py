@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from contextlib import contextmanager
+from contextvars import ContextVar
 import logging
 from urllib.parse import urlparse
 
@@ -35,6 +37,7 @@ PUBLIC_INSTRUMENT_MASTER_PATHS = (
 
 _ORIGINAL_REQUEST = None
 _INSTALLED = False
+_ALLOW_DIRECT_MARKET_DATA_EGRESS = ContextVar("allow_direct_market_data_egress", default=False)
 
 
 def _is_broker_url(url: str) -> bool:
@@ -66,10 +69,24 @@ def enforce_broker_proxy_for_requests() -> None:
     _ORIGINAL_REQUEST = requests.sessions.Session.request
 
     def guarded_request(self, method, url, **kwargs):
-        if _is_broker_url(url) and not _is_public_instrument_master_url(url) and not _has_proxy(self, kwargs):
+        if (
+            _is_broker_url(url)
+            and not _is_public_instrument_master_url(url)
+            and not _ALLOW_DIRECT_MARKET_DATA_EGRESS.get()
+            and not _has_proxy(self, kwargs)
+        ):
             logger.error("Blocked direct broker egress without proxy", extra={"method": method, "url": urlparse(str(url)).netloc})
             raise ProxyRoutingRequiredError("Direct broker egress without client proxy/static-IP route is blocked.")
         return _ORIGINAL_REQUEST(self, method, url, **kwargs)
 
     requests.sessions.Session.request = guarded_request
     _INSTALLED = True
+
+
+@contextmanager
+def allow_direct_market_data_egress():
+    token = _ALLOW_DIRECT_MARKET_DATA_EGRESS.set(True)
+    try:
+        yield
+    finally:
+        _ALLOW_DIRECT_MARKET_DATA_EGRESS.reset(token)

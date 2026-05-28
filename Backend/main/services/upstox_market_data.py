@@ -4,6 +4,7 @@ import asyncio
 import json
 import logging
 import ssl
+from contextlib import nullcontext
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Optional
@@ -20,6 +21,7 @@ from main import MarketDataFeed_pb2 as pb
 from main.broker_instrument_cache import load_upstox_instruments
 from main.brokers.utils import get_access_token
 from main.models import ClientBrokerdetails, MarketDataCredential, Tradeorderhistory
+from main.services.egress_guard import allow_direct_market_data_egress
 from main.services.live_price_cache import build_live_price_payload, cache_live_price, normalize_symbol_key
 from main.services.option_ltp_fallback import cache_option_ltp
 from main.services.proxy_utils import build_requests_proxy_config
@@ -321,12 +323,14 @@ class UpstoxMarketDataCollector:
         url = f"https://api.upstox.com/{version}/feed/market-data-feed/authorize"
         node = getattr(broker_details, "execution_node", None)
         proxies = build_requests_proxy_config(node) if node else None
-        response = requests.get(
-            url,
-            headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
-            timeout=10,
-            proxies=proxies,
-        )
+        request_context = allow_direct_market_data_egress() if not proxies else nullcontext()
+        with request_context:
+            response = requests.get(
+                url,
+                headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
+                timeout=10,
+                proxies=proxies,
+            )
         payload = response.json() if response.content else {}
         if response.status_code != 200:
             raise RuntimeError(f"Upstox market-data authorize failed: {response.status_code} {str(payload)[:300]}")

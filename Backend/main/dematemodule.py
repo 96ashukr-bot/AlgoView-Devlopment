@@ -21,6 +21,7 @@ from main.angelone.services.state_service import CallbackStateService
 from main.angelone.utils.redaction import redact_secrets
 from main.services.login_activity_service import LoginActivityService
 from main.services.proxy_utils import build_requests_proxy_config
+from main.services.egress_guard import allow_direct_market_data_egress
 from main.trade_history_service import save_trade_order_history
 logger = logging.getLogger('main')
 from datetime import datetime, timedelta  
@@ -816,7 +817,8 @@ def _handle_market_data_upstox_callback(request_token):
         "redirect_uri": _broker_callback_url(),
         "grant_type": "authorization_code",
     }
-    response = requests.post("https://api.upstox.com/v2/login/authorization/token", data=data, timeout=10)
+    with allow_direct_market_data_egress():
+        response = requests.post("https://api.upstox.com/v2/login/authorization/token", data=data, timeout=10)
     payload = response.json() if response.content else {}
     if response.status_code != 200:
         return JsonResponse({"message": "Failed", "error": payload}, status=response.status_code)
