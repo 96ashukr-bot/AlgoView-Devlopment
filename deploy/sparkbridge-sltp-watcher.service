@@ -1,0 +1,20 @@
+[Unit]
+Description=SparkBridge SL/TP Watcher
+After=network.target redis-server.service postgresql.service sparkbridge-market-data.service
+Requires=redis-server.service postgresql.service
+Wants=sparkbridge-market-data.service
+
+[Service]
+Type=simple
+User=ubuntu
+Group=www-data
+WorkingDirectory=/var/www/sparkbridge/Backend
+EnvironmentFile=/var/www/sparkbridge/Backend/.env
+ExecStart=/var/www/sparkbridge/Backend/venv/bin/python manage.py run_sl_tp_watcher --loop
+Restart=always
+RestartSec=5
+KillSignal=SIGTERM
+TimeoutStopSec=60
+
+[Install]
+WantedBy=multi-user.target

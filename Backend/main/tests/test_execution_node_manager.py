@@ -32,7 +32,9 @@ from main.broker_order_utils import extract_ltp_from_quote_payload
 from main.brokers.exchange_mapping import normalize_broker_exchange, normalize_fivepaisa_exchange
 from main.brokers.position_guard import find_matching_open_buy_position, prepare_close_order_from_open_position
 from main.permissions import can_access_client_record
+from main.services.live_price_cache import build_live_price_payload, cache_live_price, get_live_price
 from main.services.option_ltp_fallback import cache_option_ltp, fetch_nse_option_chain_ltp, get_cached_option_ltp
+from main.services.upstox_market_data import UpstoxInstrumentResolver, get_active_option_instruments
 from main.serializers import ClientBrokerDetailsUpdateSerializer, TradeorderhistorySerializer
 from main.trade_history_service import save_trade_order_history
 from main.views import _process_webhook_trade, _resolve_webhook_request_context
@@ -2672,3 +2674,52 @@ class ExecutionNodeManagerTests(TestCase):
                 history_id="no-proxy",
             )["data"]["message"],
         )
+
+    def test_live_price_cache_rejects_stale_ticks(self):
+        payload = build_live_price_payload(
+            instrument_key="NSE_FO|123",
+            ltp=101.5,
+            source="test",
+            trading_symbol="NIFTY 24000 CE 26 MAY 26",
+            underlying="NIFTY",
+            expiry_date=timezone.datetime(2026, 5, 26),
+            strike=24000,
+            option_type="CE",
+        )
+        cache_live_price(payload, aliases=("NIFTY26MAY2624000CE",))
+
+        fresh = get_live_price(trading_symbol="NIFTY26MAY2624000CE", max_age_seconds=5)
+        stale = get_live_price(trading_symbol="NIFTY26MAY2624000CE", max_age_seconds=0)
+
+        self.assertEqual(fresh["ltp"], 101.5)
+        self.assertTrue(fresh["is_fresh"])
+        self.assertFalse(stale["is_fresh"])
+
+    @mock.patch("main.services.upstox_market_data.load_upstox_instruments")
+    def test_upstox_market_data_resolves_open_trade_instrument_once(self, mock_load):
+        mock_load.side_effect = lambda exchange: [
+            {
+                "instrument_key": f"{exchange}_FO|123",
+                "trading_symbol": "NIFTY 24000 CE 26 MAY 26",
+                "instrument_type": "CE",
+                "underlying_symbol": "NIFTY",
+                "expiry": int(timezone.datetime(2026, 5, 26, tzinfo=timezone.get_current_timezone()).timestamp() * 1000),
+                "strike_price": 24000,
+                "exchange": exchange,
+            }
+        ] if exchange == "NSE" else []
+        Tradeorderhistory.objects.create(
+            client=self.client_user,
+            trading_symbol="NIFTY26MAY2624000CE",
+            Index_Symbol="NIFTY",
+            transaction_type="BUY",
+            order_id="open-1",
+            order_status="completed",
+            trade_order_status="OPEN",
+        )
+
+        instruments = get_active_option_instruments()
+
+        self.assertEqual(len(instruments), 1)
+        self.assertEqual(instruments[0].instrument_key, "NSE_FO|123")
+        self.assertEqual(UpstoxInstrumentResolver().resolve("NIFTY 24000 CE 26 MAY 26").instrument_key, "NSE_FO|123")

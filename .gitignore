@@ -17,6 +17,10 @@ db.sqlite3
 staticfiles/
 media/
 
+# Broker instrument caches generated on servers
+Backend/main/upstox_*_instruments.json
+Backend/main/groww_instruments.csv
+
 # ========================
 # Node / React
 # ========================

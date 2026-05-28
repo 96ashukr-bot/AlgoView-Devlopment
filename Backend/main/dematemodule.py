@@ -1491,7 +1491,7 @@ class BrokerCallbackView(APIView):
                     except (TypeError, ValueError):
                         expiry_time = None
                 if expiry_time is None:
-                    expiry_time = _next_session_cutoff(3, 30)
+                    expiry_time = _end_of_trading_day_session_cutoff()
                 _save_session_tokens_compat(broker_details, request_token, access_token, refresh_token=refresh_token, expiry=expiry_time)
                 logger.info(f"Upstox callback processed successfully")
                 return JsonResponse({"message": "success", "token_saved": True})

@@ -1,0 +1,19 @@
+[Unit]
+Description=SparkBridge Upstox Market Data Collector
+After=network.target redis-server.service postgresql.service
+Requires=redis-server.service postgresql.service
+
+[Service]
+Type=simple
+User=ubuntu
+Group=www-data
+WorkingDirectory=/var/www/sparkbridge/Backend
+EnvironmentFile=/var/www/sparkbridge/Backend/.env
+ExecStart=/var/www/sparkbridge/Backend/venv/bin/python manage.py run_upstox_market_data_collector
+Restart=always
+RestartSec=5
+KillSignal=SIGTERM
+TimeoutStopSec=60
+
+[Install]
+WantedBy=multi-user.target

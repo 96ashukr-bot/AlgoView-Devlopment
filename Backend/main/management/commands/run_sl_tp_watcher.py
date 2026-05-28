@@ -1,5 +1,6 @@
 import time
 
+from django.conf import settings
 from django.core.management.base import BaseCommand
 
 from main.sl_tp_watcher_service import get_sl_tp_watcher_service
@@ -10,7 +11,12 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--loop", action="store_true", help="Continuously run the watcher.")
-        parser.add_argument("--sleep", type=int, default=5, help="Seconds to wait between scans in loop mode.")
+        parser.add_argument(
+            "--sleep",
+            type=int,
+            default=getattr(settings, "SL_TP_WATCHER_SLEEP_SECONDS", 1),
+            help="Seconds to wait between scans in loop mode.",
+        )
         parser.add_argument("--client-id", type=int, default=None, help="Optional client ID filter.")
         parser.add_argument("--history-id", type=str, default=None, help="Optional history ID filter.")
 

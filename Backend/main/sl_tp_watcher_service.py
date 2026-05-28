@@ -14,6 +14,8 @@ from main.angelone.utils.logging_utils import TradingLogger
 from main.angelone.utils.symbol_parser import get_symbol_parser
 from main.execution_engine import ExecutionRequest, get_execution_engine
 from main.models import ClientBrokerdetails, ClientTradeSetting, Tradeorderhistory
+from main.services.live_price_cache import get_live_price
+from main.services.upstox_market_data import UpstoxInstrumentResolver
 
 logger = TradingLogger("sl_tp_watcher")
 
@@ -121,6 +123,7 @@ class SLTPWatcherService:
         self._contract_manager = ContractMasterManager.get_instance()
         self._symbol_parser = get_symbol_parser()
         self._execution_engine = get_execution_engine()
+        self._upstox_resolver = UpstoxInstrumentResolver()
 
     @staticmethod
     def _to_float(value: Any) -> Optional[float]:
@@ -146,6 +149,7 @@ class SLTPWatcherService:
         queryset = Tradeorderhistory.objects.select_related("client").filter(
             transaction_type__iexact="BUY",
             order_id__isnull=False,
+            date=timezone.localdate(),
         ).exclude(
             Q(order_id=0) | Q(trade_order_status__iexact="CLOSE")
         ).order_by("-id")
@@ -181,10 +185,65 @@ class SLTPWatcherService:
             broker_name__broker_name__iexact=broker_name,
         ).select_related("broker_name").first()
 
-    def _get_current_ltp(self, trade_order: Tradeorderhistory, broker_details: ClientBrokerdetails) -> Optional[float]:
+    def _resolve_market_instrument(self, trade_order: Tradeorderhistory):
+        instrument = self._upstox_resolver.resolve(
+            trade_order.trading_symbol or trade_order.Index_Symbol,
+            underlying=trade_order.Index_Symbol,
+        )
+        if instrument:
+            return instrument
+        order_params = trade_order.order_params if isinstance(trade_order.order_params, dict) else {}
+        expiry = order_params.get("expiry")
+        if not expiry and order_params.get("day") and order_params.get("month"):
+            year = str(order_params.get("fullyear") or order_params.get("year") or "")
+            if len(year) == 2:
+                year = f"20{year}"
+            if year:
+                expiry = f"{order_params.get('day')}-{order_params.get('month')}-{year}"
+        return self._upstox_resolver.resolve_contract(
+            underlying=order_params.get("symbol") or trade_order.Index_Symbol,
+            expiry_date=expiry,
+            strike=order_params.get("strike") or order_params.get("strike_price"),
+            option_type=order_params.get("option_type") or order_params.get("Type"),
+        )
+
+    def _get_cached_current_ltp(self, trade_order: Tradeorderhistory) -> tuple[Optional[float], Optional[str]]:
+        instrument = self._resolve_market_instrument(trade_order)
+        payload = None
+        if instrument:
+            payload = get_live_price(instrument_key=instrument.instrument_key)
+        if not payload:
+            payload = get_live_price(trading_symbol=trade_order.trading_symbol)
+        if not payload and instrument:
+            payload = get_live_price(
+                underlying=instrument.underlying,
+                expiry_date=instrument.expiry_date,
+                strike=instrument.strike,
+                option_type=instrument.option_type,
+            )
+        if not payload:
+            return None, "Live price is not available in the central cache."
+        if not payload.get("is_fresh"):
+            age = payload.get("age_seconds")
+            age_text = f" Age: {age}s." if age is not None else ""
+            return None, f"Live price is stale.{age_text}"
+        ltp = self._to_float(payload.get("ltp"))
+        if ltp is None or ltp <= 0:
+            return None, "Cached live price is invalid."
+        return ltp, None
+
+    def _get_current_ltp(self, trade_order: Tradeorderhistory, broker_details: ClientBrokerdetails) -> tuple[Optional[float], Optional[str]]:
+        cached_ltp, cache_error = self._get_cached_current_ltp(trade_order)
+        if cached_ltp is not None:
+            return cached_ltp, None
+
         trading_symbol = str(trade_order.trading_symbol or "").strip().upper()
         if not trading_symbol:
-            return None
+            return None, cache_error or "Trading symbol is missing."
+
+        broker = str(trade_order.broker or "").strip().lower()
+        if broker not in {"angel one", "angle one"}:
+            return None, cache_error
 
         self._contract_manager.initialize(blocking=True)
         contract = next(iter(self._contract_manager.get_contracts_by_symbol(trading_symbol)), None)
@@ -195,11 +254,11 @@ class SLTPWatcherService:
                 tradingsymbol=contract.symbol,
                 broker_details=broker_details,
             )
-            return ltp or None
+            return ltp or None, None if ltp else cache_error
 
         parsed = self._symbol_parser.parse(trading_symbol)
         if not parsed.is_option:
-            return None
+            return None, cache_error
 
         expiry = parsed.expiry_date
         contract, _resolution = self._contract_manager.resolve_option_contract(
@@ -211,7 +270,7 @@ class SLTPWatcherService:
             prefer_weekly=True,
         )
         if not contract:
-            return None
+            return None, cache_error
 
         ltp = get_ltp(
             symbol_token=contract.token,
@@ -219,7 +278,7 @@ class SLTPWatcherService:
             tradingsymbol=contract.symbol,
             broker_details=broker_details,
         )
-        return ltp or None
+        return ltp or None, None if ltp else cache_error
 
     def _resolve_thresholds(
         self,
@@ -282,12 +341,18 @@ class SLTPWatcherService:
         target_price: Optional[float],
     ) -> ExecutionRequest:
         parsed = self._symbol_parser.parse(str(trade_order.trading_symbol or ""))
+        market_instrument = None
         if not parsed.is_option:
-            raise ValueError(f"Trading symbol '{trade_order.trading_symbol}' is not a supported option symbol")
+            market_instrument = self._resolve_market_instrument(trade_order)
+            if not market_instrument:
+                raise ValueError(f"Trading symbol '{trade_order.trading_symbol}' is not a supported option symbol")
 
-        expiry = parsed.expiry_date or getattr(trade_setting, "expiry_date", None)
+        expiry = (parsed.expiry_date if parsed.is_option else None) or getattr(market_instrument, "expiry_date", None) or getattr(trade_setting, "expiry_date", None)
         if not expiry:
             raise ValueError("Expiry could not be resolved for auto-exit")
+        underlying = parsed.underlying if parsed.is_option else market_instrument.underlying
+        strike = parsed.strike if parsed.is_option else market_instrument.strike
+        option_type = parsed.option_type if parsed.is_option else market_instrument.option_type
 
         return ExecutionRequest(
             LivePrice=current_ltp,
@@ -295,11 +360,11 @@ class SLTPWatcherService:
             trade=trade_setting,
             user=trade_order.client,
             transaction_type="SELL",
-            symbol=parsed.underlying,
+            symbol=underlying,
             quantity=int(self._to_float(trade_order.EntryQty) or self._to_float(trade_setting.quantity) or 0),
             strategy=trade_order.strategy or trade_setting.strategy,
             ordertype=(trade_setting.order_type or "LIMIT"),
-            product_type=trade_setting.product_type or trade_order.order_params.get("product_type"),
+            product_type=trade_setting.product_type or (trade_order.order_params or {}).get("product_type"),
             price=None,
             Lots=trade_order.Lot or 1,
             trade_order_status="CLOSE",
@@ -326,8 +391,8 @@ class SLTPWatcherService:
             month=expiry.strftime("%b").upper(),
             year=expiry.strftime("%y"),
             fullyear=expiry.strftime("%Y"),
-            strike=parsed.strike,
-            option_type=parsed.option_type,
+            strike=strike,
+            option_type=option_type,
             order_params={
                 "trigger_source": "sl_tp_watcher",
                 "trigger_reason": trigger_reason,
@@ -347,14 +412,6 @@ class SLTPWatcherService:
         cache.delete(lock_key)
 
     def process_trade(self, trade_order: Tradeorderhistory, execute_exit: bool = True) -> WatchResult:
-        broker = str(trade_order.broker or "").strip()
-        if broker.lower() not in {"angel one", "angle one"}:
-            return self._build_watch_result(
-                trade_order,
-                status="skipped",
-                message=f"Broker '{broker}' is not supported by the watcher yet.",
-            )
-
         trade_setting = self._find_trade_setting(trade_order)
         if not trade_setting:
             return self._build_watch_result(
@@ -381,12 +438,12 @@ class SLTPWatcherService:
                 message="No active stop-loss or target is configured.",
             )
 
-        current_ltp = self._get_current_ltp(trade_order, broker_details)
+        current_ltp, ltp_error = self._get_current_ltp(trade_order, broker_details)
         if current_ltp is None or current_ltp <= 0:
             return self._build_watch_result(
                 trade_order,
                 status="skipped",
-                message="Live price could not be fetched.",
+                message=ltp_error or "Live price could not be fetched.",
                 current_ltp=current_ltp,
                 stop_loss_price=stop_loss_price,
                 target_price=target_price,
