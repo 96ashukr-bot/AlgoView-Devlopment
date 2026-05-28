@@ -13,7 +13,7 @@ from main.dhanapi import place_dhan_orders
 from main.fivepaisa import fetch_access_token_5paisa, place_5paisa_order
 from main.fyersapi import place_fyers_orders
 from main.groww import generate_groww_access_token
-from main.models import ClientBrokerdetails, Tradeorderhistory
+from main.models import ClientBrokerdetails, MarketDataCredential, Tradeorderhistory
 from main.upstock import place_upstox_orders
 from main.zerodha import place_zerodha_orders
 from main.broker_registry import get_broker_setup_spec, broker_field_is_configured
@@ -792,6 +792,58 @@ def _save_session_tokens_compat(broker_details, request_token, access_token, ref
                 logger.debug("Unable to write execution node broker verification log", exc_info=True)
 
 
+def _save_market_data_upstox_tokens(credential, request_token, access_token, refresh_token=None, expiry=None):
+    credential.request_token = request_token
+    credential.set_session_tokens(access_token=access_token, refresh_token=refresh_token, expiry=expiry)
+    credential.save()
+
+
+def _handle_market_data_upstox_callback(request_token):
+    if not request_token:
+        return JsonResponse({"error": "Authorization code not provided"}, status=400)
+
+    credential = MarketDataCredential.objects.filter(
+        provider=MarketDataCredential.PROVIDER_UPSTOX,
+        is_active=True,
+    ).select_related("execution_node").first()
+    if not credential or not credential.api_key or not credential.get_api_secret():
+        return JsonResponse({"message": "Failed", "error": "Market data Upstox credentials are incomplete."}, status=400)
+
+    proxy_config = build_requests_proxy_config(credential.execution_node)
+    if not proxy_config:
+        return JsonResponse({"message": "Failed", "error": "Market data execution route/proxy is required."}, status=400)
+
+    data = {
+        "code": request_token,
+        "client_id": credential.api_key,
+        "client_secret": credential.get_api_secret(),
+        "redirect_uri": _broker_callback_url(),
+        "grant_type": "authorization_code",
+    }
+    response = requests.post("https://api.upstox.com/v2/login/authorization/token", data=data, timeout=10, proxies=proxy_config)
+    payload = response.json() if response.content else {}
+    if response.status_code != 200:
+        return JsonResponse({"message": "Failed", "error": payload}, status=response.status_code)
+
+    access_token = payload.get("access_token")
+    refresh_token = payload.get("refresh_token")
+    if not access_token:
+        return JsonResponse({"message": "Failed", "error": payload or "No access token returned."}, status=400)
+
+    expiry_time = None
+    expires_in = payload.get("expires_in")
+    if expires_in:
+        try:
+            expiry_time = now() + timedelta(seconds=int(expires_in))
+        except (TypeError, ValueError):
+            expiry_time = None
+    if expiry_time is None:
+        expiry_time = _end_of_trading_day_session_cutoff()
+
+    _save_market_data_upstox_tokens(credential, request_token, access_token, refresh_token=refresh_token, expiry=expiry_time)
+    return JsonResponse({"message": "success", "token_saved": True, "broker": "market-data-upstox"})
+
+
 def _next_session_cutoff(hour, minute):
     now_time = now()
     expiry_date = now_time.date() if now_time.hour < hour or (now_time.hour == hour and now_time.minute < minute) else now_time.date() + timedelta(days=1)
@@ -1206,6 +1258,10 @@ class BrokerCallbackView(APIView):
             broker_state = _broker_callback_param(request, "state", "State", "redirect_params") or ""
             state_record = CallbackStateService().consume(broker_state) if broker_state else None
             if state_record:
+                if state_record.broker_details_id == 0 and state_record.client_code == "market-data-upstox":
+                    request_token = _broker_callback_param(request, "code")
+                    response = _handle_market_data_upstox_callback(request_token)
+                    return self._finalize_callback_response(request, response, state_record, "market-data-upstox")
                 broker_details = ClientBrokerdetails.objects.select_related("broker_name").filter(id=state_record.broker_details_id, client_id=state_record.user_id).first()
                 if not broker_details or not broker_details.broker_name:
                     raise ValidationError("Broker details not found for callback state")

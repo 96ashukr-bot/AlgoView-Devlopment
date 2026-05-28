@@ -1099,6 +1099,60 @@ class WebsocketDetails(models.Model):
     def __str__(self):
         return f"Auth_token: {self.Auth_token}"
 
+
+class MarketDataCredential(models.Model):
+    PROVIDER_UPSTOX = "upstox"
+    PROVIDER_CHOICES = ((PROVIDER_UPSTOX, "Upstox"),)
+
+    provider = models.CharField(max_length=50, choices=PROVIDER_CHOICES, unique=True)
+    api_key = models.TextField(null=True, blank=True)
+    encrypted_api_secret = models.TextField(null=True, blank=True)
+    execution_node = models.ForeignKey(
+        "ExecutionNode",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="market_data_credentials",
+    )
+    request_token = models.TextField(null=True, blank=True)
+    encrypted_access_token = models.TextField(null=True, blank=True)
+    encrypted_refresh_token = models.TextField(null=True, blank=True)
+    access_token_expiry = models.DateTimeField(null=True, blank=True)
+    token_status = models.CharField(max_length=50, default="inactive", null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    tokenCreatedAt = models.DateTimeField(null=True, blank=True)
+    updated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.provider} market data"
+
+    def _get_secret(self, field_name: str):
+        return decrypt_value(getattr(self, field_name, None))
+
+    def _set_secret(self, field_name: str, value) -> None:
+        setattr(self, field_name, encrypt_value(value.strip() if isinstance(value, str) else value))
+
+    def get_api_secret(self):
+        return self._get_secret("encrypted_api_secret")
+
+    def set_api_secret(self, value) -> None:
+        self._set_secret("encrypted_api_secret", value or None)
+
+    def get_access_token_secure(self):
+        return self._get_secret("encrypted_access_token")
+
+    def get_refresh_token_secure(self):
+        return self._get_secret("encrypted_refresh_token")
+
+    def set_session_tokens(self, access_token, refresh_token=None, expiry=None) -> None:
+        self._set_secret("encrypted_access_token", access_token or None)
+        self._set_secret("encrypted_refresh_token", refresh_token or None)
+        self.access_token_expiry = expiry
+        self.token_status = "active" if access_token else "inactive"
+        self.tokenCreatedAt = timezone.now() if access_token else self.tokenCreatedAt
+
 class CompanySmtpDetails(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="company_smtp",null=True, blank=True)  # Changed related_name
     email_host = models.CharField(max_length=255, blank=True, null=True)

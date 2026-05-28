@@ -203,6 +203,8 @@ urlpatterns = [
     path('trade-history-filter/', TradeOrderHistoryFilterView.as_view(), name='trade_history_filter'),
     path("get-websocket-token/", WebsocketTokenView.as_view(), name="websocket-token"),
     path("update-websocket-token/", UpdateWebSocketToken.as_view(), name="websocket-token"),
+    path("market-data/upstox/settings/", MarketDataUpstoxSettingsView.as_view(), name="market-data-upstox-settings"),
+    path("market-data/upstox/connect/", MarketDataUpstoxConnectView.as_view(), name="market-data-upstox-connect"),
     path('get-strategies-tradehistory/', StrategyListView.as_view(), name='get-strategies-tradehistory'), # for get the tradehistory strategy
 
     path('get-client-strategies-tradesetting/', ClientStrategyListView.as_view(), name='get-client-strategies-tradesetting'),

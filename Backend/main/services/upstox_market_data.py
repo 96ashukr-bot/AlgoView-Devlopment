@@ -19,7 +19,7 @@ from google.protobuf.json_format import MessageToDict
 from main import MarketDataFeed_pb2 as pb
 from main.broker_instrument_cache import load_upstox_instruments
 from main.brokers.utils import get_access_token
-from main.models import ClientBrokerdetails, Tradeorderhistory
+from main.models import ClientBrokerdetails, MarketDataCredential, Tradeorderhistory
 from main.services.live_price_cache import build_live_price_payload, cache_live_price, normalize_symbol_key
 from main.services.option_ltp_fallback import cache_option_ltp
 from main.services.proxy_utils import build_requests_proxy_config
@@ -267,6 +267,24 @@ def _expiry_from_parts(day: Any, month: Any, year: Any) -> Optional[str]:
 
 
 def get_market_data_broker_details() -> Optional[ClientBrokerdetails]:
+    dedicated = (
+        MarketDataCredential.objects.select_related("execution_node")
+        .filter(provider=MarketDataCredential.PROVIDER_UPSTOX, is_active=True)
+        .first()
+    )
+    if dedicated:
+        token = get_access_token(dedicated)
+        expiry = getattr(dedicated, "access_token_expiry", None)
+        node = getattr(dedicated, "execution_node", None)
+        if (
+            token
+            and (not expiry or expiry > timezone.now())
+            and node
+            and node.is_active
+            and (node.execution_type != node.EXECUTION_TYPE_PROXY or node.proxy_public_ip_verified)
+        ):
+            return dedicated
+
     client_id = str(getattr(settings, "MARKET_DATA_UPSTOX_CLIENT_ID", "") or "").strip()
     queryset = (
         ClientBrokerdetails.objects.select_related("broker_name", "execution_node", "client")

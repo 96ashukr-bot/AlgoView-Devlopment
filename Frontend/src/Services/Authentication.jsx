@@ -4252,6 +4252,62 @@ export const updateWebSocket = async (data) => {
   }
 };
 
+export const getMarketDataUpstoxSettings = async () => {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error("No authentication token found.");
+  }
+
+  try {
+    const response = await axios.get(`${baseUrl}/market-data/upstox/settings/`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || error.response?.data?.detail || "Failed to fetch market data settings.");
+  }
+};
+
+export const updateMarketDataUpstoxSettings = async (data) => {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error("No authentication token found.");
+  }
+
+  try {
+    const response = await axios.put(`${baseUrl}/market-data/upstox/settings/`, data, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || error.response?.data?.detail || "Failed to update market data settings.");
+  }
+};
+
+export const connectMarketDataUpstox = async () => {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error("No authentication token found.");
+  }
+
+  try {
+    const response = await axios.post(`${baseUrl}/market-data/upstox/connect/`, {}, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || error.response?.data?.detail || "Failed to start Upstox market data login.");
+  }
+};
+
 export const handleAuthCallback = async (state, callbackPayload) => {
   const token = getAuthToken();
   if (!token) {

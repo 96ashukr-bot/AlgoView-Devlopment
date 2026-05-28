@@ -5,6 +5,7 @@ from main.serializers import *
 from rest_framework import status
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import AllowAny
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
 from main.serializers import *#CompanyProfileSerializer
@@ -16,6 +17,12 @@ from django.utils.timezone import now, timedelta
 from .models import WebsocketDetails
 from django.core.mail import EmailMultiAlternatives
 from main.utils import get_smtp_connection
+from main.angelone.services.state_service import CallbackStateService
+from main.permissions import is_superadmin_user
+from main.services.proxy_utils import build_requests_proxy_config
+from django.conf import settings
+from urllib.parse import urlencode, urlparse, urlunparse
+import secrets
 
 
 class UpdateWebSocketToken(APIView):
@@ -87,7 +94,6 @@ class WebsocketTokenView(APIView):
             status=status.HTTP_404_NOT_FOUND,
         )
 
-
     def delete(self, request, *args, **kwargs):
         """Update the token or create a new one, and set expiry time."""
         data = request.data
@@ -99,7 +105,6 @@ class WebsocketTokenView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Create or update the latest token
         token, created = WebsocketDetails.objects.update_or_create(
             id=WebsocketDetails.objects.order_by("-id").first().id
             if WebsocketDetails.objects.exists()
@@ -107,13 +112,10 @@ class WebsocketTokenView(APIView):
             defaults={"Auth_token": auth_token, "token_status": "active"},
         )
 
-        # Set expiry for **next day's** 3:30 AM
         now_time = now()
         if now_time.hour < 3 or (now_time.hour == 3 and now_time.minute < 30):
-            # It's before 3:30 AM today, so expire today at 3:30 AM
             expiry_date = now_time.date()
         else:
-            # It's after 3:30 AM, so expire tomorrow at 3:30 AM
             expiry_date = now_time.date() + timedelta(days=1)
 
         token.expiry_time = datetime.combine(expiry_date, datetime.min.time()) + timedelta(
@@ -129,6 +131,132 @@ class WebsocketTokenView(APIView):
             },
             status=status.HTTP_200_OK if not created else status.HTTP_201_CREATED,
         )
+
+
+def _broker_callback_url():
+    configured_url = getattr(settings, "REDIRECT_URL", "").strip()
+    if not configured_url:
+        return configured_url
+    parsed = urlparse(configured_url)
+    if parsed.path.rstrip("/") in {"/callback", "/auth-callback", "/callback-angelone"}:
+        parsed = parsed._replace(path="/api/broker/callback/")
+        return urlunparse(parsed)
+    return configured_url
+
+
+def _market_data_return_url(request):
+    configured_frontend = getattr(settings, "FRONTEND_APP_URL", "").rstrip("/")
+    origin = (request.headers.get("Origin") or "").rstrip("/")
+    if not origin:
+        referer = (request.headers.get("Referer") or "").strip()
+        if referer:
+            parsed = urlparse(referer)
+            if parsed.scheme and parsed.netloc:
+                origin = f"{parsed.scheme}://{parsed.netloc}"
+    base = origin or configured_frontend
+    return f"{base}/settings/websocket" if base else None
+
+
+def _market_data_payload(credential):
+    node = credential.execution_node
+    return {
+        "provider": credential.provider,
+        "api_key": credential.api_key or "",
+        "api_secret_configured": bool(credential.get_api_secret()),
+        "execution_node": node.id if node else None,
+        "execution_node_name": node.name if node else "",
+        "is_active": bool(credential.is_active),
+        "token_status": credential.token_status or "inactive",
+        "token_configured": bool(credential.get_access_token_secure()),
+        "access_token_expiry": credential.access_token_expiry.isoformat() if credential.access_token_expiry else None,
+        "tokenCreatedAt": credential.tokenCreatedAt.isoformat() if credential.tokenCreatedAt else None,
+    }
+
+
+class MarketDataUpstoxSettingsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def _require_superadmin(self, request):
+        if not is_superadmin_user(request.user):
+            return Response({"detail": "Only superadmin can manage market data settings."}, status=status.HTTP_403_FORBIDDEN)
+        return None
+
+    def get(self, request, *args, **kwargs):
+        denied = self._require_superadmin(request)
+        if denied:
+            return denied
+        credential, _ = MarketDataCredential.objects.get_or_create(provider=MarketDataCredential.PROVIDER_UPSTOX)
+        if credential.access_token_expiry and credential.access_token_expiry <= now():
+            credential.token_status = "inactive"
+            credential.save(update_fields=["token_status", "updated_at"])
+        return Response({"status": "success", "data": _market_data_payload(credential)})
+
+    def put(self, request, *args, **kwargs):
+        denied = self._require_superadmin(request)
+        if denied:
+            return denied
+        credential, _ = MarketDataCredential.objects.get_or_create(provider=MarketDataCredential.PROVIDER_UPSTOX)
+        api_key = str(request.data.get("api_key") or "").strip()
+        api_secret = request.data.get("api_secret")
+        execution_node_id = request.data.get("execution_node")
+        is_active = request.data.get("is_active", True)
+
+        if not api_key:
+            return Response({"status": "failed", "message": "Upstox API Key is required."}, status=status.HTTP_400_BAD_REQUEST)
+        if not credential.get_api_secret() and not api_secret:
+            return Response({"status": "failed", "message": "Upstox API Secret Key is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        node = None
+        if execution_node_id:
+            node = ExecutionNode.objects.filter(id=execution_node_id).first()
+            if not node:
+                return Response({"status": "failed", "message": "Selected execution route was not found."}, status=status.HTTP_400_BAD_REQUEST)
+
+        credential.api_key = api_key
+        if api_secret:
+            credential.set_api_secret(str(api_secret))
+        credential.execution_node = node
+        credential.is_active = str(is_active).lower() not in {"false", "0", "no", "off"}
+        credential.updated_by = request.user
+        credential.save()
+        return Response({"status": "success", "message": "Market data account saved.", "data": _market_data_payload(credential)})
+
+
+class MarketDataUpstoxConnectView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        if not is_superadmin_user(request.user):
+            return Response({"detail": "Only superadmin can generate the market data token."}, status=status.HTTP_403_FORBIDDEN)
+        credential = MarketDataCredential.objects.filter(provider=MarketDataCredential.PROVIDER_UPSTOX).select_related("execution_node").first()
+        if not credential or not credential.api_key or not credential.get_api_secret():
+            return Response({"status": "failed", "message": "Save Upstox API Key and Secret first."}, status=status.HTTP_400_BAD_REQUEST)
+        node = credential.execution_node
+        if not node or not node.is_active:
+            return Response({"status": "failed", "message": "Select an active execution route first."}, status=status.HTTP_400_BAD_REQUEST)
+        if node.execution_type == node.EXECUTION_TYPE_PROXY and not node.proxy_public_ip_verified:
+            return Response({"status": "failed", "message": "Selected execution route proxy is not verified."}, status=status.HTTP_400_BAD_REQUEST)
+        if not build_requests_proxy_config(node):
+            return Response({"status": "failed", "message": "Selected execution route does not have proxy details."}, status=status.HTTP_400_BAD_REQUEST)
+
+        state = secrets.token_urlsafe(24)
+        CallbackStateService().create(
+            state=state,
+            user_id=request.user.id,
+            broker_details_id=0,
+            client_code="market-data-upstox",
+            frontend_redirect_url=_market_data_return_url(request),
+        )
+        params = {
+            "response_type": "code",
+            "client_id": credential.api_key,
+            "redirect_uri": _broker_callback_url(),
+            "state": state,
+        }
+        return Response({
+            "status": "success",
+            "redirect_url": f"https://api.upstox.com/v2/login/authorization/dialog?{urlencode(params)}",
+        })
 class WebsocketTokenViewww(APIView):
     def get(self, request, *args, **kwargs):
         """Retrieve the latest valid token from the database."""
