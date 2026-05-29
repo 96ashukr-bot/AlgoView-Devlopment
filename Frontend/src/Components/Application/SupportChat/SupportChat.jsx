@@ -1,4 +1,4 @@
-import React, { Fragment, useEffect, useMemo, useState } from "react";
+import React, { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Badge,
   Button,
@@ -25,6 +25,7 @@ import "./SupportChat.css";
 const roleName = (profile) => String(profile?.role?.name || "").toLowerCase();
 const isStaffProfile = (profile) => ["super-admin", "superadmin", "admin", "sub-admin", "subadmin"].includes(roleName(profile));
 const isSuperProfile = (profile) => ["super-admin", "superadmin", "admin"].includes(roleName(profile));
+const CHAT_REFRESH_INTERVAL_MS = 10000;
 
 const formatDateTime = (value) => {
   if (!value) return "-";
@@ -53,13 +54,26 @@ const SupportChat = () => {
   const [loading, setLoading] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState("");
+  const selectedThreadIdRef = useRef(null);
+  const filtersRef = useRef(filters);
 
   const staff = useMemo(() => isStaffProfile(profile), [profile]);
   const superStaff = useMemo(() => isSuperProfile(profile), [profile]);
 
-  const loadThreads = async (nextFilters = filters) => {
-    setLoading(true);
-    setError("");
+  useEffect(() => {
+    selectedThreadIdRef.current = selectedThreadId;
+  }, [selectedThreadId]);
+
+  useEffect(() => {
+    filtersRef.current = filters;
+  }, [filters]);
+
+  const loadThreads = useCallback(async (nextFilters = filtersRef.current, options = {}) => {
+    const silent = Boolean(options.silent);
+    if (!silent) {
+      setLoading(true);
+      setError("");
+    }
     try {
       const data = await getSupportChatThreads({
         status: nextFilters.status || undefined,
@@ -67,35 +81,46 @@ const SupportChat = () => {
       });
       const results = data.results || [];
       setThreads(results);
-      if (!selectedThreadId && results.length > 0) {
+      if (!selectedThreadIdRef.current && results.length > 0) {
         setSelectedThreadId(results[0].id);
       }
     } catch (err) {
-      setError(err?.response?.data?.message || err.message || "Unable to load chats.");
-      setThreads([]);
+      if (!silent) {
+        setError(err?.response?.data?.message || err.message || "Unable to load chats.");
+        setThreads([]);
+      }
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
-  };
+  }, []);
 
-  const loadThreadDetail = async (threadId) => {
+  const loadThreadDetail = useCallback(async (threadId, options = {}) => {
     if (!threadId) {
       setThreadDetail(null);
       return;
     }
-    setDetailLoading(true);
-    setError("");
+    const silent = Boolean(options.silent);
+    if (!silent) {
+      setDetailLoading(true);
+      setError("");
+    }
     try {
       const data = await getSupportChatThread(threadId);
       setThreadDetail(data);
       setThreads((prev) => prev.map((thread) => (thread.id === threadId ? data.thread : thread)));
     } catch (err) {
-      setError(err?.response?.data?.message || err.message || "Unable to load chat.");
-      setThreadDetail(null);
+      if (!silent) {
+        setError(err?.response?.data?.message || err.message || "Unable to load chat.");
+        setThreadDetail(null);
+      }
     } finally {
-      setDetailLoading(false);
+      if (!silent) {
+        setDetailLoading(false);
+      }
     }
-  };
+  }, []);
 
   useEffect(() => {
     const init = async () => {
@@ -112,11 +137,24 @@ const SupportChat = () => {
       loadThreads();
     };
     init();
-  }, []);
+  }, [loadThreads]);
 
   useEffect(() => {
     loadThreadDetail(selectedThreadId);
-  }, [selectedThreadId]);
+  }, [loadThreadDetail, selectedThreadId]);
+
+  useEffect(() => {
+    if (!profile) return undefined;
+    const intervalId = window.setInterval(async () => {
+      if (document.hidden) return;
+      await loadThreads(filtersRef.current, { silent: true });
+      if (selectedThreadIdRef.current) {
+        await loadThreadDetail(selectedThreadIdRef.current, { silent: true });
+      }
+    }, CHAT_REFRESH_INTERVAL_MS);
+
+    return () => window.clearInterval(intervalId);
+  }, [loadThreadDetail, loadThreads, profile]);
 
   const handleFilterChange = (event) => {
     const { name, value } = event.target;
@@ -190,6 +228,9 @@ const SupportChat = () => {
                 <H3>Support Chat</H3>
               </div>
               <div className="d-flex gap-2">
+                <Badge color="light-success" className="align-self-center">
+                  Auto refresh on
+                </Badge>
                 <Button color="light" onClick={() => loadThreads()} disabled={loading}>
                   <i className="fa fa-refresh me-1" />
                   Refresh
