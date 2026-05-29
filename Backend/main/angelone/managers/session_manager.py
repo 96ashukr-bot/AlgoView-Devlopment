@@ -340,7 +340,11 @@ class SessionManager:
         if not session.refresh_token:
             return False
         obj = session.smart_connect or session.attach_smart_connect()
-        profile = obj.getProfile(session.refresh_token)
+        try:
+            profile = obj.getProfile(session.refresh_token)
+        except Exception as exc:
+            logger.warning("Angel One remote validation failed", client_id=session.client_id, error=str(exc))
+            return False
         if not isinstance(profile, dict) or not profile.get("status"):
             return False
         now = timezone.now()
@@ -684,16 +688,24 @@ class SessionManager:
         if not session:
             return {"status": "error", "message": "Session not found"}
         if not session.can_refresh():
-            return {"status": "error", "message": "Cannot refresh - token expired"}
+            return self._invalid_token_response(session, "Angel One session is invalid or expired. Please login again.")
 
         obj = session.smart_connect or session.attach_smart_connect()
         session.status = SessionStatus.REFRESHING
-        data = obj.generateToken(session.refresh_token)
+        try:
+            data = obj.generateToken(session.refresh_token)
+        except Exception as exc:
+            if self._is_invalid_token_error(str(exc)):
+                return self._invalid_token_response(session, "Angel One session is invalid or expired. Please login again.")
+            raise
         if not isinstance(data, dict) or not data.get("status"):
+            message = data.get("message", "Refresh failed") if isinstance(data, dict) else "Refresh failed"
+            if self._is_invalid_token_payload(data) or self._is_invalid_token_error(message):
+                return self._invalid_token_response(session, "Angel One session is invalid or expired. Please login again.")
             session.status = SessionStatus.INVALID
             self._persist_session(session)
             self._breaker.record_failure()
-            return {"status": "error", "message": data.get("message", "Refresh failed") if isinstance(data, dict) else "Refresh failed"}
+            return {"status": "error", "message": message}
 
         response_data = data.get("data", {}) or {}
         now = timezone.now()
@@ -716,3 +728,31 @@ class SessionManager:
             "refresh_token": session.refresh_token,
             "feed_token": session.feed_token,
         }
+
+    @staticmethod
+    def _is_invalid_token_error(message: str) -> bool:
+        normalized = str(message or "").lower()
+        return (
+            "invalid token" in normalized
+            or "ag8001" in normalized
+            or "string indices must be integers" in normalized
+        )
+
+    def _is_invalid_token_payload(self, payload: Any) -> bool:
+        if not isinstance(payload, dict):
+            return False
+        return self._is_invalid_token_error(
+            " ".join(
+                str(payload.get(key) or "")
+                for key in ("message", "errorCode", "error_code", "error")
+            )
+        )
+
+    def _invalid_token_response(self, session: ClientSession, message: str) -> Dict[str, Any]:
+        session.status = SessionStatus.INVALID
+        session.access_token = None
+        session.feed_token = None
+        session.session_expiry = None
+        self._persist_session(session)
+        self._breaker.record_failure()
+        return {"status": "error", "message": message, "error_code": "TOKEN_EXPIRED"}

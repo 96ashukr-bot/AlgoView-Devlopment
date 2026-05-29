@@ -350,6 +350,22 @@ class AuthService:
                     ])
                 except Exception as e:
                     logger.error("Failed to persist ensured session", client_id=client_id, error=str(e))
+        elif result.get("error_code") == "TOKEN_EXPIRED" and broker_details:
+            try:
+                broker_details.clear_session_tokens()
+                broker_details.save(update_fields=[
+                    "encrypted_access_token",
+                    "encrypted_refresh_token",
+                    "encrypted_feed_token",
+                    "access_token_expiry",
+                    "isTokenExpired",
+                    "request_token",
+                    "access_token",
+                    "refreshToken",
+                    "feed_token",
+                ])
+            except Exception as e:
+                logger.error("Failed to clear expired Angel One session", client_id=client_id, error=str(e))
         return result
     
     def validate_credentials(

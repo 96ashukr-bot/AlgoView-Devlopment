@@ -14,7 +14,7 @@ from django.db.migrations.loader import MigrationLoader
 from django.test import RequestFactory, TestCase, override_settings
 from rest_framework.test import APIRequestFactory, force_authenticate
 
-from main.angelone.managers.session_manager import SessionManager
+from main.angelone.managers.session_manager import SessionManager, SessionStatus
 from main.angelone.managers.contract_manager import Contract
 from main.angelone.constants import MARKET_CLOSE_HOUR, MARKET_CLOSE_MINUTE, TIMEZONE
 from main.angelone.services.state_service import CallbackStateService
@@ -581,6 +581,33 @@ class AngelOneSessionManagerTests(TestCase):
         self.assertNotEqual(payload["access_token"], "jwt-token")
         self.assertNotEqual(payload["refresh_token"], "refresh-token")
         self.assertNotEqual(payload["feed_token"], "feed-token")
+
+    def test_refresh_invalid_token_sdk_type_error_returns_expired_session(self):
+        manager = SessionManager.__new__(SessionManager)
+        manager._persist_session = mock.Mock()
+        manager._breaker = mock.Mock()
+        smart_connect = SimpleNamespace(
+            generateToken=mock.Mock(side_effect=TypeError("string indices must be integers, not 'str'"))
+        )
+        session = SimpleNamespace(
+            refresh_token="expired-refresh",
+            access_token="old-jwt",
+            feed_token="old-feed",
+            session_expiry=timezone.now(),
+            status=SessionStatus.ACTIVE,
+            smart_connect=smart_connect,
+            can_refresh=lambda: True,
+            attach_smart_connect=lambda: smart_connect,
+        )
+
+        response = manager._perform_refresh(session)
+
+        self.assertEqual(response["status"], "error")
+        self.assertEqual(response["error_code"], "TOKEN_EXPIRED")
+        self.assertIn("Please login again", response["message"])
+        self.assertEqual(session.status, SessionStatus.INVALID)
+        self.assertIsNone(session.access_token)
+        self.assertIsNone(session.feed_token)
 
 
 class MigrationSafetyTests(TestCase):
