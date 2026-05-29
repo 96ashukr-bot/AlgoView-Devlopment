@@ -57,6 +57,7 @@ const SupportChat = () => {
   const selectedThreadIdRef = useRef(null);
   const filtersRef = useRef(filters);
   const refreshInProgressRef = useRef(false);
+  const messageListRef = useRef(null);
 
   const staff = useMemo(() => isStaffProfile(profile), [profile]);
   const superStaff = useMemo(() => isSuperProfile(profile), [profile]);
@@ -162,20 +163,34 @@ const SupportChat = () => {
   }, [loadThreadDetail, selectedThreadId]);
 
   useEffect(() => {
-    const refreshIfVisible = () => {
-      if (document.hidden) return;
-      refreshChatData({ silent: true });
+    let timeoutId;
+    let cancelled = false;
+
+    const isVisible = () => typeof document === "undefined" || !document.hidden;
+    const scheduleRefresh = () => {
+      timeoutId = window.setTimeout(runRefresh, CHAT_REFRESH_INTERVAL_MS);
+    };
+    const runRefresh = async () => {
+      if (cancelled) return;
+      if (isVisible()) {
+        await refreshChatData({ silent: true });
+      }
+      if (!cancelled) {
+        scheduleRefresh();
+      }
     };
     const handleVisibilityChange = () => {
-      if (!document.hidden) {
+      if (isVisible()) {
         refreshChatData({ silent: true });
       }
     };
-    const intervalId = window.setInterval(refreshIfVisible, CHAT_REFRESH_INTERVAL_MS);
+
+    scheduleRefresh();
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
-      window.clearInterval(intervalId);
+      cancelled = true;
+      window.clearTimeout(timeoutId);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [refreshChatData]);
@@ -242,6 +257,12 @@ const SupportChat = () => {
 
   const selectedThread = threadDetail?.thread;
   const messages = threadDetail?.messages || [];
+  const latestMessageId = messages.length > 0 ? messages[messages.length - 1].id : null;
+
+  useEffect(() => {
+    if (!messageListRef.current) return;
+    messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
+  }, [latestMessageId, selectedThreadId]);
 
   return (
     <Fragment>
@@ -394,7 +415,7 @@ const SupportChat = () => {
                       </div>
                     </div>
 
-                    <div className="support-message-list">
+                    <div className="support-message-list" ref={messageListRef}>
                       {messages.map((message) => {
                         const ownMessage = staff
                           ? message.sender_role !== "client"
