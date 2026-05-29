@@ -156,6 +156,25 @@ def _parse_option_contract(symbol: Any, expiry_date: Any = None, underlying: Any
             expiry=parsed_expiry,
         )
 
+    # Alice Blue style: BANKNIFTY30JUN26P54900 / NIFTY02JUN26C23900.
+    alice_match = re.match(
+        r"^(?P<under>[A-Z0-9]+?)(?P<day>\d{1,2})(?P<mon>[A-Z]{3})(?P<yy>\d{2,4})(?P<opt>[CP])(?P<strike>\d+(?:\.\d+)?)$",
+        normalized_symbol,
+    )
+    if alice_match:
+        month = _parse_month(alice_match.group("mon"))
+        year_text = alice_match.group("yy")
+        year = int(year_text) if len(year_text) == 4 else 2000 + int(year_text)
+        expiry = parsed_expiry
+        if month:
+            expiry = expiry or datetime(year, month, int(alice_match.group("day")))
+        return OptionContractHint(
+            underlying=_normalize_underlying(underlying or alice_match.group("under")),
+            strike=float(alice_match.group("strike")),
+            option_type=f"{alice_match.group('opt')}E",
+            expiry=expiry,
+        )
+
     if parsed_expiry:
         generic_match = re.match(r"^(?P<under>[A-Z0-9]+).*?(?P<strike>\d+(?:\.\d+)?)(?P<opt>CE|PE)$", normalized_symbol)
         if generic_match:

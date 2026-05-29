@@ -1689,6 +1689,7 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertEqual(cached, 188.15)
         self.assertEqual(get_cached_option_ltp("NIFTYMAY202623400PE", underlying="NIFTY"), 188.15)
         self.assertEqual(get_cached_option_ltp("NIFTY26MAY23400PE", underlying="NIFTY"), 188.15)
+        self.assertEqual(get_cached_option_ltp("NIFTY19MAY26P23400", underlying="NIFTY"), 188.15)
 
     @mock.patch("main.zerodha.KiteConnect")
     def test_zerodha_limit_order_uses_nested_last_price_variant(self, mock_kite_class):

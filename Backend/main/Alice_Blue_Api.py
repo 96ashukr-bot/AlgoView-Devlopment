@@ -24,6 +24,7 @@ from pya3.alicebluepy import encrypt_string
 from main.models import *
 from main.tasks import send_trade_email_async
 from main.broker_order_utils import extract_ltp_from_quote_payload, normalize_order_type, resolve_limit_price
+from main.services.option_ltp_fallback import cache_option_ltp, fetch_nse_option_chain_ltp, get_cached_option_ltp
 from main.trade_history_service import save_trade_order_history
 
 
@@ -685,12 +686,21 @@ def place_alice_orders(
                 try:
                     ltp_payload = alice.get_scrip_info(instrument)
                     ltp = float(extract_ltp_from_quote_payload(ltp_payload) or 0)
+                    cache_option_ltp(trading_symbol_aliceblue, ltp, underlying=symbol, source="alice-blue")
                 except Exception as e:
                     logger.error(f"{user}: Alice Blue LTP fetch failed: {str(e)}")
                     ltp = 0
 
                 if ltp == 0:
-                    return _alice_failed_response("Invalid LTP")
+                    ltp = fetch_nse_option_chain_ltp(
+                        trading_symbol_aliceblue,
+                        underlying=symbol,
+                        proxy_config=proxy_config,
+                        user=user,
+                    ) or get_cached_option_ltp(trading_symbol_aliceblue, underlying=symbol) or 0
+
+                if ltp == 0:
+                    return _alice_failed_response("Alice Blue live price is unavailable for this option. Please retry after quotes are available.")
 
             price = resolve_limit_price(explicit_price, ltp, transaction_type)
             if not price:
