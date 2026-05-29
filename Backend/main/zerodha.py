@@ -1,7 +1,7 @@
 from django.http import JsonResponse
 from kiteconnect import KiteConnect
 from main.models import ClientBrokerdetails, CompanySmtpDetails
-from main.broker_order_utils import extract_ltp_from_quote_payload, normalize_order_type, resolve_limit_price, resolve_limit_reference_price
+from main.broker_order_utils import extract_ltp_from_quote_payload, is_option_symbol, normalize_order_type, resolve_limit_price, resolve_limit_reference_price, to_float
 from main.services.option_ltp_fallback import cache_option_ltp, fetch_nse_option_chain_ltp, get_cached_option_ltp
 from main.trade_history_service import save_trade_order_history
 import logging
@@ -9,6 +9,38 @@ import requests
 logger = logging.getLogger('main')
 
 KITE_LTP_URL = "https://api.kite.trade/quote/ltp"
+ZERODHA_MAX_LIMIT_BUFFER_PERCENTAGE = 0.5
+
+
+def _zerodha_buffer_percentage(buffer_percentage=None):
+    try:
+        buffer = float(buffer_percentage)
+    except (TypeError, ValueError):
+        buffer = ZERODHA_MAX_LIMIT_BUFFER_PERCENTAGE
+    if buffer <= 0:
+        return ZERODHA_MAX_LIMIT_BUFFER_PERCENTAGE
+    return min(buffer, ZERODHA_MAX_LIMIT_BUFFER_PERCENTAGE)
+
+
+def _safe_zerodha_limit_input(explicit_price, reference_price, trading_symbol, transaction_type, user=None):
+    requested_price = to_float(explicit_price)
+    live_reference = to_float(reference_price)
+    if not requested_price or not live_reference or not is_option_symbol(trading_symbol):
+        return explicit_price
+
+    slippage_percent = abs(requested_price - live_reference) / live_reference * 100
+    if slippage_percent <= ZERODHA_MAX_LIMIT_BUFFER_PERCENTAGE:
+        return explicit_price
+
+    logger.warning(
+        "[%s] Ignoring Zerodha explicit option limit price %s for %s because it is %.2f%% away from LTP %s.",
+        user,
+        explicit_price,
+        trading_symbol,
+        slippage_percent,
+        reference_price,
+    )
+    return None
 
 def get_trading_symbol(exchange, symbol, kite, user=None):
     try:
@@ -131,7 +163,8 @@ def place_zerodha_orders(
     LivePrice, group_service, access_token, Api_key, trade_symbol, transaction_type,
     symbol, quantity, strategy, ordertype, product_type, price, user, Lots, Entry_type,
     Exit_type, Entry_price, Exit_price, EntryQty, ExitQty, webhook_signal, Exchange,
-    Segment, Index_Symbol, triggerPrice, trade_order_status, history_id, proxy_config=None):
+    Segment, Index_Symbol, triggerPrice, trade_order_status, history_id, proxy_config=None,
+    buffer_percentage=None):
     logger.info(f"[{user}] Starting Zerodha order for symbol: {symbol}, Index: {Index_Symbol}")
     if not proxy_config:
         return {"data": {"status": "Failed", "message": "Proxy/static-IP execution route is required for Zerodha orders."}}
@@ -207,7 +240,9 @@ def place_zerodha_orders(
                 logger.info(
                     f"[{user}] Zerodha LTP unavailable for {trading_symbol}; using fallback reference price {reference_price}."
                 )
-            price = resolve_limit_price(price, reference_price, transaction_type)
+            effective_buffer_percentage = _zerodha_buffer_percentage(buffer_percentage)
+            safe_price_input = _safe_zerodha_limit_input(price, reference_price, trading_symbol, transaction_type, user=user)
+            price = resolve_limit_price(safe_price_input, reference_price, transaction_type, buffer_percentage=effective_buffer_percentage)
             if not price:
                 message = "Unable to calculate Zerodha option limit price because option live price is unavailable. Please retry after quotes are available or provide an explicit option limit price."
                 response = {"data": {"status": "Failed", "message": message}}
@@ -216,6 +251,7 @@ def place_zerodha_orders(
                                          webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="zerodha", history_id=history_id)
                 return response
             order_params["price"] = price
+            order_params["buffer_percentage"] = effective_buffer_percentage
         elif requested_order_type == "MARKET":
             order_params["price"] = 0
         order_params["order_type"] = requested_order_type
@@ -319,12 +355,22 @@ def place_zerodha_orders(
                     return {"data": {"status": "pending", "message": message}}
 
                 else:
-                    message = latest_status.get("status_message", "Success")
+                    message = latest_status.get("status_message") or f"Zerodha order status is {status}."
                     logger.info(f"[{user}] Non-terminal status: {status}")
                     save_trade_order_history(LivePrice, group_service, transaction_type, trade_order_status, user, trade_symbol, order_id, status, res_data, message,
                                              strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
                                              webhook_signal, Exchange, Segment, Index_Symbol, history_order_params, broker="zerodha", history_id=history_id)
-                    return {"data": {"status": status, "message": message}}
+                    return {
+                        "data": {
+                            "status": status,
+                            "message": message,
+                            "order_id": order_id,
+                            "order_type": requested_order_type,
+                            "price": order_params.get("price"),
+                            "ltp": ltp,
+                            "reference_price": reference_price if requested_order_type == "LIMIT" else ltp,
+                        }
+                    }
 
             else:
                 logger.error(f"[{user}] Unknown order response format.")

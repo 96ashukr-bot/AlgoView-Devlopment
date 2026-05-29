@@ -48,6 +48,7 @@ def upper_value(value: Any, default: str = "") -> str:
 def common_order_kwargs(order: dict[str, Any]) -> dict[str, Any]:
     exchange = upper_value(order_value(order, "Exchange", "exchange"), "NFO")
     symbol = upper_value(order_value(order, "symbol", "underlying", "Index_Symbol"))
+    nested_order_params = order.get("order_params") if isinstance(order.get("order_params"), dict) else {}
     return {
         "LivePrice": order.get("LivePrice"),
         "group_service": order.get("group_service"),
@@ -73,6 +74,7 @@ def common_order_kwargs(order: dict[str, Any]) -> dict[str, Any]:
         "Index_Symbol": order.get("Index_Symbol"),
         "triggerPrice": order_value(order, "triggerPrice", "trigger_price"),
         "history_id": order_value(order, "history_id", "request_id", "idempotency_key"),
+        "buffer_percentage": order_value(order, "buffer_percentage", default=nested_order_params.get("buffer_percentage")),
     }
 
 

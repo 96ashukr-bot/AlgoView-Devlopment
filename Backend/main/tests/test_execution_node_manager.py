@@ -588,6 +588,37 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertEqual(close_order["option_type"], "CE")
         self.assertEqual(close_order["quantity"], 65)
 
+    def test_exit_position_does_not_match_pending_open_buy_order(self):
+        Tradeorderhistory.objects.create(
+            client=self.client_user,
+            GroupService="Lite",
+            trading_symbol="NIFTY26JUN23700CE",
+            Index_Symbol="NIFTY",
+            transaction_type="BUY",
+            trade_order_status="OPEN",
+            order_status="OPEN",
+            order_id="nifty-ce-pending-open",
+            EntryQty=65,
+            Entry_Price=203.95,
+            order_params={"transaction_type": "BUY", "option_type": "CE", "symbol": "NIFTY", "strike": 23700},
+        )
+
+        close_order, open_position, close_error = prepare_close_order_from_open_position(
+            self.client_user,
+            {
+                "symbol": "NIFTY",
+                "group_service": "Lite",
+                "transaction_type": "SELL",
+                "option_type": "CE",
+                "quantity": 65,
+            },
+            "zerodha",
+        )
+
+        self.assertIsNone(open_position)
+        self.assertEqual(close_order["transaction_type"], "SELL")
+        self.assertIn("No open BUY CE position", close_error["data"]["message"])
+
     def test_exit_position_does_not_match_banknifty_when_closing_nifty(self):
         Tradeorderhistory.objects.create(
             client=self.client_user,
@@ -1515,7 +1546,7 @@ class ExecutionNodeManagerTests(TestCase):
         )
 
         self.assertNotEqual(response["data"]["status"], "Failed")
-        self.assertEqual(kite.place_order.call_args.kwargs["price"], 10.25)
+        self.assertEqual(kite.place_order.call_args.kwargs["price"], 10.05)
         mock_fallback.assert_called_once_with(
             "NIFTY26MAY24400CE",
             expiry_date=None,
@@ -1523,6 +1554,54 @@ class ExecutionNodeManagerTests(TestCase):
             proxy_config=proxy_config,
             user=self.client_user,
         )
+
+    @mock.patch("main.zerodha.KiteConnect")
+    def test_zerodha_option_limit_ignores_far_explicit_price_and_uses_ltp_buffer(self, mock_kite_class):
+        from main.zerodha import place_zerodha_orders
+
+        proxy_config = {"http": "http://proxy.example.com:8080", "https": "http://proxy.example.com:8080"}
+        kite = mock_kite_class.return_value
+        kite.VARIETY_REGULAR = "regular"
+        kite.profile.return_value = {"user_id": "kite-user"}
+        kite.instruments.return_value = [{"tradingsymbol": "NIFTY26JUN23700CE"}]
+        kite.ltp.return_value = {"NFO:NIFTY26JUN23700CE": {"last_price": 200}}
+        kite.place_order.return_value = "kite-order-safe-price"
+        kite.order_history.return_value = [{"status": "COMPLETE", "transaction_type": "SELL", "average_price": 199, "filled_quantity": 65}]
+
+        response = place_zerodha_orders(
+            23700,
+            "Lite",
+            "kite-access",
+            "kite-api",
+            "NIFTY26JUN23700CE",
+            "SELL",
+            "NIFTY",
+            65,
+            "strategy",
+            "LIMIT",
+            "MIS",
+            23700,
+            self.client_user,
+            1,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            "NFO",
+            "FNO",
+            "NIFTY",
+            None,
+            "CLOSE",
+            "kite-history-far-price",
+            proxy_config=proxy_config,
+            buffer_percentage=2.5,
+        )
+
+        self.assertNotEqual(response["data"]["status"], "Failed")
+        self.assertEqual(kite.place_order.call_args.kwargs["price"], 199.0)
 
     @mock.patch("main.zerodha.fetch_nse_option_chain_ltp")
     @mock.patch("main.zerodha.requests.get")
@@ -1574,7 +1653,7 @@ class ExecutionNodeManagerTests(TestCase):
         )
 
         self.assertNotEqual(response["data"]["status"], "Failed")
-        self.assertEqual(kite.place_order.call_args.kwargs["price"], 59.75)
+        self.assertEqual(kite.place_order.call_args.kwargs["price"], 58.6)
         mock_get.assert_not_called()
         mock_fallback.assert_not_called()
 
@@ -1631,7 +1710,7 @@ class ExecutionNodeManagerTests(TestCase):
         )
 
         self.assertNotEqual(response["data"]["status"], "Failed")
-        self.assertEqual(kite.place_order.call_args.kwargs["price"], 10.25)
+        self.assertEqual(kite.place_order.call_args.kwargs["price"], 10.05)
         self.assertEqual(mock_get.call_args.kwargs["proxies"], proxy_config)
 
     def test_quote_ltp_parser_handles_broker_response_variants(self):
@@ -1737,7 +1816,7 @@ class ExecutionNodeManagerTests(TestCase):
         )
 
         self.assertNotEqual(response["data"]["status"], "Failed")
-        self.assertEqual(kite.place_order.call_args.kwargs["price"], 10.25)
+        self.assertEqual(kite.place_order.call_args.kwargs["price"], 10.05)
 
     @mock.patch("main.upstock.load_upstox_instruments")
     @mock.patch("main.upstock.requests.get")

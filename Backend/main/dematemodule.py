@@ -480,8 +480,7 @@ def exit_existing_buy_position_zerodha_order(LivePrice,group_service,Type,day,mo
             # strategy=strategy,
             GroupService=group_service,
             order_id__gt=0
-        ).filter(Q(order_status="rejected")| Q(order_status="completed") |Q(order_status="complete")| Q(order_status="open")
-                |Q(order_status="pending")).last()
+        ).filter(Q(order_status__iexact="completed") | Q(order_status__iexact="complete")).last()
         print("open_buy_order Zerodha order >>>>>>>",open_buy_order)
         if not open_buy_order:
             message = f"No open BUY position found for {symbol} for user {user}."
@@ -522,7 +521,7 @@ def exit_existing_buy_position_zerodha_order(LivePrice,group_service,Type,day,mo
             try:
                 sell_response =place_zerodha_orders(LivePrice,group_service,access_token,Api_key,trade_symbol, transaction_type, symbol, quantity,
                     strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type,Entry_price,Exit_price,
-                    EntryQty,ExitQty,webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice,trade_order_status)
+                    EntryQty,ExitQty,webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice,trade_order_status, history_id)
 
             except Exception as e:
                 logger.error(f"Error placing sell order: {str(e)}")

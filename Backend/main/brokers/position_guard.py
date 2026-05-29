@@ -6,7 +6,7 @@ from copy import deepcopy
 from main.brokers.utils import build_trade_symbol, common_order_kwargs, order_value
 from main.models import Tradeorderhistory
 
-OPEN_BUY_ORDER_STATUSES = {"complete", "completed", "open", "put order req received", "success"}
+OPEN_BUY_ORDER_STATUSES = {"complete", "completed", "success"}
 CLOSED_TRADE_STATUSES = {"close", "closed"}
 SUCCESS_CLOSE_STATUSES = {"completed", "complete", "success", "open", "put order req received"}
 KNOWN_UNDERLYINGS = ("MIDCPNIFTY", "BANKNIFTY", "FINNIFTY", "SENSEX", "BANKEX", "NIFTY")

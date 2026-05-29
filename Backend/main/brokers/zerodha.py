@@ -54,6 +54,7 @@ class ZerodhaBroker(BaseBroker):
             values["trade_order_status"],
             values["history_id"],
             proxy_config=proxy_config,
+            buffer_percentage=values["buffer_percentage"],
         )
         mark_open_position_closed(open_position, response)
         return response
