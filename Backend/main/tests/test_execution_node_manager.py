@@ -34,6 +34,7 @@ from main.brokers.position_guard import find_matching_open_buy_position, prepare
 from main.permissions import can_access_client_record
 from main.services.live_price_cache import build_live_price_payload, cache_live_price, get_live_price
 from main.services.option_ltp_fallback import cache_option_ltp, fetch_nse_option_chain_ltp, get_cached_option_ltp
+from main.sl_tp_watcher_service import SLTPWatcherService
 from main.services.upstox_market_data import UpstoxInstrumentResolver, get_active_option_instruments
 from main.serializers import ClientBrokerDetailsUpdateSerializer, TradeorderhistorySerializer
 from main.trade_history_service import save_trade_order_history
@@ -2536,6 +2537,30 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertIsNone(self.broker_details.refreshToken)
         self.assertIsNone(self.broker_details.feed_token)
         self.assertTrue(self.broker_details.isTokenExpired)
+
+    def test_sl_tp_watch_result_builds_entry_price_without_instance_self(self):
+        trade_order = SimpleNamespace(
+            id=1,
+            client=self.client_user,
+            client_id=self.client_user.id,
+            broker="Angel One",
+            Index_Symbol="NIFTY",
+            trading_symbol="NIFTY26JUN24000CE",
+            GroupService="",
+            Entry_Price="123.45",
+            LivePrice="124.00",
+            EntryQty="50",
+            ExitQty=None,
+        )
+
+        result = SLTPWatcherService._build_watch_result(
+            trade_order,
+            status="skipped",
+            message="No active stop-loss or target is configured.",
+        )
+
+        self.assertEqual(result.entry_price, 123.45)
+        self.assertEqual(result.quantity, 50)
 
     @mock.patch("main.dematemodule._broker_proxy_config_or_none", return_value={"https": "http://proxy.example.com:8080"})
     @mock.patch("main.dematemodule._create_broker_callback_state", return_value="alice-callback-state")

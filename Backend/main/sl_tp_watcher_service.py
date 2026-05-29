@@ -113,7 +113,7 @@ class SLTPWatcherService:
             current_ltp=current_ltp,
             stop_loss_price=stop_loss_price,
             target_price=target_price,
-            entry_price=self._to_float(trade_order.Entry_Price) or self._to_float(trade_order.LivePrice),
+            entry_price=SLTPWatcherService._to_float(trade_order.Entry_Price) or SLTPWatcherService._to_float(trade_order.LivePrice),
             quantity=quantity,
             trigger_reason=trigger_reason,
             response=response,
