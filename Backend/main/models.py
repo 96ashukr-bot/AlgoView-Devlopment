@@ -824,6 +824,9 @@ class ClientBrokerdetails(models.Model):
     def clear_session_tokens(self) -> None:
         self.set_session_tokens(None, None, None, expiry=None)
         self.request_token = None
+        self.access_token = None
+        self.refreshToken = None
+        self.feed_token = None
 
     def mark_broker_logout(self) -> None:
         self.broker_last_logout_at = timezone.now()

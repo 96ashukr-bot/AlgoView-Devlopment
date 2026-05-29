@@ -2521,6 +2521,22 @@ class ExecutionNodeManagerTests(TestCase):
         proxy_node.refresh_from_db()
         self.assertTrue(proxy_node.is_verified_with_broker)
 
+    def test_clear_session_tokens_removes_legacy_token_fields(self):
+        self.broker_details.access_token = "legacy-access"
+        self.broker_details.refreshToken = "legacy-refresh"
+        self.broker_details.feed_token = "legacy-feed"
+        self.broker_details.set_session_tokens("secure-access", refresh_token="secure-refresh", feed_token="secure-feed")
+
+        self.broker_details.clear_session_tokens()
+
+        self.assertIsNone(self.broker_details.get_access_token_secure())
+        self.assertIsNone(self.broker_details.get_refresh_token_secure())
+        self.assertIsNone(self.broker_details.get_feed_token_secure())
+        self.assertIsNone(self.broker_details.access_token)
+        self.assertIsNone(self.broker_details.refreshToken)
+        self.assertIsNone(self.broker_details.feed_token)
+        self.assertTrue(self.broker_details.isTokenExpired)
+
     @mock.patch("main.dematemodule._broker_proxy_config_or_none", return_value={"https": "http://proxy.example.com:8080"})
     @mock.patch("main.dematemodule._create_broker_callback_state", return_value="alice-callback-state")
     def test_alice_blue_redirect_does_not_mark_token_created(self, mock_create_state, mock_proxy_config):
