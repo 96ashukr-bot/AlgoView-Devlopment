@@ -56,6 +56,7 @@ const SupportChat = () => {
   const [error, setError] = useState("");
   const selectedThreadIdRef = useRef(null);
   const filtersRef = useRef(filters);
+  const refreshInProgressRef = useRef(false);
 
   const staff = useMemo(() => isStaffProfile(profile), [profile]);
   const superStaff = useMemo(() => isSuperProfile(profile), [profile]);
@@ -82,13 +83,16 @@ const SupportChat = () => {
       const results = data.results || [];
       setThreads(results);
       if (!selectedThreadIdRef.current && results.length > 0) {
+        selectedThreadIdRef.current = results[0].id;
         setSelectedThreadId(results[0].id);
       }
+      return results;
     } catch (err) {
       if (!silent) {
         setError(err?.response?.data?.message || err.message || "Unable to load chats.");
         setThreads([]);
       }
+      return [];
     } finally {
       if (!silent) {
         setLoading(false);
@@ -122,6 +126,20 @@ const SupportChat = () => {
     }
   }, []);
 
+  const refreshChatData = useCallback(async (options = {}) => {
+    if (refreshInProgressRef.current) return;
+    refreshInProgressRef.current = true;
+    try {
+      const results = await loadThreads(filtersRef.current, options);
+      const nextThreadId = selectedThreadIdRef.current || results?.[0]?.id;
+      if (nextThreadId) {
+        await loadThreadDetail(nextThreadId, options);
+      }
+    } finally {
+      refreshInProgressRef.current = false;
+    }
+  }, [loadThreadDetail, loadThreads]);
+
   useEffect(() => {
     const init = async () => {
       try {
@@ -134,27 +152,33 @@ const SupportChat = () => {
       } catch (err) {
         setError(err?.response?.data?.message || err.message || "Unable to load profile.");
       }
-      loadThreads();
+      refreshChatData();
     };
     init();
-  }, [loadThreads]);
+  }, [refreshChatData]);
 
   useEffect(() => {
     loadThreadDetail(selectedThreadId);
   }, [loadThreadDetail, selectedThreadId]);
 
   useEffect(() => {
-    if (!profile) return undefined;
-    const intervalId = window.setInterval(async () => {
+    const refreshIfVisible = () => {
       if (document.hidden) return;
-      await loadThreads(filtersRef.current, { silent: true });
-      if (selectedThreadIdRef.current) {
-        await loadThreadDetail(selectedThreadIdRef.current, { silent: true });
+      refreshChatData({ silent: true });
+    };
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        refreshChatData({ silent: true });
       }
-    }, CHAT_REFRESH_INTERVAL_MS);
+    };
+    const intervalId = window.setInterval(refreshIfVisible, CHAT_REFRESH_INTERVAL_MS);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
-    return () => window.clearInterval(intervalId);
-  }, [loadThreadDetail, loadThreads, profile]);
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [refreshChatData]);
 
   const handleFilterChange = (event) => {
     const { name, value } = event.target;
@@ -184,6 +208,7 @@ const SupportChat = () => {
       });
       setNewThread({ subject: "", message: "", client_id: "" });
       await loadThreads();
+      selectedThreadIdRef.current = created.id;
       setSelectedThreadId(created.id);
     } catch (err) {
       setError(err?.response?.data?.message || err.message || "Unable to create chat.");
@@ -231,7 +256,7 @@ const SupportChat = () => {
                 <Badge color="light-success" className="align-self-center">
                   Auto refresh on
                 </Badge>
-                <Button color="light" onClick={() => loadThreads()} disabled={loading}>
+                <Button color="light" onClick={() => refreshChatData()} disabled={loading}>
                   <i className="fa fa-refresh me-1" />
                   Refresh
                 </Button>
@@ -262,7 +287,14 @@ const SupportChat = () => {
                       </Input>
                     </Col>
                     <Col md="12">
-                      <Button className="search-btn-clr w-100" onClick={() => loadThreads(filters)} disabled={loading}>
+                      <Button
+                        className="search-btn-clr w-100"
+                        onClick={() => {
+                          filtersRef.current = filters;
+                          refreshChatData();
+                        }}
+                        disabled={loading}
+                      >
                         Apply
                       </Button>
                     </Col>
@@ -313,7 +345,10 @@ const SupportChat = () => {
                         key={thread.id}
                         type="button"
                         className={`support-thread-item ${selectedThreadId === thread.id ? "active" : ""}`}
-                        onClick={() => setSelectedThreadId(thread.id)}
+                        onClick={() => {
+                          selectedThreadIdRef.current = thread.id;
+                          setSelectedThreadId(thread.id);
+                        }}
                       >
                         <div className="d-flex justify-content-between gap-2">
                           <div className="support-thread-title">{thread.subject || "General Query"}</div>
