@@ -1,10 +1,12 @@
 import React, { Fragment, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { Container, Row } from "reactstrap";
 import { Breadcrumbs } from "../../../AbstractElements";
 import { RotatingLines } from "react-loader-spinner";
 import ClientHeader from "../../Application/Clients/Client/ClientHeader";
 import GreetingCard from "./GreetingCard";
 import ClientAlert from "../../Application/Clients/Client/ClientAlert";
+import "./Dashboards.css";
 
 const Dashboard = () => {
   const [loading, setLoading] = useState(true);
@@ -53,6 +55,12 @@ const Dashboard = () => {
           </Row>
         )}
       </Container>
+      {isClient && !loading ? (
+        <Link to="/support-chat" className="client-support-chat-fab" title="Support Chat">
+          <i className="fa fa-comments" />
+          <span>Support Chat</span>
+        </Link>
+      ) : null}
     </Fragment>
   );
 };
