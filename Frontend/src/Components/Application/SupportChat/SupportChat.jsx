@@ -25,7 +25,7 @@ import "./SupportChat.css";
 const roleName = (profile) => String(profile?.role?.name || "").toLowerCase();
 const isStaffProfile = (profile) => ["super-admin", "superadmin", "admin", "sub-admin", "subadmin"].includes(roleName(profile));
 const isSuperProfile = (profile) => ["super-admin", "superadmin", "admin"].includes(roleName(profile));
-const CHAT_REFRESH_INTERVAL_MS = 10000;
+const CHAT_REFRESH_INTERVAL_MS = 5000;
 
 const formatDateTime = (value) => {
   if (!value) return "-";
