@@ -30,6 +30,7 @@ export const MENUITEMSNEWNEW = [
           { path: `/tradedetails/sl-tp-watcher`, title: "SL/TP Watcher", type: "link" },
         ],
       },
+      { path: `/support-chat`, icon: "chat", title: "Support Chat", type: "link" },
       {
         title: "License",
         icon: "chat",

@@ -32,6 +32,8 @@ export const MENUITEMSNEW = [
           { path: `/dashboard/strategies/multileg-execution`, title: "Multi Leg Execution", type: "link" },
         ],
       },
+
+      { path: `/support-chat`, icon: "chat", title: "Support Chat", type: "link" },
      
       {
         title: "API Info",

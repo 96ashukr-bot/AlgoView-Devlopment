@@ -2134,4 +2134,79 @@ class BrokerLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = ClientBrokerdetails
         fields = ['id', 'broker', 'last_login', 'logout_time', 'isTokenExpired']
+
+
+def _chat_user_payload(user):
+    if not user:
+        return None
+    return {
+        "id": user.id,
+        "name": user.fullName or user.get_full_name() or user.email,
+        "email": user.email,
+        "phone": user.phoneNumber,
+    }
+
+
+class ChatMessageSerializer(serializers.ModelSerializer):
+    sender = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ChatMessage
+        fields = [
+            "id",
+            "thread",
+            "sender",
+            "sender_role",
+            "message",
+            "is_read_by_client",
+            "is_read_by_staff",
+            "created_at",
+        ]
+        read_only_fields = fields
+
+    def get_sender(self, obj):
+        return _chat_user_payload(obj.sender)
+
+
+class ChatThreadSerializer(serializers.ModelSerializer):
+    client = serializers.SerializerMethodField()
+    assigned_subadmin = serializers.SerializerMethodField()
+    last_message = serializers.SerializerMethodField()
+    unread_count = serializers.IntegerField(read_only=True, default=0)
+    messages_count = serializers.IntegerField(read_only=True, default=0)
+
+    class Meta:
+        model = ChatThread
+        fields = [
+            "id",
+            "client",
+            "assigned_subadmin",
+            "subject",
+            "status",
+            "last_message",
+            "unread_count",
+            "messages_count",
+            "last_message_at",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = fields
+
+    def get_client(self, obj):
+        return _chat_user_payload(obj.client)
+
+    def get_assigned_subadmin(self, obj):
+        return _chat_user_payload(obj.assigned_subadmin)
+
+    def get_last_message(self, obj):
+        message = getattr(obj, "latest_message", None)
+        if not message:
+            message = obj.messages.order_by("-created_at", "-id").first()
+        if not message:
+            return None
+        return {
+            "message": message.message,
+            "sender_role": message.sender_role,
+            "created_at": message.created_at,
+        }
 logger = logging.getLogger(__name__)

@@ -282,6 +282,63 @@ class UserActivityLog(models.Model):
         self.last_logout_time = now()
         self.save()        
 
+
+class ChatThread(models.Model):
+    STATUS_OPEN = "open"
+    STATUS_RESOLVED = "resolved"
+    STATUS_CHOICES = (
+        (STATUS_OPEN, "Open"),
+        (STATUS_RESOLVED, "Resolved"),
+    )
+
+    client = models.ForeignKey(User, on_delete=models.CASCADE, related_name="chat_threads")
+    assigned_subadmin = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="assigned_chat_threads")
+    subject = models.CharField(max_length=255, blank=True, default="")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_OPEN, db_index=True)
+    last_message_at = models.DateTimeField(default=get_ist_time, db_index=True)
+    created_at = models.DateTimeField(default=get_ist_time)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["client", "status"]),
+            models.Index(fields=["assigned_subadmin", "status"]),
+            models.Index(fields=["last_message_at"]),
+        ]
+        ordering = ["-last_message_at", "-id"]
+
+    def __str__(self):
+        return f"Chat {self.id} - {self.client}"
+
+
+class ChatMessage(models.Model):
+    SENDER_CLIENT = "client"
+    SENDER_SUBADMIN = "subadmin"
+    SENDER_SUPERADMIN = "superadmin"
+    SENDER_CHOICES = (
+        (SENDER_CLIENT, "Client"),
+        (SENDER_SUBADMIN, "Subadmin"),
+        (SENDER_SUPERADMIN, "Superadmin"),
+    )
+
+    thread = models.ForeignKey(ChatThread, on_delete=models.CASCADE, related_name="messages")
+    sender = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="sent_chat_messages")
+    sender_role = models.CharField(max_length=20, choices=SENDER_CHOICES)
+    message = models.TextField()
+    is_read_by_client = models.BooleanField(default=False)
+    is_read_by_staff = models.BooleanField(default=False)
+    created_at = models.DateTimeField(default=get_ist_time, db_index=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["thread", "created_at"]),
+            models.Index(fields=["sender_role"]),
+        ]
+        ordering = ["created_at", "id"]
+
+    def __str__(self):
+        return f"Message {self.id} in chat {self.thread_id}"
+
 class State(models.Model):
     id = models.AutoField(primary_key=True) 
     name = models.CharField(max_length=255) 

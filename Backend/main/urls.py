@@ -47,6 +47,12 @@ from main.execution_node_views import (
     NodePlaceOrderAPIView,
     NodePublicIPAPIView,
 )
+from main.chat_views import (
+    ChatAccessibleClientListAPIView,
+    ChatMessageCreateAPIView,
+    ChatThreadDetailAPIView,
+    ChatThreadListCreateAPIView,
+)
 urlpatterns = [
     path('signup/', UserRegistrationView.as_view(), name='user-registration'),
     path('login/', CustomLoginView.as_view(), name='login'),
@@ -238,6 +244,10 @@ urlpatterns = [
     path('node/public-ip/', NodePublicIPAPIView.as_view(), name='node-public-ip'),
     path('node/heartbeat/', NodeHeartbeatAPIView.as_view(), name='node-heartbeat'),
     path('node/place-order/', NodePlaceOrderAPIView.as_view(), name='node-place-order'),
+    path('support-chat/clients/', ChatAccessibleClientListAPIView.as_view(), name='support-chat-clients'),
+    path('support-chat/threads/', ChatThreadListCreateAPIView.as_view(), name='support-chat-threads'),
+    path('support-chat/threads/<int:thread_id>/', ChatThreadDetailAPIView.as_view(), name='support-chat-thread-detail'),
+    path('support-chat/threads/<int:thread_id>/messages/', ChatMessageCreateAPIView.as_view(), name='support-chat-message-create'),
     
     path('client-broker-details-setting-aleart/', GetClientBrokerDetailsSettingView.as_view(), name='client-broker-details'),
     path('client-complete-trade-history/',TradeCompleteListView.as_view(), name='client-completed-trade-details'),

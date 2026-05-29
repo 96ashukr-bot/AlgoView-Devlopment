@@ -182,6 +182,7 @@ import CompleteTradeHistory from "../Components/Tables/DataTable/TradeDetails/Co
 import WebhookDiagnostics from "../Components/Tables/DataTable/TradeDetails/WebhookDiagnostics";
 import SLTPWatcher from "../Components/Tables/DataTable/TradeDetails/SLTPWatcher";
 import IPPool from "../Components/Application/IPPool/IPPool";
+import SupportChat from "../Components/Application/SupportChat/SupportChat";
 
 export const routes = [
   { path: `/dashboard/algoviewtech/user`, Component: <Default /> },
@@ -237,6 +238,7 @@ export const routes = [
   { path: `/ip-pool/create`, Component: <IPPool mode="create" />},
   { path: `/ip-pool/assigned`, Component: <IPPool mode="assigned" />},
   { path: `/ip-pool/unassigned`, Component: <IPPool mode="unassigned" />},
+  { path: `/support-chat`, Component: <SupportChat />},
   { path: `/dashboard/optionchain`, Component: <OptionChain />},
   { path: `/openposition/optionchainlist`, Component: <OpenPosition />},
   { path: `/license/transactionlicense`, Component: <TransactionLicense />},

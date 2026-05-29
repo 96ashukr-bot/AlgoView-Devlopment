@@ -4954,3 +4954,33 @@ export const getClientBrokerTradeAlert = async () => {
     throw new Error(error.response?.data?.message || "Failed to fetch getClientBrokerTradeAlert.");
   }
 };
+
+export const getSupportChatThreads = async (params = {}) => {
+  const response = await axios.get(`${baseUrl}/support-chat/threads/`, { params });
+  return response.data;
+};
+
+export const createSupportChatThread = async (payload) => {
+  const response = await axios.post(`${baseUrl}/support-chat/threads/`, payload);
+  return response.data;
+};
+
+export const getSupportChatThread = async (threadId) => {
+  const response = await axios.get(`${baseUrl}/support-chat/threads/${threadId}/`);
+  return response.data;
+};
+
+export const sendSupportChatMessage = async (threadId, payload) => {
+  const response = await axios.post(`${baseUrl}/support-chat/threads/${threadId}/messages/`, payload);
+  return response.data;
+};
+
+export const updateSupportChatThread = async (threadId, payload) => {
+  const response = await axios.patch(`${baseUrl}/support-chat/threads/${threadId}/`, payload);
+  return response.data;
+};
+
+export const getSupportChatClients = async () => {
+  const response = await axios.get(`${baseUrl}/support-chat/clients/`);
+  return response.data;
+};

@@ -11,7 +11,7 @@ from django.utils import timezone
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from main.brokers.base import get_broker_adapter
-from main.models import Broker, ClientBrokerdetails, ClientTradeSetting, ExecutionNode, ExecutionOrderJob, Role, Tradeorderhistory, User
+from main.models import Broker, ChatMessage, ChatThread, ClientBrokerdetails, ClientTradeSetting, ExecutionNode, ExecutionOrderJob, Role, Tradeorderhistory, User
 from main.services.execution_nodes import assign_execution_node_to_client, release_execution_node
 from main.services.execution_router import route_order_to_execution_node
 from main.services.egress_guard import _is_broker_url, _is_public_instrument_master_url
@@ -796,6 +796,98 @@ class ExecutionNodeManagerTests(TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertTrue(ExecutionNode.objects.filter(id=self.node.id).exists())
+
+    def test_client_can_create_support_chat_and_subadmin_can_reply(self):
+        subadmin_role, _ = Role.objects.get_or_create(name="Sub-Admin", defaults={"status": "active"})
+        subadmin = User.objects.create_user(
+            email="chat-subadmin@example.com",
+            firstName="Chat",
+            lastName="Subadmin",
+            phoneNumber="9999999101",
+            password="Pass@123",
+            role=subadmin_role,
+        )
+        self.client_user.assigned_client = subadmin
+        self.client_user.type_of_user = "is_client"
+        self.client_user.is_client = "True"
+        self.client_user.save(update_fields=["assigned_client", "type_of_user", "is_client"])
+
+        client_token = str(RefreshToken.for_user(self.client_user).access_token)
+        create_response = self.client.post(
+            "/api/support-chat/threads/",
+            {"subject": "Broker token", "message": "Please check my broker token."},
+            format="json",
+            HTTP_AUTHORIZATION=f"Bearer {client_token}",
+        )
+        self.assertEqual(create_response.status_code, 201)
+        thread_id = create_response.data["id"]
+        thread = ChatThread.objects.get(id=thread_id)
+        self.assertEqual(thread.client_id, self.client_user.id)
+        self.assertEqual(thread.assigned_subadmin_id, subadmin.id)
+
+        subadmin_token = str(RefreshToken.for_user(subadmin).access_token)
+        reply_response = self.client.post(
+            f"/api/support-chat/threads/{thread_id}/messages/",
+            {"message": "We are checking it."},
+            format="json",
+            HTTP_AUTHORIZATION=f"Bearer {subadmin_token}",
+        )
+        self.assertEqual(reply_response.status_code, 201)
+        self.assertEqual(reply_response.data["sender_role"], ChatMessage.SENDER_SUBADMIN)
+
+        detail_response = self.client.get(
+            f"/api/support-chat/threads/{thread_id}/",
+            HTTP_AUTHORIZATION=f"Bearer {client_token}",
+        )
+        self.assertEqual(detail_response.status_code, 200)
+        self.assertEqual(len(detail_response.data["messages"]), 2)
+
+    def test_subadmin_cannot_view_unassigned_client_chat_but_superadmin_can(self):
+        subadmin_role, _ = Role.objects.get_or_create(name="Sub-Admin", defaults={"status": "active"})
+        assigned_subadmin = User.objects.create_user(
+            email="chat-assigned-subadmin@example.com",
+            firstName="Assigned",
+            lastName="Subadmin",
+            phoneNumber="9999999102",
+            password="Pass@123",
+            role=subadmin_role,
+        )
+        other_subadmin = User.objects.create_user(
+            email="chat-other-subadmin@example.com",
+            firstName="Other",
+            lastName="Subadmin",
+            phoneNumber="9999999103",
+            password="Pass@123",
+            role=subadmin_role,
+        )
+        self.client_user.assigned_client = assigned_subadmin
+        self.client_user.type_of_user = "is_client"
+        self.client_user.is_client = "True"
+        self.client_user.save(update_fields=["assigned_client", "type_of_user", "is_client"])
+        thread = ChatThread.objects.create(client=self.client_user, assigned_subadmin=assigned_subadmin, subject="Access")
+        ChatMessage.objects.create(thread=thread, sender=self.client_user, sender_role=ChatMessage.SENDER_CLIENT, message="Hello")
+
+        other_token = str(RefreshToken.for_user(other_subadmin).access_token)
+        denied_response = self.client.get(
+            f"/api/support-chat/threads/{thread.id}/",
+            HTTP_AUTHORIZATION=f"Bearer {other_token}",
+        )
+        self.assertEqual(denied_response.status_code, 404)
+
+        superadmin = User.objects.create_user(
+            email="chat-superadmin@example.com",
+            firstName="Chat",
+            lastName="Superadmin",
+            phoneNumber="9999999104",
+            password="Pass@123",
+            is_superuser=True,
+        )
+        superadmin_token = str(RefreshToken.for_user(superadmin).access_token)
+        allowed_response = self.client.get(
+            f"/api/support-chat/threads/{thread.id}/",
+            HTTP_AUTHORIZATION=f"Bearer {superadmin_token}",
+        )
+        self.assertEqual(allowed_response.status_code, 200)
 
     @mock.patch("main.brokers.angelone.place_angel_one_order")
     def test_angel_one_adapter_supports_proxy_and_passes_config(self, mock_place_order):
