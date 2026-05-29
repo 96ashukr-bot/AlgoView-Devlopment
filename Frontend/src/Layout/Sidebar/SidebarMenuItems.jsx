@@ -6,7 +6,9 @@ import CustomizerContext from "../../_helper/Customizer";
 import { MENUITEMS} from "./Menu";
 import { MENUITEMSNEW } from "./Menunewclients";
 import { MENUITEMSNEWNEW} from "./Menunewnew";
-import { fetchUserProfile, updateUserProfile, changePassword } from './../../Services/Authentication';
+import { fetchUserProfile, getSupportChatUnreadCount } from './../../Services/Authentication';
+
+const SUPPORT_CHAT_BADGE_INTERVAL_MS = 30000;
 
 const SidebarMenuItems = ({ setMainMenu, sidebartoogle, setNavActive, activeClass }) => {
   const { layout } = useContext(CustomizerContext);
@@ -15,6 +17,7 @@ const SidebarMenuItems = ({ setMainMenu, sidebartoogle, setNavActive, activeClas
   const id = window.location.pathname.split("/").pop();
   const layoutId = id;
   const CurrentPath = window.location.pathname;
+  const [supportChatUnreadCount, setSupportChatUnreadCount] = useState(0);
 
   useEffect(() => {
     const getUserProfile = async () => {
@@ -28,6 +31,44 @@ const SidebarMenuItems = ({ setMainMenu, sidebartoogle, setNavActive, activeClas
     getUserProfile();
 
 
+  }, []);
+
+  useEffect(() => {
+    let timeoutId;
+    let cancelled = false;
+
+    const refreshUnreadCount = async () => {
+      if (cancelled || document.hidden) return;
+      try {
+        const data = await getSupportChatUnreadCount();
+        setSupportChatUnreadCount(Number(data.unread_count || 0));
+      } catch (_error) {
+        setSupportChatUnreadCount(0);
+      }
+    };
+    const scheduleRefresh = () => {
+      timeoutId = window.setTimeout(async () => {
+        await refreshUnreadCount();
+        if (!cancelled) {
+          scheduleRefresh();
+        }
+      }, SUPPORT_CHAT_BADGE_INTERVAL_MS);
+    };
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        refreshUnreadCount();
+      }
+    };
+
+    refreshUnreadCount();
+    scheduleRefresh();
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, []);
 
 
@@ -65,6 +106,14 @@ const SidebarMenuItems = ({ setMainMenu, sidebartoogle, setNavActive, activeClas
   // const MENUITEMSSELECTION = isAdmin ? MENUITEMS : MENUITEMSNEW ? issubAdmin : MENUITEMSNEWNEW ;
 
   const { t } = useTranslation();
+  const supportChatBadge = supportChatUnreadCount > 0 && !CurrentPath.includes("/support-chat")
+    ? (
+      <label className="badge bg-danger ms-2">
+        {supportChatUnreadCount > 99 ? "99+" : supportChatUnreadCount}
+      </label>
+    )
+    : null;
+
   const toggletNavActive = (item) => {
     if (window.innerWidth <= 991) {
       document.querySelector(".page-header").className = "page-header close_icon";
@@ -139,6 +188,7 @@ const SidebarMenuItems = ({ setMainMenu, sidebartoogle, setNavActive, activeClas
                   <SvgIcon className="stroke-icon" iconId={`stroke-${menuItem.icon}`} />
                   <SvgIcon className="fill-icon" iconId={`fill-${menuItem.icon}`} />
                   <span>{t(menuItem.title)}</span>
+                  {menuItem.path === "/support-chat" ? supportChatBadge : null}
                   {menuItem.badge ? <label className={menuItem.badge}>{menuItem.badgetxt}</label> : ""}
                 </Link>
               ) : (

@@ -842,6 +842,53 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertEqual(detail_response.status_code, 200)
         self.assertEqual(len(detail_response.data["messages"]), 2)
 
+    def test_support_chat_unread_count_clears_when_thread_is_opened(self):
+        subadmin_role, _ = Role.objects.get_or_create(name="Sub-Admin", defaults={"status": "active"})
+        subadmin = User.objects.create_user(
+            email="chat-badge-subadmin@example.com",
+            firstName="Badge",
+            lastName="Subadmin",
+            phoneNumber="9999999105",
+            password="Pass@123",
+            role=subadmin_role,
+        )
+        self.client_user.assigned_client = subadmin
+        self.client_user.type_of_user = "is_client"
+        self.client_user.is_client = "True"
+        self.client_user.save(update_fields=["assigned_client", "type_of_user", "is_client"])
+
+        thread = ChatThread.objects.create(client=self.client_user, assigned_subadmin=subadmin, subject="Badge")
+        ChatMessage.objects.create(
+            thread=thread,
+            sender=subadmin,
+            sender_role=ChatMessage.SENDER_SUBADMIN,
+            message="Please check this reply.",
+            is_read_by_client=False,
+            is_read_by_staff=True,
+        )
+        client_token = str(RefreshToken.for_user(self.client_user).access_token)
+
+        unread_response = self.client.get(
+            "/api/support-chat/unread-count/",
+            HTTP_AUTHORIZATION=f"Bearer {client_token}",
+        )
+        self.assertEqual(unread_response.status_code, 200)
+        self.assertEqual(unread_response.data["unread_count"], 1)
+        self.assertEqual(unread_response.data["unread_thread_count"], 1)
+
+        detail_response = self.client.get(
+            f"/api/support-chat/threads/{thread.id}/",
+            HTTP_AUTHORIZATION=f"Bearer {client_token}",
+        )
+        self.assertEqual(detail_response.status_code, 200)
+
+        cleared_response = self.client.get(
+            "/api/support-chat/unread-count/",
+            HTTP_AUTHORIZATION=f"Bearer {client_token}",
+        )
+        self.assertEqual(cleared_response.status_code, 200)
+        self.assertEqual(cleared_response.data["unread_count"], 0)
+
     def test_subadmin_cannot_view_unassigned_client_chat_but_superadmin_can(self):
         subadmin_role, _ = Role.objects.get_or_create(name="Sub-Admin", defaults={"status": "active"})
         assigned_subadmin = User.objects.create_user(

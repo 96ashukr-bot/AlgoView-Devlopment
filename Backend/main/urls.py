@@ -52,6 +52,7 @@ from main.chat_views import (
     ChatMessageCreateAPIView,
     ChatThreadDetailAPIView,
     ChatThreadListCreateAPIView,
+    ChatUnreadCountAPIView,
 )
 urlpatterns = [
     path('signup/', UserRegistrationView.as_view(), name='user-registration'),
@@ -245,6 +246,7 @@ urlpatterns = [
     path('node/heartbeat/', NodeHeartbeatAPIView.as_view(), name='node-heartbeat'),
     path('node/place-order/', NodePlaceOrderAPIView.as_view(), name='node-place-order'),
     path('support-chat/clients/', ChatAccessibleClientListAPIView.as_view(), name='support-chat-clients'),
+    path('support-chat/unread-count/', ChatUnreadCountAPIView.as_view(), name='support-chat-unread-count'),
     path('support-chat/threads/', ChatThreadListCreateAPIView.as_view(), name='support-chat-threads'),
     path('support-chat/threads/<int:thread_id>/', ChatThreadDetailAPIView.as_view(), name='support-chat-thread-detail'),
     path('support-chat/threads/<int:thread_id>/messages/', ChatMessageCreateAPIView.as_view(), name='support-chat-message-create'),

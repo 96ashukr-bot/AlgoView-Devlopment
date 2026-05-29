@@ -59,6 +59,29 @@ def _mark_thread_read_for_user(thread, user):
         thread.messages.filter(sender_role=ChatMessage.SENDER_CLIENT, is_read_by_staff=False).update(is_read_by_staff=True)
 
 
+def _unread_message_queryset_for_user(user):
+    queryset = ChatMessage.objects.filter(thread__in=_thread_queryset_for_user(user))
+    if is_end_user(user):
+        return queryset.filter(
+            sender_role__in=[ChatMessage.SENDER_SUBADMIN, ChatMessage.SENDER_SUPERADMIN],
+            is_read_by_client=False,
+        )
+    return queryset.filter(sender_role=ChatMessage.SENDER_CLIENT, is_read_by_staff=False)
+
+
+class ChatUnreadCountAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        unread_messages = _unread_message_queryset_for_user(request.user)
+        return Response(
+            {
+                "unread_count": unread_messages.count(),
+                "unread_thread_count": unread_messages.values("thread_id").distinct().count(),
+            }
+        )
+
+
 class ChatThreadListCreateAPIView(APIView):
     permission_classes = [IsAuthenticated]
 

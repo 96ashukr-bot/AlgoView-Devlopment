@@ -4984,3 +4984,8 @@ export const getSupportChatClients = async () => {
   const response = await axios.get(`${baseUrl}/support-chat/clients/`);
   return response.data;
 };
+
+export const getSupportChatUnreadCount = async () => {
+  const response = await axios.get(`${baseUrl}/support-chat/unread-count/`);
+  return response.data;
+};
