@@ -251,14 +251,17 @@ def place_zerodha_orders(
                                          webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="zerodha", history_id=history_id)
                 return response
             order_params["price"] = price
-            order_params["buffer_percentage"] = effective_buffer_percentage
         elif requested_order_type == "MARKET":
             order_params["price"] = 0
         order_params["order_type"] = requested_order_type
         logger.info(f"[{user}] Placing order with params: {order_params}")
 
         try:
-            history_order_params = {**order_params, "reference_price": reference_price} if requested_order_type == "LIMIT" else order_params
+            history_order_params = (
+                {**order_params, "reference_price": reference_price, "buffer_percentage": effective_buffer_percentage}
+                if requested_order_type == "LIMIT"
+                else order_params
+            )
             order_response = kite.place_order(variety=kite.VARIETY_REGULAR, **order_params)
             order_id = order_response  # Assuming it returns an order_id
             logger.info(f"[{user}] Order placed. Order ID: {order_id}")
