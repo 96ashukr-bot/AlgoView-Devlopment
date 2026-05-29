@@ -26,7 +26,7 @@ from main.groww import generate_groww_access_token, generate_groww_checksum, pla
 from main.zerodha import place_zerodha_orders
 from main.Alice_Blue_Api import place_alice_orders
 from main.dematemodule import _broker_proxy_config_or_none, _save_session_tokens_compat
-from main.dematemodule import BrokerCallbackView
+from main.dematemodule import BrokerCallbackView, BrokerLoginRedirectView
 from main.broker_registry import get_broker_setup_spec
 from main.broker_order_utils import extract_ltp_from_quote_payload
 from main.brokers.exchange_mapping import normalize_broker_exchange, normalize_fivepaisa_exchange
@@ -2520,6 +2520,30 @@ class ExecutionNodeManagerTests(TestCase):
 
         proxy_node.refresh_from_db()
         self.assertTrue(proxy_node.is_verified_with_broker)
+
+    @mock.patch("main.dematemodule._broker_proxy_config_or_none", return_value={"https": "http://proxy.example.com:8080"})
+    @mock.patch("main.dematemodule._create_broker_callback_state", return_value="alice-callback-state")
+    def test_alice_blue_redirect_does_not_mark_token_created(self, mock_create_state, mock_proxy_config):
+        alice = Broker.objects.create(broker_name="Alice Blue", is_active=True)
+        old_token_time = timezone.now() - timezone.timedelta(days=2)
+        broker_details = ClientBrokerdetails.objects.create(
+            client=self.client_user,
+            broker_name=alice,
+            broker_API_KEY="alice-app-code",
+            broker_API_SKEY="alice-secret",
+            broker_API_UID="alice-user",
+        )
+        ClientBrokerdetails.objects.filter(pk=broker_details.pk).update(tokenCreatedAt=old_token_time)
+        broker_details.refresh_from_db()
+
+        response = BrokerLoginRedirectView().redirect_to_alice_blue(SimpleNamespace(), broker_details)
+
+        self.assertEqual(response.status_code, 200)
+        broker_details.refresh_from_db()
+        self.assertEqual(broker_details.request_token, "alice-callback-state")
+        self.assertEqual(broker_details.tokenCreatedAt, old_token_time)
+        mock_create_state.assert_called_once()
+        mock_proxy_config.assert_called_once_with(broker_details, require_broker_verified=False)
 
     @mock.patch("main.dematemodule.requests.post")
     def test_upstox_token_flow_uses_verified_proxy_before_broker_verification(self, mock_post):

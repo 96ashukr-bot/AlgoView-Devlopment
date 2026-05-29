@@ -984,8 +984,7 @@ class BrokerLoginRedirectView(APIView):
 
         state = _create_broker_callback_state(request, broker_details, "alice blue")
         broker_details.request_token = state
-        broker_details.tokenCreatedAt = now()
-        broker_details.save(update_fields=["request_token", "tokenCreatedAt"])
+        ClientBrokerdetails.objects.filter(pk=broker_details.pk).update(request_token=state)
 
         callback_url = _broker_callback_url_with_params({"broker": "alice blue", "state": state})
         params = urlencode(
