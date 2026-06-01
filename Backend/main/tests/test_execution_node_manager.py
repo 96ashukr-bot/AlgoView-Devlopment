@@ -30,6 +30,7 @@ from main.dematemodule import BrokerCallbackView, BrokerLoginRedirectView
 from main.broker_registry import get_broker_setup_spec
 from main.broker_order_utils import extract_ltp_from_quote_payload
 from main.brokers.exchange_mapping import normalize_broker_exchange, normalize_fivepaisa_exchange
+from main.brokers.utils import build_trade_symbol
 from main.brokers.position_guard import find_matching_open_buy_position, prepare_close_order_from_open_position
 from main.permissions import can_access_client_record
 from main.services.live_price_cache import build_live_price_payload, cache_live_price, get_live_price
@@ -1407,6 +1408,38 @@ class ExecutionNodeManagerTests(TestCase):
             proxy_config=proxy_config,
         )
         self.assertEqual(mock_place_order.call_args.kwargs["proxy_config"], proxy_config)
+
+    def test_zerodha_trade_symbol_uses_weekly_nifty_format(self):
+        symbol = build_trade_symbol(
+            {
+                "symbol": "NIFTY",
+                "strike": "23600",
+                "option_type": "CE",
+                "day": "02",
+                "month": "JUN",
+                "year": "26",
+                "fullyear": "2026",
+            },
+            "zerodha",
+        )
+
+        self.assertEqual(symbol, "NIFTY2660223600CE")
+
+    def test_zerodha_trade_symbol_keeps_monthly_index_format(self):
+        symbol = build_trade_symbol(
+            {
+                "symbol": "NIFTY",
+                "strike": "23600",
+                "option_type": "CE",
+                "day": "30",
+                "month": "JUN",
+                "year": "26",
+                "fullyear": "2026",
+            },
+            "zerodha",
+        )
+
+        self.assertEqual(symbol, "NIFTY26JUN23600CE")
 
     @mock.patch("main.brokers.groww.place_groww_orders")
     def test_groww_adapter_supports_proxy_and_passes_config(self, mock_place_order):

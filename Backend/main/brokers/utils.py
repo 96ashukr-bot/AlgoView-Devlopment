@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import calendar
 from datetime import datetime
 from typing import Any
 
@@ -103,6 +104,51 @@ def expiry_parts(order: dict[str, Any]) -> tuple[str, str, str, str]:
     )
 
 
+ZERODHA_WEEKLY_MONTH_CODES = {
+    "JAN": "1",
+    "FEB": "2",
+    "MAR": "3",
+    "APR": "4",
+    "MAY": "5",
+    "JUN": "6",
+    "JUL": "7",
+    "AUG": "8",
+    "SEP": "9",
+    "OCT": "O",
+    "NOV": "N",
+    "DEC": "D",
+}
+
+
+def _is_last_tuesday_expiry(day: str, month: str, fullyear: str) -> bool:
+    try:
+        month_number = datetime.strptime(month[:3], "%b").month
+        year_number = int(fullyear)
+        day_number = int(day)
+    except (TypeError, ValueError):
+        return False
+
+    last_day = calendar.monthrange(year_number, month_number)[1]
+    for candidate_day in range(last_day, 0, -1):
+        if datetime(year_number, month_number, candidate_day).weekday() == calendar.TUESDAY:
+            return day_number == candidate_day
+    return False
+
+
+def _zerodha_trade_symbol(order: dict[str, Any]) -> str:
+    symbol = upper_value(order_value(order, "symbol", "underlying", "Index_Symbol"))
+    option_type = upper_value(order_value(order, "option_type", "Type"))
+    day, month, year, fullyear = expiry_parts(order)
+    strike = _strike_component(order)
+
+    if symbol == "NIFTY" and day and month and year and not _is_last_tuesday_expiry(day, month, fullyear):
+        month_code = ZERODHA_WEEKLY_MONTH_CODES.get(month[:3].upper())
+        if month_code:
+            return f"{symbol}{year}{month_code}{int(float(day)):02d}{strike}{option_type}"
+
+    return f"{symbol}{year}{month}{strike}{option_type}"
+
+
 def build_trade_symbol(order: dict[str, Any], broker_name: str) -> str:
     explicit = order_value(order, "trade_symbol", "trading_symbol")
     if explicit:
@@ -119,7 +165,7 @@ def build_trade_symbol(order: dict[str, Any], broker_name: str) -> str:
     if broker_name == "upstox":
         return f"{symbol}{_strike_component(order)}{option_type}{day}{month}{year}"
     if broker_name == "zerodha":
-        return f"{symbol}{year}{month}{_strike_component(order)}{option_type}"
+        return _zerodha_trade_symbol(order)
     if broker_name == "groww":
         return f"{symbol}{year}{month}{_strike_component(order)}{option_type}"
     if broker_name == "fyers":
