@@ -26,6 +26,7 @@ from main.broker_registry import (
 )
 from main.permissions import is_end_user
 from main.trade_history_service import resolve_trade_failure_reason
+import json
 company_profile = get_company_profile()
 smtp_details=get_smtp_details()
 company_profile=company_profile if company_profile else None
@@ -1963,14 +1964,63 @@ def _extract_trade_failure_reason(response_data):
     return None
 
 
+def _extract_trade_broker_response(response_data, failure_reason=None):
+    if failure_reason not in (None, "", [], {}, ()):
+        return str(failure_reason)
+
+    if response_data in (None, "", [], {}, ()):
+        return None
+    if not isinstance(response_data, dict):
+        return str(response_data)
+
+    message_keys = ("message", "reason", "error", "emsg", "remarks", "status_message", "order_message")
+
+    def collect_messages(value):
+        messages = []
+        if isinstance(value, dict):
+            for key in message_keys:
+                candidate = value.get(key)
+                if candidate not in (None, "", [], {}, ()):
+                    if isinstance(candidate, (dict, list)):
+                        messages.append(json.dumps(candidate, default=str))
+                    else:
+                        messages.append(str(candidate))
+
+            skip_reasons = value.get("skip_reasons")
+            if isinstance(skip_reasons, list):
+                joined = "; ".join(str(reason) for reason in skip_reasons if reason)
+                if joined:
+                    messages.append(joined)
+
+            for nested in value.values():
+                messages.extend(collect_messages(nested))
+        elif isinstance(value, list):
+            for item in value:
+                messages.extend(collect_messages(item))
+        return messages
+
+    for message in collect_messages(response_data):
+        if message:
+            return message
+
+    try:
+        return json.dumps(response_data, default=str)
+    except TypeError:
+        return str(response_data)
+
+
 class TradeorderhistorySerializer(serializers.ModelSerializer):
     client = ClientnameSerializer(read_only=True)  # Use the nested serializer
     failure_reason = serializers.SerializerMethodField()
+    broker_response = serializers.SerializerMethodField()
     expiry = serializers.SerializerMethodField()
 
     def get_failure_reason(self, obj):
         reason = obj.failure_reason or _extract_trade_failure_reason(obj.response_data)
         return resolve_trade_failure_reason(obj.order_status, obj.trade_order_status, reason)
+
+    def get_broker_response(self, obj):
+        return _extract_trade_broker_response(obj.response_data, obj.failure_reason)
 
     def get_expiry(self, obj):
         order_params = obj.order_params if isinstance(obj.order_params, dict) else {}
@@ -1989,7 +2039,7 @@ class TradeorderhistorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Tradeorderhistory
         fields = ['id', 'client', 'date', 'trading_symbol','GroupService' ,'Index_Symbol', 'order_id', 'order_status','transaction_type'
-                , 'failure_reason', 'broker', 'order_params', 'strategy', 'Entry_type', 'Entry_Price', 
+                , 'failure_reason', 'broker_response', 'broker', 'order_params', 'strategy', 'Entry_type', 'Entry_Price', 
                 'Exit_Price','Exit_type','EntryQty','ExitQty','trade_order_status', 'SignalEntry_time', 'SignalExit_time', 'Exchange', 'Segment','webhook_signal', 'LivePrice', 'expiry']
 
 
@@ -2019,11 +2069,15 @@ class ClientdashboardSerializer(serializers.Serializer):
         
 class TradeOrderHistoryFilterSerializer(serializers.ModelSerializer):
     failure_reason = serializers.SerializerMethodField()
+    broker_response = serializers.SerializerMethodField()
     expiry = serializers.SerializerMethodField()
 
     def get_failure_reason(self, obj):
         reason = obj.failure_reason or _extract_trade_failure_reason(obj.response_data)
         return resolve_trade_failure_reason(obj.order_status, obj.trade_order_status, reason)
+
+    def get_broker_response(self, obj):
+        return _extract_trade_broker_response(obj.response_data, obj.failure_reason)
 
     def get_expiry(self, obj):
         return TradeorderhistorySerializer().get_expiry(obj)
@@ -2031,7 +2085,7 @@ class TradeOrderHistoryFilterSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tradeorderhistory
         fields = ['id', 'client', 'date', 'trading_symbol', 'GroupService','Index_Symbol', 'order_id','transaction_type',
-                'broker', 'order_status', 'failure_reason', 'strategy', 'Entry_type', 'Entry_Price', 
+                'broker', 'order_status', 'failure_reason', 'broker_response', 'strategy', 'Entry_type', 'Entry_Price', 
                 'Exit_Price','Exit_type','EntryQty','ExitQty','trade_order_status',
                 'SignalEntry_time', 'SignalExit_time', 'Exchange', 'Segment','webhook_signal', 'LivePrice', 'expiry']
         

@@ -193,6 +193,7 @@ class ExecutionNodeManagerTests(TestCase):
             item for item in response.data["results"] if item["client"]["email"] == "unassigned-history@example.com"
         )
         self.assertEqual(failed_trade["failure_reason"], "Insufficient margin")
+        self.assertEqual(failed_trade["broker_response"], "Insufficient margin")
 
     def test_successful_trade_history_suppresses_internal_routing_failure_reason(self):
         history = Tradeorderhistory.objects.create(
@@ -207,6 +208,21 @@ class ExecutionNodeManagerTests(TestCase):
         data = TradeorderhistorySerializer(history).data
 
         self.assertIsNone(data["failure_reason"])
+        self.assertEqual(data["broker_response"], "Order routed to execution node.")
+
+    def test_successful_trade_history_includes_broker_response_message(self):
+        history = Tradeorderhistory.objects.create(
+            client=self.client_user,
+            trading_symbol="NIFTY26MAY2624000CE",
+            order_status="complete",
+            trade_order_status="OPEN",
+            response_data={"data": {"status": "success", "message": "Order placed successfully"}},
+        )
+
+        data = TradeorderhistorySerializer(history).data
+
+        self.assertIsNone(data["failure_reason"])
+        self.assertEqual(data["broker_response"], "Order placed successfully")
 
     def test_trade_history_placeholder_is_not_saved_as_failure_reason(self):
         save_trade_order_history(

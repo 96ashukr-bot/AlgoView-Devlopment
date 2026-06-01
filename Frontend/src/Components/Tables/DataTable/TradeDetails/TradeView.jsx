@@ -522,7 +522,7 @@ const TradeView = () => {
                                                 <FaArrowUp className="sort-arrow-left" />
                                                 <FaArrowDown className="sort-arrow-right" />
                                             </th>
-                                            <th onClick={() => handleSort('failure_reason')} className='custom-col-design'>Failure Reason
+                                            <th onClick={() => handleSort('broker_response')} className='custom-col-design'>Response
                                             </th>
                                         </tr>
                                     </thead>
@@ -563,7 +563,7 @@ const TradeView = () => {
                                                         </td>
                                                         <td>{signal.order_status || '-'}</td>
                                                         <td>{signal.client?.full_name || '-'}</td>
-                                                        <td>{signal.failure_reason || '-'}</td>
+                                                        <td>{signal.broker_response || signal.failure_reason || '-'}</td>
                                                     </tr>
                                                 );
                                             })

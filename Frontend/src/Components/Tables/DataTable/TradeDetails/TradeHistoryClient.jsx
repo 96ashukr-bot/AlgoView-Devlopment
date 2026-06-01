@@ -426,7 +426,9 @@ const TradeHistoryClient = () => {
             'Exit Price': signal.Exit_Price !== null ? signal.Exit_Price : '-',
             Total: signal.Total || '-',
             'Order Status': signal.order_status || '-',
-            'Failure Reason': signal.failure_reason ? signal.failure_reason.replace(/(\r\n|\n|\r)/gm, ' ') : '-',
+            Response: (signal.broker_response || signal.failure_reason)
+                ? String(signal.broker_response || signal.failure_reason).replace(/(\r\n|\n|\r)/gm, ' ')
+                : '-',
         }));
 
         const worksheet = XLSX.utils.json_to_sheet(data);
@@ -741,7 +743,7 @@ const TradeHistoryClient = () => {
                                                 <FaArrowUp className="sort-arrow-left" />
                                                 <FaArrowDown className="sort-arrow-right" />
                                             </th>
-                                            <th onClick={() => handleSort('failure_reason')} className='custom-col-design'>Failure Reason
+                                            <th onClick={() => handleSort('broker_response')} className='custom-col-design'>Response
                                             </th>
                                             <th className='custom-col-design'>Trade View
                                             </th>
@@ -785,7 +787,7 @@ const TradeHistoryClient = () => {
                                                         </td>
                                                         <td></td>
                                                         <td>{signal.order_status || '-'}</td>
-                                                        <td>{signal.failure_reason || '-'}</td>
+                                                        <td>{signal.broker_response || signal.failure_reason || '-'}</td>
                                                         <td>
                                                             <button
                                                                 className="btn btn-primary search-btn-clr"
