@@ -624,7 +624,6 @@ class ExecutionNodeManagerTests(TestCase):
             self.client_user,
             {
                 "symbol": "NIFTY",
-                "group_service": "Lite",
                 "transaction_type": "SELL",
                 "option_type": "CE",
                 "quantity": 65,

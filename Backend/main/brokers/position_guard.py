@@ -196,13 +196,14 @@ def find_matching_open_buy_position(client, order):
         Tradeorderhistory.objects.filter(
             client=client,
             transaction_type__iexact="BUY",
-            GroupService=values["group_service"],
         )
         .exclude(order_id__isnull=True)
         .exclude(order_id="")
         .exclude(order_id="0")
         .order_by("-id")
     )
+    if values["group_service"]:
+        qs = qs.filter(GroupService=values["group_service"])
     for history in qs:
         if _history_matches_underlying(history, values["symbol"]) and _history_matches_open_buy(history, option_type):
             return history
