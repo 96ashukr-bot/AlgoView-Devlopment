@@ -588,6 +588,57 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertEqual(close_order["option_type"], "CE")
         self.assertEqual(close_order["quantity"], 65)
 
+    def test_exit_matches_broker_accepted_open_buy_order(self):
+        Tradeorderhistory.objects.create(
+            client=self.client_user,
+            GroupService="Lite",
+            trading_symbol="NIFTY",
+            Index_Symbol="NIFTY",
+            transaction_type="BUY",
+            trade_order_status="open",
+            order_status="open",
+            order_id="26060100028066",
+            Entry_type="BUY",
+            EntryQty=65,
+            Entry_Price=137.05,
+            response_data={
+                "data": {
+                    "status": "open",
+                    "message": "Success",
+                    "order_id": "26060100028066",
+                    "response": {
+                        "status": "Ok",
+                        "message": "Success",
+                    },
+                }
+            },
+            order_params={
+                "transaction_type": "BUY",
+                "option_type": "CE",
+                "symbol": "NIFTY",
+                "strike": 23600,
+            },
+        )
+
+        close_order, open_position, close_error = prepare_close_order_from_open_position(
+            self.client_user,
+            {
+                "symbol": "NIFTY",
+                "group_service": "Lite",
+                "transaction_type": "SELL",
+                "option_type": "CE",
+                "quantity": 65,
+                "strike": 23600,
+            },
+            "alice blue",
+        )
+
+        self.assertIsNone(close_error)
+        self.assertEqual(open_position.order_id, "26060100028066")
+        self.assertEqual(str(close_order["strike"]), "23600")
+        self.assertEqual(close_order["option_type"], "CE")
+        self.assertEqual(close_order["quantity"], 65)
+
     def test_exit_position_does_not_match_pending_open_buy_order(self):
         Tradeorderhistory.objects.create(
             client=self.client_user,

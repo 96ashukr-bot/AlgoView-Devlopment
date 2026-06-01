@@ -7,6 +7,7 @@ from main.brokers.utils import build_trade_symbol, common_order_kwargs, order_va
 from main.models import Tradeorderhistory
 
 OPEN_BUY_ORDER_STATUSES = {"complete", "completed", "success"}
+BROKER_ACCEPTED_OPEN_STATUSES = {"open"}
 CLOSED_TRADE_STATUSES = {"close", "closed"}
 SUCCESS_CLOSE_STATUSES = {"completed", "complete", "success", "open", "put order req received"}
 KNOWN_UNDERLYINGS = ("MIDCPNIFTY", "BANKNIFTY", "FINNIFTY", "SENSEX", "BANKEX", "NIFTY")
@@ -139,11 +140,32 @@ def history_strike(history):
 def _history_matches_open_buy(history, option_type):
     order_status = str(getattr(history, "order_status", "") or "").lower()
     trade_status = str(getattr(history, "trade_order_status", "") or "").lower()
-    if order_status not in OPEN_BUY_ORDER_STATUSES:
+    if order_status not in OPEN_BUY_ORDER_STATUSES and not _history_is_broker_accepted_open_buy(history):
         return False
     if trade_status in CLOSED_TRADE_STATUSES:
         return False
     return history_option_type(history) == option_type
+
+
+def _response_indicates_broker_acceptance(value):
+    if isinstance(value, dict):
+        status = str(value.get("status") or "").strip().lower()
+        message = str(value.get("message") or "").strip().lower()
+        if status in {"ok", "success", "open"} or message == "success":
+            return True
+        return any(_response_indicates_broker_acceptance(item) for item in value.values())
+    if isinstance(value, list):
+        return any(_response_indicates_broker_acceptance(item) for item in value)
+    return False
+
+
+def _history_is_broker_accepted_open_buy(history):
+    order_status = str(getattr(history, "order_status", "") or "").lower()
+    trade_status = str(getattr(history, "trade_order_status", "") or "").lower()
+    if order_status not in BROKER_ACCEPTED_OPEN_STATUSES or trade_status not in BROKER_ACCEPTED_OPEN_STATUSES:
+        return False
+    response_data = getattr(history, "response_data", None)
+    return _response_indicates_broker_acceptance(response_data)
 
 
 def _history_matches_underlying(history, symbol):
