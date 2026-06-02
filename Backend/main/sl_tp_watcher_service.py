@@ -353,6 +353,8 @@ class SLTPWatcherService:
         underlying = parsed.underlying if parsed.is_option else market_instrument.underlying
         strike = parsed.strike if parsed.is_option else market_instrument.strike
         option_type = parsed.option_type if parsed.is_option else market_instrument.option_type
+        original_history_id = str(trade_order.history_id or trade_order.id)
+        exit_history_id = f"{original_history_id}_sltp_exit"
 
         return ExecutionRequest(
             LivePrice=current_ltp,
@@ -381,7 +383,7 @@ class SLTPWatcherService:
                 "stop_loss_price": stop_loss_price,
                 "target_price": target_price,
                 "triggered_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
-                "original_history_id": trade_order.history_id,
+                "original_history_id": original_history_id,
             },
             Exchange=trade_order.Exchange or "NFO",
             Segment=trade_order.Segment,
@@ -400,7 +402,7 @@ class SLTPWatcherService:
                 "effective_stop_loss_price": stop_loss_price,
                 "effective_target_price": target_price,
             },
-            history_id=trade_order.history_id,
+            history_id=exit_history_id,
         )
 
     def _try_acquire_lock(self, trade_order: Tradeorderhistory) -> bool:

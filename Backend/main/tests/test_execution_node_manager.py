@@ -3027,6 +3027,44 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertEqual(result.entry_price, 123.45)
         self.assertEqual(result.quantity, 50)
 
+    def test_sl_tp_exit_request_uses_separate_history_id(self):
+        trade_order = SimpleNamespace(
+            id=1,
+            history_id="buy-history-1",
+            client=self.client_user,
+            GroupService="",
+            trading_symbol="NIFTY26JUN24000CE",
+            Index_Symbol="NIFTY",
+            EntryQty=50,
+            Entry_type=None,
+            Entry_Price="123.45",
+            Lot=1,
+            strategy="test",
+            Exchange="NFO",
+            Segment="FNO",
+            order_params={},
+        )
+        trade_setting = SimpleNamespace(
+            expiry_date=timezone.datetime(2026, 6, 26),
+            strategy="test",
+            order_type="LIMIT",
+            product_type="INTRADAY",
+            quantity=50,
+        )
+
+        request = SLTPWatcherService()._build_exit_request(
+            trade_order=trade_order,
+            trade_setting=trade_setting,
+            current_ltp=130,
+            trigger_reason="TARGET",
+            stop_loss_price=None,
+            target_price=130,
+        )
+
+        self.assertEqual(request.history_id, "buy-history-1_sltp_exit")
+        self.assertEqual(request.webhook_signal["original_history_id"], "buy-history-1")
+        self.assertEqual(request.transaction_type, "SELL")
+
     @mock.patch("main.dematemodule._broker_proxy_config_or_none", return_value={"https": "http://proxy.example.com:8080"})
     @mock.patch("main.dematemodule._create_broker_callback_state", return_value="alice-callback-state")
     def test_alice_blue_redirect_does_not_mark_token_created(self, mock_create_state, mock_proxy_config):
