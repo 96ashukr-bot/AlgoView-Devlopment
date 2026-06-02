@@ -2619,6 +2619,26 @@ export const killSwitchAllClientTrades = async (payload = {}) => {
   }
 };
 
+export const forceKillSwitchSelectedTrades = async (payload = {}) => {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error("No authentication token found.");
+  }
+
+  try {
+    const response = await axios.post(`${baseUrl}/superadmin/force-kill-switch/`, payload, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error running superadmin force kill switch:", error);
+    throw new Error(error.response?.data?.detail || "Failed to run force kill switch.");
+  }
+};
+
 export const getMultiLegStrategyLogs = async (executionId) => {
   const token = getAuthToken();
   if (!token) {

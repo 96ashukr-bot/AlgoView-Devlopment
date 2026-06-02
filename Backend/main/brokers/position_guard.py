@@ -210,10 +210,24 @@ def find_matching_open_buy_position(client, order):
     return None
 
 
+def is_force_broker_squareoff(order):
+    if not isinstance(order, dict):
+        return False
+    nested_order_params = order.get("order_params") if isinstance(order.get("order_params"), dict) else {}
+    for source in (order, nested_order_params):
+        if source.get("force_broker_squareoff") is True:
+            return True
+        if str(source.get("order_action") or "").strip().lower() in {"force_kill_switch_exit", "forced_squareoff"}:
+            return True
+    return False
+
+
 def prepare_close_order_from_open_position(client, order, broker_name):
     order = deepcopy(order)
     values = common_order_kwargs(order)
     if values["transaction_type"] != "SELL":
+        return order, None, None
+    if is_force_broker_squareoff(order):
         return order, None, None
 
     option_type = str(order_value(order, "option_type", "Type") or "").upper()

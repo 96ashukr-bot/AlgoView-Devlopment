@@ -786,6 +786,26 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertEqual(close_order["option_type"], "CE")
         self.assertEqual(close_order["quantity"], 65)
 
+    def test_force_squareoff_skips_open_buy_position_matching(self):
+        close_order, open_position, close_error = prepare_close_order_from_open_position(
+            self.client_user,
+            {
+                "symbol": "NIFTY",
+                "transaction_type": "SELL",
+                "option_type": "CE",
+                "quantity": 65,
+                "strike": 23600,
+                "force_broker_squareoff": True,
+                "order_params": {"order_action": "force_kill_switch_exit"},
+            },
+            "angel one",
+        )
+
+        self.assertIsNone(close_error)
+        self.assertIsNone(open_position)
+        self.assertEqual(close_order["strike"], 23600)
+        self.assertTrue(close_order["force_broker_squareoff"])
+
     def test_routed_open_exit_does_not_close_buy_position(self):
         buy_history = Tradeorderhistory.objects.create(
             client=self.client_user,

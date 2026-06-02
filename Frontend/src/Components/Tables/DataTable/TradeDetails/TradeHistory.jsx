@@ -7,11 +7,12 @@ import { saveAs } from 'file-saver';
 import { H3 } from '../../../../AbstractElements';
 import { RotatingLines } from 'react-loader-spinner';
 import { FaArrowUp, FaArrowDown } from 'react-icons/fa';
-import { getTradeHistory, getTradeStrategy, getBroker, getTradeResponse } from '../../../../Services/Authentication';
+import { forceKillSwitchSelectedTrades, getTradeHistory, getTradeStrategy, getBroker, getTradeResponse } from '../../../../Services/Authentication';
 import './TradeDetails.css';
 import { Modal, ModalHeader, ModalBody, ModalFooter } from 'reactstrap';
 import { getStockSymbolLivePriceSocketUrl } from '../../../../ConfigUrl/config';
 import { getTradeSymbolDisplay } from '../../../../Utils/tradeSymbolDisplay';
+import Swal from 'sweetalert2';
 
 const TradeHistory = () => {
     const [currentPage, setCurrentPage] = useState(1);
@@ -32,6 +33,8 @@ const TradeHistory = () => {
     const [sortConfig, setSortConfig] = useState({ key: '', direction: '' });
     const [tradeHistory, setTradeHistory] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [selectedTradeIds, setSelectedTradeIds] = useState([]);
+    const [killSwitchLoading, setKillSwitchLoading] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
     const [pageBatch, setPageBatch] = useState(0);
     const [modalOpen, setModalOpen] = useState(false);
@@ -306,9 +309,11 @@ const TradeHistory = () => {
             if (response.results && response.results.length > 0) {
                 setTradeHistory(response.results); // Directly store the paginated data.
                 setTotalPages(Math.ceil(response.count / itemsPerPage));
+                setSelectedTradeIds([]);
             } else {
                 setTradeHistory([]); // Handle empty pages.
                 setTotalPages(1);
+                setSelectedTradeIds([]);
             }
         } catch (err) {
             console.error("Error fetching data:", err);
@@ -324,6 +329,64 @@ const TradeHistory = () => {
             return;
         }
         fetchTradeHistory();
+    };
+
+    const currentPageTradeIds = tradeHistory.map((trade) => trade.id).filter(Boolean);
+    const allCurrentPageSelected = currentPageTradeIds.length > 0 && currentPageTradeIds.every((id) => selectedTradeIds.includes(id));
+
+    const handleSelectTrade = (tradeId, checked) => {
+        setSelectedTradeIds((previous) => {
+            if (checked) {
+                return previous.includes(tradeId) ? previous : [...previous, tradeId];
+            }
+            return previous.filter((id) => id !== tradeId);
+        });
+    };
+
+    const handleSelectCurrentPage = (checked) => {
+        setSelectedTradeIds((previous) => {
+            if (!checked) {
+                return previous.filter((id) => !currentPageTradeIds.includes(id));
+            }
+            return Array.from(new Set([...previous, ...currentPageTradeIds]));
+        });
+    };
+
+    const handleForceKillSwitch = async () => {
+        if (!selectedTradeIds.length) {
+            Swal.fire('Select Trade', 'Please select at least one trade to force square off.', 'warning');
+            return;
+        }
+
+        const result = await Swal.fire({
+            title: 'Force Kill Switch',
+            text: `This will send direct square-off/exit orders for ${selectedTradeIds.length} selected trade(s). The system will not check whether these trades are already closed in our panel.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Send Force Exit',
+            cancelButtonText: 'Cancel',
+        });
+
+        if (!result.isConfirmed) {
+            return;
+        }
+
+        setKillSwitchLoading(true);
+        try {
+            const response = await forceKillSwitchSelectedTrades({
+                trade_history_ids: selectedTradeIds,
+                reason: 'Superadmin selected force kill switch',
+            });
+            await fetchTradeHistory();
+            const failedCount = response?.failed_count || 0;
+            const sentCount = response?.sent_count || 0;
+            const summary = `${sentCount} exit order(s) sent.${failedCount ? ` ${failedCount} rejected/failed. Check Response for broker details.` : ''}`;
+            await Swal.fire('Force Kill Switch Complete', summary, failedCount ? 'warning' : 'success');
+        } catch (error) {
+            Swal.fire('Error', error.message || 'Failed to run force kill switch.', 'error');
+        } finally {
+            setKillSwitchLoading(false);
+        }
     };
 
     const calculateTotal = (exitPrice, exitQty, entryPrice, entryQty, orderStatus) => {
@@ -519,6 +582,14 @@ const TradeHistory = () => {
                                     style={{ width: '200px', display: 'inline-block', marginRight: '10px' }}
                                 />
                                 <Button className='search-btn-clr' onClick={handleSearch}>Search</Button>
+                                <Button
+                                    color="danger"
+                                    className="text-nowrap ms-2"
+                                    onClick={handleForceKillSwitch}
+                                    disabled={killSwitchLoading || selectedTradeIds.length === 0}
+                                >
+                                    {killSwitchLoading ? 'Sending Exit...' : `Kill Switch${selectedTradeIds.length ? ` (${selectedTradeIds.length})` : ''}`}
+                                </Button>
                             </div>
                         </div>
 
@@ -635,6 +706,14 @@ const TradeHistory = () => {
                                 <Table responsive>
                                     <thead>
                                         <tr>
+                                            <th className='custom-col-design'>
+                                                <Input
+                                                    type="checkbox"
+                                                    checked={allCurrentPageSelected}
+                                                    onChange={(event) => handleSelectCurrentPage(event.target.checked)}
+                                                    aria-label="Select all trades on current page"
+                                                />
+                                            </th>
                                             <th className='custom-col-design'>S.No.</th>
                                             <th onClick={() => handleSort('SignalEntry_time')} className='custom-col-design'>Signal Entry Time
                                                 <FaArrowUp className="sort-arrow-left" />
@@ -701,7 +780,7 @@ const TradeHistory = () => {
                                     <tbody>
                                         {loading ? (
                                             <tr>
-                                                <td colSpan="16" style={{ textAlign: 'center', height: '100px' }}>
+                                                <td colSpan="17" style={{ textAlign: 'center', height: '100px' }}>
                                                     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
                                                         <RotatingLines
                                                             strokeColor="#283F7B"
@@ -720,6 +799,14 @@ const TradeHistory = () => {
 
                                                 return (
                                                     <tr key={signal.id}>
+                                                        <td>
+                                                            <Input
+                                                                type="checkbox"
+                                                                checked={selectedTradeIds.includes(signal.id)}
+                                                                onChange={(event) => handleSelectTrade(signal.id, event.target.checked)}
+                                                                aria-label={`Select trade ${signal.id}`}
+                                                            />
+                                                        </td>
                                                         <td>{indexOfFirstSignal + index + 1}</td>
                                                         <td>{formatDateTime(signal.SignalEntry_time)}</td>
                                                         <td>{formatDateTime(signal.SignalExit_time)}</td>
@@ -751,7 +838,7 @@ const TradeHistory = () => {
                                             })
                                         ) : (
                                             <tr>
-                                                <td colSpan="13" style={{ textAlign: 'center', padding: '10px' }}>
+                                                <td colSpan="17" style={{ textAlign: 'center', padding: '10px' }}>
                                                     No Trade History Found
                                                 </td>
                                             </tr>

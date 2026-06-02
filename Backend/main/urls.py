@@ -227,6 +227,7 @@ urlpatterns = [
     path('strategies/multileg/<int:execution_id>/logs/', MultiLegStrategyLogsAPIView.as_view(), name='multileg-logs'),
     path('strategies/multileg/kill-switch/', MultiLegKillSwitchAPIView.as_view(), name='multileg-kill-switch'),
     path('client/kill-switch/', ClientGlobalKillSwitchAPIView.as_view(), name='client-global-kill-switch'),
+    path('superadmin/force-kill-switch/', SuperadminForceKillSwitchAPIView.as_view(), name='superadmin-force-kill-switch'),
     path('execution-nodes/', ExecutionNodeListAPIView.as_view(), name='execution-node-list'),
     path('execution-nodes/<int:node_id>/', ExecutionNodeDetailAPIView.as_view(), name='execution-node-detail'),
     path('execution-nodes/assign/', ExecutionNodeAssignAPIView.as_view(), name='execution-node-assign'),

@@ -3917,7 +3917,7 @@ def _is_regular_trade_open(trade_history):
     return trade_status in OPEN_TRADE_ORDER_STATUSES or order_status in {"OPEN", "COMPLETE", "COMPLETED", "TRANSIT", "PENDING"}
 
 
-def _build_regular_trade_exit_request(trade_history):
+def _build_regular_trade_exit_request(trade_history, *, force_broker_squareoff=False, source="client_trade_history_kill_switch", reason=None, initiated_by=None):
     contract = _parse_trade_history_contract(trade_history)
     order_params = trade_history.order_params if isinstance(trade_history.order_params, dict) else {}
     quantity = trade_history.EntryQty or trade_history.ExitQty or order_params.get("quantity") or order_params.get("qty") or 0
@@ -3927,6 +3927,7 @@ def _build_regular_trade_exit_request(trade_history):
     if not contract["underlying"] or not contract["strike"] or contract["option_type"] not in {"CE", "PE"}:
         raise ValueError("Unable to resolve open trade contract.")
 
+    order_action = "force_kill_switch_exit" if force_broker_squareoff else "kill_switch_exit"
     return ExecutionRequest(
         LivePrice=trade_history.LivePrice or trade_history.Entry_Price or 0,
         group_service=trade_history.GroupService,
@@ -3947,7 +3948,13 @@ def _build_regular_trade_exit_request(trade_history):
         Exit_price=trade_history.Exit_Price,
         EntryQty=trade_history.EntryQty,
         ExitQty=quantity,
-        webhook_signal={"source": "client_trade_history_kill_switch", "original_history_id": trade_history.history_id or trade_history.id},
+        webhook_signal={
+            "source": source,
+            "original_history_id": trade_history.history_id or trade_history.id,
+            "force_broker_squareoff": bool(force_broker_squareoff),
+            "reason": reason or "",
+            "initiated_by": getattr(initiated_by, "id", None),
+        },
         Exchange=trade_history.Exchange or "NFO",
         Segment=trade_history.Segment,
         Index_Symbol=trade_history.Index_Symbol or contract["underlying"],
@@ -3959,12 +3966,15 @@ def _build_regular_trade_exit_request(trade_history):
         strike=contract["strike"],
         option_type=contract["option_type"],
         order_params={
-            "order_action": "kill_switch_exit",
+            "order_action": order_action,
             "source": "trade_history",
             "original_history_id": trade_history.history_id or trade_history.id,
             "tradingsymbol": contract["trading_symbol"],
+            "force_broker_squareoff": bool(force_broker_squareoff),
+            "reason": reason or "",
+            "initiated_by": getattr(initiated_by, "id", None),
         },
-        history_id=f"kill_{trade_history.id}_{timezone.now().strftime('%Y%m%d%H%M%S%f')}",
+        history_id=f"{'forcekill' if force_broker_squareoff else 'kill'}_{trade_history.id}_{timezone.now().strftime('%Y%m%d%H%M%S%f')}",
     )
 
 
@@ -4007,6 +4017,85 @@ class ClientGlobalKillSwitchAPIView(APIView):
                 "regular_failed": failed_regular,
             },
             status=status.HTTP_200_OK if not failed_regular else status.HTTP_207_MULTI_STATUS,
+        )
+
+
+class SuperadminForceKillSwitchAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        if not is_superadmin_user(request.user):
+            return Response({"detail": "Only superadmin can run force kill switch."}, status=status.HTTP_403_FORBIDDEN)
+
+        trade_ids = request.data.get("trade_history_ids") or request.data.get("trade_ids") or []
+        if not isinstance(trade_ids, list):
+            return Response({"detail": "trade_history_ids must be a list."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            trade_ids = [int(trade_id) for trade_id in trade_ids]
+        except (TypeError, ValueError):
+            return Response({"detail": "trade_history_ids must contain numeric IDs."}, status=status.HTTP_400_BAD_REQUEST)
+
+        trade_ids = list(dict.fromkeys(trade_ids))
+        if not trade_ids:
+            return Response({"detail": "Select at least one trade to force square off."}, status=status.HTTP_400_BAD_REQUEST)
+        if len(trade_ids) > 100:
+            return Response({"detail": "You can force square off a maximum of 100 trades at once."}, status=status.HTTP_400_BAD_REQUEST)
+
+        reason = request.data.get("reason") or "Superadmin force kill switch"
+        trades = {
+            trade.id: trade
+            for trade in Tradeorderhistory.objects.select_related("client").filter(id__in=trade_ids)
+        }
+
+        results = []
+        for trade_id in trade_ids:
+            trade_history = trades.get(trade_id)
+            if not trade_history:
+                results.append({
+                    "trade_history_id": trade_id,
+                    "status": "failed",
+                    "message": "Trade history row not found.",
+                })
+                continue
+            try:
+                exit_request = _build_regular_trade_exit_request(
+                    trade_history,
+                    force_broker_squareoff=True,
+                    source="superadmin_force_kill_switch",
+                    reason=reason,
+                    initiated_by=request.user,
+                )
+                response = get_execution_engine().execute_order(exit_request)
+                response_data = response.get("data", {}) if isinstance(response, dict) else {}
+                response_status = str(response_data.get("status") or response.get("status") or "").lower()
+                success = response_status in {"success", "complete", "completed", "open", "placed"}
+                results.append({
+                    "trade_history_id": trade_history.id,
+                    "client_id": trade_history.client_id,
+                    "client_name": getattr(trade_history.client, "fullName", None) or getattr(trade_history.client, "full_name", None),
+                    "status": "sent" if success else "broker_rejected",
+                    "broker_status": response_data.get("status") or response.get("status"),
+                    "message": response_data.get("message") or response.get("message") or "",
+                    "order_id": response_data.get("order_id"),
+                    "response": response,
+                })
+            except Exception as exc:
+                results.append({
+                    "trade_history_id": trade_id,
+                    "status": "failed",
+                    "message": str(exc),
+                })
+
+        failed_count = sum(1 for item in results if item["status"] in {"failed", "broker_rejected"})
+        return Response(
+            {
+                "requested_count": len(trade_ids),
+                "sent_count": len(trade_ids) - failed_count,
+                "failed_count": failed_count,
+                "results": results,
+            },
+            status=status.HTTP_200_OK if failed_count == 0 else status.HTTP_207_MULTI_STATUS,
         )
 
 
