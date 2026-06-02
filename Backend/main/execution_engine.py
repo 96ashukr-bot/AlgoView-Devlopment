@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import time
 import uuid
+import re
 from dataclasses import dataclass
 from datetime import datetime, time as datetime_time
 from typing import Any, Optional, Dict
@@ -173,6 +174,10 @@ class ExecutionRequest:
             or ""
         ).strip().lower()
         return action in {"exit", "rollback"}
+
+    @property
+    def is_exit_order(self) -> bool:
+        return str(self.transaction_type or "").strip().upper() == "SELL" or self.is_position_exit_order
 
     @property
     def quantity_int(self) -> int:
@@ -1570,8 +1575,11 @@ class ExecutionEngine:
         return any(marker in normalized for marker in self.TRANSIENT_ERROR_MARKERS)
 
     def _check_circuit_breaker(self, request: ExecutionRequest) -> Optional[Dict[str, Any]]:
+        if request.is_exit_order:
+            return None
         broker = request.broker_name or "unknown"
-        blocked_until_key = f"execution_engine:circuit_breaker:blocked_until:{broker}"
+        scope = self._circuit_breaker_scope(request)
+        blocked_until_key = f"execution_engine:circuit_breaker:blocked_until:{scope}"
         blocked_until = self._circuit_breaker_cache.get(blocked_until_key)
         now = time.time()
         if blocked_until and blocked_until > now:
@@ -1579,6 +1587,7 @@ class ExecutionEngine:
             logger.warning(
                 "Circuit breaker blocked order",
                 broker=broker,
+                circuit_breaker_scope=scope,
                 request_id=request.request_id,
                 user_id=getattr(request.user, "id", None),
                 retry_after_seconds=remaining,
@@ -1591,8 +1600,9 @@ class ExecutionEngine:
 
     def _record_broker_failure(self, request: ExecutionRequest) -> None:
         broker = request.broker_name or "unknown"
-        failures_key = f"execution_engine:circuit_breaker:failures:{broker}"
-        blocked_until_key = f"execution_engine:circuit_breaker:blocked_until:{broker}"
+        scope = self._circuit_breaker_scope(request)
+        failures_key = f"execution_engine:circuit_breaker:failures:{scope}"
+        blocked_until_key = f"execution_engine:circuit_breaker:blocked_until:{scope}"
         self._circuit_breaker_cache.add(failures_key, 0, timeout=self.CIRCUIT_BREAKER_BLOCK_SECONDS)
         try:
             failures = self._circuit_breaker_cache.incr(failures_key)
@@ -1607,6 +1617,7 @@ class ExecutionEngine:
             logger.warning(
                 "Circuit breaker opened",
                 broker=broker,
+                circuit_breaker_scope=scope,
                 request_id=request.request_id,
                 user_id=getattr(request.user, "id", None),
                 failures=failures,
@@ -1614,9 +1625,16 @@ class ExecutionEngine:
             )
 
     def _reset_broker_failures(self, request: ExecutionRequest) -> None:
+        scope = self._circuit_breaker_scope(request)
+        self._circuit_breaker_cache.delete(f"execution_engine:circuit_breaker:failures:{scope}")
+        self._circuit_breaker_cache.delete(f"execution_engine:circuit_breaker:blocked_until:{scope}")
+
+    @staticmethod
+    def _circuit_breaker_scope(request: ExecutionRequest) -> str:
         broker = request.broker_name or "unknown"
-        self._circuit_breaker_cache.delete(f"execution_engine:circuit_breaker:failures:{broker}")
-        self._circuit_breaker_cache.delete(f"execution_engine:circuit_breaker:blocked_until:{broker}")
+        client_id = getattr(request.user, "id", None) or "unknown"
+        broker_key = re.sub(r"[^a-z0-9_-]+", "_", str(broker).lower()).strip("_") or "unknown"
+        return f"{broker_key}_client_{client_id}"
 
     def _touch_circuit_breaker_key(self, key: str, timeout: int) -> None:
         try:

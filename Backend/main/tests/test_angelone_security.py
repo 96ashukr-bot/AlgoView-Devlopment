@@ -9,6 +9,7 @@ from types import SimpleNamespace
 from zoneinfo import ZoneInfo
 
 from django.contrib.sessions.middleware import SessionMiddleware
+from django.core.cache import caches
 from django.db import connection
 from django.db.migrations.loader import MigrationLoader
 from django.test import RequestFactory, TestCase, override_settings
@@ -740,6 +741,49 @@ class AngelOneExecutionValidationTests(TestCase):
                 expiry=datetime(2026, 5, 19),
             ),
         )
+
+    def test_execution_circuit_breaker_is_scoped_per_client(self):
+        cache = caches["circuit_breaker"]
+        cache.clear()
+        engine = ExecutionEngine.__new__(ExecutionEngine)
+        engine._circuit_breaker_cache = cache
+        engine.CIRCUIT_BREAKER_THRESHOLD = 1
+        engine.CIRCUIT_BREAKER_BLOCK_SECONDS = 60
+        request = self._request(history_id="client-one-failure")
+
+        engine._record_broker_failure(request)
+
+        other_user = User.objects.create_user(
+            email="angel-other-client@example.com",
+            firstName="Other",
+            lastName="Client",
+            phoneNumber="9999999911",
+            password="Pass@1234",
+        )
+        other_request = ExecutionRequest(**{**request.__dict__, "user": other_user, "history_id": "client-two-order"})
+        self.assertIsNotNone(engine._check_circuit_breaker(request))
+        self.assertIsNone(engine._check_circuit_breaker(other_request))
+
+    def test_execution_circuit_breaker_does_not_block_exit_orders(self):
+        cache = caches["circuit_breaker"]
+        cache.clear()
+        engine = ExecutionEngine.__new__(ExecutionEngine)
+        engine._circuit_breaker_cache = cache
+        engine.CIRCUIT_BREAKER_THRESHOLD = 1
+        engine.CIRCUIT_BREAKER_BLOCK_SECONDS = 60
+        request = self._request(history_id="client-entry-failure")
+        exit_request = ExecutionRequest(
+            **{
+                **request.__dict__,
+                "transaction_type": "SELL",
+                "history_id": "client-exit-order",
+                "order_params": {**request.order_params, "transaction_type": "SELL"},
+            }
+        )
+
+        engine._record_broker_failure(request)
+
+        self.assertIsNone(engine._check_circuit_breaker(exit_request))
 
     def test_zero_like_limit_price_is_treated_as_auto_buffer_price(self):
         request = self._request()
