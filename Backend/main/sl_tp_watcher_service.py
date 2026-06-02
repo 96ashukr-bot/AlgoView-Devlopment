@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from django.core.cache import cache
@@ -341,18 +342,22 @@ class SLTPWatcherService:
         target_price: Optional[float],
     ) -> ExecutionRequest:
         parsed = self._symbol_parser.parse(str(trade_order.trading_symbol or ""))
+        order_params = trade_order.order_params if isinstance(trade_order.order_params, dict) else {}
         market_instrument = None
         if not parsed.is_option:
             market_instrument = self._resolve_market_instrument(trade_order)
             if not market_instrument:
                 raise ValueError(f"Trading symbol '{trade_order.trading_symbol}' is not a supported option symbol")
 
-        expiry = (parsed.expiry_date if parsed.is_option else None) or getattr(market_instrument, "expiry_date", None) or getattr(trade_setting, "expiry_date", None)
+        expiry = self._expiry_from_order_params(order_params)
+        if expiry is None and parsed.is_option and parsed.expiry_str:
+            expiry = parsed.expiry_date
+        expiry = expiry or getattr(market_instrument, "expiry_date", None) or getattr(trade_setting, "expiry_date", None)
         if not expiry:
             raise ValueError("Expiry could not be resolved for auto-exit")
-        underlying = parsed.underlying if parsed.is_option else market_instrument.underlying
-        strike = parsed.strike if parsed.is_option else market_instrument.strike
-        option_type = parsed.option_type if parsed.is_option else market_instrument.option_type
+        underlying = str(order_params.get("symbol") or (parsed.underlying if parsed.is_option else market_instrument.underlying)).upper()
+        strike = order_params.get("strike") or order_params.get("strike_price") or (parsed.strike if parsed.is_option else market_instrument.strike)
+        option_type = str(order_params.get("option_type") or order_params.get("Type") or (parsed.option_type if parsed.is_option else market_instrument.option_type)).upper()
         original_history_id = str(trade_order.history_id or trade_order.id)
         exit_history_id = f"{original_history_id}_sltp_exit"
 
@@ -404,6 +409,29 @@ class SLTPWatcherService:
             },
             history_id=exit_history_id,
         )
+
+    @staticmethod
+    def _expiry_from_order_params(order_params: Dict[str, Any]) -> Optional[datetime]:
+        expiry = order_params.get("expiry") or order_params.get("expiry_date")
+        if expiry:
+            for date_format in ("%Y-%m-%d", "%d-%b-%Y", "%d%b%Y", "%d%b%y"):
+                try:
+                    return datetime.strptime(str(expiry), date_format)
+                except ValueError:
+                    continue
+
+        day = order_params.get("day")
+        month = order_params.get("month")
+        year = order_params.get("fullyear") or order_params.get("year")
+        if day and month and year:
+            year_text = str(year)
+            if len(year_text) == 2:
+                year_text = f"20{year_text}"
+            try:
+                return datetime.strptime(f"{int(float(day)):02d}{str(month)[:3].upper()}{year_text}", "%d%b%Y")
+            except (TypeError, ValueError):
+                return None
+        return None
 
     def _try_acquire_lock(self, trade_order: Tradeorderhistory) -> bool:
         lock_key = f"sl_tp_watcher_lock:{trade_order.history_id or trade_order.id}"

@@ -3076,6 +3076,53 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertEqual(request.webhook_signal["original_history_id"], "buy-history-1")
         self.assertEqual(request.transaction_type, "SELL")
 
+    def test_sl_tp_exit_request_prefers_stored_contract_metadata(self):
+        trade_order = SimpleNamespace(
+            id=1,
+            history_id="alice-buy-history",
+            client=self.client_user,
+            GroupService="Lite",
+            trading_symbol="BANKNIFTY53400CE",
+            Index_Symbol="BANKNIFTY53400CE",
+            EntryQty=30,
+            Entry_type=None,
+            Entry_Price="1334.55",
+            Lot=1,
+            strategy="test",
+            Exchange="NFO",
+            Segment="FNO",
+            order_params={
+                "symbol": "BANKNIFTY",
+                "expiry": "2026-06-30",
+                "strike": 53400,
+                "option_type": "CE",
+                "product_type": "MIS",
+            },
+        )
+        trade_setting = SimpleNamespace(
+            expiry_date=timezone.datetime(2026, 6, 1),
+            strategy="test",
+            order_type="LIMIT",
+            product_type="MIS",
+            quantity=30,
+        )
+
+        request = SLTPWatcherService()._build_exit_request(
+            trade_order=trade_order,
+            trade_setting=trade_setting,
+            current_ltp=1297.9,
+            trigger_reason="STOP_LOSS",
+            stop_loss_price=1314.55,
+            target_price=1374.55,
+        )
+
+        self.assertEqual(request.day, "30")
+        self.assertEqual(request.month, "JUN")
+        self.assertEqual(request.year, "26")
+        self.assertEqual(request.symbol, "BANKNIFTY")
+        self.assertEqual(request.strike, 53400)
+        self.assertEqual(request.option_type, "CE")
+
     @mock.patch("main.dematemodule._broker_proxy_config_or_none", return_value={"https": "http://proxy.example.com:8080"})
     @mock.patch("main.dematemodule._create_broker_callback_state", return_value="alice-callback-state")
     def test_alice_blue_redirect_does_not_mark_token_created(self, mock_create_state, mock_proxy_config):
