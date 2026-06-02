@@ -1603,6 +1603,8 @@ class ExecutionEngine:
         return None
 
     def _record_broker_failure(self, request: ExecutionRequest) -> None:
+        if request.is_exit_order:
+            return
         broker = request.broker_name or "unknown"
         scope = self._circuit_breaker_scope(request)
         failures_key = f"execution_engine:circuit_breaker:failures:{scope}"

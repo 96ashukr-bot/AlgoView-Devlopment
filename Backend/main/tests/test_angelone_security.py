@@ -785,6 +785,27 @@ class AngelOneExecutionValidationTests(TestCase):
 
         self.assertIsNone(engine._check_circuit_breaker(exit_request))
 
+    def test_exit_failures_do_not_open_entry_circuit_breaker(self):
+        cache = caches["circuit_breaker"]
+        cache.clear()
+        engine = ExecutionEngine.__new__(ExecutionEngine)
+        engine._circuit_breaker_cache = cache
+        engine.CIRCUIT_BREAKER_THRESHOLD = 1
+        engine.CIRCUIT_BREAKER_BLOCK_SECONDS = 60
+        request = self._request(history_id="client-entry-after-exit-failure")
+        exit_request = ExecutionRequest(
+            **{
+                **request.__dict__,
+                "transaction_type": "SELL",
+                "history_id": "client-exit-failure",
+                "order_params": {**request.order_params, "transaction_type": "SELL"},
+            }
+        )
+
+        engine._record_broker_failure(exit_request)
+
+        self.assertIsNone(engine._check_circuit_breaker(request))
+
     def test_angel_one_access_rate_errors_are_retryable(self):
         engine = ExecutionEngine.__new__(ExecutionEngine)
 
