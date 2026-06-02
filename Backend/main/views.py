@@ -3760,10 +3760,29 @@ def place_order_broker(LivePrice,group_service,
             order_params=order_params,
             history_id=history_id,
         )
-        return get_execution_engine().execute_order(execution_request)
+        order_response = get_execution_engine().execute_order(execution_request)
+        response_data = order_response.get("data", {}) if isinstance(order_response, dict) else {}
+        response_status = response_data.get("status") or "Failed"
+        response_message = response_data.get("message") or response_data.get("error") or str(order_response)
+        response_order_id = response_data.get("order_id") or response_data.get("orderid") or 0
+        save_trade_order_history(
+            LivePrice, group_service, transaction_type, trade_order_status, user, symbol,
+            response_order_id, response_status, order_response, response_message, strategy,
+            Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty, webhook_signal,
+            Exchange, Segment, Index_Symbol, order_params, broker=getattr(trade, "broker", None),
+            history_id=history_id
+        )
+        return order_response
     except Exception as e:
         response = {'data': {'status': 'Failed', "message": str(e)}}
         logger.error("Place Order Broker encountered an error: %s", e)
+        save_trade_order_history(
+            LivePrice, group_service, transaction_type, trade_order_status, user, symbol,
+            0, "Failed", response, str(e), strategy, Entry_type, Exit_type,
+            Entry_price, Exit_price, EntryQty, ExitQty, webhook_signal, Exchange,
+            Segment, Index_Symbol, order_params, broker=getattr(trade, "broker", None),
+            history_id=history_id
+        )
         return response
 
 

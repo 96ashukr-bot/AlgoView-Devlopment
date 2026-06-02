@@ -39,7 +39,7 @@ from main.sl_tp_watcher_service import SLTPWatcherService, SUCCESS_EXIT_STATUSES
 from main.services.upstox_market_data import UpstoxInstrumentResolver, get_active_option_instruments
 from main.serializers import ClientBrokerDetailsUpdateSerializer, TradeorderhistorySerializer
 from main.trade_history_service import save_trade_order_history
-from main.views import _process_webhook_trade, _resolve_webhook_request_context
+from main.views import _process_webhook_trade, _resolve_webhook_request_context, place_order_broker
 
 
 TEST_CACHES = {
@@ -255,6 +255,57 @@ class ExecutionNodeManagerTests(TestCase):
         history = Tradeorderhistory.objects.get(history_id="placeholder-history")
 
         self.assertIsNone(history.failure_reason)
+
+    @mock.patch("main.views.get_execution_engine")
+    def test_place_order_broker_overwrites_placeholder_with_engine_failure(self, mock_get_engine):
+        mock_get_engine.return_value.execute_order.return_value = {
+            "data": {
+                "status": "Failed",
+                "message": "No valid Angel One session is available. Please complete broker login again.",
+                "error_code": "TOKEN_EXPIRED",
+            }
+        }
+        trade = SimpleNamespace(broker="Angel One")
+
+        place_order_broker(
+            100,
+            "test",
+            trade,
+            self.client_user,
+            "SELL",
+            "NIFTY",
+            65,
+            "test-strategy",
+            "LIMIT",
+            "MIS",
+            None,
+            1,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            65,
+            {"ordertype": "buy-C"},
+            "NFO",
+            "FNO",
+            "NIFTY",
+            None,
+            "02",
+            "JUN",
+            "26",
+            "2026",
+            23300,
+            "PE",
+            {"transaction_type": "SELL", "option_type": "PE", "quantity": 65},
+            "engine-failure-history",
+        )
+
+        history = Tradeorderhistory.objects.get(history_id="engine-failure-history")
+        self.assertEqual(history.failure_reason, "No valid Angel One session is available. Please complete broker login again.")
+        self.assertEqual(history.response_data["data"]["error_code"], "TOKEN_EXPIRED")
+        self.assertEqual(history.broker, "Angel One")
 
     def test_subadmin_trade_history_is_limited_to_assigned_clients(self):
         subadmin_role, _ = Role.objects.get_or_create(name="Sub-Admin", defaults={"status": "active"})
