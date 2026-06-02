@@ -9,7 +9,7 @@ from main.models import Tradeorderhistory
 OPEN_BUY_ORDER_STATUSES = {"complete", "completed", "success"}
 BROKER_ACCEPTED_OPEN_STATUSES = {"open"}
 CLOSED_TRADE_STATUSES = {"close", "closed"}
-SUCCESS_CLOSE_STATUSES = {"completed", "complete", "success", "open", "put order req received"}
+SUCCESS_CLOSE_STATUSES = {"completed", "complete", "success"}
 KNOWN_UNDERLYINGS = ("MIDCPNIFTY", "BANKNIFTY", "FINNIFTY", "SENSEX", "BANKEX", "NIFTY")
 
 

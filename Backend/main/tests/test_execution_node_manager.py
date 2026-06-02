@@ -31,11 +31,11 @@ from main.broker_registry import get_broker_setup_spec
 from main.broker_order_utils import extract_ltp_from_quote_payload
 from main.brokers.exchange_mapping import normalize_broker_exchange, normalize_fivepaisa_exchange
 from main.brokers.utils import build_trade_symbol
-from main.brokers.position_guard import find_matching_open_buy_position, prepare_close_order_from_open_position
+from main.brokers.position_guard import find_matching_open_buy_position, mark_open_position_closed, prepare_close_order_from_open_position
 from main.permissions import can_access_client_record
 from main.services.live_price_cache import build_live_price_payload, cache_live_price, get_live_price
 from main.services.option_ltp_fallback import cache_option_ltp, fetch_nse_option_chain_ltp, get_cached_option_ltp
-from main.sl_tp_watcher_service import SLTPWatcherService
+from main.sl_tp_watcher_service import SLTPWatcherService, SUCCESS_EXIT_STATUSES
 from main.services.upstox_market_data import UpstoxInstrumentResolver, get_active_option_instruments
 from main.serializers import ClientBrokerDetailsUpdateSerializer, TradeorderhistorySerializer
 from main.trade_history_service import save_trade_order_history
@@ -654,6 +654,53 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertEqual(str(close_order["strike"]), "23600")
         self.assertEqual(close_order["option_type"], "CE")
         self.assertEqual(close_order["quantity"], 65)
+
+    def test_routed_open_exit_does_not_close_buy_position(self):
+        buy_history = Tradeorderhistory.objects.create(
+            client=self.client_user,
+            GroupService="Lite",
+            trading_symbol="NIFTY02JUN2623500CE",
+            Index_Symbol="NIFTY02JUN2623500CE",
+            transaction_type="BUY",
+            trade_order_status="OPEN",
+            order_status="completed",
+            order_id="buy-open-1",
+            Entry_type="LE",
+            EntryQty=65,
+        )
+
+        mark_open_position_closed(
+            buy_history,
+            {"data": {"status": "open", "message": "Order routed to execution node."}},
+        )
+
+        buy_history.refresh_from_db()
+        self.assertEqual(buy_history.trade_order_status, "OPEN")
+
+    def test_completed_exit_closes_buy_position(self):
+        buy_history = Tradeorderhistory.objects.create(
+            client=self.client_user,
+            GroupService="Lite",
+            trading_symbol="NIFTY02JUN2623500CE",
+            Index_Symbol="NIFTY02JUN2623500CE",
+            transaction_type="BUY",
+            trade_order_status="OPEN",
+            order_status="completed",
+            order_id="buy-completed-1",
+            Entry_type="LE",
+            EntryQty=65,
+        )
+
+        mark_open_position_closed(
+            buy_history,
+            {"data": {"status": "completed", "message": "Order completed successfully."}},
+        )
+
+        buy_history.refresh_from_db()
+        self.assertEqual(buy_history.trade_order_status, "CLOSE")
+
+    def test_sltp_watcher_does_not_treat_open_exit_as_success(self):
+        self.assertNotIn("open", SUCCESS_EXIT_STATUSES)
 
     def test_exit_position_does_not_match_pending_open_buy_order(self):
         Tradeorderhistory.objects.create(
