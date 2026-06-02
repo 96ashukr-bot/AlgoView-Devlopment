@@ -634,6 +634,43 @@ class AngelOneSessionManagerTests(TestCase):
         self.assertIsNone(session.access_token)
         self.assertIsNone(session.feed_token)
 
+    def test_validate_session_propagates_expired_refresh_token(self):
+        broker_details = SimpleNamespace(
+            access_token_expiry=timezone.now() + timezone.timedelta(hours=1),
+            get_access_token_secure=lambda: "old-access",
+            get_refresh_token_secure=lambda: "old-refresh",
+            get_feed_token_secure=lambda: "old-feed",
+            get_angel_one_login_credentials=lambda: {
+                "client_code": "A12345",
+                "api_key": "angel-key",
+                "password": None,
+                "totp_secret": None,
+            },
+        )
+
+        manager = SessionManager.get_instance()
+        with (
+            mock.patch.object(manager, "_get_cached_session", return_value=None),
+            mock.patch.object(manager, "_remote_validate", return_value=False),
+            mock.patch.object(
+                manager,
+                "_perform_refresh",
+                return_value={
+                    "status": "error",
+                    "message": "Angel One session is invalid or expired. Please login again.",
+                    "error_code": "TOKEN_EXPIRED",
+                },
+            ),
+            mock.patch.object(manager, "invalidate_client_sessions") as mock_invalidate,
+            mock.patch.object(manager, "_breaker") as mock_breaker,
+        ):
+            mock_breaker.is_open.return_value = False
+            response = manager.validate_session("A12345", "angel-key", broker_details=broker_details)
+
+        self.assertEqual(response["status"], "error")
+        self.assertEqual(response["error_code"], "TOKEN_EXPIRED")
+        mock_invalidate.assert_called_with("A12345")
+
 
 class MigrationSafetyTests(TestCase):
     def test_client_trade_setting_migration_depends_on_initial(self):

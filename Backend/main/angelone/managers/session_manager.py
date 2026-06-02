@@ -529,6 +529,7 @@ class SessionManager:
                     self._breaker.record_success()
                     return {"status": "success", "session": session, "source": "redis"}
 
+            token_expired_detected = False
             if broker_details:
                 persisted_access_token = broker_details.get_access_token_secure()
                 persisted_refresh_token = broker_details.get_refresh_token_secure()
@@ -551,6 +552,7 @@ class SessionManager:
                         self._persist_session(candidate)
                         self._breaker.record_success()
                         return {"status": "success", "session": candidate, "source": "persisted_tokens"}
+                    token_expired_detected = True
 
                 if persisted_refresh_token:
                     refresh_seed = self._build_session(
@@ -568,6 +570,8 @@ class SessionManager:
                     if refreshed.get("status") == "success":
                         refreshed_session = self._get_cached_session(session_key, proxy_config=proxy_config)
                         return {"status": "success", "session": refreshed_session, "source": "refresh"}
+                    if refreshed.get("error_code") == "TOKEN_EXPIRED":
+                        token_expired_detected = True
 
                 credentials = broker_details.get_angel_one_login_credentials()
                 password = credentials.get("password")
@@ -586,6 +590,13 @@ class SessionManager:
                         return {"status": "success", "session": login_session, "source": "credential_login"}
 
             self._breaker.record_failure()
+            if token_expired_detected:
+                self.invalidate_client_sessions(client_id)
+                return {
+                    "status": "error",
+                    "message": "Angel One session is invalid or expired. Please login again.",
+                    "error_code": "TOKEN_EXPIRED",
+                }
             return {"status": "error", "message": "No valid Angel One session is available. Please complete broker login again."}
         finally:
             try:
