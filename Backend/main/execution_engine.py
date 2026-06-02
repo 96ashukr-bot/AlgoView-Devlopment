@@ -284,6 +284,10 @@ class ExecutionEngine:
         "429",
         "throttle",
         "rate limit",
+        "rate-limit",
+        "access rate",
+        "exceeding access rate",
+        "too many requests",
         "service unavailable",
     )
 

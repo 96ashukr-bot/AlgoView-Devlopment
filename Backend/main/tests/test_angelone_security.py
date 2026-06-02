@@ -785,6 +785,16 @@ class AngelOneExecutionValidationTests(TestCase):
 
         self.assertIsNone(engine._check_circuit_breaker(exit_request))
 
+    def test_angel_one_access_rate_errors_are_retryable(self):
+        engine = ExecutionEngine.__new__(ExecutionEngine)
+
+        self.assertTrue(
+            engine._is_transient_error(
+                "Couldn't parse the JSON response received from the server: "
+                "b'Access denied because of exceeding access rate'"
+            )
+        )
+
     def test_zero_like_limit_price_is_treated_as_auto_buffer_price(self):
         request = self._request()
         request = ExecutionRequest(
