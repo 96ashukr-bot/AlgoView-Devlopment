@@ -31,12 +31,24 @@ def _decimal_or_none(value):
     return parsed if parsed > 0 else None
 
 
+def _json_safe(value):
+    if isinstance(value, dict):
+        return {key: _json_safe(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_json_safe(item) for item in value]
+    if isinstance(value, tuple):
+        return [_json_safe(item) for item in value]
+    if isinstance(value, Decimal):
+        return float(value)
+    return value
+
+
 def _safe_job_payload(order_payload: dict[str, Any], broker_details: ClientBrokerdetails) -> dict[str, Any]:
     return {
         "client_id": broker_details.client_id,
         "broker_details_id": broker_details.id,
         "broker": getattr(getattr(broker_details, "broker_name", None), "broker_name", None),
-        "order": order_payload,
+        "order": _json_safe(order_payload),
     }
 
 

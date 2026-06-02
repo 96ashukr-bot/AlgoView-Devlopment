@@ -1,5 +1,6 @@
 import os
 import tempfile
+from decimal import Decimal
 from types import SimpleNamespace
 from unittest import mock
 
@@ -922,11 +923,21 @@ class ExecutionNodeManagerTests(TestCase):
         result = route_order_to_execution_node(
             self.client_user,
             self.broker_details,
-            {"symbol": "NIFTY", "quantity": 65, "transaction_type": "BUY", "idempotency_key": "route-1"},
+            {
+                "symbol": "NIFTY",
+                "quantity": 65,
+                "transaction_type": "BUY",
+                "idempotency_key": "route-1",
+                "Entry_price": Decimal("123.45"),
+                "order_params": {"current_ltp": Decimal("120.50")},
+            },
         )
         self.assertEqual(result["status"], ExecutionOrderJob.STATUS_PLACED)
         self.assertEqual(result["broker_response"], broker_response)
         self.assertTrue(ExecutionOrderJob.objects.filter(idempotency_key="route-1").exists())
+        sent_payload = mock_post.call_args.kwargs["json"]
+        self.assertEqual(sent_payload["order"]["Entry_price"], 123.45)
+        self.assertEqual(sent_payload["order"]["order_params"]["current_ltp"], 120.5)
 
     @mock.patch("main.services.execution_router.requests.post", side_effect=TimeoutError("timeout"))
     def test_failed_node_timeout_handling(self, mock_post):
