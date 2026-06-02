@@ -172,7 +172,12 @@ def route_order_to_execution_node(client: User, broker_details: ClientBrokerdeta
             job.error_message = response_payload.get("message") if isinstance(response_payload, dict) else response.text[:1000]
         job.save(update_fields=["node_response", "broker_response", "status", "error_message", "updated_at"])
         node.mark_log("order_routed", f"Order job {job.id} routed to execution node.", client=client, metadata={"status": job.status})
-        return {"status": job.status, "job_id": job.id, "message": job.error_message}
+        return {
+            "status": job.status,
+            "job_id": job.id,
+            "message": job.error_message,
+            "broker_response": broker_response,
+        }
     except requests.Timeout:
         job.status = ExecutionOrderJob.STATUS_FAILED
         job.error_message = "Execution node request timed out."

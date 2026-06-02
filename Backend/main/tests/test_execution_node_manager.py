@@ -912,11 +912,12 @@ class ExecutionNodeManagerTests(TestCase):
     def test_successful_mocked_order_routing(self, mock_post):
         assign_execution_node_to_client(self.client_user, self.node)
         self.broker_details.refresh_from_db()
+        broker_response = {"status": "success", "order_id": "1"}
         mock_post.return_value = SimpleNamespace(
             ok=True,
             status_code=200,
             content=b"{}",
-            json=lambda: {"status": "placed", "broker_response": {"status": "success", "order_id": "1"}},
+            json=lambda: {"status": "placed", "broker_response": broker_response},
         )
         result = route_order_to_execution_node(
             self.client_user,
@@ -924,6 +925,7 @@ class ExecutionNodeManagerTests(TestCase):
             {"symbol": "NIFTY", "quantity": 65, "transaction_type": "BUY", "idempotency_key": "route-1"},
         )
         self.assertEqual(result["status"], ExecutionOrderJob.STATUS_PLACED)
+        self.assertEqual(result["broker_response"], broker_response)
         self.assertTrue(ExecutionOrderJob.objects.filter(idempotency_key="route-1").exists())
 
     @mock.patch("main.services.execution_router.requests.post", side_effect=TimeoutError("timeout"))
