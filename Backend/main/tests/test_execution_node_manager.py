@@ -3345,6 +3345,39 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertIsNone(ltp)
         self.assertEqual(error, "Cached live price does not match the option contract.")
 
+    def test_sl_tp_exit_cooldown_uses_long_pause_for_rate_limit_response(self):
+        service = SLTPWatcherService()
+        trade_order = SimpleNamespace(history_id="rate-limited-history", id=1)
+        response = {
+            "data": {
+                "status": "Failed",
+                "message": "Couldn't parse the JSON response received from the server: b'Access denied because of exceeding access rate'",
+                "error_code": "ORDER_EXECUTION_FAILED",
+            }
+        }
+
+        cooldown_seconds = service._set_exit_cooldown(trade_order, response)
+        remaining = service._get_exit_cooldown_remaining(trade_order)
+
+        self.assertEqual(cooldown_seconds, service.RATE_LIMIT_COOLDOWN_SECONDS)
+        self.assertIsNotNone(remaining)
+        self.assertGreater(remaining, 0)
+
+    def test_sl_tp_exit_cooldown_uses_pause_for_empty_broker_response(self):
+        service = SLTPWatcherService()
+        trade_order = SimpleNamespace(history_id="empty-response-history", id=1)
+        response = {
+            "data": {
+                "status": "Failed",
+                "message": "Angel One returned an empty response while placing the order.",
+                "error_code": "EMPTY_BROKER_RESPONSE",
+            }
+        }
+
+        cooldown_seconds = service._set_exit_cooldown(trade_order, response)
+
+        self.assertEqual(cooldown_seconds, service.EMPTY_RESPONSE_COOLDOWN_SECONDS)
+
     @mock.patch("main.dematemodule._broker_proxy_config_or_none", return_value={"https": "http://proxy.example.com:8080"})
     @mock.patch("main.dematemodule._create_broker_callback_state", return_value="alice-callback-state")
     def test_alice_blue_redirect_does_not_mark_token_created(self, mock_create_state, mock_proxy_config):

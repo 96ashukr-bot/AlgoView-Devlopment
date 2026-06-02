@@ -80,6 +80,9 @@ class WatchResult:
 
 class SLTPWatcherService:
     LOCK_TIMEOUT_SECONDS = 30
+    EXIT_FAILURE_COOLDOWN_SECONDS = 60
+    RATE_LIMIT_COOLDOWN_SECONDS = 180
+    EMPTY_RESPONSE_COOLDOWN_SECONDS = 120
 
     @staticmethod
     def _build_watch_result(
@@ -499,6 +502,38 @@ class SLTPWatcherService:
         lock_key = f"sl_tp_watcher_lock:{trade_order.history_id or trade_order.id}"
         cache.delete(lock_key)
 
+    def _exit_cooldown_key(self, trade_order: Tradeorderhistory) -> str:
+        return f"sl_tp_watcher_exit_cooldown:{trade_order.history_id or trade_order.id}"
+
+    def _get_exit_cooldown_remaining(self, trade_order: Tradeorderhistory) -> Optional[int]:
+        blocked_until = cache.get(self._exit_cooldown_key(trade_order))
+        if not blocked_until:
+            return None
+        remaining = int(round(float(blocked_until) - time.time()))
+        if remaining <= 0:
+            cache.delete(self._exit_cooldown_key(trade_order))
+            return None
+        return remaining
+
+    def _cooldown_seconds_for_response(self, response: Dict[str, Any]) -> int:
+        data = response.get("data") if isinstance(response, dict) else {}
+        message = str((data or {}).get("message") or "").lower()
+        error_code = str((data or {}).get("error_code") or "").upper()
+        if "access rate" in message or "rate limit" in message or "too many requests" in message:
+            return self.RATE_LIMIT_COOLDOWN_SECONDS
+        if "empty response" in message or error_code == "EMPTY_BROKER_RESPONSE":
+            return self.EMPTY_RESPONSE_COOLDOWN_SECONDS
+        return self.EXIT_FAILURE_COOLDOWN_SECONDS
+
+    def _set_exit_cooldown(self, trade_order: Tradeorderhistory, response: Dict[str, Any]) -> int:
+        cooldown_seconds = self._cooldown_seconds_for_response(response)
+        cache.set(
+            self._exit_cooldown_key(trade_order),
+            time.time() + cooldown_seconds,
+            timeout=cooldown_seconds,
+        )
+        return cooldown_seconds
+
     def process_trade(self, trade_order: Tradeorderhistory, execute_exit: bool = True) -> WatchResult:
         trade_setting = self._find_trade_setting(trade_order)
         if not trade_setting:
@@ -559,6 +594,18 @@ class SLTPWatcherService:
                 trigger_reason=trigger_reason,
             )
 
+        cooldown_remaining = self._get_exit_cooldown_remaining(trade_order)
+        if cooldown_remaining:
+            return self._build_watch_result(
+                trade_order,
+                status="skipped",
+                message=f"Previous auto-exit attempt failed recently. Retrying after {cooldown_remaining} seconds.",
+                current_ltp=current_ltp,
+                stop_loss_price=stop_loss_price,
+                target_price=target_price,
+                trigger_reason=trigger_reason,
+            )
+
         if not self._try_acquire_lock(trade_order):
             return self._build_watch_result(
                 trade_order,
@@ -592,6 +639,8 @@ class SLTPWatcherService:
                 status = "triggered"
             else:
                 message = response.get("data", {}).get("message", "Auto-exit request failed.")
+                cooldown_seconds = self._set_exit_cooldown(trade_order, response)
+                message = f"{message} Auto-exit retry paused for {cooldown_seconds} seconds."
                 status = "failed"
 
             return self._build_watch_result(
