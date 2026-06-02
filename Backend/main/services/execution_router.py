@@ -137,6 +137,8 @@ def route_order_to_execution_node(client: User, broker_details: ClientBrokerdeta
             job.status = ExecutionOrderJob.STATUS_PLACED if response_status in {"success", "complete", "completed", "open", "placed"} else ExecutionOrderJob.STATUS_REJECTED
             if job.status == ExecutionOrderJob.STATUS_REJECTED:
                 job.error_message = broker_response.get("message") or broker_response.get("data", {}).get("message") or "Broker rejected proxy-routed order."
+            else:
+                job.error_message = None
             job.save(update_fields=["broker_response", "status", "error_message", "updated_at"])
             node.mark_log("proxy_order_routed", f"Order job {job.id} routed through assigned proxy.", client=client, metadata={"status": job.status, "proxy": mask_proxy_url(node)})
             return {"status": job.status, "job_id": job.id, "message": job.error_message, "broker_response": broker_response}
@@ -179,6 +181,7 @@ def route_order_to_execution_node(client: User, broker_details: ClientBrokerdeta
         job.broker_response = broker_response
         if response.ok and str(response_payload.get("status", "")).lower() in {"accepted", "placed", "success"}:
             job.status = ExecutionOrderJob.STATUS_PLACED if response_payload.get("broker_response") else ExecutionOrderJob.STATUS_ACCEPTED_BY_NODE
+            job.error_message = None
         else:
             job.status = ExecutionOrderJob.STATUS_REJECTED if response.status_code < 500 else ExecutionOrderJob.STATUS_FAILED
             job.error_message = response_payload.get("message") if isinstance(response_payload, dict) else response.text[:1000]

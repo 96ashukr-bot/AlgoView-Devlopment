@@ -343,6 +343,9 @@ def save_trade_order_history(*args, **kwargs):
                 if field_name in {"SignalEntry_time", "SignalExit_time"}:
                     setattr(history, field_name, field_value)
                     continue
+                if field_name == "failure_reason":
+                    setattr(history, field_name, field_value)
+                    continue
                 if field_value in (None, "", {}, []):
                     continue
                 setattr(history, field_name, field_value)

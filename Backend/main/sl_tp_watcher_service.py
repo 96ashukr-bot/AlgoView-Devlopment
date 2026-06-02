@@ -31,7 +31,7 @@ OPEN_ORDER_STATUSES = {
     "transit",
 }
 
-SUCCESS_EXIT_STATUSES = {"complete", "completed", "success"}
+SUCCESS_EXIT_STATUSES = {"complete", "completed", "success", "open", "placed"}
 
 
 @dataclass

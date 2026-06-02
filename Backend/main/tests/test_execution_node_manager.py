@@ -257,6 +257,47 @@ class ExecutionNodeManagerTests(TestCase):
 
         self.assertIsNone(history.failure_reason)
 
+    def test_trade_history_success_update_clears_old_failure_reason(self):
+        history = Tradeorderhistory.objects.create(
+            client=self.client_user,
+            history_id="clear-failure-history",
+            trading_symbol="NIFTY26MAY2624000CE",
+            order_status="Failed",
+            trade_order_status="Failed",
+            failure_reason="Old failure",
+        )
+
+        save_trade_order_history(
+            100,
+            "test",
+            "BUY",
+            "OPEN",
+            self.client_user,
+            "NIFTY26MAY2624000CE",
+            "order-1",
+            "open",
+            {"data": {"status": "open", "message": "Success", "order_id": "order-1"}},
+            "Success",
+            "test",
+            None,
+            None,
+            None,
+            None,
+            65,
+            None,
+            {},
+            "NFO",
+            "FNO",
+            "NIFTY26MAY2624000CE",
+            {},
+            broker="Alice Blue",
+            history_id=history.history_id,
+        )
+
+        history.refresh_from_db()
+        self.assertIsNone(history.failure_reason)
+        self.assertEqual(history.order_status, "open")
+
     @mock.patch("main.views.get_execution_engine")
     def test_place_order_broker_overwrites_placeholder_with_engine_failure(self, mock_get_engine):
         mock_get_engine.return_value.execute_order.return_value = {
@@ -3037,6 +3078,9 @@ class ExecutionNodeManagerTests(TestCase):
 
         self.assertEqual(result.entry_price, 123.45)
         self.assertEqual(result.quantity, 50)
+
+    def test_sl_tp_success_statuses_include_routed_open_order(self):
+        self.assertIn("open", SUCCESS_EXIT_STATUSES)
 
     def test_sl_tp_exit_request_uses_separate_history_id(self):
         trade_order = SimpleNamespace(
