@@ -6,8 +6,8 @@ from copy import deepcopy
 from main.brokers.utils import build_trade_symbol, common_order_kwargs, order_value
 from main.models import Tradeorderhistory
 
-OPEN_BUY_ORDER_STATUSES = {"complete", "completed", "success"}
-BROKER_ACCEPTED_OPEN_STATUSES = {"open"}
+OPEN_BUY_ORDER_STATUSES = {"complete", "completed", "success", "traded"}
+BROKER_ACCEPTED_OPEN_STATUSES = {"open", "placed", "accepted_by_node", "sent_to_node", "put order req received"}
 CLOSED_TRADE_STATUSES = {"close", "closed"}
 SUCCESS_CLOSE_STATUSES = {"completed", "complete", "success"}
 KNOWN_UNDERLYINGS = ("MIDCPNIFTY", "BANKNIFTY", "FINNIFTY", "SENSEX", "BANKEX", "NIFTY")
@@ -151,7 +151,12 @@ def _response_indicates_broker_acceptance(value):
     if isinstance(value, dict):
         status = str(value.get("status") or "").strip().lower()
         message = str(value.get("message") or "").strip().lower()
-        if status in {"ok", "success", "open"} or message == "success":
+        order_id = value.get("order_id") or value.get("orderid") or value.get("broker_order_id")
+        if status in {"ok", "success", "open", "complete", "completed", "placed", "traded"}:
+            return True
+        if message in {"success", "order placed successfully", "order routed to execution node."}:
+            return True
+        if order_id and status not in {"failed", "failure", "error", "rejected", "cancelled", "canceled"}:
             return True
         return any(_response_indicates_broker_acceptance(item) for item in value.values())
     if isinstance(value, list):
@@ -163,6 +168,8 @@ def _history_is_broker_accepted_open_buy(history):
     order_status = str(getattr(history, "order_status", "") or "").lower()
     trade_status = str(getattr(history, "trade_order_status", "") or "").lower()
     if order_status not in BROKER_ACCEPTED_OPEN_STATUSES or trade_status not in BROKER_ACCEPTED_OPEN_STATUSES:
+        return False
+    if not getattr(history, "order_id", None):
         return False
     response_data = getattr(history, "response_data", None)
     return _response_indicates_broker_acceptance(response_data)

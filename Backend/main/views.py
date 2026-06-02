@@ -3716,16 +3716,6 @@ def place_order_broker(LivePrice,group_service,
     trade_order_status, Entry_type, Exit_type, Entry_price,Exit_price,EntryQty,ExitQty,
     webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice, day, month, year, fullyear,default_price, Type, order_params, history_id):
     try:
-        order_id = 0
-        status = "Failed"
-        message = "Order is placing by place order broker !!"
-        save_trade_order_history(
-            LivePrice, group_service, transaction_type, trade_order_status, user, None,
-            order_id, status, message, message, strategy, Entry_type, Exit_type,
-            Entry_price, Exit_price, EntryQty, ExitQty, webhook_signal, Exchange,
-            Segment, Index_Symbol, order_params, broker=None, history_id=history_id
-        )
-
         execution_request = ExecutionRequest(
             LivePrice=LivePrice,
             group_service=group_service,

@@ -33,7 +33,7 @@ OPEN_ORDER_STATUSES = {
     "transit",
 }
 
-SUCCESS_EXIT_STATUSES = {"complete", "completed", "success", "open", "placed"}
+SUCCESS_EXIT_STATUSES = {"complete", "completed", "success"}
 
 
 @dataclass
@@ -119,7 +119,7 @@ class SLTPWatcherService:
         display_symbol = build_option_display_symbol(
             current_symbol=trade_order.trading_symbol,
             index_symbol=trade_order.Index_Symbol,
-            order_params=trade_order.order_params,
+            order_params=getattr(trade_order, "order_params", None),
             metadata=getattr(trade_order, "sltp_metadata", None),
         )
 
