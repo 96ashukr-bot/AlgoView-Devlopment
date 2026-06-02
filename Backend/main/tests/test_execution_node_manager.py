@@ -3252,6 +3252,99 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertEqual(request.strike, 53400)
         self.assertEqual(request.option_type, "CE")
 
+    @mock.patch("main.sl_tp_watcher_service.get_live_price")
+    def test_sl_tp_ltp_uses_option_contract_cache_not_plain_underlying_symbol(self, mock_get_live_price):
+        service = SLTPWatcherService()
+        service._upstox_resolver = SimpleNamespace(
+            resolve_contract=mock.Mock(
+                return_value=SimpleNamespace(
+                    instrument_key="NSE_FO|12345",
+                    underlying="NIFTY",
+                    expiry_date=timezone.datetime(2026, 6, 2),
+                    strike=23500,
+                    option_type="PE",
+                )
+            ),
+            resolve=mock.Mock(return_value=None),
+        )
+        trade_order = SimpleNamespace(
+            trading_symbol="NIFTY",
+            Index_Symbol="NIFTY2623500PE02JUN",
+            order_params={
+                "symbol": "NIFTY",
+                "expiry": "2026-06-02",
+                "strike": 23500,
+                "option_type": "PE",
+            },
+        )
+        option_payload = {
+            "instrument_key": "NSE_FO|12345",
+            "trading_symbol": "NIFTY02JUN2623500PE",
+            "ltp": 17.35,
+            "is_fresh": True,
+            "underlying": "NIFTY",
+            "expiry_date": "2026-06-02",
+            "strike": 23500,
+            "option_type": "PE",
+        }
+
+        def live_price_side_effect(**kwargs):
+            if kwargs.get("trading_symbol") == "NIFTY":
+                return {"ltp": 23517.05, "is_fresh": True, "underlying": "NIFTY"}
+            if kwargs.get("instrument_key") == "NSE_FO|12345":
+                return None
+            if kwargs.get("underlying") == "NIFTY" and kwargs.get("strike") == 23500:
+                return option_payload
+            return None
+
+        mock_get_live_price.side_effect = live_price_side_effect
+
+        ltp, error = service._get_cached_current_ltp(trade_order)
+
+        self.assertEqual(ltp, 17.35)
+        self.assertIsNone(error)
+        self.assertNotIn(mock.call(trading_symbol="NIFTY"), mock_get_live_price.mock_calls)
+
+    @mock.patch("main.sl_tp_watcher_service.get_live_price")
+    def test_sl_tp_rejects_underlying_ltp_for_option_trade(self, mock_get_live_price):
+        service = SLTPWatcherService()
+        service._upstox_resolver = SimpleNamespace(
+            resolve_contract=mock.Mock(
+                return_value=SimpleNamespace(
+                    instrument_key="NSE_FO|12345",
+                    underlying="NIFTY",
+                    expiry_date=timezone.datetime(2026, 6, 2),
+                    strike=23500,
+                    option_type="PE",
+                )
+            ),
+            resolve=mock.Mock(return_value=None),
+        )
+        trade_order = SimpleNamespace(
+            trading_symbol="NIFTY",
+            Index_Symbol="NIFTY2623500PE02JUN",
+            order_params={
+                "symbol": "NIFTY",
+                "expiry": "2026-06-02",
+                "strike": 23500,
+                "option_type": "PE",
+            },
+        )
+        mock_get_live_price.return_value = {
+            "instrument_key": "NSE_INDEX|Nifty 50",
+            "trading_symbol": "NIFTY",
+            "ltp": 23517.05,
+            "is_fresh": True,
+            "underlying": "NIFTY",
+            "strike": None,
+            "option_type": "",
+        }
+
+        ltp, error = service._get_cached_current_ltp(trade_order)
+
+        self.assertIsNone(ltp)
+        self.assertEqual(error, "Cached live price does not match the option contract.")
+
     @mock.patch("main.dematemodule._broker_proxy_config_or_none", return_value={"https": "http://proxy.example.com:8080"})
     @mock.patch("main.dematemodule._create_broker_callback_state", return_value="alice-callback-state")
     def test_alice_blue_redirect_does_not_mark_token_created(self, mock_create_state, mock_proxy_config):

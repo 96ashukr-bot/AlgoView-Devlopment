@@ -136,6 +136,48 @@ class SLTPWatcherService:
             return None
 
     @staticmethod
+    def _looks_like_option_symbol(value: Any) -> bool:
+        text = str(value or "").strip().upper()
+        return len(text) > 6 and ("CE" in text or "PE" in text)
+
+    @classmethod
+    def _has_option_contract_metadata(cls, trade_order: Tradeorderhistory) -> bool:
+        order_params = trade_order.order_params if isinstance(trade_order.order_params, dict) else {}
+        option_type = str(order_params.get("option_type") or order_params.get("Type") or "").strip().upper()
+        has_metadata = bool(
+            (order_params.get("symbol") or order_params.get("underlying"))
+            and (order_params.get("strike") or order_params.get("strike_price"))
+            and option_type in {"CE", "PE"}
+        )
+        return has_metadata or cls._looks_like_option_symbol(trade_order.trading_symbol) or cls._looks_like_option_symbol(trade_order.Index_Symbol)
+
+    @classmethod
+    def _payload_matches_option_contract(cls, trade_order: Tradeorderhistory, payload: Dict[str, Any]) -> bool:
+        option_type = str(payload.get("option_type") or "").strip().upper()
+        if option_type not in {"CE", "PE"}:
+            return False
+
+        payload_strike = cls._to_float(payload.get("strike"))
+        if payload_strike is None:
+            return False
+
+        order_params = trade_order.order_params if isinstance(trade_order.order_params, dict) else {}
+        expected_option_type = str(order_params.get("option_type") or order_params.get("Type") or "").strip().upper()
+        if expected_option_type in {"CE", "PE"} and option_type != expected_option_type:
+            return False
+
+        expected_strike = cls._to_float(order_params.get("strike") or order_params.get("strike_price"))
+        if expected_strike is not None and abs(payload_strike - expected_strike) > 0.001:
+            return False
+
+        expected_underlying = str(order_params.get("symbol") or order_params.get("underlying") or "").replace(" ", "").upper()
+        payload_underlying = str(payload.get("underlying") or "").replace(" ", "").upper()
+        if expected_underlying and payload_underlying and payload_underlying != expected_underlying:
+            return False
+
+        return True
+
+    @staticmethod
     def _normalize_sl_tp_type(value: Any) -> Optional[str]:
         if value in (None, "", "None"):
             return None
@@ -187,12 +229,6 @@ class SLTPWatcherService:
         ).select_related("broker_name").first()
 
     def _resolve_market_instrument(self, trade_order: Tradeorderhistory):
-        instrument = self._upstox_resolver.resolve(
-            trade_order.trading_symbol or trade_order.Index_Symbol,
-            underlying=trade_order.Index_Symbol,
-        )
-        if instrument:
-            return instrument
         order_params = trade_order.order_params if isinstance(trade_order.order_params, dict) else {}
         expiry = order_params.get("expiry")
         if not expiry and order_params.get("day") and order_params.get("month"):
@@ -201,19 +237,34 @@ class SLTPWatcherService:
                 year = f"20{year}"
             if year:
                 expiry = f"{order_params.get('day')}-{order_params.get('month')}-{year}"
-        return self._upstox_resolver.resolve_contract(
-            underlying=order_params.get("symbol") or trade_order.Index_Symbol,
+
+        instrument = self._upstox_resolver.resolve_contract(
+            underlying=order_params.get("symbol") or order_params.get("underlying"),
             expiry_date=expiry,
             strike=order_params.get("strike") or order_params.get("strike_price"),
             option_type=order_params.get("option_type") or order_params.get("Type"),
         )
+        if instrument:
+            return instrument
+
+        for symbol in (trade_order.trading_symbol, trade_order.Index_Symbol):
+            if not self._looks_like_option_symbol(symbol):
+                continue
+            instrument = self._upstox_resolver.resolve(
+                symbol,
+                underlying=order_params.get("symbol") or order_params.get("underlying"),
+            )
+            if instrument:
+                return instrument
+        return None
 
     def _get_cached_current_ltp(self, trade_order: Tradeorderhistory) -> tuple[Optional[float], Optional[str]]:
         instrument = self._resolve_market_instrument(trade_order)
+        is_option_trade = self._has_option_contract_metadata(trade_order)
         payload = None
         if instrument:
             payload = get_live_price(instrument_key=instrument.instrument_key)
-        if not payload:
+        if not payload and not is_option_trade:
             payload = get_live_price(trading_symbol=trade_order.trading_symbol)
         if not payload and instrument:
             payload = get_live_price(
@@ -223,11 +274,15 @@ class SLTPWatcherService:
                 option_type=instrument.option_type,
             )
         if not payload:
+            if is_option_trade:
+                return None, "Option live price is not available in the central cache."
             return None, "Live price is not available in the central cache."
         if not payload.get("is_fresh"):
             age = payload.get("age_seconds")
             age_text = f" Age: {age}s." if age is not None else ""
             return None, f"Live price is stale.{age_text}"
+        if is_option_trade and not self._payload_matches_option_contract(trade_order, payload):
+            return None, "Cached live price does not match the option contract."
         ltp = self._to_float(payload.get("ltp"))
         if ltp is None or ltp <= 0:
             return None, "Cached live price is invalid."
@@ -241,6 +296,9 @@ class SLTPWatcherService:
         trading_symbol = str(trade_order.trading_symbol or "").strip().upper()
         if not trading_symbol:
             return None, cache_error or "Trading symbol is missing."
+
+        if self._has_option_contract_metadata(trade_order) and not self._looks_like_option_symbol(trading_symbol):
+            return None, cache_error or "Option trading symbol is missing."
 
         broker = str(trade_order.broker or "").strip().lower()
         if broker not in {"angel one", "angle one"}:
