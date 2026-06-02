@@ -644,7 +644,7 @@ class OrderService:
 
     def _build_error_payload(self, message: str) -> Dict[str, Any]:
         normalized = (message or "").lower()
-        if "ag7002" in normalized:
+        if "ag7002" in normalized or "not a registered ip" in normalized or "registered/whitelisted" in normalized:
             return {
                 "error_code": "IP_NOT_WHITELISTED",
                 "message": "Angel One rejected the request because this server IP is not registered/whitelisted for your SmartAPI app (AG7002).",

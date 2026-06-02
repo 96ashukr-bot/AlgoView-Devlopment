@@ -23,6 +23,7 @@ PUBLIC_IP_ENDPOINTS = (
 
 PROXY_VERIFY_CONNECT_TIMEOUT_SECONDS = 3
 PROXY_VERIFY_READ_TIMEOUT_SECONDS = 5
+PROXY_VERIFY_MIN_SUCCESSFUL_CHECKS = 2
 
 
 def _clean_proxy_value(value: str | None) -> str:
@@ -132,6 +133,7 @@ def verify_proxy_public_ip(execution_node: ExecutionNode) -> dict[str, Any]:
         min(PROXY_VERIFY_READ_TIMEOUT_SECONDS, configured_timeout),
     )
     last_error = ""
+    observed_ips: list[str] = []
     for url in PUBLIC_IP_ENDPOINTS:
         try:
             response = requests.get(url, proxies=proxies, timeout=timeout)
@@ -139,31 +141,44 @@ def verify_proxy_public_ip(execution_node: ExecutionNode) -> dict[str, Any]:
             actual_ip = _normalize_ip(_parse_public_ip_response(url, response))
             if not actual_ip:
                 raise ValueError("Public IP endpoint returned an empty response.")
-            matched = actual_ip == expected_ip
-            execution_node.proxy_last_seen_ip = actual_ip
-            execution_node.proxy_last_verified_at = timezone.now()
-            execution_node.proxy_public_ip_verified = matched
-            execution_node.proxy_last_error = "" if matched else f"Expected {expected_ip}, got {actual_ip}."
-            execution_node.save(
-                update_fields=[
-                    "proxy_last_seen_ip",
-                    "proxy_last_verified_at",
-                    "proxy_public_ip_verified",
-                    "proxy_last_error",
-                    "updated_at",
-                ]
-            )
-            result.update(
-                {
-                    "status": "success" if matched else "failed",
-                    "actual_ip": actual_ip,
-                    "message": "Proxy public IP verified." if matched else execution_node.proxy_last_error,
-                }
-            )
-            return result
+            observed_ips.append(actual_ip)
+            if len(observed_ips) >= PROXY_VERIFY_MIN_SUCCESSFUL_CHECKS:
+                break
         except Exception as exc:  # noqa: BLE001 - every endpoint is a fallback attempt.
             last_error = str(exc)
             logger.warning("Proxy public IP verification endpoint failed", extra={"node_id": execution_node.node_id, "endpoint": url})
+
+    if observed_ips:
+        unique_ips = sorted(set(observed_ips))
+        matched = len(unique_ips) == 1 and unique_ips[0] == expected_ip
+        actual_ip = unique_ips[0] if len(unique_ips) == 1 else ", ".join(unique_ips)
+        if matched:
+            message = "Proxy public IP verified."
+        elif len(unique_ips) > 1:
+            message = f"Proxy route is rotating public IPs. Expected {expected_ip}, got {actual_ip}."
+        else:
+            message = f"Expected {expected_ip}, got {actual_ip}."
+        execution_node.proxy_last_seen_ip = unique_ips[-1]
+        execution_node.proxy_last_verified_at = timezone.now()
+        execution_node.proxy_public_ip_verified = matched
+        execution_node.proxy_last_error = "" if matched else message
+        execution_node.save(
+            update_fields=[
+                "proxy_last_seen_ip",
+                "proxy_last_verified_at",
+                "proxy_public_ip_verified",
+                "proxy_last_error",
+                "updated_at",
+            ]
+        )
+        result.update(
+            {
+                "status": "success" if matched else "failed",
+                "actual_ip": actual_ip,
+                "message": message,
+            }
+        )
+        return result
 
     execution_node.proxy_public_ip_verified = False
     execution_node.proxy_last_verified_at = timezone.now()

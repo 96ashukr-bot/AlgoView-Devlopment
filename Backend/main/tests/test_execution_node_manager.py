@@ -1,5 +1,6 @@
 import os
 import tempfile
+from datetime import timedelta
 from decimal import Decimal
 from types import SimpleNamespace
 from unittest import mock
@@ -2929,6 +2930,39 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertTrue(node.proxy_public_ip_verified)
 
     @mock.patch("main.services.proxy_utils.requests.get")
+    def test_verify_proxy_public_ip_rejects_rotating_route(self, mock_get):
+        node = ExecutionNode.objects.create(
+            name="Rotating Proxy Verify",
+            ip_address="10.0.0.23",
+            execution_type=ExecutionNode.EXECUTION_TYPE_PROXY,
+            proxy_host="proxy.example.com",
+            proxy_port=8080,
+            proxy_protocol=ExecutionNode.PROXY_PROTOCOL_HTTP,
+        )
+        responses = [
+            SimpleNamespace(
+                status_code=200,
+                json=lambda: {"ip": "10.0.0.23"},
+                text="10.0.0.23",
+                raise_for_status=lambda: None,
+            ),
+            SimpleNamespace(
+                status_code=200,
+                json=lambda: {"ip": "10.0.0.24"},
+                text="10.0.0.24",
+                raise_for_status=lambda: None,
+            ),
+        ]
+        mock_get.side_effect = responses
+
+        result = verify_proxy_public_ip(node)
+
+        node.refresh_from_db()
+        self.assertEqual(result["status"], "failed")
+        self.assertIn("rotating public IPs", result["message"])
+        self.assertFalse(node.proxy_public_ip_verified)
+
+    @mock.patch("main.services.proxy_utils.requests.get")
     def test_verify_proxy_public_ipv6_success_with_normalization(self, mock_get):
         node = ExecutionNode.objects.create(
             name="IPv6 Proxy Verify",
@@ -2961,6 +2995,7 @@ class ExecutionNodeManagerTests(TestCase):
             proxy_port=8080,
             proxy_protocol=ExecutionNode.PROXY_PROTOCOL_HTTP,
             proxy_public_ip_verified=True,
+            proxy_last_verified_at=timezone.now(),
             is_verified_with_broker=True,
         )
         assign_execution_node_to_client(self.client_user, proxy_node)
@@ -2979,6 +3014,35 @@ class ExecutionNodeManagerTests(TestCase):
         adapter.place_order.assert_called_once()
         self.assertIn("https", adapter.place_order.call_args.kwargs["proxy_config"])
 
+    @mock.patch("main.services.execution_router.verify_proxy_public_ip")
+    def test_proxy_order_reverifies_stale_public_ip_before_adapter(self, mock_verify):
+        stale_time = timezone.now() - timedelta(minutes=10)
+        proxy_node = ExecutionNode.objects.create(
+            name="Proxy Stale Route",
+            ip_address="10.0.0.24",
+            execution_type=ExecutionNode.EXECUTION_TYPE_PROXY,
+            proxy_host="proxy.example.com",
+            proxy_port=8080,
+            proxy_protocol=ExecutionNode.PROXY_PROTOCOL_HTTP,
+            proxy_public_ip_verified=True,
+            proxy_last_verified_at=stale_time,
+            is_verified_with_broker=True,
+        )
+        assign_execution_node_to_client(self.client_user, proxy_node)
+        self.broker_details.execution_node = proxy_node
+        self.broker_details.save(update_fields=["execution_node"])
+        mock_verify.return_value = {"status": "failed", "message": "Expected 10.0.0.24, got 10.0.0.25."}
+
+        with self.assertRaisesMessage(ValidationError, "Execution proxy public IP changed"):
+            route_order_to_execution_node(
+                self.client_user,
+                self.broker_details,
+                {"symbol": "NIFTY", "quantity": 1, "idempotency_key": "proxy-route-stale"},
+            )
+
+        proxy_node.refresh_from_db()
+        self.assertFalse(proxy_node.is_verified_with_broker)
+
     @mock.patch("main.services.execution_router.get_broker_adapter")
     def test_proxy_order_blocks_unsupported_adapter(self, adapter_factory):
         proxy_node = ExecutionNode.objects.create(
@@ -2989,6 +3053,7 @@ class ExecutionNodeManagerTests(TestCase):
             proxy_port=8080,
             proxy_protocol=ExecutionNode.PROXY_PROTOCOL_HTTP,
             proxy_public_ip_verified=True,
+            proxy_last_verified_at=timezone.now(),
             is_verified_with_broker=True,
         )
         assign_execution_node_to_client(self.client_user, proxy_node)

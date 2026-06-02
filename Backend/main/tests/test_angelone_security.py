@@ -1071,6 +1071,14 @@ class AngelOneExecutionValidationTests(TestCase):
         self.assertEqual(response["error_code"], "EMPTY_BROKER_RESPONSE")
         self.assertIn("check the Angel One order book before retrying", response["message"])
 
+    def test_order_service_maps_registered_ip_rejection(self):
+        service = OrderService.__new__(OrderService)
+
+        response = service._build_error_payload("119.13.234.94 is not a registered IP, please check your registered IP.")
+
+        self.assertEqual(response["error_code"], "IP_NOT_WHITELISTED")
+        self.assertIn("SmartAPI app", response["message"])
+
     def test_order_service_maps_smartapi_timeout_to_unconfirmed_message(self):
         service = OrderService.__new__(OrderService)
 

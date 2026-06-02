@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import time
 import uuid
+from datetime import timedelta
 from decimal import Decimal
 from typing import Any
 from urllib.parse import urljoin
@@ -11,14 +12,44 @@ import requests
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
+from django.utils import timezone
 
 from main.models import ClientBrokerdetails, ExecutionNode, ExecutionOrderJob, User
 from main.brokers import get_broker_adapter
 from main.services.execution_nodes import get_execution_node_for_client
 from main.services.node_security import generate_node_signature
-from main.services.proxy_utils import build_requests_proxy_config, mask_proxy_url
+from main.services.proxy_utils import build_requests_proxy_config, mask_proxy_url, verify_proxy_public_ip
 
 logger = logging.getLogger("main.execution_router")
+
+
+PROXY_PUBLIC_IP_REVERIFY_SECONDS = 60
+
+
+def _proxy_verification_is_fresh(node: ExecutionNode) -> bool:
+    verified_at = node.proxy_last_verified_at
+    if not verified_at:
+        return False
+    max_age = int(getattr(settings, "EXECUTION_PROXY_REVERIFY_SECONDS", PROXY_PUBLIC_IP_REVERIFY_SECONDS))
+    return timezone.now() - verified_at <= timedelta(seconds=max_age)
+
+
+def _ensure_proxy_public_ip_current(node: ExecutionNode) -> None:
+    if node.execution_type != ExecutionNode.EXECUTION_TYPE_PROXY:
+        return
+    if not node.proxy_public_ip_verified:
+        raise ValidationError("Execution proxy public IP is not verified.")
+    if _proxy_verification_is_fresh(node):
+        return
+    result = verify_proxy_public_ip(node)
+    if result.get("status") == "success":
+        return
+    node.refresh_from_db(fields=["proxy_public_ip_verified", "proxy_last_error", "proxy_last_seen_ip"])
+    if node.is_verified_with_broker:
+        node.is_verified_with_broker = False
+        node.save(update_fields=["is_verified_with_broker", "updated_at"])
+    message = result.get("message") or node.proxy_last_error or "Execution proxy public IP verification failed."
+    raise ValidationError(f"Execution proxy public IP changed or is not static: {message}")
 
 
 def _decimal_or_none(value):
@@ -81,8 +112,7 @@ def route_order_to_execution_node(client: User, broker_details: ClientBrokerdeta
         raise ValidationError("Execution node is not available for trading.")
     if not node.is_verified_with_broker:
         raise ValidationError("Execution node is not verified with broker for this client.")
-    if node.execution_type == ExecutionNode.EXECUTION_TYPE_PROXY and not node.proxy_public_ip_verified:
-        raise ValidationError("Execution proxy public IP is not verified.")
+    _ensure_proxy_public_ip_current(node)
 
     idempotency_key = str(order_payload.get("idempotency_key") or uuid.uuid4())
     request_payload = _safe_job_payload(order_payload, broker_details)
