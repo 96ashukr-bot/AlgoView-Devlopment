@@ -266,6 +266,36 @@ class SessionManager:
     def invalidate_local_session(self, client_id: str, api_key: str, proxy_config: Optional[Dict[str, str]] = None) -> None:
         self._delete_session(self._get_session_key(client_id, api_key, proxy_config))
 
+    def invalidate_client_sessions(self, client_id: str) -> None:
+        """Remove all cached Angel One sessions for one broker client code."""
+        client_id = str(client_id or "").strip()
+        if not client_id:
+            return
+        cache_prefix = f"{self._prefix}:"
+        try:
+            for key in list(self._redis.scan_iter(match=f"{cache_prefix}*")):
+                payload = self._redis.get(key)
+                if not payload:
+                    continue
+                try:
+                    if json.loads(payload).get("client_id") == client_id:
+                        self._redis.delete(key)
+                except Exception:
+                    continue
+        except Exception:
+            with self._fallback_store_lock:
+                for key, record in list(self._fallback_store.items()):
+                    if not key.startswith(cache_prefix):
+                        continue
+                    if record["expires_at"] <= timezone.now():
+                        self._fallback_store.pop(key, None)
+                        continue
+                    try:
+                        if json.loads(record["payload"]).get("client_id") == client_id:
+                            self._fallback_store.pop(key, None)
+                    except Exception:
+                        continue
+
     def _get_cached_session(self, session_key: str, proxy_config: Optional[Dict[str, str]] = None) -> Optional[ClientSession]:
         cache_key = self._cache_key(session_key)
         payload = None

@@ -384,6 +384,9 @@ class AngelOnePermissionTests(TestCase):
             broker_API_UID="C12345",
             broker_Demate_User_Name="C12345",
         )
+        self.broker_details.set_broker_password("Pass@1234")
+        self.broker_details.set_broker_totp_secret("JBSWY3DPEHPK3PXP")
+        self.broker_details.save()
 
     def test_admin_broker_view_blocks_cross_client_access(self):
         request = self.factory.get(f"/get-client-broker-details-by-id/{self.owner.id}/")
@@ -392,6 +395,28 @@ class AngelOnePermissionTests(TestCase):
         response = AdminClientBrokerDetailsView.as_view()(request, pk=self.owner.id)
 
         self.assertEqual(response.status_code, 403)
+
+    def test_angel_one_api_key_update_clears_stale_cached_sessions(self):
+        session_manager = SessionManager.get_instance()
+        session_manager.create_session_from_tokens(
+            client_id="C12345",
+            api_key="old-key",
+            access_token="old-token",
+            persist=True,
+        )
+        self.assertIsNotNone(session_manager.get_session("C12345", "old-key"))
+
+        serializer = ClientBrokerDetailsUpdateSerializer(
+            self.broker_details,
+            data={"broker_API_KEY": "new-key"},
+            partial=True,
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        serializer.save()
+
+        self.assertIsNone(session_manager.get_session("C12345", "old-key"))
+        self.broker_details.refresh_from_db()
+        self.assertIsNone(self.broker_details.get_access_token_secure())
 
 
 class LoginActivitySummaryTests(TestCase):

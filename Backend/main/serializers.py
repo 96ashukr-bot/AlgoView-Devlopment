@@ -1691,6 +1691,9 @@ class ClientBrokerDetailsUpdateSerializer(serializers.ModelSerializer):
         return attrs
 
     def update(self, instance, validated_data):
+        was_angel_one = instance.is_angel_one_broker()
+        previous_api_key = (instance.broker_API_KEY or "").strip()
+        previous_client_code = instance.get_canonical_client_code()
         api_key = validated_data.pop('broker_API_KEY', None)
         api_secret = validated_data.pop('broker_API_SKEY', None)
         broker_pass = validated_data.pop('broker_pass', None)
@@ -1724,6 +1727,25 @@ class ClientBrokerDetailsUpdateSerializer(serializers.ModelSerializer):
                 instance.access_token = access_token or None
 
         if instance.is_angel_one_broker():
+            current_api_key = (instance.broker_API_KEY or "").strip()
+            current_client_code = instance.get_canonical_client_code()
+            credential_changed = (
+                was_angel_one
+                and (
+                    (api_key is not None and previous_api_key != current_api_key)
+                    or previous_client_code != current_client_code
+                )
+            )
+            if credential_changed:
+                instance.clear_session_tokens()
+                try:
+                    from main.angelone.managers.session_manager import SessionManager
+
+                    session_manager = SessionManager.get_instance()
+                    session_manager.invalidate_client_sessions(previous_client_code)
+                    session_manager.invalidate_client_sessions(current_client_code)
+                except Exception:
+                    pass
             instance.clear_legacy_angel_sensitive_fields()
 
         instance.save()

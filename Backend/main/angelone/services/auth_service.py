@@ -186,6 +186,7 @@ class AuthService:
         proxy_config: Optional[Dict[str, str]] = None,
     ) -> Dict[str, Any]:
         """Register callback-provided tokens only after broker-side verification."""
+        self._session_manager.invalidate_client_sessions(client_id)
         session = self._session_manager.create_session_from_tokens(
             client_id=client_id,
             api_key=api_key,
