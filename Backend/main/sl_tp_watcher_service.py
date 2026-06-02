@@ -16,6 +16,7 @@ from main.angelone.utils.logging_utils import TradingLogger
 from main.angelone.utils.symbol_parser import get_symbol_parser
 from main.execution_engine import ExecutionRequest, get_execution_engine
 from main.models import ClientBrokerdetails, ClientTradeSetting, Tradeorderhistory
+from main.services.contract_display import build_option_display_symbol
 from main.services.live_price_cache import get_live_price
 from main.services.upstox_market_data import UpstoxInstrumentResolver
 
@@ -115,15 +116,22 @@ class SLTPWatcherService:
         except (TypeError, ValueError):
             quantity = None
 
+        display_symbol = build_option_display_symbol(
+            current_symbol=trade_order.trading_symbol,
+            index_symbol=trade_order.Index_Symbol,
+            order_params=trade_order.order_params,
+            metadata=getattr(trade_order, "sltp_metadata", None),
+        )
+
         return WatchResult(
             trade_id=trade_order.id,
             client_id=trade_order.client_id,
             client_name=client_name,
             broker=str(trade_order.broker or "").strip(),
-            symbol=str(trade_order.Index_Symbol or trade_order.trading_symbol or ""),
-            trading_symbol=str(trade_order.trading_symbol or ""),
+            symbol=display_symbol,
+            trading_symbol=display_symbol,
             group_service=str(trade_order.GroupService or ""),
-            script_name=str(trade_order.Index_Symbol or trade_order.trading_symbol or ""),
+            script_name=display_symbol,
             status=status,
             message=message,
             current_ltp=current_ltp,

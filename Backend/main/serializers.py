@@ -26,6 +26,7 @@ from main.broker_registry import (
 )
 from main.permissions import is_end_user
 from main.trade_history_service import resolve_trade_failure_reason
+from main.services.contract_display import build_option_display_symbol
 import json
 company_profile = get_company_profile()
 smtp_details=get_smtp_details()
@@ -2064,9 +2065,25 @@ def _extract_trade_broker_response(response_data, failure_reason=None):
 
 class TradeorderhistorySerializer(serializers.ModelSerializer):
     client = ClientnameSerializer(read_only=True)  # Use the nested serializer
+    trading_symbol = serializers.SerializerMethodField()
+    Index_Symbol = serializers.SerializerMethodField()
     failure_reason = serializers.SerializerMethodField()
     broker_response = serializers.SerializerMethodField()
     expiry = serializers.SerializerMethodField()
+
+    def _display_symbol(self, obj):
+        return build_option_display_symbol(
+            current_symbol=getattr(obj, "trading_symbol", None),
+            index_symbol=getattr(obj, "Index_Symbol", None),
+            order_params=getattr(obj, "order_params", None),
+            metadata=getattr(obj, "sltp_metadata", None),
+        )
+
+    def get_trading_symbol(self, obj):
+        return self._display_symbol(obj)
+
+    def get_Index_Symbol(self, obj):
+        return self._display_symbol(obj)
 
     def get_failure_reason(self, obj):
         reason = obj.failure_reason or _extract_trade_failure_reason(obj.response_data)
@@ -2122,9 +2139,25 @@ class ClientdashboardSerializer(serializers.Serializer):
         }
         
 class TradeOrderHistoryFilterSerializer(serializers.ModelSerializer):
+    trading_symbol = serializers.SerializerMethodField()
+    Index_Symbol = serializers.SerializerMethodField()
     failure_reason = serializers.SerializerMethodField()
     broker_response = serializers.SerializerMethodField()
     expiry = serializers.SerializerMethodField()
+
+    def _display_symbol(self, obj):
+        return build_option_display_symbol(
+            current_symbol=getattr(obj, "trading_symbol", None),
+            index_symbol=getattr(obj, "Index_Symbol", None),
+            order_params=getattr(obj, "order_params", None),
+            metadata=getattr(obj, "sltp_metadata", None),
+        )
+
+    def get_trading_symbol(self, obj):
+        return self._display_symbol(obj)
+
+    def get_Index_Symbol(self, obj):
+        return self._display_symbol(obj)
 
     def get_failure_reason(self, obj):
         reason = obj.failure_reason or _extract_trade_failure_reason(obj.response_data)
