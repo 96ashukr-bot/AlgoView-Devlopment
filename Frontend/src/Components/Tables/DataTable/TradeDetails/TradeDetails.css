@@ -71,6 +71,36 @@ input:checked+.slider:before {
     cursor: pointer;
 }
 
+.kill-switch-select-col {
+    width: 52px;
+    min-width: 52px;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.kill-switch-checkbox.form-check-input {
+    display: inline-block;
+    float: none;
+    width: 20px;
+    height: 20px;
+    margin: 0;
+    cursor: pointer;
+    opacity: 1;
+    background-color: #ffffff;
+    border: 2px solid #283F7B;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.75);
+}
+
+.custom-col-design .kill-switch-checkbox.form-check-input {
+    border-color: #ffffff;
+    box-shadow: 0 0 0 2px rgba(40, 63, 123, 0.35);
+}
+
+.kill-switch-checkbox.form-check-input:checked {
+    background-color: #dc3545;
+    border-color: #dc3545;
+}
+
 .sort-arrow-left {
     margin-left: 5px;
     color: gray;

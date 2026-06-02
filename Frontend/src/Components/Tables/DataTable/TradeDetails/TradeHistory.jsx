@@ -706,9 +706,10 @@ const TradeHistory = () => {
                                 <Table responsive>
                                     <thead>
                                         <tr>
-                                            <th className='custom-col-design'>
+                                            <th className='custom-col-design kill-switch-select-col'>
                                                 <Input
                                                     type="checkbox"
+                                                    className="kill-switch-checkbox"
                                                     checked={allCurrentPageSelected}
                                                     onChange={(event) => handleSelectCurrentPage(event.target.checked)}
                                                     aria-label="Select all trades on current page"
@@ -799,9 +800,10 @@ const TradeHistory = () => {
 
                                                 return (
                                                     <tr key={signal.id}>
-                                                        <td>
+                                                        <td className="kill-switch-select-col">
                                                             <Input
                                                                 type="checkbox"
+                                                                className="kill-switch-checkbox"
                                                                 checked={selectedTradeIds.includes(signal.id)}
                                                                 onChange={(event) => handleSelectTrade(signal.id, event.target.checked)}
                                                                 aria-label={`Select trade ${signal.id}`}
