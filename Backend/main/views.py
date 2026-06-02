@@ -3970,7 +3970,7 @@ class ClientGlobalKillSwitchAPIView(APIView):
                 exit_request = _build_regular_trade_exit_request(trade_history)
                 response = get_execution_engine().execute_order(exit_request)
                 response_status = str(response.get("status") or response.get("data", {}).get("status") or "").lower()
-                if response_status in {"success", "complete", "completed", "open"}:
+                if response_status in {"success", "complete", "completed"}:
                     exited_regular_ids.append(trade_history.id)
                 else:
                     failed_regular.append({

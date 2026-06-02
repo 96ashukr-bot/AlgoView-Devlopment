@@ -34,6 +34,22 @@ from rest_framework import permissions, status
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 
+LEGACY_OPEN_BUY_ORDER_STATUSES = {"completed", "complete", "success", "open", "traded"}
+LEGACY_SUCCESSFUL_EXIT_STATUSES = {"completed", "complete", "success", "closed", "fully executed", "traded"}
+
+
+def _legacy_status_filter(*statuses):
+    query = Q()
+    for status_value in statuses:
+        query |= Q(order_status__iexact=status_value)
+    return query
+
+
+def _legacy_exit_completed(response):
+    status_value = str((response or {}).get("data", {}).get("status") or "").strip().lower()
+    return status_value in LEGACY_SUCCESSFUL_EXIT_STATUSES
+
+
 def _broker_proxy_config_or_none(broker_details, *, require_broker_verified=True):
     node = getattr(broker_details, "execution_node", None)
     if not node or not node.is_active:
@@ -129,7 +145,7 @@ def exit_existing_buy_position_Upstox(
             # strategy=strategy,
             GroupService=group_service,
             order_id__gt=0
-        ).filter(Q(order_status="rejected") | Q(order_status="completed") | Q(order_status="complete") | Q(order_status="open")).last()
+        ).filter(_legacy_status_filter(*LEGACY_OPEN_BUY_ORDER_STATUSES)).last()
         print(":::open_buy_order_get:::",open_buy_order_get)
         open_buy_order = Tradeorderhistory.objects.filter(
             client=user,
@@ -138,7 +154,7 @@ def exit_existing_buy_position_Upstox(
             # strategy=strategy,
             GroupService=group_service,
             order_id__gt=0
-        ).filter(Q(order_status="rejected") | Q(order_status="completed") | Q(order_status="complete") |Q(order_status="put order req received")| Q(order_status="open")).last()
+        ).filter(_legacy_status_filter(*LEGACY_OPEN_BUY_ORDER_STATUSES)).last()
 
         print("open_buy_order>>>>>>>", open_buy_order)
         if not open_buy_order:
@@ -179,8 +195,7 @@ def exit_existing_buy_position_Upstox(
                     webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice, trade_order_status
                 )
 
-                status_value = sell_response.get("data", {}).get("status")
-                if status_value in ["completed","complete", "rejected", "closed", "open","put order req received"]:
+                if _legacy_exit_completed(sell_response):
                     trade_order = Tradeorderhistory.objects.get(order_id=oid)
                     trade_order.trade_order_status = "CLOSE"
                     trade_order.save()
@@ -217,8 +232,7 @@ def exit_existing_buy_position_Aliceblue(LivePrice,group_service, Type, day, mon
             # strategy=strategy,
             GroupService=group_service,
             order_id__gt=0
-        ).filter(Q(order_status="rejected") | Q(order_status="completed") | Q(order_status="complete") |Q(order_status="pending")
-        | Q(order_status="open")).last()
+        ).filter(_legacy_status_filter(*LEGACY_OPEN_BUY_ORDER_STATUSES)).last()
         print("GROUP service open_buy_orderfffff>>>>>",open_buy)
         open_buy_order = Tradeorderhistory.objects.filter(
             client=user, 
@@ -227,7 +241,7 @@ def exit_existing_buy_position_Aliceblue(LivePrice,group_service, Type, day, mon
             # strategy=strategy,
             GroupService=group_service,
             order_id__gt=0
-        ).filter(Q(order_status="rejected") | Q(order_status="completed") | Q(order_status="complete") | Q(order_status="open")).last()
+        ).filter(_legacy_status_filter(*LEGACY_OPEN_BUY_ORDER_STATUSES)).last()
 
         print("open_buy_order alice blue >>>>>>>", open_buy_order)
         if not open_buy_order:
@@ -266,8 +280,7 @@ def exit_existing_buy_position_Aliceblue(LivePrice,group_service, Type, day, mon
                                                    product_type, price, user, Lots, trade_order_status, Entry_type, Exit_type, Entry_price, Exit_price,
                                                    EntryQty, ExitQty, webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice)
                 
-                status_value = sell_response.get("data", {}).get("status")
-                if status_value in ["completed","complete", "rejected", "closed", "open","pending"]:
+                if _legacy_exit_completed(sell_response):
                     try:
                         trade_order = Tradeorderhistory.objects.get(order_id=oid)
                         trade_order.trade_order_status = "CLOSE"
@@ -309,9 +322,7 @@ def exit_existing_buy_position_DhanOrder(expiry_date,LivePrice, group_service,Ty
             # strategy=strategy,
             GroupService=group_service,
             order_id__gt=0,
-        ).filter(Q(order_status="rejected") | Q(order_status="traded") | Q(order_status="TRADED")
-                |Q(order_status="TRANSIT")| Q(order_status="transit")| Q(order_status="completed")  
-                | Q(order_status="complete") | Q(order_status="open")).last()
+        ).filter(_legacy_status_filter(*LEGACY_OPEN_BUY_ORDER_STATUSES)).last()
         
         print("open_buy_order alice blue >>>>>>>", open_buy_order)
 
@@ -358,9 +369,7 @@ def exit_existing_buy_position_DhanOrder(expiry_date,LivePrice, group_service,Ty
             logger.error(f"Error placing sell order: {str(e)}")
             return {"data": {"status": "error", "message": f"Error placing sell order: {str(e)}"}}
 
-        status_value = sell_response.get("data", {}).get("status")
-
-        if status_value in ["completed","complete", "rejected", "closed", "open", "transit", "TRANSIT","TRADED","traded"]:
+        if _legacy_exit_completed(sell_response):
             try:
                 trade_order = Tradeorderhistory.objects.get(order_id=oid)
                 trade_order.trade_order_status = "CLOSE"
@@ -397,7 +406,7 @@ def exit_existing_buy_position_5PaisaOrder(LivePrice,group_service,Type,day,mont
             # strategy=strategy,
             GroupService=group_service,
             order_id__gt=0
-        ).filter(Q(order_status="rejected")|  Q(order_status="completed") |Q(order_status="complete")| Q(order_status="open")).last()
+        ).filter(_legacy_status_filter(*LEGACY_OPEN_BUY_ORDER_STATUSES)).last()
         print("open_buy_order 5Paisa::::::::--------",open_buy_order)
         if not open_buy_order:
             message = f"No open BUY position found for {symbol} for user {user}."
@@ -442,8 +451,7 @@ def exit_existing_buy_position_5PaisaOrder(LivePrice,group_service,Type,day,mont
             except Exception as e:
                 logger.error(f"Error placing sell order: {str(e)}")
                 return {"data": {"status": "error", "message": f"Error placing sell order: {str(e)}"}}
-            status_value = sell_response.get("data", {}).get("status")
-            if status_value in ["completed","complete","rejected", "closed","open","Fully Executed","TRANSIT"]:
+            if _legacy_exit_completed(sell_response):
                 try:
                     trade_order = Tradeorderhistory.objects.get(order_id=oid)
                     trade_order.trade_order_status = "CLOSE"
@@ -527,8 +535,7 @@ def exit_existing_buy_position_zerodha_order(LivePrice,group_service,Type,day,mo
                 logger.error(f"Error placing sell order: {str(e)}")
                 return {"data": {"status": "error", "message": f"Error placing sell order: {str(e)}"}}
 
-            status_value = sell_response.get("data", {}).get("status")
-            if status_value in ["completed","complete","rejected", ]:
+            if _legacy_exit_completed(sell_response):
                 try:
                     trade_order = Tradeorderhistory.objects.get(order_id=oid)
                     trade_order.trade_order_status = "CLOSE"
@@ -564,8 +571,7 @@ def exit_existing_buy_position_fyers_order(default_price,LivePrice,group_service
             # strategy=strategy,
             GroupService=group_service,
             order_id__gt=0
-        ).filter(Q(order_status="rejected")| Q(order_status="completed") |Q(order_status="complete")| Q(order_status="open")
-                |Q(order_status="pending")| Q(order_status="Transit")).last()
+        ).filter(_legacy_status_filter(*LEGACY_OPEN_BUY_ORDER_STATUSES)).last()
 
         if not open_buy_order:
             message = f"No open BUY position found for {symbol} for user {user}."
@@ -610,8 +616,7 @@ def exit_existing_buy_position_fyers_order(default_price,LivePrice,group_service
                 logger.error(f"{user} : Error placing sell order: {str(e)}")
                 return {"data": {"status": "error", "message": f"Error placing sell order: {str(e)}"}}
 
-            status_value = sell_response.get("data", {}).get("status")
-            if status_value in ["completed","complete","rejected", "Transit"]:
+            if _legacy_exit_completed(sell_response):
                 try:
                     trade_order = Tradeorderhistory.objects.get(order_id=oid)
                     trade_order.trade_order_status = "CLOSE"

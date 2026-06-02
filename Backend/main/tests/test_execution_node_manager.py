@@ -25,7 +25,7 @@ from main.dhanapi import get_trading_symbol_security_id
 from main.groww import generate_groww_access_token, generate_groww_checksum, place_groww_orders, resolve_groww_trading_symbol
 from main.zerodha import place_zerodha_orders
 from main.Alice_Blue_Api import place_alice_orders
-from main.dematemodule import _broker_proxy_config_or_none, _save_session_tokens_compat
+from main.dematemodule import LEGACY_OPEN_BUY_ORDER_STATUSES, _broker_proxy_config_or_none, _legacy_exit_completed, _save_session_tokens_compat
 from main.dematemodule import BrokerCallbackView, BrokerLoginRedirectView
 from main.broker_registry import get_broker_setup_spec
 from main.broker_order_utils import extract_ltp_from_quote_payload
@@ -738,6 +738,17 @@ class ExecutionNodeManagerTests(TestCase):
 
     def test_sltp_watcher_does_not_treat_open_exit_as_success(self):
         self.assertNotIn("open", SUCCESS_EXIT_STATUSES)
+
+    def test_legacy_exit_helpers_require_completed_status_to_close(self):
+        for status_value in ("open", "pending", "transit", "rejected", "put order req received"):
+            self.assertFalse(_legacy_exit_completed({"data": {"status": status_value}}))
+        for status_value in ("complete", "completed", "success", "closed", "traded", "Fully Executed"):
+            self.assertTrue(_legacy_exit_completed({"data": {"status": status_value}}))
+
+    def test_legacy_open_buy_candidates_do_not_include_rejected_or_pending(self):
+        self.assertNotIn("rejected", LEGACY_OPEN_BUY_ORDER_STATUSES)
+        self.assertNotIn("pending", LEGACY_OPEN_BUY_ORDER_STATUSES)
+        self.assertNotIn("transit", LEGACY_OPEN_BUY_ORDER_STATUSES)
 
     def test_exit_position_does_not_match_pending_open_buy_order(self):
         Tradeorderhistory.objects.create(
