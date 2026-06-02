@@ -864,7 +864,7 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertNotIn("pending", LEGACY_OPEN_BUY_ORDER_STATUSES)
         self.assertNotIn("transit", LEGACY_OPEN_BUY_ORDER_STATUSES)
 
-    def test_exit_position_does_not_match_pending_open_buy_order(self):
+    def test_exit_position_matches_open_buy_order_with_broker_order_id(self):
         Tradeorderhistory.objects.create(
             client=self.client_user,
             GroupService="Lite",
@@ -874,6 +874,39 @@ class ExecutionNodeManagerTests(TestCase):
             trade_order_status="OPEN",
             order_status="OPEN",
             order_id="nifty-ce-pending-open",
+            EntryQty=65,
+            Entry_Price=203.95,
+            order_params={"transaction_type": "BUY", "option_type": "CE", "symbol": "NIFTY", "strike": 23700},
+        )
+
+        close_order, open_position, close_error = prepare_close_order_from_open_position(
+            self.client_user,
+            {
+                "symbol": "NIFTY",
+                "group_service": "Lite",
+                "transaction_type": "SELL",
+                "option_type": "CE",
+                "quantity": 65,
+            },
+            "zerodha",
+        )
+
+        self.assertIsNone(close_error)
+        self.assertEqual(open_position.order_id, "nifty-ce-pending-open")
+        self.assertEqual(close_order["transaction_type"], "SELL")
+        self.assertEqual(close_order["option_type"], "CE")
+        self.assertEqual(close_order["quantity"], 65)
+
+    def test_exit_position_does_not_match_open_buy_without_broker_order_id(self):
+        Tradeorderhistory.objects.create(
+            client=self.client_user,
+            GroupService="Lite",
+            trading_symbol="NIFTY26JUN23700CE",
+            Index_Symbol="NIFTY",
+            transaction_type="BUY",
+            trade_order_status="OPEN",
+            order_status="OPEN",
+            order_id=None,
             EntryQty=65,
             Entry_Price=203.95,
             order_params={"transaction_type": "BUY", "option_type": "CE", "symbol": "NIFTY", "strike": 23700},

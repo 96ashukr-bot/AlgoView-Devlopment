@@ -488,7 +488,7 @@ def exit_existing_buy_position_zerodha_order(LivePrice,group_service,Type,day,mo
             # strategy=strategy,
             GroupService=group_service,
             order_id__gt=0
-        ).filter(Q(order_status__iexact="completed") | Q(order_status__iexact="complete")).last()
+        ).filter(_legacy_status_filter(*LEGACY_OPEN_BUY_ORDER_STATUSES)).last()
         print("open_buy_order Zerodha order >>>>>>>",open_buy_order)
         if not open_buy_order:
             message = f"No open BUY position found for {symbol} for user {user}."

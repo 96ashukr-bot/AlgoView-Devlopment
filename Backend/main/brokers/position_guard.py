@@ -6,8 +6,8 @@ from copy import deepcopy
 from main.brokers.utils import build_trade_symbol, common_order_kwargs, order_value
 from main.models import Tradeorderhistory
 
-OPEN_BUY_ORDER_STATUSES = {"complete", "completed", "success", "traded"}
-BROKER_ACCEPTED_OPEN_STATUSES = {"open", "placed", "accepted_by_node", "sent_to_node", "put order req received"}
+OPEN_BUY_ORDER_STATUSES = {"complete", "completed", "success", "traded", "open"}
+BROKER_ACCEPTED_OPEN_STATUSES = {"placed", "accepted_by_node", "sent_to_node", "put order req received"}
 CLOSED_TRADE_STATUSES = {"close", "closed"}
 SUCCESS_CLOSE_STATUSES = {"completed", "complete", "success"}
 KNOWN_UNDERLYINGS = ("MIDCPNIFTY", "BANKNIFTY", "FINNIFTY", "SENSEX", "BANKEX", "NIFTY")
@@ -140,7 +140,10 @@ def history_strike(history):
 def _history_matches_open_buy(history, option_type):
     order_status = str(getattr(history, "order_status", "") or "").lower()
     trade_status = str(getattr(history, "trade_order_status", "") or "").lower()
+    has_order_id = bool(getattr(history, "order_id", None))
     if order_status not in OPEN_BUY_ORDER_STATUSES and not _history_is_broker_accepted_open_buy(history):
+        return False
+    if order_status == "open" and not has_order_id:
         return False
     if trade_status in CLOSED_TRADE_STATUSES:
         return False
