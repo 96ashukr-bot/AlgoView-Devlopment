@@ -175,8 +175,8 @@ const WebhookDiagnostics = () => {
                 </Col>
               </Row>
 
-              <div className="table-responsive-sm">
-                <Table>
+              <div className="trade-details-table-scroll">
+                <Table className="trade-details-wide-table webhook-diagnostics-table">
                   <thead>
                     <tr>
                       <th className="custom-col-design">S.No.</th>

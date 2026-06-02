@@ -129,3 +129,35 @@ input:checked+.slider:before {
     text-overflow: ellipsis;
     max-width: 200px;
 }
+
+.trade-details-table-scroll {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+}
+
+.trade-details-wide-table {
+    width: max-content;
+    min-width: 100%;
+    margin-bottom: 0;
+}
+
+.webhook-diagnostics-table {
+    min-width: 1280px;
+}
+
+.sltp-watcher-table {
+    min-width: 1680px;
+}
+
+.trade-details-wide-table th,
+.trade-details-wide-table td {
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+.trade-details-wide-table td:last-child {
+    white-space: normal;
+}
