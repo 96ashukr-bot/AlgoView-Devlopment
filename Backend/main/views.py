@@ -355,8 +355,17 @@ def _collect_trade_skip_reasons(trade, *, webhook_symbol=None, strategy_identifi
     if quantity is None:
         reasons.append("Quantity is missing or invalid")
 
-    if getattr(trade, "expiry_date", None) is None:
+    expiry_date = getattr(trade, "expiry_date", None)
+    if expiry_date is None:
         reasons.append("Expiry date is missing")
+    else:
+        try:
+            expiry_value = make_aware(expiry_date) if timezone.is_naive(expiry_date) else expiry_date
+            expiry_local_date = localtime(expiry_value).date()
+        except Exception:
+            expiry_local_date = None
+        if expiry_local_date and expiry_local_date < timezone.localdate():
+            reasons.append("Expiry date has expired. Please update expiry date.")
 
     return reasons
 

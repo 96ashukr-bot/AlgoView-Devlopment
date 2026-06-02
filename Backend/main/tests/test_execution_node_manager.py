@@ -412,6 +412,43 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertIn("Client trading is disabled", result["skip_reasons"])
         self.assertFalse(Tradeorderhistory.objects.filter(client=disabled_client).exists())
 
+    @mock.patch("main.views.place_order_broker")
+    def test_expired_trade_expiry_skips_webhook_before_broker_execution(self, mock_place_order):
+        trade = ClientTradeSetting.objects.create(
+            client=self.client_user,
+            symbol="NIFTY",
+            group_service="NIFTY",
+            broker="Angel One",
+            product_type="INTRADAY",
+            quantity=65,
+            trade_limit=10,
+            is_tread_status=True,
+            expiry_date=timezone.now() - timezone.timedelta(days=1),
+        )
+        context = {
+            "alert_data": {"symbol": "NIFTY"},
+            "symbols": "NIFTY",
+            "exch_seg": "NFO",
+            "default_price": 23600,
+            "default_quantity": 65,
+            "live_price": 100,
+            "lots": 1,
+            "trigger_price": 0,
+            "transaction_type": "BUY",
+            "buy_sell": "CE",
+            "limit_price": 100,
+            "strategy_id": "NIFTY",
+        }
+
+        result = _process_webhook_trade(trade, 0, context, history_id="expired-expiry-skip")
+
+        self.assertEqual(result["status"], "skipped")
+        self.assertIn("Expiry date has expired. Please update expiry date.", result["skip_reasons"])
+        mock_place_order.assert_not_called()
+        history = Tradeorderhistory.objects.get(history_id="expired-expiry-skip")
+        self.assertEqual(history.order_status, "Failed")
+        self.assertIn("Expiry date has expired", history.failure_reason)
+
     def test_tradingview_webhook_language_decodes_expected_contracts(self):
         cases = {
             "BUY-O": ("CE", "Buy CE"),
