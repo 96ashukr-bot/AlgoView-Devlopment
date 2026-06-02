@@ -1399,6 +1399,36 @@ class ExecutionEngine:
 
         return snapshot
 
+    def _build_sltp_metadata(self, request: ExecutionRequest, validation_context: Dict[str, Any], normalized: Dict[str, Any]) -> Dict[str, Any]:
+        trade_setting = getattr(request, "trade", None)
+        contract = validation_context.get("contract")
+        order_params = request.order_params if isinstance(request.order_params, dict) else {}
+        snapshot = self._build_sl_tp_snapshot(request, validation_context, normalized)
+        metadata = {
+            "trade_setting_id": getattr(trade_setting, "id", None),
+            "client_id": getattr(request.user, "id", None),
+            "broker": getattr(trade_setting, "broker", None),
+            "quantity": request.quantity_int,
+            "underlying": order_params.get("symbol") or request.underlying_symbol,
+            "expiry": order_params.get("expiry") or (
+                validation_context.get("expiry").date().isoformat()
+                if hasattr(validation_context.get("expiry"), "date")
+                else str(validation_context.get("expiry") or "")
+            ),
+            "strike": order_params.get("strike") or order_params.get("strike_price") or request.strike_value,
+            "option_type": order_params.get("option_type") or order_params.get("Type") or request.option_type,
+            "resolved_trading_symbol": getattr(contract, "symbol", None) or getattr(contract, "trading_symbol", None),
+            "instrument_key": validation_context.get("upstox_instrument_key") or order_params.get("instrument_key"),
+            "entry_option_price": snapshot.get("entry_reference_price"),
+            "calculated_stoploss_price": snapshot.get("effective_stop_loss_price"),
+            "calculated_target_price": snapshot.get("effective_target_price"),
+            "sl_tp_type": snapshot.get("sl_tp_type"),
+            "stop_loss_input": snapshot.get("stop_loss_input"),
+            "target_input": snapshot.get("target_input"),
+            "source": "execution_engine",
+        }
+        return {key: value for key, value in metadata.items() if value not in (None, "", [], {})}
+
     def _finalize_execution(
         self,
         request: ExecutionRequest,
@@ -1455,6 +1485,19 @@ class ExecutionEngine:
             }
         )
         history_order_params.update(self._build_sl_tp_snapshot(request, validation_context, normalized))
+        sltp_metadata = self._build_sltp_metadata(request, validation_context, normalized)
+        if sltp_metadata:
+            history_order_params.update(
+                {
+                    "trade_setting_id": sltp_metadata.get("trade_setting_id"),
+                    "underlying": sltp_metadata.get("underlying"),
+                    "instrument_key": sltp_metadata.get("instrument_key"),
+                    "resolved_trading_symbol": sltp_metadata.get("resolved_trading_symbol"),
+                    "entry_option_price": sltp_metadata.get("entry_option_price"),
+                    "calculated_stoploss_price": sltp_metadata.get("calculated_stoploss_price"),
+                    "calculated_target_price": sltp_metadata.get("calculated_target_price"),
+                }
+            )
 
         save_trade_order_history(
             request.LivePrice,
@@ -1481,6 +1524,8 @@ class ExecutionEngine:
             history_order_params,
             broker=request.trade.broker,
             history_id=request.history_id,
+            trade_setting=request.trade,
+            sltp_metadata=sltp_metadata,
         )
 
         logger.info(

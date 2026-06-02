@@ -4,7 +4,7 @@ import re
 
 from django.utils import timezone
 
-from main.models import Tradeorderhistory
+from main.models import ClientTradeSetting, Tradeorderhistory
 
 NON_FAILURE_ORDER_STATUSES = {
     "accepted",
@@ -209,6 +209,9 @@ def save_trade_order_history(*args, **kwargs):
 
         broker = kwargs.get("broker")
         history_id = kwargs.get("history_id")
+        trade_setting = kwargs.get("trade_setting")
+        trade_setting_id = kwargs.get("trade_setting_id")
+        sltp_metadata = kwargs.get("sltp_metadata") if isinstance(kwargs.get("sltp_metadata"), dict) else {}
 
         response_payload = _serialize_trade_history_value(res_data)
         order_payload = _serialize_trade_history_value(order_params if isinstance(order_params, dict) else {})
@@ -320,6 +323,15 @@ def save_trade_order_history(*args, **kwargs):
             "trade_order_status": trade_order_status or str(resolved_status),
             "webhook_signal": _serialize_trade_history_value(webhook_signal),
         }
+        if trade_setting is not None:
+            defaults["trade_setting"] = trade_setting
+        elif trade_setting_id:
+            try:
+                defaults["trade_setting"] = ClientTradeSetting.objects.get(id=trade_setting_id)
+            except ClientTradeSetting.DoesNotExist:
+                pass
+        if sltp_metadata:
+            defaults["sltp_metadata"] = _serialize_trade_history_value(sltp_metadata)
 
         if is_exit_signal:
             defaults["Exit_Price"] = effective_price or _to_decimal(Exit_price)

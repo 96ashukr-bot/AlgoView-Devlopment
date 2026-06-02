@@ -95,6 +95,7 @@ urlpatterns = [
     path('order-logs-list/', OrderLogListView.as_view(), name='order-log-list'),
     path('webhook-diagnostics/', WebhookDiagnosticsAPIView.as_view(), name='webhook-diagnostics'),
     path('sl-tp-watcher/scan/', SLTPWatcherScanAPIView.as_view(), name='sl-tp-watcher-scan'),
+    path('sl-tp-watcher/health/', SLTPWatcherScanAPIView.as_view(), name='sl-tp-watcher-health'),
     path('user-activity-logs/', UserActivityLogListView.as_view(), name='user-activity-logs'),
     path('user-last-login/', LastLoginActivityView.as_view(), name='last-login'),
     path('get-city-data/',Get_city_data.as_view(), name='cites'),

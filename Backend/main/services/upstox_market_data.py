@@ -242,10 +242,52 @@ def get_active_option_instruments() -> list[UpstoxInstrument]:
         if str(trade.order_status or "").strip().lower() not in OPEN_ORDER_STATUSES:
             continue
         order_params = trade.order_params if isinstance(trade.order_params, dict) else {}
-        instrument = resolver.resolve(trade.trading_symbol or trade.Index_Symbol, underlying=trade.Index_Symbol)
+        metadata = trade.sltp_metadata if isinstance(getattr(trade, "sltp_metadata", None), dict) else {}
+        has_sltp = any(
+            value not in (None, "", 0, "0", 0.0, "0.0")
+            for value in (
+                metadata.get("calculated_stoploss_price"),
+                metadata.get("calculated_target_price"),
+                order_params.get("effective_stop_loss_price"),
+                order_params.get("effective_target_price"),
+                order_params.get("stop_loss_input"),
+                order_params.get("target_input"),
+            )
+        )
+        if not has_sltp:
+            continue
+
+        instrument_key = str(metadata.get("instrument_key") or order_params.get("instrument_key") or "").strip()
+        if instrument_key:
+            instrument = resolver.resolve_contract(
+                underlying=metadata.get("underlying") or order_params.get("symbol") or order_params.get("underlying"),
+                expiry_date=metadata.get("expiry") or order_params.get("expiry") or _expiry_from_parts(
+                    order_params.get("day"),
+                    order_params.get("month"),
+                    order_params.get("fullyear") or order_params.get("year"),
+                ),
+                strike=metadata.get("strike") or order_params.get("strike") or order_params.get("strike_price"),
+                option_type=metadata.get("option_type") or order_params.get("option_type") or order_params.get("Type"),
+            )
+            if instrument and instrument.instrument_key == instrument_key:
+                instruments[instrument.instrument_key] = instrument
+                continue
+
+        instrument = resolver.resolve_contract(
+            underlying=metadata.get("underlying") or order_params.get("symbol") or order_params.get("underlying"),
+            expiry_date=metadata.get("expiry") or order_params.get("expiry") or _expiry_from_parts(
+                order_params.get("day"),
+                order_params.get("month"),
+                order_params.get("fullyear") or order_params.get("year"),
+            ),
+            strike=metadata.get("strike") or order_params.get("strike") or order_params.get("strike_price"),
+            option_type=metadata.get("option_type") or order_params.get("option_type") or order_params.get("Type"),
+        )
+        if not instrument:
+            instrument = resolver.resolve(trade.trading_symbol or trade.Index_Symbol, underlying=metadata.get("underlying") or order_params.get("symbol"))
         if not instrument:
             instrument = resolver.resolve_contract(
-                underlying=order_params.get("symbol") or trade.Index_Symbol,
+                underlying=order_params.get("symbol") or order_params.get("underlying"),
                 expiry_date=order_params.get("expiry") or _expiry_from_parts(
                     order_params.get("day"),
                     order_params.get("month"),
@@ -309,8 +351,10 @@ class UpstoxMarketDataCollector:
     def __init__(self, *, refresh_seconds: Optional[int] = None):
         self.refresh_seconds = refresh_seconds or int(getattr(settings, "MARKET_DATA_SUBSCRIPTION_REFRESH_SECONDS", 30))
         self.api_version = str(getattr(settings, "MARKET_DATA_UPSTOX_API_VERSION", "2.0") or "2.0")
+        self.recv_timeout_seconds = int(getattr(settings, "MARKET_DATA_WEBSOCKET_RECV_TIMEOUT_SECONDS", 45))
         self.instruments: dict[str, UpstoxInstrument] = {}
         self.proxy_url: Optional[str] = None
+        self.last_tick_at: dict[str, datetime] = {}
 
     def _decode_protobuf(self, buffer: bytes):
         feed_response = pb.FeedResponse()
@@ -395,6 +439,7 @@ class UpstoxMarketDataCollector:
                 source="upstox-websocket",
             )
             saved += 1
+            self.last_tick_at[instrument.instrument_key] = timezone.now()
         return saved
 
     async def run_forever(self) -> None:
@@ -404,7 +449,7 @@ class UpstoxMarketDataCollector:
             except asyncio.CancelledError:
                 raise
             except Exception as exc:
-                logger.exception("Upstox market data collector crashed; reconnecting shortly: %s", exc)
+                logger.exception("Upstox market data collector disconnected; reconnecting shortly: %s", exc)
                 await asyncio.sleep(5)
 
     async def _run_once(self) -> None:
@@ -427,7 +472,15 @@ class UpstoxMarketDataCollector:
         ssl_context = ssl.create_default_context()
 
         logger.info("Connecting Upstox market-data collector for %s instruments.", len(self.instruments))
-        async with websockets.connect(uri, ssl=ssl_context, proxy=self.proxy_url, max_size=4 * 1024 * 1024) as websocket:
+        async with websockets.connect(
+            uri,
+            ssl=ssl_context,
+            proxy=self.proxy_url,
+            max_size=4 * 1024 * 1024,
+            ping_interval=20,
+            ping_timeout=20,
+            close_timeout=10,
+        ) as websocket:
             await asyncio.sleep(1)
             await self._send_subscription(websocket, method="sub")
             last_refresh = timezone.now()
@@ -451,7 +504,7 @@ class UpstoxMarketDataCollector:
                             await websocket.send(json.dumps(payload).encode("utf-8"))
                     last_refresh = timezone.now()
 
-                message = await asyncio.wait_for(websocket.recv(), timeout=30)
+                message = await asyncio.wait_for(websocket.recv(), timeout=self.recv_timeout_seconds)
                 decoded = self._decode_protobuf(message)
                 saved = await self._process_tick(decoded)
                 if saved:

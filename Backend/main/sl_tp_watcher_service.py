@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
+from django.conf import settings
 from django.core.cache import cache
 from django.db.models import Q
 from django.utils import timezone
@@ -53,6 +54,10 @@ class WatchResult:
     quantity: Optional[int] = None
     trigger_reason: Optional[str] = None
     response: Optional[Dict[str, Any]] = None
+    cache_age_seconds: Optional[float] = None
+    subscription_status: Optional[str] = None
+    retry_count: int = 0
+    last_failure_reason: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
         payload = {
@@ -72,6 +77,10 @@ class WatchResult:
             "entry_price": self.entry_price,
             "quantity": self.quantity,
             "trigger_reason": self.trigger_reason,
+            "cache_age_seconds": self.cache_age_seconds,
+            "subscription_status": self.subscription_status,
+            "retry_count": self.retry_count,
+            "last_failure_reason": self.last_failure_reason,
         }
         if self.response is not None:
             payload["response"] = self.response
@@ -83,6 +92,7 @@ class SLTPWatcherService:
     EXIT_FAILURE_COOLDOWN_SECONDS = 60
     RATE_LIMIT_COOLDOWN_SECONDS = 180
     EMPTY_RESPONSE_COOLDOWN_SECONDS = 120
+    MAX_EXIT_RETRIES = 3
 
     @staticmethod
     def _build_watch_result(
@@ -95,6 +105,8 @@ class SLTPWatcherService:
         target_price: Optional[float] = None,
         trigger_reason: Optional[str] = None,
         response: Optional[Dict[str, Any]] = None,
+        cache_age_seconds: Optional[float] = None,
+        subscription_status: Optional[str] = None,
     ) -> WatchResult:
         client_name = getattr(trade_order.client, "fullName", None) or getattr(trade_order.client, "userName", None)
         quantity_value = trade_order.EntryQty or trade_order.ExitQty
@@ -121,6 +133,10 @@ class SLTPWatcherService:
             quantity=quantity,
             trigger_reason=trigger_reason,
             response=response,
+            cache_age_seconds=cache_age_seconds,
+            subscription_status=subscription_status,
+            retry_count=getattr(trade_order, "sltp_retry_count", 0) or 0,
+            last_failure_reason=getattr(trade_order, "sltp_last_failure_reason", None),
         )
 
     def __init__(self):
@@ -128,6 +144,7 @@ class SLTPWatcherService:
         self._symbol_parser = get_symbol_parser()
         self._execution_engine = get_execution_engine()
         self._upstox_resolver = UpstoxInstrumentResolver()
+        self.max_price_age_seconds = int(getattr(settings, "SLTP_MAX_PRICE_AGE_SECONDS", 15))
 
     @staticmethod
     def _to_float(value: Any) -> Optional[float]:
@@ -146,13 +163,20 @@ class SLTPWatcherService:
     @classmethod
     def _has_option_contract_metadata(cls, trade_order: Tradeorderhistory) -> bool:
         order_params = trade_order.order_params if isinstance(trade_order.order_params, dict) else {}
+        metadata = trade_order.sltp_metadata if isinstance(getattr(trade_order, "sltp_metadata", None), dict) else {}
         option_type = str(order_params.get("option_type") or order_params.get("Type") or "").strip().upper()
+        metadata_option_type = str(metadata.get("option_type") or "").strip().upper()
         has_metadata = bool(
             (order_params.get("symbol") or order_params.get("underlying"))
             and (order_params.get("strike") or order_params.get("strike_price"))
             and option_type in {"CE", "PE"}
         )
-        return has_metadata or cls._looks_like_option_symbol(trade_order.trading_symbol) or cls._looks_like_option_symbol(trade_order.Index_Symbol)
+        has_stored_metadata = bool(
+            (metadata.get("underlying") or metadata.get("symbol"))
+            and metadata.get("strike")
+            and metadata_option_type in {"CE", "PE"}
+        )
+        return has_metadata or has_stored_metadata or cls._looks_like_option_symbol(trade_order.trading_symbol) or cls._looks_like_option_symbol(trade_order.Index_Symbol)
 
     @classmethod
     def _payload_matches_option_contract(cls, trade_order: Tradeorderhistory, payload: Dict[str, Any]) -> bool:
@@ -165,15 +189,16 @@ class SLTPWatcherService:
             return False
 
         order_params = trade_order.order_params if isinstance(trade_order.order_params, dict) else {}
-        expected_option_type = str(order_params.get("option_type") or order_params.get("Type") or "").strip().upper()
+        metadata = trade_order.sltp_metadata if isinstance(getattr(trade_order, "sltp_metadata", None), dict) else {}
+        expected_option_type = str(metadata.get("option_type") or order_params.get("option_type") or order_params.get("Type") or "").strip().upper()
         if expected_option_type in {"CE", "PE"} and option_type != expected_option_type:
             return False
 
-        expected_strike = cls._to_float(order_params.get("strike") or order_params.get("strike_price"))
+        expected_strike = cls._to_float(metadata.get("strike") or order_params.get("strike") or order_params.get("strike_price"))
         if expected_strike is not None and abs(payload_strike - expected_strike) > 0.001:
             return False
 
-        expected_underlying = str(order_params.get("symbol") or order_params.get("underlying") or "").replace(" ", "").upper()
+        expected_underlying = str(metadata.get("underlying") or order_params.get("symbol") or order_params.get("underlying") or "").replace(" ", "").upper()
         payload_underlying = str(payload.get("underlying") or "").replace(" ", "").upper()
         if expected_underlying and payload_underlying and payload_underlying != expected_underlying:
             return False
@@ -207,6 +232,21 @@ class SLTPWatcherService:
         return Tradeorderhistory.objects.select_related("client").filter(id__in=eligible_ids).order_by("-id")
 
     def _find_trade_setting(self, trade_order: Tradeorderhistory) -> Optional[ClientTradeSetting]:
+        stored_trade_setting = getattr(trade_order, "trade_setting", None)
+        if stored_trade_setting:
+            return stored_trade_setting
+
+        order_params = trade_order.order_params if isinstance(trade_order.order_params, dict) else {}
+        metadata = trade_order.sltp_metadata if isinstance(getattr(trade_order, "sltp_metadata", None), dict) else {}
+        trade_setting_id = metadata.get("trade_setting_id") or order_params.get("trade_setting_id")
+        if trade_setting_id:
+            trade_setting = ClientTradeSetting.objects.select_related("segment", "sub_segment").filter(
+                id=trade_setting_id,
+                client=trade_order.client,
+            ).first()
+            if trade_setting:
+                return trade_setting
+
         base_queryset = ClientTradeSetting.objects.select_related("segment", "sub_segment").filter(
             client=trade_order.client,
             group_service=trade_order.GroupService,
@@ -233,7 +273,8 @@ class SLTPWatcherService:
 
     def _resolve_market_instrument(self, trade_order: Tradeorderhistory):
         order_params = trade_order.order_params if isinstance(trade_order.order_params, dict) else {}
-        expiry = order_params.get("expiry")
+        metadata = trade_order.sltp_metadata if isinstance(getattr(trade_order, "sltp_metadata", None), dict) else {}
+        expiry = metadata.get("expiry") or order_params.get("expiry")
         if not expiry and order_params.get("day") and order_params.get("month"):
             year = str(order_params.get("fullyear") or order_params.get("year") or "")
             if len(year) == 2:
@@ -242,10 +283,10 @@ class SLTPWatcherService:
                 expiry = f"{order_params.get('day')}-{order_params.get('month')}-{year}"
 
         instrument = self._upstox_resolver.resolve_contract(
-            underlying=order_params.get("symbol") or order_params.get("underlying"),
+            underlying=metadata.get("underlying") or order_params.get("symbol") or order_params.get("underlying"),
             expiry_date=expiry,
-            strike=order_params.get("strike") or order_params.get("strike_price"),
-            option_type=order_params.get("option_type") or order_params.get("Type"),
+            strike=metadata.get("strike") or order_params.get("strike") or order_params.get("strike_price"),
+            option_type=metadata.get("option_type") or order_params.get("option_type") or order_params.get("Type"),
         )
         if instrument:
             return instrument
@@ -255,7 +296,7 @@ class SLTPWatcherService:
                 continue
             instrument = self._upstox_resolver.resolve(
                 symbol,
-                underlying=order_params.get("symbol") or order_params.get("underlying"),
+                underlying=metadata.get("underlying") or order_params.get("symbol") or order_params.get("underlying"),
             )
             if instrument:
                 return instrument
@@ -264,17 +305,22 @@ class SLTPWatcherService:
     def _get_cached_current_ltp(self, trade_order: Tradeorderhistory) -> tuple[Optional[float], Optional[str]]:
         instrument = self._resolve_market_instrument(trade_order)
         is_option_trade = self._has_option_contract_metadata(trade_order)
+        metadata = trade_order.sltp_metadata if isinstance(getattr(trade_order, "sltp_metadata", None), dict) else {}
+        expected_instrument_key = str(metadata.get("instrument_key") or (trade_order.order_params or {}).get("instrument_key") or "").strip()
         payload = None
-        if instrument:
-            payload = get_live_price(instrument_key=instrument.instrument_key)
+        if expected_instrument_key:
+            payload = get_live_price(instrument_key=expected_instrument_key, max_age_seconds=self.max_price_age_seconds)
+        if not payload and instrument:
+            payload = get_live_price(instrument_key=instrument.instrument_key, max_age_seconds=self.max_price_age_seconds)
         if not payload and not is_option_trade:
-            payload = get_live_price(trading_symbol=trade_order.trading_symbol)
+            payload = get_live_price(trading_symbol=trade_order.trading_symbol, max_age_seconds=self.max_price_age_seconds)
         if not payload and instrument:
             payload = get_live_price(
                 underlying=instrument.underlying,
                 expiry_date=instrument.expiry_date,
                 strike=instrument.strike,
                 option_type=instrument.option_type,
+                max_age_seconds=self.max_price_age_seconds,
             )
         if not payload:
             if is_option_trade:
@@ -284,12 +330,38 @@ class SLTPWatcherService:
             age = payload.get("age_seconds")
             age_text = f" Age: {age}s." if age is not None else ""
             return None, f"Live price is stale.{age_text}"
+        if expected_instrument_key and str(payload.get("instrument_key") or "").strip() != expected_instrument_key:
+            return None, "Cached live price does not match the stored instrument key."
         if is_option_trade and not self._payload_matches_option_contract(trade_order, payload):
             return None, "Cached live price does not match the option contract."
         ltp = self._to_float(payload.get("ltp"))
         if ltp is None or ltp <= 0:
             return None, "Cached live price is invalid."
         return ltp, None
+
+    def _get_cached_payload_status(self, trade_order: Tradeorderhistory) -> tuple[Optional[float], Optional[str], Optional[float], str]:
+        instrument = self._resolve_market_instrument(trade_order)
+        metadata = trade_order.sltp_metadata if isinstance(getattr(trade_order, "sltp_metadata", None), dict) else {}
+        order_params = trade_order.order_params if isinstance(trade_order.order_params, dict) else {}
+        instrument_key = str(metadata.get("instrument_key") or order_params.get("instrument_key") or getattr(instrument, "instrument_key", "") or "").strip()
+        payload = get_live_price(instrument_key=instrument_key, max_age_seconds=self.max_price_age_seconds) if instrument_key else None
+        if not payload and instrument:
+            payload = get_live_price(
+                underlying=instrument.underlying,
+                expiry_date=instrument.expiry_date,
+                strike=instrument.strike,
+                option_type=instrument.option_type,
+                max_age_seconds=self.max_price_age_seconds,
+            )
+        if not payload:
+            return None, "PRICE_MISSING", None, "missing"
+        age = payload.get("age_seconds")
+        ltp = self._to_float(payload.get("ltp"))
+        if not payload.get("is_fresh"):
+            return ltp, "PRICE_STALE", age, "stale"
+        if self._has_option_contract_metadata(trade_order) and not self._payload_matches_option_contract(trade_order, payload):
+            return ltp, "WRONG_CONTRACT", age, "wrong_contract"
+        return ltp, None, age, "subscribed"
 
     def _get_current_ltp(self, trade_order: Tradeorderhistory, broker_details: ClientBrokerdetails) -> tuple[Optional[float], Optional[str]]:
         cached_ltp, cache_error = self._get_cached_current_ltp(trade_order)
@@ -534,9 +606,77 @@ class SLTPWatcherService:
         )
         return cooldown_seconds
 
+    @staticmethod
+    def _market_is_open_now() -> bool:
+        now = timezone.localtime()
+        if now.weekday() >= 5:
+            return False
+        open_at = now.replace(hour=9, minute=15, second=0, microsecond=0)
+        close_at = now.replace(hour=15, minute=30, second=0, microsecond=0)
+        return open_at <= now <= close_at
+
+    @staticmethod
+    def _broker_token_invalid(broker_details: ClientBrokerdetails) -> bool:
+        token_getter = getattr(broker_details, "get_access_token_secure", None)
+        token = token_getter() if callable(token_getter) else getattr(broker_details, "access_token", None)
+        expiry = getattr(broker_details, "access_token_expiry", None)
+        return bool(getattr(broker_details, "isTokenExpired", False) or not token or (expiry and expiry <= timezone.now()))
+
+    def _mark_sltp_state(
+        self,
+        trade_order: Tradeorderhistory,
+        *,
+        status: str,
+        action: str,
+        failure_reason: Optional[str] = None,
+        increment_retry: bool = False,
+    ) -> None:
+        update_fields = ["sltp_status", "sltp_last_action", "sltp_last_checked_at"]
+        trade_order.sltp_status = status
+        trade_order.sltp_last_action = action
+        trade_order.sltp_last_checked_at = timezone.now()
+        if failure_reason is not None:
+            trade_order.sltp_last_failure_reason = failure_reason
+            update_fields.append("sltp_last_failure_reason")
+        if increment_retry:
+            trade_order.sltp_retry_count = (trade_order.sltp_retry_count or 0) + 1
+            update_fields.append("sltp_retry_count")
+            if trade_order.sltp_retry_count >= self.MAX_EXIT_RETRIES:
+                trade_order.sltp_manual_attention = True
+                trade_order.sltp_status = "MANUAL_ATTENTION_REQUIRED"
+                update_fields.extend(["sltp_manual_attention", "sltp_status"])
+        trade_order.save(update_fields=list(dict.fromkeys(update_fields)))
+
+    @staticmethod
+    def _response_failure_status(response: Dict[str, Any]) -> str:
+        data = response.get("data") if isinstance(response, dict) else {}
+        message = str((data or {}).get("message") or "").lower()
+        error_code = str((data or {}).get("error_code") or "").upper()
+        if "token" in message or "session" in message or "invalid token" in message:
+            return "TOKEN_INVALID"
+        if "market is outside" in message or error_code == "MARKET_CLOSED":
+            return "MARKET_CLOSED"
+        if "access rate" in message or "rate limit" in message or "too many requests" in message:
+            return "RATE_LIMIT"
+        if "timeout" in message or "timed out" in message:
+            return "TIMEOUT"
+        if "empty response" in message or error_code == "EMPTY_BROKER_RESPONSE":
+            return "EMPTY_RESPONSE"
+        if "reject" in message:
+            return "ORDER_REJECTED"
+        return "EXIT_FAILED"
+
     def process_trade(self, trade_order: Tradeorderhistory, execute_exit: bool = True) -> WatchResult:
+        if getattr(trade_order, "sltp_manual_attention", False):
+            return self._build_watch_result(
+                trade_order,
+                status="manual_attention_required",
+                message=trade_order.sltp_last_failure_reason or "Manual attention is required for this auto-exit.",
+            )
+
         trade_setting = self._find_trade_setting(trade_order)
         if not trade_setting:
+            self._mark_sltp_state(trade_order, status="TRADE_SETTING_MISSING", action="SKIPPED", failure_reason="Matching client trade setting not found.")
             return self._build_watch_result(
                 trade_order,
                 status="skipped",
@@ -545,6 +685,7 @@ class SLTPWatcherService:
 
         broker_details = self._get_broker_details(trade_setting)
         if not broker_details:
+            self._mark_sltp_state(trade_order, status="BROKER_MISSING", action="SKIPPED", failure_reason="Broker details are missing for the client.")
             return self._build_watch_result(
                 trade_order,
                 status="skipped",
@@ -555,14 +696,40 @@ class SLTPWatcherService:
         stop_loss_price = thresholds.get("stop_loss_price")
         target_price = thresholds.get("target_price")
         if stop_loss_price is None and target_price is None:
+            self._mark_sltp_state(trade_order, status="SLTP_INACTIVE", action="SKIPPED", failure_reason="No active stop-loss or target is configured.")
             return self._build_watch_result(
                 trade_order,
                 status="skipped",
                 message="No active stop-loss or target is configured.",
             )
 
+        current_ltp, price_status, cache_age, subscription_status = self._get_cached_payload_status(trade_order)
+        if price_status:
+            self._mark_sltp_state(trade_order, status=price_status, action="SKIPPED", failure_reason=price_status)
+            message_map = {
+                "PRICE_MISSING": "Option live price is not available in the central cache.",
+                "PRICE_STALE": f"Live price is stale. Age: {cache_age}s.",
+                "WRONG_CONTRACT": "Cached live price does not match the option contract.",
+            }
+            return self._build_watch_result(
+                trade_order,
+                status="skipped",
+                message=message_map.get(price_status, price_status),
+                current_ltp=current_ltp,
+                stop_loss_price=stop_loss_price,
+                target_price=target_price,
+                cache_age_seconds=cache_age,
+                subscription_status=subscription_status,
+            )
+
         current_ltp, ltp_error = self._get_current_ltp(trade_order, broker_details)
         if current_ltp is None or current_ltp <= 0:
+            status_code = "PRICE_MISSING"
+            if ltp_error and "stale" in ltp_error.lower():
+                status_code = "PRICE_STALE"
+            elif ltp_error and "match" in ltp_error.lower():
+                status_code = "WRONG_CONTRACT"
+            self._mark_sltp_state(trade_order, status=status_code, action="SKIPPED", failure_reason=ltp_error or "Live price could not be fetched.")
             return self._build_watch_result(
                 trade_order,
                 status="skipped",
@@ -570,10 +737,13 @@ class SLTPWatcherService:
                 current_ltp=current_ltp,
                 stop_loss_price=stop_loss_price,
                 target_price=target_price,
+                cache_age_seconds=cache_age,
+                subscription_status=subscription_status,
             )
 
         trigger_reason = self._determine_trigger_reason(current_ltp, stop_loss_price, target_price)
         if not trigger_reason:
+            self._mark_sltp_state(trade_order, status="MONITORING", action="MONITORING")
             return self._build_watch_result(
                 trade_order,
                 status="monitoring",
@@ -581,9 +751,26 @@ class SLTPWatcherService:
                 current_ltp=current_ltp,
                 stop_loss_price=stop_loss_price,
                 target_price=target_price,
+                cache_age_seconds=cache_age,
+                subscription_status=subscription_status,
             )
 
+        trigger_status = "TARGET_HIT" if trigger_reason == "TARGET" else "STOPLOSS_HIT"
         if not execute_exit:
+            if not self._market_is_open_now():
+                self._mark_sltp_state(trade_order, status="MARKET_CLOSED", action="DRY_RUN", failure_reason="Market is closed; auto-exit would be skipped.")
+                return self._build_watch_result(
+                    trade_order,
+                    status="skipped",
+                    message=f"{trigger_reason} has been hit but market is closed.",
+                    current_ltp=current_ltp,
+                    stop_loss_price=stop_loss_price,
+                    target_price=target_price,
+                    trigger_reason=trigger_reason,
+                    cache_age_seconds=cache_age,
+                    subscription_status=subscription_status,
+                )
+            self._mark_sltp_state(trade_order, status=trigger_status, action="DRY_RUN")
             return self._build_watch_result(
                 trade_order,
                 status="triggered",
@@ -592,6 +779,37 @@ class SLTPWatcherService:
                 stop_loss_price=stop_loss_price,
                 target_price=target_price,
                 trigger_reason=trigger_reason,
+                cache_age_seconds=cache_age,
+                subscription_status=subscription_status,
+            )
+
+        if not self._market_is_open_now():
+            self._mark_sltp_state(trade_order, status="MARKET_CLOSED", action="SKIPPED", failure_reason="Order rejected because the market is outside configured trading hours.")
+            return self._build_watch_result(
+                trade_order,
+                status="skipped",
+                message="Market is closed; auto-exit execution skipped.",
+                current_ltp=current_ltp,
+                stop_loss_price=stop_loss_price,
+                target_price=target_price,
+                trigger_reason=trigger_reason,
+                cache_age_seconds=cache_age,
+                subscription_status=subscription_status,
+            )
+
+        if self._broker_token_invalid(broker_details):
+            self._mark_sltp_state(trade_order, status="BROKER_TOKEN_INVALID", action="SKIPPED", failure_reason="Broker token/session is invalid or expired.")
+            self._set_exit_cooldown(trade_order, {"data": {"message": "Broker token/session is invalid or expired."}})
+            return self._build_watch_result(
+                trade_order,
+                status="skipped",
+                message="Broker token/session is invalid or expired.",
+                current_ltp=current_ltp,
+                stop_loss_price=stop_loss_price,
+                target_price=target_price,
+                trigger_reason=trigger_reason,
+                cache_age_seconds=cache_age,
+                subscription_status=subscription_status,
             )
 
         cooldown_remaining = self._get_exit_cooldown_remaining(trade_order)
@@ -604,6 +822,8 @@ class SLTPWatcherService:
                 stop_loss_price=stop_loss_price,
                 target_price=target_price,
                 trigger_reason=trigger_reason,
+                cache_age_seconds=cache_age,
+                subscription_status=subscription_status,
             )
 
         if not self._try_acquire_lock(trade_order):
@@ -615,6 +835,8 @@ class SLTPWatcherService:
                 stop_loss_price=stop_loss_price,
                 target_price=target_price,
                 trigger_reason=trigger_reason,
+                cache_age_seconds=cache_age,
+                subscription_status=subscription_status,
             )
 
         try:
@@ -634,12 +856,23 @@ class SLTPWatcherService:
                 trade_order.Exit_status = response.get("data", {}).get("status")
                 trade_order.Exit_Price = current_ltp
                 trade_order.SignalExit_time = trade_order.SignalExit_time or timezone.now()
-                trade_order.save(update_fields=["trade_order_status", "Exit_status", "Exit_Price", "SignalExit_time"])
+                trade_order.sltp_status = "CLOSED"
+                trade_order.sltp_last_action = f"AUTO_{trigger_reason}"
+                trade_order.sltp_last_checked_at = timezone.now()
+                trade_order.save(update_fields=["trade_order_status", "Exit_status", "Exit_Price", "SignalExit_time", "sltp_status", "sltp_last_action", "sltp_last_checked_at"])
                 message = f"Auto-exit triggered by {trigger_reason}."
                 status = "triggered"
             else:
                 message = response.get("data", {}).get("message", "Auto-exit request failed.")
                 cooldown_seconds = self._set_exit_cooldown(trade_order, response)
+                failure_status = self._response_failure_status(response)
+                self._mark_sltp_state(
+                    trade_order,
+                    status=failure_status,
+                    action="FAILED_EXIT",
+                    failure_reason=message,
+                    increment_retry=True,
+                )
                 message = f"{message} Auto-exit retry paused for {cooldown_seconds} seconds."
                 status = "failed"
 
@@ -652,6 +885,8 @@ class SLTPWatcherService:
                 target_price=target_price,
                 trigger_reason=trigger_reason,
                 response=response,
+                cache_age_seconds=cache_age,
+                subscription_status=subscription_status,
             )
         finally:
             self._release_lock(trade_order)
@@ -689,6 +924,16 @@ class SLTPWatcherService:
             "monitoring": sum(1 for item in results if item.status == "monitoring"),
             "skipped": sum(1 for item in results if item.status == "skipped"),
             "failed": sum(1 for item in results if item.status == "failed"),
+            "target_hit_candidates": sum(1 for item in results if item.trigger_reason == "TARGET"),
+            "stoploss_hit_candidates": sum(1 for item in results if item.trigger_reason == "STOP_LOSS"),
+            "missing_sl_tp_config": sum(1 for item in results if "No active stop-loss or target" in item.message),
+            "missing_trade_setting": sum(1 for item in results if "Matching client trade setting not found" in item.message),
+            "price_missing": sum(1 for item in results if item.subscription_status == "missing"),
+            "price_stale": sum(1 for item in results if item.subscription_status == "stale"),
+            "wrong_contract": sum(1 for item in results if item.subscription_status == "wrong_contract"),
+            "broker_token_invalid": sum(1 for item in results if "token/session is invalid" in item.message.lower()),
+            "market_closed": sum(1 for item in results if "market is closed" in item.message.lower()),
+            "manual_attention_required": sum(1 for item in results if item.status == "manual_attention_required"),
         }
 
         return {

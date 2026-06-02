@@ -1104,6 +1104,13 @@ class ExecutionNodeLog(models.Model):
     
 class Tradeorderhistory(models.Model):
     client = models.ForeignKey('User', on_delete=models.CASCADE)
+    trade_setting = models.ForeignKey(
+        'ClientTradeSetting',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='order_histories',
+    )
     GroupService =  models.CharField(max_length=255, null=True, blank=True)
     date = models.DateField(auto_now_add=True, null=True, blank=True)
     trading_symbol = models.CharField(max_length=255, null=True, blank=True)
@@ -1135,6 +1142,13 @@ class Tradeorderhistory(models.Model):
     ExitQty=models.IntegerField( null=True, blank=True)
     trade_order_status = models.CharField(max_length=15, null=True, blank=True)
     history_id = models.CharField(max_length=100, unique=True, null=True, blank=True)
+    sltp_metadata = models.JSONField(default=dict, blank=True)
+    sltp_status = models.CharField(max_length=50, null=True, blank=True, db_index=True)
+    sltp_last_action = models.CharField(max_length=100, null=True, blank=True)
+    sltp_last_failure_reason = models.TextField(null=True, blank=True)
+    sltp_retry_count = models.PositiveIntegerField(default=0)
+    sltp_manual_attention = models.BooleanField(default=False, db_index=True)
+    sltp_last_checked_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return f"Order ID: {self.order_id}"

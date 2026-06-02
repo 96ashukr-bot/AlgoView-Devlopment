@@ -1417,6 +1417,22 @@ class ClientTradeSettingSerializer(serializers.ModelSerializer):
                 })
             attrs[numeric_field] = normalized_value
 
+        if attrs.get("sl_type") and not (attrs.get("stop_loss") or attrs.get("target")):
+            raise serializers.ValidationError({
+                "target": "At least one of Stoploss or Target is required when SL/TP type is selected."
+            })
+        if attrs.get("stop_loss") or attrs.get("target"):
+            if not attrs.get("sl_type"):
+                raise serializers.ValidationError({
+                    "sl_type": "SL/TP type is required when Stoploss or Target is configured."
+                })
+            quantity = attrs.get("quantity", getattr(self.instance, "quantity", None))
+            broker = str(attrs.get("broker", getattr(self.instance, "broker", "")) or "").strip()
+            if not broker:
+                raise serializers.ValidationError({"broker": "Broker is required when SL/TP is configured."})
+            if _safe_positive_int(quantity) is None:
+                raise serializers.ValidationError({"quantity": "Quantity must be greater than 0 when SL/TP is configured."})
+
         buffer_percentage = attrs.get("buffer_percentage", getattr(self.instance, "buffer_percentage", None))
         if order_type == "LIMIT":
             if buffer_percentage is not None:
@@ -1526,6 +1542,21 @@ class ClientMultiLegStrategySettingSerializer(serializers.ModelSerializer):
                     numeric_field: f"{numeric_field.replace('_', ' ').title()} must be greater than 0."
                 })
             attrs[numeric_field] = normalized_value
+
+        if attrs.get("sl_type") and not (attrs.get("stop_loss") or attrs.get("target")):
+            raise serializers.ValidationError({
+                "target": "At least one of Stoploss or Target is required when SL/TP type is selected."
+            })
+        if attrs.get("stop_loss") or attrs.get("target"):
+            if not attrs.get("sl_type"):
+                raise serializers.ValidationError({
+                    "sl_type": "SL/TP type is required when Stoploss or Target is configured."
+                })
+            broker = str(attrs.get("broker", getattr(self.instance, "broker", "")) or "").strip()
+            if not broker:
+                raise serializers.ValidationError({"broker": "Broker is required when SL/TP is configured."})
+            if _safe_positive_int(attrs.get("quantity", getattr(self.instance, "quantity", None))) is None:
+                raise serializers.ValidationError({"quantity": "Quantity must be greater than 0 when SL/TP is configured."})
 
         buffer_percentage = attrs.get("buffer_percentage", getattr(self.instance, "buffer_percentage", None))
         if order_type == "LIMIT":
@@ -2062,7 +2093,8 @@ class TradeorderhistorySerializer(serializers.ModelSerializer):
         model = Tradeorderhistory
         fields = ['id', 'client', 'date', 'trading_symbol','GroupService' ,'Index_Symbol', 'order_id', 'order_status','transaction_type'
                 , 'failure_reason', 'broker_response', 'broker', 'order_params', 'strategy', 'Entry_type', 'Entry_Price', 
-                'Exit_Price','Exit_type','EntryQty','ExitQty','trade_order_status', 'SignalEntry_time', 'SignalExit_time', 'Exchange', 'Segment','webhook_signal', 'LivePrice', 'expiry']
+                'Exit_Price','Exit_type','EntryQty','ExitQty','trade_order_status', 'SignalEntry_time', 'SignalExit_time', 'Exchange', 'Segment','webhook_signal', 'LivePrice', 'expiry',
+                'trade_setting', 'sltp_metadata', 'sltp_status', 'sltp_last_action', 'sltp_last_failure_reason', 'sltp_retry_count', 'sltp_manual_attention', 'sltp_last_checked_at']
 
 
 from rest_framework.exceptions import AuthenticationFailed
