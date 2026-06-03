@@ -1383,7 +1383,7 @@ class UserAssignRoleView(generics.UpdateAPIView):
 class CustomPageNumberPagination(PageNumberPagination):
     page_size = 10  # Default page size
     page_size_query_param = 'page_size'  # Allows the client to set the page size dynamically
-    max_page_size = 100  # Max limit for page size to avoid performance issues
+    max_page_size = 150  # Max limit for page size to avoid performance issues
     page_query_param = 'page_number'  # Allows the client to set the page number
 
 class GetUser(APIView):
