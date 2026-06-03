@@ -294,10 +294,28 @@ const CompleteTradeHistory = () => {
         fetchTradeHistory();
     };
 
-    const calculateTotal = (exitPrice, exitQty, entryPrice, entryQty, orderStatus) => {
-        if (orderStatus === 'complete' || orderStatus === 'completed') {
-            if (exitPrice !== null && entryPrice !== null) {
-                const total = (exitPrice * exitQty) - (entryPrice * entryQty);
+    const toNumberOrNull = (value) => {
+        if (value === null || value === undefined || value === '') return null;
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : null;
+    };
+
+    const calculateTotal = (signal) => {
+        const serverTotal = toNumberOrNull(signal.Total ?? signal.total);
+        if (serverTotal !== null) {
+            return serverTotal.toFixed(2);
+        }
+
+        const status = String(signal.order_status || '').toLowerCase();
+        if (status === 'complete' || status === 'completed') {
+            const exitPrice = toNumberOrNull(signal.Exit_Price);
+            const entryPrice = toNumberOrNull(signal.Entry_Price);
+            const quantity = toNumberOrNull(signal.ExitQty) ?? toNumberOrNull(signal.EntryQty);
+            if (exitPrice !== null && entryPrice !== null && quantity !== null) {
+                const entryType = String(signal.Entry_type || '').trim().toUpperCase();
+                const total = entryType === 'SELL' || entryType === 'SHORT'
+                    ? (entryPrice - exitPrice) * quantity
+                    : (exitPrice - entryPrice) * quantity;
                 return total.toFixed(2);
             }
         }
@@ -351,7 +369,7 @@ const CompleteTradeHistory = () => {
             'Exit Qty': signal.ExitQty || '-',
             'Entry Price': signal.Entry_Price !== null ? signal.Entry_Price : '-',
             'Exit Price': signal.Exit_Price !== null ? signal.Exit_Price : '-',
-            Total: signal.Total || '-',
+            Total: calculateTotal(signal) || '-',
             Name: signal.full_name || '-',
         }));
 
@@ -646,7 +664,7 @@ const CompleteTradeHistory = () => {
                                             </tr>
                                         ) : currentSignals.length > 0 ? (
                                             currentSignals.map((signal, index) => {
-                                                const total = calculateTotal(signal.Exit_Price, signal.ExitQty, signal.Entry_Price, signal.EntryQty, signal.order_status);
+                                                const total = calculateTotal(signal);
                                                 const totalValue = total !== null ? parseFloat(total) : null;
 
                                                 return (

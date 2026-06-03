@@ -2,6 +2,7 @@ from django.forms import ValidationError
 import requests
 from rest_framework import serializers
 import logging
+from decimal import Decimal, InvalidOperation
 from main.tasks import send_client_acc_email_async, send_email_async, send_email_pass_async, send_login_success_email
 from main.utils import get_browser_info, get_client_ip, get_login_time
 from .models import *
@@ -2070,6 +2071,16 @@ class TradeorderhistorySerializer(serializers.ModelSerializer):
     failure_reason = serializers.SerializerMethodField()
     broker_response = serializers.SerializerMethodField()
     expiry = serializers.SerializerMethodField()
+    Total = serializers.SerializerMethodField()
+
+    @staticmethod
+    def _decimal_or_none(value):
+        if value in (None, ""):
+            return None
+        try:
+            return Decimal(str(value))
+        except (InvalidOperation, TypeError, ValueError):
+            return None
 
     def _display_symbol(self, obj):
         return build_option_display_symbol(
@@ -2106,12 +2117,27 @@ class TradeorderhistorySerializer(serializers.ModelSerializer):
             return trade_setting.expiry_date.date().isoformat()
         return None
 
+    def get_Total(self, obj):
+        entry_price = self._decimal_or_none(obj.Entry_Price)
+        exit_price = self._decimal_or_none(obj.Exit_Price)
+        quantity = self._decimal_or_none(obj.ExitQty) or self._decimal_or_none(obj.EntryQty)
+        if entry_price is None or exit_price is None or quantity is None:
+            stored_total = self._decimal_or_none(getattr(obj, "Total", None))
+            return f"{stored_total:.2f}" if stored_total is not None else None
+
+        entry_type = str(getattr(obj, "Entry_type", "") or "").strip().upper()
+        if entry_type in {"SELL", "SHORT"}:
+            total = (entry_price - exit_price) * quantity
+        else:
+            total = (exit_price - entry_price) * quantity
+        return f"{total:.2f}"
+
     class Meta:
         model = Tradeorderhistory
         fields = ['id', 'client', 'date', 'trading_symbol','GroupService' ,'Index_Symbol', 'order_id', 'order_status','transaction_type'
                 , 'failure_reason', 'broker_response', 'broker', 'order_params', 'strategy', 'Entry_type', 'Entry_Price', 
                 'Exit_Price','Exit_type','EntryQty','ExitQty','trade_order_status', 'SignalEntry_time', 'SignalExit_time', 'Exchange', 'Segment','webhook_signal', 'LivePrice', 'expiry',
-                'trade_setting', 'sltp_metadata', 'sltp_status', 'sltp_last_action', 'sltp_last_failure_reason', 'sltp_retry_count', 'sltp_manual_attention', 'sltp_last_checked_at']
+                'Total', 'trade_setting', 'sltp_metadata', 'sltp_status', 'sltp_last_action', 'sltp_last_failure_reason', 'sltp_retry_count', 'sltp_manual_attention', 'sltp_last_checked_at']
 
 
 from rest_framework.exceptions import AuthenticationFailed

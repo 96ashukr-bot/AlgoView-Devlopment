@@ -227,6 +227,23 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertIsNone(data["failure_reason"])
         self.assertEqual(data["broker_response"], "Order placed successfully")
 
+    def test_trade_history_serializer_total_uses_closed_quantity(self):
+        history = Tradeorderhistory.objects.create(
+            client=self.client_user,
+            trading_symbol="NIFTY26MAY2624000CE",
+            order_status="complete",
+            trade_order_status="CLOSE",
+            Entry_type="BUY",
+            Entry_Price=Decimal("100.00"),
+            Exit_Price=Decimal("90.00"),
+            EntryQty=65,
+            ExitQty=30,
+        )
+
+        data = TradeorderhistorySerializer(history).data
+
+        self.assertEqual(data["Total"], "-300.00")
+
     def test_trade_history_placeholder_is_not_saved_as_failure_reason(self):
         save_trade_order_history(
             100,
