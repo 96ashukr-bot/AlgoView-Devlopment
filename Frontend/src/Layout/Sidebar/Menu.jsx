@@ -33,17 +33,6 @@ export const MENUITEMS = [
       // },
       
       {
-        title: "Kyc",
-        icon: "charts",
-        // path: `/app/users/profile`,
-        type: "sub",
-        bookmark: true,
-        active: false,
-        children: [
-          { path: `/kyc/kyclist`, title: "Kyc List", type: "link" },
-        ],
-      },
-      {
         title: "Client",
         icon: "user",
         // path: `/table/datatable/addclient`,

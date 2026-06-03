@@ -81,16 +81,10 @@ const CreatePwd = ({ logoClassMain }) => {
     try {
       const response = await changePassword(oldPassword, newPassword, confirmPassword);
 
-      if (response.ekyc_status === true) {
-        toast.success('New Password Created Successfully!');
-        setTimeout(() => {
-          navigate('/dashboard/algoviewtech/user');
-        }, 2000);
-      } else {
-        setTimeout(() => {
-          navigate('/algoview/kyc-update');
-        }, 2000);
-      }
+      toast.success('New Password Created Successfully!');
+      setTimeout(() => {
+        navigate('/dashboard/algoviewtech/user');
+      }, 2000);
     } catch (error) {
       toast.error(error.message || 'Failed to change password.');
     } finally {

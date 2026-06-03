@@ -5,7 +5,7 @@ import man from "../../../assets/images/dashboard/defaultpicture.jpg";
 import { LI, UL, Image, P } from "../../../AbstractElements";
 import CustomizerContext from "../../../_helper/Customizer";
 import { baseUrl } from "../../../ConfigUrl/config";
-import { Account, KycUpdate } from "../../../Constant";
+import { Account } from "../../../Constant";
 import { fetchUserProfile, logoutUser } from "../../../Services/Authentication";
 import './RightHeader.css'
 
@@ -98,20 +98,6 @@ const UserHeader = () => {
             <User />
             <span>{Account}</span>
           </LI>
-
-          {role.toLowerCase() === "client" && (
-            <LI
-              attrLI={{
-                onClick: () => {
-                  UserMenuRedirect(`/algoview/kyc-update`);
-                  closeDropdown();
-                },
-              }}
-            >
-              <User />
-              <span>{KycUpdate}</span>
-            </LI>
-          )}
 
           <LI
             attrLI={{

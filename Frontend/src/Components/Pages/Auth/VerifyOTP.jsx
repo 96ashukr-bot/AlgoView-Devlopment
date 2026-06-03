@@ -87,13 +87,8 @@ const VerifyOTP = ({ email }) => {
       } else if (response.message === "login successfully") {
         localStorage.removeItem('pendingOtpEmail');
         localStorage.removeItem('pendingOtpApiBaseUrl');
-        if (response.ekyc_status === true) {
-          toast.success('Login successful! Redirecting to dashboard.');
-          navigate('/dashboard/algoviewtech/user');
-        }
-        else {
-          navigate('/algoview/kyc-update');
-        }
+        toast.success('Login successful! Redirecting to dashboard.');
+        navigate('/dashboard/algoviewtech/user');
 
       } else {
         setError('Unexpected response from server.');
