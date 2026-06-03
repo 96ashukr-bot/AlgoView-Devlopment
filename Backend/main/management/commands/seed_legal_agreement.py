@@ -9,12 +9,12 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--content-file", dest="content_file", default=None)
-        parser.add_argument("--version", dest="version", default="v1.0")
+        parser.add_argument("--agreement-version", dest="agreement_version", default="v1.0")
 
     def handle(self, *args, **options):
         content_file = options["content_file"] or getattr(settings, "MASTER_AGREEMENT_FILE", None) or DEFAULT_AGREEMENT_CONTENT_FILE
         try:
-            agreement, created = seed_agreement_from_file(content_file, version=options["version"])
+            agreement, created = seed_agreement_from_file(content_file, version=options["agreement_version"])
         except Exception as exc:
             raise CommandError(str(exc)) from exc
 
