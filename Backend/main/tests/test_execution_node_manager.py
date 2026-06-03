@@ -244,6 +244,23 @@ class ExecutionNodeManagerTests(TestCase):
 
         self.assertEqual(data["Total"], "-300.00")
 
+    def test_trade_history_serializer_backfills_missing_exit_quantity_for_completed_close(self):
+        history = Tradeorderhistory.objects.create(
+            client=self.client_user,
+            trading_symbol="NIFTY26MAY2623200CE",
+            order_status="complete",
+            trade_order_status="CLOSE",
+            Entry_Price=Decimal("250.00"),
+            Exit_Price=Decimal("230.00"),
+            EntryQty=65,
+            ExitQty=None,
+        )
+
+        data = TradeorderhistorySerializer(history).data
+
+        self.assertEqual(data["ExitQty"], 65)
+        self.assertEqual(data["Total"], "-1300.00")
+
     def test_trade_history_placeholder_is_not_saved_as_failure_reason(self):
         save_trade_order_history(
             100,

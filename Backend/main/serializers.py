@@ -2072,6 +2072,7 @@ class TradeorderhistorySerializer(serializers.ModelSerializer):
     broker_response = serializers.SerializerMethodField()
     expiry = serializers.SerializerMethodField()
     Total = serializers.SerializerMethodField()
+    ExitQty = serializers.SerializerMethodField()
 
     @staticmethod
     def _decimal_or_none(value):
@@ -2120,7 +2121,7 @@ class TradeorderhistorySerializer(serializers.ModelSerializer):
     def get_Total(self, obj):
         entry_price = self._decimal_or_none(obj.Entry_Price)
         exit_price = self._decimal_or_none(obj.Exit_Price)
-        quantity = self._decimal_or_none(obj.ExitQty) or self._decimal_or_none(obj.EntryQty)
+        quantity = self._decimal_or_none(self.get_ExitQty(obj))
         if entry_price is None or exit_price is None or quantity is None:
             stored_total = self._decimal_or_none(getattr(obj, "Total", None))
             return f"{stored_total:.2f}" if stored_total is not None else None
@@ -2131,6 +2132,16 @@ class TradeorderhistorySerializer(serializers.ModelSerializer):
         else:
             total = (exit_price - entry_price) * quantity
         return f"{total:.2f}"
+
+    def get_ExitQty(self, obj):
+        if obj.ExitQty is not None:
+            return obj.ExitQty
+        trade_order_status = str(getattr(obj, "trade_order_status", "") or "").strip().upper()
+        order_status = str(getattr(obj, "order_status", "") or "").strip().lower()
+        is_completed_close = trade_order_status == "CLOSE" and order_status in {"complete", "completed"}
+        if is_completed_close and obj.Exit_Price is not None and obj.EntryQty is not None:
+            return obj.EntryQty
+        return obj.ExitQty
 
     class Meta:
         model = Tradeorderhistory
