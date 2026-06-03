@@ -137,25 +137,43 @@ const TermsAcceptance = () => {
                     className="d-flex align-items-start gap-3 border rounded bg-white p-3"
                     style={{ cursor: "pointer" }}
                   >
+                    <span
+                      style={{
+                        alignItems: "center",
+                        backgroundColor: checked ? "#ffffff" : "#ffffff",
+                        border: "2px solid #2f3f7f",
+                        borderRadius: "4px",
+                        color: "#000000",
+                        display: "inline-flex",
+                        fontSize: "18px",
+                        fontWeight: 800,
+                        width: "22px",
+                        height: "22px",
+                        minWidth: "22px",
+                        justifyContent: "center",
+                        lineHeight: 1,
+                        marginTop: "2px",
+                        pointerEvents: "none",
+                      }}
+                    >
+                      {checked ? "✓" : ""}
+                    </span>
                     <Input
                       id="legalAgreementCheck"
                       type="checkbox"
                       checked={checked}
                       onChange={(e) => setChecked(e.target.checked)}
                       style={{
-                        position: "static",
-                        margin: "2px 0 0",
-                        width: "22px",
-                        height: "22px",
-                        minWidth: "22px",
-                        accentColor: "#2f3f7f",
-                        border: "2px solid #2f3f7f",
-                        opacity: 1,
-                        visibility: "visible",
-                        cursor: "pointer",
+                        opacity: 0,
+                        position: "absolute",
+                        pointerEvents: "none",
                       }}
                     />
-                    <span>
+                    <span
+                      style={{
+                        cursor: "pointer",
+                      }}
+                    >
                     I have read and agree to the Software Development and Automation Services Agreement, Risk Disclaimer, Terms & Conditions and No Refund Policy.
                     </span>
                   </Label>
