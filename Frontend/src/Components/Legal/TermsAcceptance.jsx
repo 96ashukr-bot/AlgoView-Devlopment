@@ -131,10 +131,33 @@ const TermsAcceptance = () => {
                   <AgreementContent content={agreement.content} />
                 </div>
 
-                <FormGroup check className="mb-4">
-                  <Input id="legalAgreementCheck" type="checkbox" checked={checked} onChange={(e) => setChecked(e.target.checked)} />
-                  <Label check htmlFor="legalAgreementCheck">
+                <FormGroup className="mb-4">
+                  <Label
+                    htmlFor="legalAgreementCheck"
+                    className="d-flex align-items-start gap-3 border rounded bg-white p-3"
+                    style={{ cursor: "pointer" }}
+                  >
+                    <Input
+                      id="legalAgreementCheck"
+                      type="checkbox"
+                      checked={checked}
+                      onChange={(e) => setChecked(e.target.checked)}
+                      style={{
+                        position: "static",
+                        margin: "2px 0 0",
+                        width: "22px",
+                        height: "22px",
+                        minWidth: "22px",
+                        accentColor: "#2f3f7f",
+                        border: "2px solid #2f3f7f",
+                        opacity: 1,
+                        visibility: "visible",
+                        cursor: "pointer",
+                      }}
+                    />
+                    <span>
                     I have read and agree to the Software Development and Automation Services Agreement, Risk Disclaimer, Terms & Conditions and No Refund Policy.
+                    </span>
                   </Label>
                 </FormGroup>
 
