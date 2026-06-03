@@ -4110,7 +4110,7 @@ class WebhookDiagnosticsAPIView(APIView):
 
     def get(self, request, *args, **kwargs):
         user = request.user
-        if not is_admin_or_superadmin(user):
+        if not (is_admin_or_superadmin(user) or is_subadmin_user(user)):
             return Response({"detail": "You do not have permission to view webhook diagnostics."}, status=status.HTTP_403_FORBIDDEN)
 
         webhook_symbol = str(request.query_params.get("symbol", "") or "").strip()
@@ -4125,6 +4125,12 @@ class WebhookDiagnosticsAPIView(APIView):
                 Q(client__assigned_client=user) |
                 Q(client__created_by=user)
             ).filter(client__type_of_user='is_client', client__is_client=True)
+        elif is_subadmin_user(user):
+            queryset = queryset.filter(
+                client__in=get_accessible_clients_queryset(user),
+                client__type_of_user='is_client',
+                client__is_client=True,
+            )
 
         if client_id:
             if not can_access_client_record(user, client_id):
@@ -4191,7 +4197,7 @@ class SLTPWatcherScanAPIView(APIView):
 
     def get(self, request, *args, **kwargs):
         user = request.user
-        if not is_admin_or_superadmin(user):
+        if not (is_admin_or_superadmin(user) or is_subadmin_user(user)):
             return Response(
                 {"detail": "You do not have permission to view the SL/TP watcher."},
                 status=status.HTTP_403_FORBIDDEN,
@@ -4208,6 +4214,7 @@ class SLTPWatcherScanAPIView(APIView):
             client_id=client_id,
             history_id=history_id,
             execute_exit=False,
+            client_ids=list(get_accessible_clients_queryset(user).values_list("id", flat=True)) if is_subadmin_user(user) and not client_id else None,
         )
         return Response(
             {

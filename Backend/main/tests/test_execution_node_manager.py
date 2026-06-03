@@ -404,6 +404,114 @@ class ExecutionNodeManagerTests(TestCase):
         )
         self.assertEqual(assigned_trade["failure_reason"], "Broker access token is missing")
 
+    def test_subadmin_can_view_webhook_diagnostics_for_assigned_clients_only(self):
+        subadmin_role, _ = Role.objects.get_or_create(name="Sub-Admin", defaults={"status": "active"})
+        subadmin = User.objects.create_user(
+            email="diagnostics-subadmin@example.com",
+            firstName="Diagnostics",
+            lastName="Sub",
+            phoneNumber="9999999920",
+            password="Pass@123",
+            role=subadmin_role,
+        )
+        assigned_client = User.objects.create_user(
+            email="diagnostics-assigned@example.com",
+            firstName="Diagnostics",
+            lastName="Assigned",
+            phoneNumber="9999999921",
+            password="Pass@123",
+            type_of_user="is_client",
+            is_client=True,
+            assigned_client=subadmin,
+        )
+        other_client = User.objects.create_user(
+            email="diagnostics-other@example.com",
+            firstName="Diagnostics",
+            lastName="Other",
+            phoneNumber="9999999922",
+            password="Pass@123",
+            type_of_user="is_client",
+            is_client=True,
+        )
+        ClientTradeSetting.objects.create(client=assigned_client, symbol="NIFTY", broker="Angel One", quantity=65)
+        ClientTradeSetting.objects.create(client=other_client, symbol="BANKNIFTY", broker="Zerodha", quantity=30)
+
+        access_token = str(RefreshToken.for_user(subadmin).access_token)
+        response = self.client.get(
+            "/api/webhook-diagnostics/",
+            HTTP_AUTHORIZATION=f"Bearer {access_token}",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        client_ids = {item["client_id"] for item in response.data["data"]}
+        self.assertIn(assigned_client.id, client_ids)
+        self.assertNotIn(other_client.id, client_ids)
+
+    def test_subadmin_can_view_sltp_watcher_for_assigned_clients_only(self):
+        subadmin_role, _ = Role.objects.get_or_create(name="Sub-Admin", defaults={"status": "active"})
+        subadmin = User.objects.create_user(
+            email="sltp-subadmin@example.com",
+            firstName="Sltp",
+            lastName="Sub",
+            phoneNumber="9999999923",
+            password="Pass@123",
+            role=subadmin_role,
+        )
+        assigned_client = User.objects.create_user(
+            email="sltp-assigned@example.com",
+            firstName="Sltp",
+            lastName="Assigned",
+            phoneNumber="9999999924",
+            password="Pass@123",
+            type_of_user="is_client",
+            is_client=True,
+            assigned_client=subadmin,
+        )
+        other_client = User.objects.create_user(
+            email="sltp-other@example.com",
+            firstName="Sltp",
+            lastName="Other",
+            phoneNumber="9999999925",
+            password="Pass@123",
+            type_of_user="is_client",
+            is_client=True,
+        )
+        Tradeorderhistory.objects.create(
+            client=assigned_client,
+            GroupService="Lite",
+            trading_symbol="NIFTY02JUN2623500CE",
+            Index_Symbol="NIFTY02JUN2623500CE",
+            transaction_type="BUY",
+            order_status="completed",
+            trade_order_status="OPEN",
+            order_id="assigned-open-buy",
+            EntryQty=65,
+            Entry_Price=100,
+        )
+        Tradeorderhistory.objects.create(
+            client=other_client,
+            GroupService="Lite",
+            trading_symbol="BANKNIFTY30JUN2653700PE",
+            Index_Symbol="BANKNIFTY30JUN2653700PE",
+            transaction_type="BUY",
+            order_status="completed",
+            trade_order_status="OPEN",
+            order_id="other-open-buy",
+            EntryQty=30,
+            Entry_Price=200,
+        )
+
+        access_token = str(RefreshToken.for_user(subadmin).access_token)
+        response = self.client.get(
+            "/api/sl-tp-watcher/scan/",
+            HTTP_AUTHORIZATION=f"Bearer {access_token}",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        client_ids = {item["client_id"] for item in response.data["results"]}
+        self.assertIn(assigned_client.id, client_ids)
+        self.assertNotIn(other_client.id, client_ids)
+
     def test_client_trade_history_is_limited_to_self(self):
         self_client = User.objects.create_user(
             email="self-history@example.com",

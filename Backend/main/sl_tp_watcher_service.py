@@ -899,10 +899,18 @@ class SLTPWatcherService:
         finally:
             self._release_lock(trade_order)
 
-    def scan(self, client_id: Optional[int] = None, history_id: Optional[str] = None, execute_exit: bool = True) -> Dict[str, Any]:
+    def scan(
+        self,
+        client_id: Optional[int] = None,
+        history_id: Optional[str] = None,
+        execute_exit: bool = True,
+        client_ids: Optional[List[int]] = None,
+    ) -> Dict[str, Any]:
         queryset = self._get_open_trades()
         if client_id:
             queryset = queryset.filter(client_id=client_id)
+        elif client_ids is not None:
+            queryset = queryset.filter(client_id__in=client_ids)
         if history_id:
             queryset = queryset.filter(history_id=history_id)
 
