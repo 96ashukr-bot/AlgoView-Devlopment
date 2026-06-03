@@ -54,6 +54,15 @@ from main.chat_views import (
     ChatThreadListCreateAPIView,
     ChatUnreadCountAPIView,
 )
+from main.legal_views import (
+    AcceptAgreementAPIView,
+    CurrentAgreementAPIView,
+    LegalAcceptanceListAPIView,
+    LegalAcceptancePDFDownloadAPIView,
+    LegalAcceptanceResendEmailAPIView,
+    MyAcceptanceStatusAPIView,
+    MyAgreementPDFAPIView,
+)
 urlpatterns = [
     path('signup/', UserRegistrationView.as_view(), name='user-registration'),
     path('login/', CustomLoginView.as_view(), name='login'),
@@ -252,7 +261,14 @@ urlpatterns = [
     path('support-chat/threads/', ChatThreadListCreateAPIView.as_view(), name='support-chat-threads'),
     path('support-chat/threads/<int:thread_id>/', ChatThreadDetailAPIView.as_view(), name='support-chat-thread-detail'),
     path('support-chat/threads/<int:thread_id>/messages/', ChatMessageCreateAPIView.as_view(), name='support-chat-message-create'),
-    
+    path('legal/current-agreement/', CurrentAgreementAPIView.as_view(), name='legal-current-agreement'),
+    path('legal/my-acceptance-status/', MyAcceptanceStatusAPIView.as_view(), name='legal-my-acceptance-status'),
+    path('legal/accept-agreement/', AcceptAgreementAPIView.as_view(), name='legal-accept-agreement'),
+    path('legal/my-agreement/', MyAgreementPDFAPIView.as_view(), name='legal-my-agreement'),
+    path('legal/acceptances/', LegalAcceptanceListAPIView.as_view(), name='legal-acceptances'),
+    path('legal/acceptances/<int:acceptance_id>/download/', LegalAcceptancePDFDownloadAPIView.as_view(), name='legal-acceptance-download'),
+    path('legal/acceptances/<int:acceptance_id>/resend-email/', LegalAcceptanceResendEmailAPIView.as_view(), name='legal-acceptance-resend-email'),
+
     path('client-broker-details-setting-aleart/', GetClientBrokerDetailsSettingView.as_view(), name='client-broker-details'),
     path('client-complete-trade-history/',TradeCompleteListView.as_view(), name='client-completed-trade-details'),
     

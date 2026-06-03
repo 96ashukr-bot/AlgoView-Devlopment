@@ -4,6 +4,7 @@ from zoneinfo import ZoneInfo
 from django.conf import settings
 from django.utils.timezone import now
 from django.db import models
+from django.db.models import Q
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.utils.translation import gettext_lazy as _
 # from django.utils import timezone
@@ -16,6 +17,20 @@ from pytz import timezone as pytz_timezone
 
 from main.angelone.utils.crypto import decrypt_value, encrypt_value
 from main.broker_registry import normalize_broker_name
+
+
+def agreement_pdf_upload_path(instance, filename):
+    client_id = getattr(instance, "client_id", None) or "unknown"
+    version = (instance.agreement_version or "unknown").replace("/", "-").replace("\\", "-")
+    return f"agreements/{client_id}/{version}/{filename}"
+
+
+def calculate_terms_hash(content, version):
+    import hashlib
+
+    return hashlib.sha256(f"{content or ''}{version or ''}".encode("utf-8")).hexdigest()
+
+
 def get_ist_time():
     # Convert the current UTC time to IST
     ist_timezone = pytz_timezone('Asia/Kolkata')
@@ -338,6 +353,100 @@ class ChatMessage(models.Model):
 
     def __str__(self):
         return f"Message {self.id} in chat {self.thread_id}"
+
+
+class LegalAgreement(models.Model):
+    title = models.CharField(max_length=255)
+    version = models.CharField(max_length=50)
+    content = models.TextField()
+    content_hash = models.CharField(max_length=64, editable=False, db_index=True)
+    is_active = models.BooleanField(default=False, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="created_legal_agreements")
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["version"], name="unique_legal_agreement_version"),
+            models.UniqueConstraint(fields=["is_active"], condition=Q(is_active=True), name="unique_active_legal_agreement"),
+        ]
+        ordering = ["-created_at", "-id"]
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            original = LegalAgreement.objects.filter(pk=self.pk).only("title", "version", "content", "content_hash").first()
+            if original and (
+                original.title != self.title
+                or original.version != self.version
+                or original.content != self.content
+                or original.content_hash != self.content_hash
+            ):
+                raise ValueError("Legal agreement title, version, content, and hash are immutable after creation.")
+        self.content_hash = calculate_terms_hash(self.content, self.version)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.title} {self.version}"
+
+
+class ClientAgreementAcceptance(models.Model):
+    STATUS_ACCEPTED = "ACCEPTED"
+    STATUS_PDF_GENERATED = "PDF_GENERATED"
+    STATUS_EMAIL_SENT = "EMAIL_SENT"
+    STATUS_EMAIL_FAILED = "EMAIL_FAILED"
+    STATUS_CHOICES = (
+        (STATUS_ACCEPTED, "Accepted"),
+        (STATUS_PDF_GENERATED, "PDF Generated"),
+        (STATUS_EMAIL_SENT, "Email Sent"),
+        (STATUS_EMAIL_FAILED, "Email Failed"),
+    )
+
+    client = models.ForeignKey(User, on_delete=models.PROTECT, related_name="agreement_acceptances")
+    agreement = models.ForeignKey(LegalAgreement, on_delete=models.PROTECT, related_name="acceptances")
+    agreement_version = models.CharField(max_length=50)
+    terms_version_hash = models.CharField(max_length=64, db_index=True)
+    client_name = models.CharField(max_length=300, blank=True, default="")
+    client_email = models.EmailField(blank=True, null=True)
+    client_mobile = models.CharField(max_length=30, blank=True, default="")
+    accepted_at = models.DateTimeField(default=get_ist_time, db_index=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(blank=True, default="")
+    pdf_file = models.FileField(upload_to=agreement_pdf_upload_path, null=True, blank=True)
+    pdf_generated_at = models.DateTimeField(null=True, blank=True)
+    client_email_sent_at = models.DateTimeField(null=True, blank=True)
+    admin_email_sent_at = models.DateTimeField(null=True, blank=True)
+    email_status = models.CharField(max_length=30, choices=STATUS_CHOICES, default=STATUS_ACCEPTED)
+    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default=STATUS_ACCEPTED)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["client", "agreement"], name="unique_client_agreement_acceptance"),
+        ]
+        ordering = ["-accepted_at", "-id"]
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            original = ClientAgreementAcceptance.objects.filter(pk=self.pk).first()
+            immutable_fields = (
+                "client_id",
+                "agreement_id",
+                "agreement_version",
+                "terms_version_hash",
+                "client_name",
+                "client_email",
+                "client_mobile",
+                "accepted_at",
+                "ip_address",
+                "user_agent",
+            )
+            for field_name in immutable_fields:
+                if getattr(original, field_name) != getattr(self, field_name):
+                    raise ValueError(f"{field_name} is immutable after agreement acceptance.")
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.client_email} accepted {self.agreement_version}"
 
 class State(models.Model):
     id = models.AutoField(primary_key=True) 

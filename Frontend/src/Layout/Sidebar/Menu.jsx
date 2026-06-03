@@ -134,6 +134,7 @@ export const MENUITEMS = [
           { path: `/settings/companydetails`, title: "Company Details", type: "link" },
           { path: `/settings/emailaccount`, title: "Email Account", type: "link" },
           { path: `/settings/websocket`, title: "Web Socket", type: "link" },                                
+          { path: `/settings/agreement-acceptances`, title: "Agreement Acceptances", type: "link" },
         ],
       },
 

@@ -160,6 +160,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'allauth.account.middleware.AccountMiddleware',  # Add this line
     'corsheaders.middleware.CorsMiddleware',
+    'main.legal_middleware.LegalAgreementAcceptanceMiddleware',
 ]
 
 
@@ -311,6 +312,8 @@ EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
 EMAIL_HOST_USER = config('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL')
+AGREEMENT_ADMIN_EMAIL = config('AGREEMENT_ADMIN_EMAIL', default=DEFAULT_FROM_EMAIL)
+MASTER_AGREEMENT_FILE = config('MASTER_AGREEMENT_FILE', default='')
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')

@@ -183,6 +183,7 @@ import WebhookDiagnostics from "../Components/Tables/DataTable/TradeDetails/Webh
 import SLTPWatcher from "../Components/Tables/DataTable/TradeDetails/SLTPWatcher";
 import IPPool from "../Components/Application/IPPool/IPPool";
 import SupportChat from "../Components/Application/SupportChat/SupportChat";
+import AgreementAcceptanceManagement from "../Components/Legal/AgreementAcceptanceManagement";
 
 export const routes = [
   { path: `/dashboard/algoviewtech/user`, Component: <Default /> },
@@ -227,6 +228,7 @@ export const routes = [
   { path: `/settings/brokers`, Component: <Broker />},
   { path: `/settings/emailaccount`, Component: <SmtpDetails />},
   { path: `/settings/websocket`, Component: <WebSocket />},
+  { path: `/settings/agreement-acceptances`, Component: <AgreementAcceptanceManagement />},
   { path: `/settings/companydetails`, Component: <CompanyDetails />},
   { path: `/service-manage/strategies`, Component: <Strategies />},
   { path: `/service-manage/strategies/editstrategies/:id`, Component: <EditStrategies />},

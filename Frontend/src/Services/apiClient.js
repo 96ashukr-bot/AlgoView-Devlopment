@@ -43,6 +43,16 @@ const redirectToLogin = () => {
   }
 };
 
+const redirectToTermsAcceptance = () => {
+  if (typeof window === "undefined") {
+    return;
+  }
+  const currentPath = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+  if (!currentPath.includes("/terms-acceptance")) {
+    window.location.replace("/terms-acceptance");
+  }
+};
+
 const getTargetBaseUrl = (requestUrl = "") => {
   if (typeof requestUrl === "string" && /^https?:\/\//i.test(requestUrl)) {
     try {
@@ -127,6 +137,10 @@ apiClient.interceptors.response.use(
     const originalRequest = error.config || {};
     const responseStatus = error.response?.status;
     const responseCode = error.response?.data?.code;
+    if (responseStatus === 451 && responseCode === "LEGAL_AGREEMENT_REQUIRED") {
+      redirectToTermsAcceptance();
+      return Promise.reject(error);
+    }
     const shouldRefresh =
       responseStatus === 401 &&
       !originalRequest._retry &&

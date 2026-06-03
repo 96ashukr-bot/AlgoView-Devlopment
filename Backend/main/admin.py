@@ -290,3 +290,43 @@ class StrategyExecutionLogAdmin(admin.ModelAdmin):
     list_display = ('id', 'strategy_execution', 'event_type', 'created_at')
     list_filter = ('event_type',)
     search_fields = ('strategy_execution__client__email', 'message')
+
+
+@admin.register(LegalAgreement)
+class LegalAgreementAdmin(admin.ModelAdmin):
+    list_display = ("id", "title", "version", "content_hash", "is_active", "created_at", "created_by")
+    search_fields = ("title", "version", "content_hash")
+    list_filter = ("is_active",)
+    readonly_fields = ("content_hash", "created_at", "updated_at")
+
+
+@admin.register(ClientAgreementAcceptance)
+class ClientAgreementAcceptanceAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "client_name",
+        "client_email",
+        "client_mobile",
+        "agreement_version",
+        "accepted_at",
+        "ip_address",
+        "email_status",
+    )
+    search_fields = ("client_name", "client_email", "client_mobile", "terms_version_hash")
+    list_filter = ("agreement_version", "email_status", "status")
+    readonly_fields = (
+        "client",
+        "agreement",
+        "agreement_version",
+        "terms_version_hash",
+        "client_name",
+        "client_email",
+        "client_mobile",
+        "accepted_at",
+        "ip_address",
+        "user_agent",
+        "pdf_generated_at",
+        "client_email_sent_at",
+        "admin_email_sent_at",
+        "created_at",
+    )

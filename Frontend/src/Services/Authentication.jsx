@@ -5009,3 +5009,50 @@ export const getSupportChatUnreadCount = async () => {
   const response = await axios.get(`${baseUrl}/support-chat/unread-count/`);
   return response.data;
 };
+
+export const getCurrentLegalAgreement = async () => {
+  const response = await axios.get(`${baseUrl}/legal/current-agreement/`);
+  return response.data;
+};
+
+export const getMyAgreementAcceptanceStatus = async () => {
+  const response = await axios.get(`${baseUrl}/legal/my-acceptance-status/`);
+  return response.data;
+};
+
+export const acceptLegalAgreement = async () => {
+  const response = await axios.post(`${baseUrl}/legal/accept-agreement/`, {});
+  return response.data;
+};
+
+export const getLegalAcceptances = async (params = {}) => {
+  const response = await axios.get(`${baseUrl}/legal/acceptances/`, { params });
+  return response.data;
+};
+
+export const resendLegalAcceptanceEmail = async (acceptanceId, target = "both") => {
+  const response = await axios.post(`${baseUrl}/legal/acceptances/${acceptanceId}/resend-email/`, { target });
+  return response.data;
+};
+
+export const getLegalAcceptanceDownloadUrl = (acceptanceId) => {
+  return `${baseUrl}/legal/acceptances/${acceptanceId}/download/`;
+};
+
+export const getMyLegalAgreementDownloadUrl = () => {
+  return `${baseUrl}/legal/my-agreement/`;
+};
+
+export const downloadLegalAcceptancePdf = async (acceptanceId) => {
+  const response = await axios.get(`${baseUrl}/legal/acceptances/${acceptanceId}/download/`, {
+    responseType: "blob",
+  });
+  return response.data;
+};
+
+export const downloadMyLegalAgreementPdf = async () => {
+  const response = await axios.get(`${baseUrl}/legal/my-agreement/`, {
+    responseType: "blob",
+  });
+  return response.data;
+};
