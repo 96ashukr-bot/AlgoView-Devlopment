@@ -9,7 +9,8 @@ from django.core.mail import EmailMessage
 from django.db import transaction
 from django.utils import timezone
 
-from main.models import ClientAgreementAcceptance, LegalAgreement, calculate_terms_hash
+from main.models import ClientAgreementAcceptance, CompanySmtpDetails, LegalAgreement, calculate_terms_hash
+from main.utils import get_smtp_connection
 
 logger = logging.getLogger(__name__)
 
@@ -255,14 +256,36 @@ def generate_acceptance_pdf(acceptance):
     return acceptance.pdf_file
 
 
+def _get_agreement_email_defaults():
+    smtp_details = CompanySmtpDetails.objects.order_by("-id").first()
+    from_email = (
+        getattr(smtp_details, "default_from_email", None)
+        or getattr(smtp_details, "email_host_user", None)
+        or getattr(settings, "DEFAULT_FROM_EMAIL", None)
+    )
+    admin_email = (
+        getattr(settings, "AGREEMENT_ADMIN_EMAIL", "")
+        or getattr(smtp_details, "default_from_email", None)
+        or getattr(settings, "DEFAULT_FROM_EMAIL", "")
+    )
+    return from_email, admin_email
+
+
 def send_acceptance_emails(acceptance, send_client=True, send_admin=True):
-    admin_email = getattr(settings, "AGREEMENT_ADMIN_EMAIL", "") or getattr(settings, "DEFAULT_FROM_EMAIL", "")
-    from_email = getattr(settings, "DEFAULT_FROM_EMAIL", None)
+    from_email, admin_email = _get_agreement_email_defaults()
+    smtp_connection = get_smtp_connection()
     accepted_at = timezone.localtime(acceptance.accepted_at).strftime("%d-%m-%Y %H:%M:%S")
     failures = []
 
     if not acceptance.pdf_file:
         generate_acceptance_pdf(acceptance)
+
+    if not smtp_connection:
+        failures.append("SMTP connection could not be established.")
+        acceptance.email_status = ClientAgreementAcceptance.STATUS_EMAIL_FAILED
+        acceptance.status = ClientAgreementAcceptance.STATUS_EMAIL_FAILED
+        acceptance.save(update_fields=["email_status", "status"])
+        return failures
 
     if send_client and acceptance.client_email:
         try:
@@ -278,6 +301,7 @@ def send_acceptance_emails(acceptance, send_client=True, send_admin=True):
                 ),
                 from_email=from_email,
                 to=[acceptance.client_email],
+                connection=smtp_connection,
             )
             client_message.attach_file(acceptance.pdf_file.path)
             client_message.send(fail_silently=False)
@@ -303,6 +327,7 @@ def send_acceptance_emails(acceptance, send_client=True, send_admin=True):
                 ),
                 from_email=from_email,
                 to=[admin_email],
+                connection=smtp_connection,
             )
             admin_message.attach_file(acceptance.pdf_file.path)
             admin_message.send(fail_silently=False)
