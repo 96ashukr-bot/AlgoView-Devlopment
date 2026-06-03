@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 from io import BytesIO
 
 from django.conf import settings
@@ -78,6 +79,28 @@ def render_agreement_content(agreement, client_snapshot=None, accepted_at=None, 
     return content
 
 
+def clean_agreement_markdown_text(content):
+    cleaned_lines = []
+    for line in str(content or "").splitlines():
+        cleaned = re.sub(r"^\s{0,3}#{1,6}\s*", "", line)
+        cleaned = cleaned.replace("**", "")
+        cleaned_lines.append(cleaned)
+    return "\n".join(cleaned_lines)
+
+
+def _split_markdown_bold(text):
+    parts = re.split(r"(\*\*[^*]+\*\*)", str(text or ""))
+    segments = []
+    for part in parts:
+        if not part:
+            continue
+        if part.startswith("**") and part.endswith("**"):
+            segments.append((part[2:-2], True))
+        else:
+            segments.append((part, False))
+    return segments or [("", False)]
+
+
 def _draw_wrapped_text(canvas, text, x, y, width, font_name="Helvetica", font_size=10, line_gap=4):
     from reportlab.lib.units import inch
     from reportlab.pdfbase.pdfmetrics import stringWidth
@@ -105,6 +128,49 @@ def _draw_wrapped_text(canvas, text, x, y, width, font_name="Helvetica", font_si
                 canvas.setFont(font_name, font_size)
         canvas.drawString(x, y, line)
         y -= line_height
+    return y
+
+
+def _draw_markdown_text(canvas, text, x, y, width, font_size=10, line_gap=4):
+    from reportlab.lib.units import inch
+    from reportlab.pdfbase.pdfmetrics import stringWidth
+
+    line_height = font_size + line_gap
+    for raw_line in str(text or "").splitlines():
+        stripped = raw_line.strip()
+        if not stripped:
+            y -= line_height
+            continue
+
+        is_heading = stripped.startswith("#")
+        line = re.sub(r"^\s{0,3}#{1,6}\s*", "", raw_line)
+        font_size_for_line = 12 if is_heading else font_size
+        line_height_for_line = font_size_for_line + (line_gap + 2 if is_heading else line_gap)
+        bold_default = is_heading
+
+        current_x = x
+        for segment_text, segment_bold in _split_markdown_bold(line):
+            font_name = "Helvetica-Bold" if bold_default or segment_bold else "Helvetica"
+            tokens = re.findall(r"\S+\s*", segment_text)
+            for token in tokens:
+                token_width = stringWidth(token, font_name, font_size_for_line)
+                if current_x > x and current_x + token_width > x + width:
+                    y -= line_height_for_line
+                    current_x = x
+                    if y < inch:
+                        canvas.showPage()
+                        y = 10.5 * inch
+                canvas.setFont(font_name, font_size_for_line)
+                canvas.drawString(current_x, y, token)
+                current_x += token_width
+
+        y -= line_height_for_line
+        if is_heading:
+            y -= 3
+        if y < inch:
+            canvas.showPage()
+            y = 10.5 * inch
+
     return y
 
 
@@ -138,7 +204,7 @@ def generate_acceptance_pdf(acceptance):
         accepted_at=acceptance.accepted_at,
         ip_address=acceptance.ip_address,
     )
-    y = _draw_wrapped_text(pdf, rendered_content, margin, y, width - (2 * margin), font_size=10)
+    y = _draw_markdown_text(pdf, rendered_content, margin, y, width - (2 * margin), font_size=10)
 
     pdf.showPage()
     y = height - margin

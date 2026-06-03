@@ -8,6 +8,33 @@ import {
   getMyAgreementAcceptanceStatus,
 } from "../../Services/Authentication";
 
+const renderAgreementLine = (line, lineIndex) => {
+  const headingText = line.replace(/^\s{0,3}#{1,6}\s*/, "");
+  const isHeading = headingText !== line;
+  const segments = headingText.split(/(\*\*[^*]+\*\*)/g).filter(Boolean);
+  return (
+    <div
+      key={lineIndex}
+      className={isHeading ? "fw-bold mt-3 mb-2" : ""}
+      style={{ minHeight: line.trim() ? "auto" : "1.35em" }}
+    >
+      {segments.map((segment, segmentIndex) => {
+        if (segment.startsWith("**") && segment.endsWith("**")) {
+          return <strong key={segmentIndex}>{segment.slice(2, -2)}</strong>;
+        }
+        return <React.Fragment key={segmentIndex}>{segment}</React.Fragment>;
+      })}
+    </div>
+  );
+};
+
+const AgreementContent = ({ content }) => {
+  if (!content) {
+    return <>Agreement content is not configured.</>;
+  }
+  return <>{content.split("\n").map(renderAgreementLine)}</>;
+};
+
 const TermsAcceptance = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -99,9 +126,9 @@ const TermsAcceptance = () => {
 
                 <div
                   className="border rounded bg-white p-3 mb-4"
-                  style={{ maxHeight: "52vh", overflowY: "auto", whiteSpace: "pre-wrap", lineHeight: 1.6 }}
+                  style={{ maxHeight: "52vh", overflowY: "auto", lineHeight: 1.6 }}
                 >
-                  {agreement.content || "Agreement content is not configured."}
+                  <AgreementContent content={agreement.content} />
                 </div>
 
                 <FormGroup check className="mb-4">
