@@ -169,6 +169,11 @@ class SessionManager:
     def _lock_key(self, session_key: str) -> str:
         return f"{self._lock_prefix}:{session_key}"
 
+    def _breaker_for_session(self, session_key: Optional[str] = None) -> BrokerAuthCircuitBreaker:
+        if not session_key:
+            return self._breaker
+        return BrokerAuthCircuitBreaker(f"angelone:{session_key}")
+
     def _proxy_fingerprint(self, proxy_config: Optional[Dict[str, str]] = None) -> str:
         if not proxy_config:
             return "direct"
@@ -441,10 +446,11 @@ class SessionManager:
         force_new: bool = False,
         proxy_config: Optional[Dict[str, str]] = None,
     ) -> Dict[str, Any]:
-        if self._breaker.is_open():
+        session_key = self._get_session_key(client_id, api_key, proxy_config)
+        breaker = self._breaker_for_session(session_key)
+        if breaker.is_open():
             return {"status": "error", "message": "Angel One auth circuit breaker is open. Retry shortly."}
 
-        session_key = self._get_session_key(client_id, api_key, proxy_config)
         lock = self._get_lock(session_key)
         try:
             acquired = lock.acquire(blocking=True)
@@ -457,7 +463,7 @@ class SessionManager:
         try:
             return self._perform_login(client_id, password, totp_secret, api_key, force_new=force_new, proxy_config=proxy_config)
         except Exception as exc:
-            self._breaker.record_failure()
+            breaker.record_failure()
             logger.exception("Login exception", client_id=client_id, error=str(exc))
             return {"status": "error", "message": str(exc)}
         finally:
@@ -474,10 +480,11 @@ class SessionManager:
     ) -> Dict[str, Any]:
         if not api_key:
             return {"status": "error", "message": "API key is required"}
-        if self._breaker.is_open():
+        session_key = self._get_session_key(client_id, api_key, proxy_config)
+        breaker = self._breaker_for_session(session_key)
+        if breaker.is_open():
             return {"status": "error", "message": "Angel One auth circuit breaker is open. Retry shortly."}
 
-        session_key = self._get_session_key(client_id, api_key, proxy_config)
         lock = self._get_lock(session_key)
         try:
             acquired = lock.acquire(blocking=True)
@@ -491,7 +498,7 @@ class SessionManager:
             session = self._get_cached_session(session_key, proxy_config=proxy_config)
             return self._perform_refresh(session)
         except Exception as exc:
-            self._breaker.record_failure()
+            breaker.record_failure()
             logger.error("Session refresh failed", client_id=client_id, error=str(exc))
             return {"status": "error", "message": str(exc)}
         finally:
@@ -508,9 +515,10 @@ class SessionManager:
         verify_remote: bool = True,
         proxy_config: Optional[Dict[str, str]] = None,
     ) -> Dict[str, Any]:
-        if self._breaker.is_open():
-            return {"status": "error", "message": "Angel One auth circuit breaker is open. Retry shortly."}
         session_key = self._get_session_key(client_id, api_key, proxy_config)
+        breaker = self._breaker_for_session(session_key)
+        if breaker.is_open():
+            return {"status": "error", "message": "Angel One auth circuit breaker is open. Retry shortly."}
         lock = self._get_lock(session_key)
         try:
             acquired = lock.acquire(blocking=True)
@@ -526,7 +534,7 @@ class SessionManager:
                 if not verify_remote or not session.requires_remote_validation() or self._remote_validate(session):
                     session.update_activity()
                     self._persist_session(session)
-                    self._breaker.record_success()
+                    breaker.record_success()
                     return {"status": "success", "session": session, "source": "redis"}
 
             token_expired_detected = False
@@ -550,7 +558,7 @@ class SessionManager:
                     )
                     if self._remote_validate(candidate):
                         self._persist_session(candidate)
-                        self._breaker.record_success()
+                        breaker.record_success()
                         return {"status": "success", "session": candidate, "source": "persisted_tokens"}
                     token_expired_detected = True
 
@@ -589,7 +597,7 @@ class SessionManager:
                         login_session = self._get_cached_session(session_key, proxy_config=proxy_config)
                         return {"status": "success", "session": login_session, "source": "credential_login"}
 
-            self._breaker.record_failure()
+            breaker.record_failure()
             if token_expired_detected:
                 self.invalidate_client_sessions(client_id)
                 return {
@@ -699,7 +707,7 @@ class SessionManager:
         )
         data = obj.generateSession(client_id, password, totp)
         if not isinstance(data, dict) or not data.get("status"):
-            self._breaker.record_failure()
+            self._breaker_for_session(session_key).record_failure()
             return {"status": "error", "message": data.get("message", "Login failed") if isinstance(data, dict) else "Login failed"}
 
         profile_data = data.get("data", {}) or {}
@@ -715,7 +723,7 @@ class SessionManager:
             proxy_config=proxy_config,
         )
         self._persist_session(session)
-        self._breaker.record_success()
+        self._breaker_for_session(session_key).record_success()
         return {
             "status": "success",
             "message": "Login successful",
@@ -745,7 +753,7 @@ class SessionManager:
                 return self._invalid_token_response(session, "Angel One session is invalid or expired. Please login again.")
             session.status = SessionStatus.INVALID
             self._persist_session(session)
-            self._breaker.record_failure()
+            self._breaker_for_session(session.session_key).record_failure()
             return {"status": "error", "message": message}
 
         response_data = data.get("data", {}) or {}
@@ -761,7 +769,7 @@ class SessionManager:
         session.last_activity = now
         session.attach_smart_connect()
         self._persist_session(session)
-        self._breaker.record_success()
+        self._breaker_for_session(session.session_key).record_success()
         return {
             "status": "success",
             "message": "Session refreshed",
@@ -795,5 +803,5 @@ class SessionManager:
         session.feed_token = None
         session.session_expiry = None
         self._persist_session(session)
-        self._breaker.record_failure()
+        self._breaker_for_session(session.session_key).record_failure()
         return {"status": "error", "message": message, "error_code": "TOKEN_EXPIRED"}
