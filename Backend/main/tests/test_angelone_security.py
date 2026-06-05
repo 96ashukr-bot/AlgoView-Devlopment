@@ -841,6 +841,29 @@ class AngelOneExecutionValidationTests(TestCase):
             )
         )
 
+    def test_midcap_nifty_alias_normalizes_for_expiry_lookup(self):
+        from main.angleapi_upgraded import normalize_underlying_symbol
+
+        self.assertEqual(normalize_underlying_symbol("MIDCAP NIFTY"), "MIDCPNIFTY")
+        self.assertEqual(normalize_underlying_symbol("MIDCAPNIFTY"), "MIDCPNIFTY")
+        self.assertEqual(normalize_underlying_symbol("NIFTY MID SELECT"), "MIDCPNIFTY")
+
+    @mock.patch("main.angleapi_upgraded.ContractMasterManager.get_instance")
+    def test_expiry_view_uses_midcap_nifty_canonical_symbol(self, mock_get_instance):
+        from main.angleapi_upgraded import SymbolExpiryDateListView
+
+        manager = mock.Mock()
+        manager.get_expiries_for_underlying.return_value = [datetime(2026, 6, 30)]
+        mock_get_instance.return_value = manager
+        request = APIRequestFactory().get("/api/get-expiry-date-list/", {"symbol": "MIDCAP NIFTY"})
+
+        response = SymbolExpiryDateListView.as_view()(request)
+
+        manager.initialize.assert_called_once_with(blocking=True)
+        manager.get_expiries_for_underlying.assert_called_once_with("MIDCPNIFTY")
+        self.assertEqual(response.data["symbol"], "MIDCPNIFTY")
+        self.assertEqual(response.data["expiry_dates"], ["30JUN2026"])
+
     def test_zero_like_limit_price_is_treated_as_auto_buffer_price(self):
         request = self._request()
         request = ExecutionRequest(

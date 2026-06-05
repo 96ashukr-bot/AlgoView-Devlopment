@@ -29,6 +29,21 @@ from main.angelone.utils.logging_utils import TradingLogger
 logger = TradingLogger("angleapi_upgraded")
 
 
+UNDERLYING_SYMBOL_ALIASES = {
+    "MIDCAP NIFTY": "MIDCPNIFTY",
+    "MID CAP NIFTY": "MIDCPNIFTY",
+    "MIDCAPNIFTY": "MIDCPNIFTY",
+    "NIFTY MID SELECT": "MIDCPNIFTY",
+    "MIDCP NIFTY": "MIDCPNIFTY",
+}
+
+
+def normalize_underlying_symbol(symbol: str) -> str:
+    normalized = str(symbol or "").strip().upper()
+    compact = normalized.replace(" ", "")
+    return UNDERLYING_SYMBOL_ALIASES.get(normalized) or UNDERLYING_SYMBOL_ALIASES.get(compact) or compact
+
+
 def validate_buffer_percentage(buffer_percentage: Optional[float]) -> tuple[bool, str, float]:
     """Validate and normalize the configured Angel One LTP buffer."""
     if buffer_percentage is None:
@@ -443,13 +458,14 @@ class SymbolExpiryDateListView(APIView):
         symbol = request.query_params.get("symbol")
         if not symbol:
             return Response({"error": "Symbol required"}, status=400)
+        normalized_symbol = normalize_underlying_symbol(symbol)
 
         contract_manager = ContractMasterManager.get_instance()
         contract_manager.initialize(blocking=True)
-        expiries = contract_manager.get_expiries_for_underlying(symbol)
+        expiries = contract_manager.get_expiries_for_underlying(normalized_symbol)
         return Response(
             {
-                "symbol": symbol,
+                "symbol": normalized_symbol,
                 "expiry_dates": [expiry.strftime("%d%b%Y").upper() for expiry in expiries[:10]],
             }
         )
