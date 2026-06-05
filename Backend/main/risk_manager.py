@@ -53,6 +53,17 @@ class RiskManager:
         if quantity <= 0:
             return RiskCheckResult(False, "Quantity must be greater than zero.", "INVALID_QUANTITY")
 
+        if self._is_forced_squareoff_exit(request, transaction_type):
+            logger.info(
+                "Forced squareoff exit bypassed entry risk gates",
+                user_id=client_id,
+                symbol=symbol,
+                strike=strike,
+                transaction_type=transaction_type,
+                request_id=getattr(request, "request_id", None),
+            )
+            return RiskCheckResult(True)
+
         configured_max_quantity = int(
             getattr(getattr(request, "trade", None), "quantity", 0)
             or DEFAULT_MAX_QUANTITY_PER_TRADE
@@ -116,6 +127,27 @@ class RiskManager:
             request_id=getattr(request, "request_id", None),
         )
         return RiskCheckResult(True, reservation_key=duplicate_key)
+
+    @staticmethod
+    def _is_forced_squareoff_exit(request, transaction_type: str) -> bool:
+        if transaction_type != "SELL":
+            return False
+        order_params = getattr(request, "order_params", None)
+        webhook_signal = getattr(request, "webhook_signal", None)
+        sources = [
+            order_params if isinstance(order_params, dict) else {},
+            webhook_signal if isinstance(webhook_signal, dict) else {},
+        ]
+        for source in sources:
+            if source.get("force_broker_squareoff") is True:
+                return True
+            order_action = str(source.get("order_action") or "").strip().lower()
+            if order_action in {"force_kill_switch_exit", "forced_squareoff"}:
+                return True
+            source_name = str(source.get("source") or "").strip().lower()
+            if source_name == "superadmin_force_kill_switch":
+                return True
+        return False
 
     def release_reservation(self, reservation_key: Optional[str]) -> None:
         if reservation_key:
