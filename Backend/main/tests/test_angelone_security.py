@@ -22,7 +22,7 @@ from main.angelone.services.state_service import CallbackStateService
 from main.angelone_views import angelone_callback
 from main.execution_engine import ContractInfo, ExecutionEngine, ExecutionRequest
 from main.angelone.services.order_service import OrderService, _optional_positive_float as angel_one_optional_price
-from main.models import Broker, ClientBrokerdetails, OTP, Tradeorderhistory, User, UserActivityLog
+from main.models import Broker, ClientBrokerdetails, OTP, Tradeorderhistory, TradingLog, User, UserActivityLog
 from main.serializers import ClientBrokerDetailsSerializer, ClientBrokerDetailsUpdateSerializer, OTPVerifySerializer
 from main.services.login_activity_service import LoginActivityService
 from main.trade_history_service import save_trade_order_history
@@ -805,6 +805,31 @@ class AngelOneExecutionValidationTests(TestCase):
         engine._record_broker_failure(exit_request)
 
         self.assertIsNone(engine._check_circuit_breaker(request))
+
+    def test_daily_trade_limit_blocks_buy_but_not_sell_exit(self):
+        from main.risk_manager import RiskManager
+
+        request = self._request(history_id="daily-limit-buy")
+        request.trade.trade_limit = 1
+        for _ in range(2):
+            TradingLog.objects.create(client=self.user, symbol="NIFTY", strategy="test-strategy")
+        sell_request = ExecutionRequest(
+            **{
+                **request.__dict__,
+                "transaction_type": "SELL",
+                "history_id": "daily-limit-sell-exit",
+                "order_params": {**request.order_params, "transaction_type": "SELL"},
+            }
+        )
+
+        risk_manager = RiskManager()
+
+        buy_result = risk_manager.validate_and_reserve(request)
+        sell_result = risk_manager.validate_and_reserve(sell_request)
+
+        self.assertFalse(buy_result.allowed)
+        self.assertEqual(buy_result.error_code, "DAILY_TRADE_LIMIT_REACHED")
+        self.assertTrue(sell_result.allowed)
 
     def test_angel_one_access_rate_errors_are_retryable(self):
         engine = ExecutionEngine.__new__(ExecutionEngine)

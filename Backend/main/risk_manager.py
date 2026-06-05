@@ -75,20 +75,21 @@ class RiskManager:
                 "MAX_QUANTITY_EXCEEDED",
             )
 
-        daily_limit = int(
-            (getattr(getattr(request, "trade", None), "trade_limit", 0) or DEFAULT_MAX_DAILY_TRADES_PER_CLIENT) * 2
-        )
-        daily_trade_count = TradingLog.objects.filter(
-            client=request.user,
-            date=timezone.localdate(),
-            symbol=symbol,
-        ).count()
-        if daily_trade_count >= daily_limit:
-            return RiskCheckResult(
-                False,
-                "Daily trade limit reached for this client and symbol.",
-                "DAILY_TRADE_LIMIT_REACHED",
+        if transaction_type == "BUY":
+            daily_limit = int(
+                (getattr(getattr(request, "trade", None), "trade_limit", 0) or DEFAULT_MAX_DAILY_TRADES_PER_CLIENT) * 2
             )
+            daily_trade_count = TradingLog.objects.filter(
+                client=request.user,
+                date=timezone.localdate(),
+                symbol=symbol,
+            ).count()
+            if daily_trade_count >= daily_limit:
+                return RiskCheckResult(
+                    False,
+                    "Daily trade limit reached for this client and symbol.",
+                    "DAILY_TRADE_LIMIT_REACHED",
+                )
 
         minute_key = f"risk:minute:{client_id}:{timezone.now().strftime('%Y%m%d%H%M')}"
         cache.add(minute_key, 0, timeout=60)

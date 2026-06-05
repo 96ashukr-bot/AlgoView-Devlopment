@@ -385,6 +385,10 @@ def _get_trade_limit_skip_reason(trade, symbol):
     return None
 
 
+def _should_apply_trade_limit_for_webhook_order(transaction_type):
+    return str(transaction_type or "").strip().upper() in {"BUY", "BUY-O", "SELL-O"}
+
+
 def _build_trade_history_payload(status_value, message, *, skip_reasons=None, order_response=None):
     payload = {"status": status_value, "message": message}
     if skip_reasons:
@@ -567,9 +571,10 @@ def _process_webhook_trade(trade, index, context, *, history_id=None):
         webhook_symbol=symbols,
         strategy_identifier=strategy_id,
     )
-    trade_limit_reason = _get_trade_limit_skip_reason(trade, trade_symbol.upper() if trade_symbol else "")
-    if trade_limit_reason:
-        base_skip_reasons.append(trade_limit_reason)
+    if _should_apply_trade_limit_for_webhook_order(transaction_type):
+        trade_limit_reason = _get_trade_limit_skip_reason(trade, trade_symbol.upper() if trade_symbol else "")
+        if trade_limit_reason:
+            base_skip_reasons.append(trade_limit_reason)
 
     if base_skip_reasons:
         reason_message = "; ".join(base_skip_reasons)
@@ -3907,6 +3912,46 @@ def _is_regular_trade_open(trade_history):
     return trade_status in OPEN_TRADE_ORDER_STATUSES or order_status in {"OPEN", "COMPLETE", "COMPLETED", "TRANSIT", "PENDING"}
 
 
+def _first_non_empty_value(*values):
+    for value in values:
+        if value not in (None, "", [], {}, ()):
+            return value
+    return None
+
+
+def _extract_force_exit_message(response):
+    if not isinstance(response, dict):
+        return str(response or "")
+
+    data = response.get("data") if isinstance(response.get("data"), dict) else {}
+    meta = response.get("meta") if isinstance(response.get("meta"), dict) else {}
+    broker_order = response.get("broker_order") if isinstance(response.get("broker_order"), dict) else {}
+    data_broker_order = data.get("broker_order") if isinstance(data.get("broker_order"), dict) else {}
+    meta_broker_order = meta.get("broker_order") if isinstance(meta.get("broker_order"), dict) else {}
+
+    return str(
+        _first_non_empty_value(
+            data.get("emsg"),
+            data.get("error_message"),
+            response.get("emsg"),
+            response.get("error_message"),
+            data_broker_order.get("text"),
+            data_broker_order.get("status_message"),
+            data_broker_order.get("message"),
+            broker_order.get("text"),
+            broker_order.get("status_message"),
+            broker_order.get("message"),
+            meta_broker_order.get("text"),
+            meta_broker_order.get("status_message"),
+            meta_broker_order.get("message"),
+            data.get("message"),
+            response.get("message"),
+            meta.get("message"),
+            "Broker rejected force exit.",
+        )
+    )
+
+
 def _build_regular_trade_exit_request(trade_history, *, force_broker_squareoff=False, source="client_trade_history_kill_switch", reason=None, initiated_by=None):
     contract = _parse_trade_history_contract(trade_history)
     order_params = trade_history.order_params if isinstance(trade_history.order_params, dict) else {}
@@ -4081,13 +4126,16 @@ class SuperadminForceKillSwitchAPIView(APIView):
                 response_data = response.get("data", {}) if isinstance(response, dict) else {}
                 response_status = str(response_data.get("status") or response.get("status") or "").lower()
                 success = response_status in {"success", "complete", "completed", "open", "placed"}
+                message = _extract_force_exit_message(response)
+                if not success and message.strip().lower() == "success":
+                    message = f"Broker rejected force exit. Broker status: {response_status or 'unknown'}."
                 results.append({
                     "trade_history_id": trade_history.id,
                     "client_id": trade_history.client_id,
                     "client_name": getattr(trade_history.client, "fullName", None) or getattr(trade_history.client, "full_name", None),
                     "status": "sent" if success else "broker_rejected",
                     "broker_status": response_data.get("status") or response.get("status"),
-                    "message": response_data.get("message") or response.get("message") or "",
+                    "message": message,
                     "order_id": response_data.get("order_id"),
                     "response": response,
                 })

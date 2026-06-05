@@ -62,7 +62,7 @@ from main.dematemodule import (
 from main.dhanapi import place_dhan_orders
 from main.fivepaisa import place_5paisa_order
 from main.fyersapi import place_fyers_orders
-from main.models import ClientBrokerdetails
+from main.models import ClientBrokerdetails, ClientTradeSetting
 from main.broker_registry import normalize_broker_name
 from main.brokers.exchange_mapping import normalize_broker_exchange
 from main.risk_manager import get_risk_manager
@@ -1400,7 +1400,7 @@ class ExecutionEngine:
         return snapshot
 
     def _build_sltp_metadata(self, request: ExecutionRequest, validation_context: Dict[str, Any], normalized: Dict[str, Any]) -> Dict[str, Any]:
-        trade_setting = getattr(request, "trade", None)
+        trade_setting = self._trade_setting_or_none(request)
         contract = validation_context.get("contract")
         order_params = request.order_params if isinstance(request.order_params, dict) else {}
         snapshot = self._build_sl_tp_snapshot(request, validation_context, normalized)
@@ -1428,6 +1428,11 @@ class ExecutionEngine:
             "source": "execution_engine",
         }
         return {key: value for key, value in metadata.items() if value not in (None, "", [], {})}
+
+    @staticmethod
+    def _trade_setting_or_none(request: ExecutionRequest) -> Optional[ClientTradeSetting]:
+        trade = getattr(request, "trade", None)
+        return trade if isinstance(trade, ClientTradeSetting) else None
 
     def _finalize_execution(
         self,
@@ -1524,7 +1529,7 @@ class ExecutionEngine:
             history_order_params,
             broker=request.trade.broker,
             history_id=request.history_id,
-            trade_setting=request.trade,
+            trade_setting=self._trade_setting_or_none(request),
             sltp_metadata=sltp_metadata,
         )
 

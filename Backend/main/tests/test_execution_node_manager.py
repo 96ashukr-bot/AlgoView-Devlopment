@@ -1,5 +1,6 @@
 import os
 import tempfile
+import time
 from datetime import timedelta
 from decimal import Decimal
 from types import SimpleNamespace
@@ -13,7 +14,7 @@ from django.utils import timezone
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from main.brokers.base import get_broker_adapter
-from main.models import Broker, ChatMessage, ChatThread, ClientBrokerdetails, ClientTradeSetting, ExecutionNode, ExecutionOrderJob, Role, Tradeorderhistory, User
+from main.models import Broker, ChatMessage, ChatThread, ClientBrokerdetails, ClientTradeSetting, ExecutionNode, ExecutionOrderJob, Role, Tradeorderhistory, TradingLog, User
 from main.services.execution_nodes import assign_execution_node_to_client, release_execution_node
 from main.services.execution_router import route_order_to_execution_node
 from main.services.egress_guard import _is_broker_url, _is_public_instrument_master_url
@@ -749,6 +750,42 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertEqual(open_call[30]["transaction_type"], "BUY")
         self.assertEqual(open_call[30]["option_type"], "PE")
         self.assertEqual(open_call[31], "combo-sell-c-o_open_pe")
+
+    @mock.patch("main.views.place_order_broker")
+    def test_sell_close_webhook_ignores_daily_trade_limit(self, mock_place_order):
+        mock_place_order.return_value = {"data": {"status": "complete", "message": "closed"}}
+        self.broker_details.set_broker_password("trading-password")
+        self.broker_details.set_broker_totp_secret("BASE32SECRET")
+        self.broker_details.save()
+        trade = ClientTradeSetting.objects.create(
+            client=self.client_user,
+            symbol="FINNIFTY",
+            group_service="Sparks Lite",
+            broker="Angel One",
+            product_type="INTRADAY",
+            quantity=60,
+            trade_limit=1,
+            is_tread_status=True,
+            expiry_date=timezone.now(),
+        )
+        for _ in range(2):
+            TradingLog.objects.create(client=self.client_user, symbol="FINNIFTY", strategy="Sparks Lite")
+        context = _resolve_webhook_request_context(
+            {
+                "text": "NIFTY FIN SERVICE",
+                "ordertype": "SELL-C",
+                "signalprice": "26115.60",
+                "stratergyid": "Sparks Lite",
+            }
+        )
+
+        result = _process_webhook_trade(trade, 0, context, history_id="sell-close-daily-limit")
+
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(mock_place_order.call_count, 1)
+        close_call = mock_place_order.call_args.args
+        self.assertEqual(close_call[4], "SELL")
+        self.assertEqual(close_call[30]["transaction_type"], "SELL")
 
     @mock.patch("main.views.place_order_broker")
     def test_combined_buy_c_o_creates_distinct_close_pe_and_open_ce_legs(self, mock_place_order):
@@ -1555,6 +1592,88 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertEqual(normalized["data"]["status"], "Failed")
         self.assertEqual(normalized["data"]["message"], "Invalid LTP")
         self.assertEqual(normalized["job_id"], 769)
+
+    def test_force_exit_message_prefers_broker_rejection_text(self):
+        from main.views import _extract_force_exit_message
+
+        message = _extract_force_exit_message(
+            {
+                "data": {"status": "Failed", "message": "Success"},
+                "meta": {"broker_order": {"text": "RMS: insufficient margin"}},
+            }
+        )
+
+        self.assertEqual(message, "RMS: insufficient margin")
+
+    def test_force_exit_history_saves_without_trade_setting_fk(self):
+        from main.execution_engine import ExecutionEngine, ExecutionRequest
+
+        original_history = Tradeorderhistory.objects.create(
+            client=self.client_user,
+            GroupService="Lite",
+            trading_symbol="NIFTY05JUN2623400PE",
+            Index_Symbol="NIFTY",
+            transaction_type="BUY",
+            trade_order_status="OPEN",
+            order_status="completed",
+            order_id="alice-open-1",
+            broker="Alice Blue",
+            Entry_type="LE",
+            EntryQty=65,
+            Entry_Price=Decimal("100.00"),
+        )
+        request = ExecutionRequest(
+            LivePrice=100,
+            group_service="Lite",
+            trade=original_history,
+            user=self.client_user,
+            transaction_type="SELL",
+            symbol="NIFTY",
+            quantity=65,
+            strategy="Sparks Lite",
+            ordertype="MARKET",
+            product_type="INTRADAY",
+            price=None,
+            Lots=1,
+            trade_order_status="CLOSE",
+            Entry_type="LE",
+            Exit_type="KILL_SWITCH",
+            Entry_price=Decimal("100.00"),
+            Exit_price=None,
+            EntryQty=65,
+            ExitQty=65,
+            webhook_signal={"source": "superadmin_force_kill_switch"},
+            Exchange="NFO",
+            Segment="FNO",
+            Index_Symbol="NIFTY",
+            triggerPrice=0,
+            day="05",
+            month="JUN",
+            year="26",
+            fullyear="2026",
+            strike=23400,
+            option_type="PE",
+            order_params={
+                "order_action": "force_kill_switch_exit",
+                "original_history_id": original_history.id,
+                "force_broker_squareoff": True,
+            },
+            history_id=f"forcekill_{original_history.id}_test",
+        )
+
+        ExecutionEngine()._finalize_execution(
+            request,
+            {"data": {"status": "Failed", "message": "Broker rejected force exit."}},
+            {},
+            None,
+            None,
+            time.perf_counter(),
+        )
+
+        exit_history = Tradeorderhistory.objects.get(history_id=f"forcekill_{original_history.id}_test")
+        self.assertIsNone(exit_history.trade_setting)
+        self.assertEqual(exit_history.failure_reason, "Broker rejected force exit.")
+        self.assertEqual(exit_history.order_params["original_history_id"], original_history.id)
 
     @mock.patch("main.Alice_Blue_Api.requests.get")
     def test_alice_blue_proxy_client_passes_proxies_to_requests(self, mock_get):
