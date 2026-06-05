@@ -4013,6 +4013,17 @@ class ClientGlobalKillSwitchAPIView(APIView):
 class SuperadminForceKillSwitchAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @staticmethod
+    def _force_kill_switch_row_error(trade_history):
+        order_id = str(getattr(trade_history, "order_id", "") or "").strip()
+        order_status = str(getattr(trade_history, "order_status", "") or "").strip().upper()
+        trade_status = str(getattr(trade_history, "trade_order_status", "") or "").strip().upper()
+        if not order_id or order_id == "0":
+            return "This trade row has no broker order id. It was not placed in demat, so force kill switch cannot square it off."
+        if order_status in FAILED_ORDER_STATUSES or trade_status in FAILED_ORDER_STATUSES or trade_status == "SKIPPED":
+            return "This trade row is failed/skipped in our system. Select the original successful/open BUY trade row that has a broker order id."
+        return None
+
     def post(self, request, *args, **kwargs):
         if not is_superadmin_user(request.user):
             return Response({"detail": "Only superadmin can run force kill switch."}, status=status.HTTP_403_FORBIDDEN)
@@ -4049,6 +4060,16 @@ class SuperadminForceKillSwitchAPIView(APIView):
                 })
                 continue
             try:
+                row_error = self._force_kill_switch_row_error(trade_history)
+                if row_error:
+                    results.append({
+                        "trade_history_id": trade_history.id,
+                        "client_id": trade_history.client_id,
+                        "client_name": getattr(trade_history.client, "fullName", None) or getattr(trade_history.client, "full_name", None),
+                        "status": "failed",
+                        "message": row_error,
+                    })
+                    continue
                 exit_request = _build_regular_trade_exit_request(
                     trade_history,
                     force_broker_squareoff=True,

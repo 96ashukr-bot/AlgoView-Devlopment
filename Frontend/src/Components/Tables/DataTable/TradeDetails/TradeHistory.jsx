@@ -331,7 +331,28 @@ const TradeHistory = () => {
         fetchTradeHistory();
     };
 
-    const currentPageTradeIds = tradeHistory.map((trade) => trade.id).filter(Boolean);
+    const isForceKillSwitchEligible = (trade) => {
+        const orderId = String(trade?.order_id || '').trim();
+        const orderStatus = String(trade?.order_status || '').trim().toLowerCase();
+        const tradeStatus = String(trade?.trade_order_status || '').trim().toLowerCase();
+        if (!orderId || orderId === '0') return false;
+        if (['failed', 'rejected', 'errors', 'error', 'unauthorized', 'cancelled', 'canceled'].includes(orderStatus)) return false;
+        if (['failed', 'skipped', 'close', 'closed', 'exit', 'exited', 'squareoff', 'squared_off'].includes(tradeStatus)) return false;
+        return true;
+    };
+
+    const getForceKillSwitchDisabledReason = (trade) => {
+        const orderId = String(trade?.order_id || '').trim();
+        const orderStatus = String(trade?.order_status || '').trim().toLowerCase();
+        const tradeStatus = String(trade?.trade_order_status || '').trim().toLowerCase();
+        if (!orderId || orderId === '0') return 'No broker order id found for this row.';
+        if (['failed', 'rejected', 'errors', 'error', 'unauthorized', 'cancelled', 'canceled'].includes(orderStatus)) return 'This row is failed/rejected.';
+        if (['failed', 'skipped'].includes(tradeStatus)) return 'This row was skipped/failed.';
+        if (['close', 'closed', 'exit', 'exited', 'squareoff', 'squared_off'].includes(tradeStatus)) return 'This row is already marked as closed.';
+        return '';
+    };
+
+    const currentPageTradeIds = tradeHistory.filter(isForceKillSwitchEligible).map((trade) => trade.id).filter(Boolean);
     const allCurrentPageSelected = currentPageTradeIds.length > 0 && currentPageTradeIds.every((id) => selectedTradeIds.includes(id));
 
     const handleSelectTrade = (tradeId, checked) => {
@@ -380,7 +401,14 @@ const TradeHistory = () => {
             await fetchTradeHistory();
             const failedCount = response?.failed_count || 0;
             const sentCount = response?.sent_count || 0;
-            const summary = `${sentCount} exit order(s) sent.${failedCount ? ` ${failedCount} rejected/failed. Check Response for broker details.` : ''}`;
+            const failedMessages = Array.isArray(response?.results)
+                ? response.results
+                    .filter((item) => ['failed', 'broker_rejected'].includes(item?.status))
+                    .map((item) => `Trade ${item.trade_history_id}: ${item.message || item.broker_status || 'Failed'}`)
+                    .slice(0, 5)
+                    .join('\n')
+                : '';
+            const summary = `${sentCount} exit order(s) sent.${failedCount ? ` ${failedCount} rejected/failed.\n${failedMessages}` : ''}`;
             await Swal.fire('Force Kill Switch Complete', summary, failedCount ? 'warning' : 'success');
         } catch (error) {
             Swal.fire('Error', error.message || 'Failed to run force kill switch.', 'error');
@@ -797,6 +825,8 @@ const TradeHistory = () => {
                                             currentSignals.map((signal, index) => {
                                                 const total = calculateTotal(signal.Exit_Price, signal.ExitQty, signal.Entry_Price, signal.EntryQty, signal.order_status);
                                                 const totalValue = total !== null ? parseFloat(total) : null;
+                                                const canForceKillSwitch = isForceKillSwitchEligible(signal);
+                                                const disabledReason = getForceKillSwitchDisabledReason(signal);
 
                                                 return (
                                                     <tr key={signal.id}>
@@ -805,6 +835,8 @@ const TradeHistory = () => {
                                                                 type="checkbox"
                                                                 className="kill-switch-checkbox"
                                                                 checked={selectedTradeIds.includes(signal.id)}
+                                                                disabled={!canForceKillSwitch}
+                                                                title={disabledReason}
                                                                 onChange={(event) => handleSelectTrade(signal.id, event.target.checked)}
                                                                 aria-label={`Select trade ${signal.id}`}
                                                             />
