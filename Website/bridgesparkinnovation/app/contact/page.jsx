@@ -30,7 +30,7 @@ export default function ContactPage() {
               </p>
               <p className="flex items-center gap-3">
                 <Phone className="text-teal" size={20} />
-                Consultation by enquiry
+                {site.phone}
               </p>
               <p className="flex items-center gap-3">
                 <MapPin className="text-teal" size={20} />

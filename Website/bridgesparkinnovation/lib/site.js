@@ -23,6 +23,7 @@ export const site = {
   description:
     "Sparkbridge Innovations builds custom software, API integrations, automation systems, dashboards, cloud infrastructure, and digital products for businesses and professionals.",
   email: "support@bridgesparkinnovation.com",
+  phone: "8586078471",
   gst: "09EOFPB1620N1ZZ",
 };
 
