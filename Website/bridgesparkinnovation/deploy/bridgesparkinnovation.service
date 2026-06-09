@@ -1,0 +1,16 @@
+[Unit]
+Description=Sparkbridge Innovations Next.js website
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/var/www/bridgesparkinnovation
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/npm run start
+Restart=always
+RestartSec=5
+User=ubuntu
+Group=ubuntu
+
+[Install]
+WantedBy=multi-user.target
