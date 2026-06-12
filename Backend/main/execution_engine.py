@@ -1412,6 +1412,34 @@ class ExecutionEngine:
             return "POINTS"
         return None
 
+    def _entry_price_for_sl_tp(self, normalized: Dict[str, Any], validation_context: Dict[str, Any], request: ExecutionRequest) -> Optional[float]:
+        data = normalized.get("data", {}) if isinstance(normalized, dict) else {}
+        if not isinstance(data, dict):
+            data = {}
+        status = str(data.get("status") or "").strip().lower()
+
+        for key in ("average_price", "averageprice", "traded_price", "tradedPrice", "executed_price"):
+            price = self._to_float(data.get(key))
+            if price is not None and price > 0:
+                return price
+
+        if status in {"complete", "completed", "success", "traded"}:
+            price = self._to_float(data.get("price"))
+            if price is not None and price > 0:
+                return price
+
+        for candidate in (
+            data.get("reference_price"),
+            validation_context.get("ltp"),
+            data.get("ltp"),
+            request.LivePrice,
+            validation_context.get("validated_price"),
+        ):
+            price = self._to_float(candidate)
+            if price is not None and price > 0:
+                return price
+        return None
+
     def _build_sl_tp_snapshot(self, request: ExecutionRequest, validation_context: Dict[str, Any], normalized: Dict[str, Any]) -> Dict[str, Any]:
         trade_setting = getattr(request, "trade", None)
         if not trade_setting:
@@ -1424,18 +1452,7 @@ class ExecutionEngine:
         if not sl_tp_type or (stop_loss_value is None and target_value is None):
             return {}
 
-        entry_price = self._to_float(normalized.get("data", {}).get("executed_price"))
-        if entry_price is None:
-            entry_price = self._to_float(normalized.get("data", {}).get("price"))
-        if entry_price is None:
-            entry_price = self._to_float(validation_context.get("validated_price"))
-        if entry_price is None:
-            entry_price = self._to_float(normalized.get("data", {}).get("ltp"))
-        if entry_price is None:
-            entry_price = self._to_float(validation_context.get("ltp"))
-        if entry_price is None:
-            entry_price = self._to_float(request.LivePrice)
-
+        entry_price = self._entry_price_for_sl_tp(normalized, validation_context, request)
         if entry_price is None or entry_price <= 0:
             return {
                 "sl_tp_type": sl_tp_type,
@@ -1601,6 +1618,7 @@ class ExecutionEngine:
             history_id=request.history_id,
             trade_setting=self._trade_setting_or_none(request),
             sltp_metadata=sltp_metadata,
+            logger=logger,
         )
 
         logger.info(

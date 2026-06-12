@@ -174,6 +174,49 @@ def _extract_signal_time(webhook_signal, *keys):
     return None
 
 
+def _price_from_payload(payload, *keys):
+    if not isinstance(payload, dict):
+        return None
+    for key in keys:
+        value = payload.get(key)
+        price = _to_decimal(value)
+        if price is not None and price > 0:
+            return price
+    return None
+
+
+def _effective_trade_price(nested_response, meta_response, order_payload, entry_price, exit_price, is_exit_signal):
+    nested_response = nested_response if isinstance(nested_response, dict) else {}
+    meta_response = meta_response if isinstance(meta_response, dict) else {}
+    order_payload = order_payload if isinstance(order_payload, dict) else {}
+
+    fill_price = (
+        _price_from_payload(nested_response, "average_price", "averageprice", "traded_price", "tradedPrice", "executed_price")
+        or _price_from_payload(meta_response, "average_price", "averageprice", "traded_price", "tradedPrice", "executed_price")
+    )
+    if fill_price is not None:
+        return fill_price
+
+    status = _normalize_status_value(nested_response.get("status") or meta_response.get("status"))
+    if status in {"complete", "completed", "success", "traded"}:
+        complete_price = _price_from_payload(nested_response, "price") or _price_from_payload(meta_response, "price")
+        if complete_price is not None:
+            return complete_price
+
+    reference_price = (
+        _price_from_payload(nested_response, "reference_price", "ltp")
+        or _price_from_payload(meta_response, "reference_price", "ltp")
+    )
+    if reference_price is not None:
+        return reference_price
+
+    return (
+        _to_decimal(exit_price if is_exit_signal else entry_price)
+        or _price_from_payload(order_payload, "average_price", "averageprice", "traded_price", "tradedPrice", "executed_price")
+        or (None if status not in {"complete", "completed", "success", "traded"} else _price_from_payload(order_payload, "price"))
+    )
+
+
 def save_trade_order_history(*args, **kwargs):
     logger = kwargs.pop("logger", None)
     try:
@@ -238,19 +281,13 @@ def save_trade_order_history(*args, **kwargs):
             "exitTime",
         )
 
-        effective_price = _to_decimal(
-            _first_non_empty(
-                nested_response.get("executed_price") if isinstance(nested_response, dict) else None,
-                nested_response.get("price") if isinstance(nested_response, dict) else None,
-                nested_response.get("average_price") if isinstance(nested_response, dict) else None,
-                nested_response.get("averageprice") if isinstance(nested_response, dict) else None,
-                meta_response.get("price") if isinstance(meta_response, dict) else None,
-                meta_response.get("executed_price") if isinstance(meta_response, dict) else None,
-                meta_response.get("average_price") if isinstance(meta_response, dict) else None,
-                meta_response.get("averageprice") if isinstance(meta_response, dict) else None,
-                order_payload.get("price") if isinstance(order_payload, dict) else None,
-                Entry_price if not is_exit_signal else Exit_price,
-            )
+        effective_price = _effective_trade_price(
+            nested_response,
+            meta_response,
+            order_payload,
+            Entry_price,
+            Exit_price,
+            is_exit_signal,
         )
         live_price_value = _to_decimal(
             _first_non_empty(
@@ -367,5 +404,5 @@ def save_trade_order_history(*args, **kwargs):
         return Tradeorderhistory.objects.create(**defaults)
     except Exception as exc:
         if logger:
-            logger.exception("Failed to save trade history: %s", exc)
+            logger.exception(f"Failed to save trade history: {exc}")
         return None

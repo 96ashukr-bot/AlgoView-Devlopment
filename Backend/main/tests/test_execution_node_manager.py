@@ -1687,6 +1687,107 @@ class ExecutionNodeManagerTests(TestCase):
 
         self.assertEqual(message, "RMS: insufficient margin")
 
+    def test_sl_tp_snapshot_uses_reference_price_for_open_limit_order(self):
+        from main.execution_engine import ExecutionEngine
+
+        request = SimpleNamespace(
+            trade=SimpleNamespace(sl_type="POINTS", stop_loss=20, target=30),
+            transaction_type="BUY",
+            LivePrice=Decimal("847.55"),
+        )
+        snapshot = ExecutionEngine()._build_sl_tp_snapshot(
+            request,
+            {},
+            {
+                "data": {
+                    "status": "open",
+                    "price": 868.75,
+                    "ltp": 847.55,
+                    "reference_price": 847.55,
+                }
+            },
+        )
+
+        self.assertEqual(snapshot["entry_reference_price"], 847.55)
+        self.assertEqual(snapshot["effective_stop_loss_price"], 827.55)
+        self.assertEqual(snapshot["effective_target_price"], 877.55)
+
+    def test_trade_history_open_order_entry_uses_ltp_not_buffered_limit_price(self):
+        history = save_trade_order_history(
+            Decimal("847.55"),
+            "Lite",
+            "BUY",
+            "OPEN",
+            self.client_user,
+            "BANKNIFTY",
+            "alice-open-847",
+            "open",
+            {
+                "data": {
+                    "status": "open",
+                    "price": 868.75,
+                    "ltp": 847.55,
+                    "reference_price": 847.55,
+                    "order_id": "alice-open-847",
+                }
+            },
+            "Success",
+            "Sparks Lite",
+            "LE",
+            None,
+            None,
+            None,
+            None,
+            None,
+            {"ordertype": "SELL-O"},
+            "NFO",
+            "FNO",
+            "BANKNIFTY",
+            {"price": 868.75},
+            broker="Alice Blue",
+            history_id="alice-open-reference-price",
+        )
+
+        self.assertEqual(history.Entry_Price, Decimal("847.55"))
+
+    def test_trade_history_completed_order_prefers_average_price(self):
+        history = save_trade_order_history(
+            Decimal("847.55"),
+            "Lite",
+            "BUY",
+            "OPEN",
+            self.client_user,
+            "BANKNIFTY",
+            "alice-complete-845",
+            "complete",
+            {
+                "data": {
+                    "status": "complete",
+                    "price": 868.75,
+                    "average_price": 845,
+                    "ltp": 847.55,
+                    "order_id": "alice-complete-845",
+                }
+            },
+            "Success",
+            "Sparks Lite",
+            "LE",
+            None,
+            None,
+            None,
+            None,
+            None,
+            {"ordertype": "SELL-O"},
+            "NFO",
+            "FNO",
+            "BANKNIFTY",
+            {"price": 868.75},
+            broker="Alice Blue",
+            history_id="alice-complete-average-price",
+        )
+
+        self.assertEqual(history.Entry_Price, Decimal("845"))
+
     def test_force_exit_history_saves_without_trade_setting_fk(self):
         from main.execution_engine import ExecutionEngine, ExecutionRequest
 
