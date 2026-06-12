@@ -1788,6 +1788,79 @@ class ExecutionNodeManagerTests(TestCase):
 
         self.assertEqual(history.Entry_Price, Decimal("845"))
 
+    @mock.patch("main.services.broker_fill_reconciliation.get_broker_adapter")
+    def test_broker_fill_refresh_updates_entry_price_and_sltp_thresholds(self, mock_get_adapter):
+        from main.services.broker_fill_reconciliation import refresh_trade_fill_from_broker
+
+        trade_setting = ClientTradeSetting.objects.create(
+            client=self.client_user,
+            group_service="Lite",
+            broker="Alice Blue",
+            strategy="Sparks Lite",
+            symbol="BANKNIFTY",
+            quantity=30,
+            product_type="INTRADAY",
+            is_tread_status=True,
+            expiry_date=timezone.now(),
+            sl_type="POINTS",
+            stop_loss=20,
+            target=30,
+        )
+        history = Tradeorderhistory.objects.create(
+            client=self.client_user,
+            trade_setting=trade_setting,
+            GroupService="Lite",
+            broker="Alice Blue",
+            transaction_type="BUY",
+            trade_order_status="OPEN",
+            order_status="open",
+            order_id="alice-open-847",
+            trading_symbol="BANKNIFTY30JUN2655900PE",
+            Index_Symbol="BANKNIFTY",
+            Entry_Price=Decimal("847.55"),
+            EntryQty=30,
+            order_params={
+                "entry_reference_price": 847.55,
+                "effective_stop_loss_price": 827.55,
+                "effective_target_price": 877.55,
+            },
+            sltp_metadata={
+                "entry_option_price": 847.55,
+                "calculated_stoploss_price": 827.55,
+                "calculated_target_price": 877.55,
+            },
+        )
+        adapter = SimpleNamespace(
+            get_orderbook=mock.Mock(
+                return_value={
+                    "status": "success",
+                    "response": {
+                        "result": [
+                            {
+                                "brokerOrderId": "alice-open-847",
+                                "status": "complete",
+                                "averagePrice": "845.00",
+                                "filledQuantity": "30",
+                            }
+                        ]
+                    },
+                }
+            )
+        )
+        mock_get_adapter.return_value = adapter
+
+        changed = refresh_trade_fill_from_broker(history, self.broker_details)
+
+        self.assertTrue(changed)
+        history.refresh_from_db()
+        self.assertEqual(history.Entry_Price, Decimal("845.00"))
+        self.assertEqual(history.EntryQty, 30)
+        self.assertEqual(history.order_status, "complete")
+        self.assertEqual(history.order_params["entry_reference_price"], 845.0)
+        self.assertEqual(history.order_params["effective_stop_loss_price"], 825.0)
+        self.assertEqual(history.order_params["effective_target_price"], 875.0)
+        self.assertEqual(history.sltp_metadata["entry_option_price"], 845.0)
+
     def test_force_exit_history_saves_without_trade_setting_fk(self):
         from main.execution_engine import ExecutionEngine, ExecutionRequest
 

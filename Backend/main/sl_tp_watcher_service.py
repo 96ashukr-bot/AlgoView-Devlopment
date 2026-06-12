@@ -16,6 +16,7 @@ from main.angelone.utils.logging_utils import TradingLogger
 from main.angelone.utils.symbol_parser import get_symbol_parser
 from main.execution_engine import ExecutionRequest, get_execution_engine
 from main.models import ClientBrokerdetails, ClientTradeSetting, Tradeorderhistory
+from main.services.broker_fill_reconciliation import refresh_trade_fill_from_broker
 from main.services.contract_display import build_option_display_symbol
 from main.services.live_price_cache import get_live_price
 from main.services.upstox_market_data import UpstoxInstrumentResolver
@@ -699,6 +700,9 @@ class SLTPWatcherService:
                 status="skipped",
                 message="Broker details are missing for the client.",
             )
+
+        if refresh_trade_fill_from_broker(trade_order, broker_details):
+            trade_order.refresh_from_db()
 
         thresholds = self._resolve_thresholds(trade_order, trade_setting)
         stop_loss_price = thresholds.get("stop_loss_price")
