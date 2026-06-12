@@ -5579,7 +5579,11 @@ class IsSuperAdminOrSubAdmin(permissions.BasePermission):
     """
 
     def has_permission(self, request, view):
-        return bool(request.user and request.user.is_authenticated and is_admin_or_superadmin(request.user))
+        return bool(
+            request.user
+            and request.user.is_authenticated
+            and (is_admin_or_superadmin(request.user) or is_subadmin_user(request.user))
+        )
     
 class BrokerLogActivityView(APIView):
     permission_classes = [IsSuperAdminOrSubAdmin]  # Only superadmin or subadmin can access

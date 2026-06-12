@@ -606,6 +606,49 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertTrue(str(client))
         self.assertTrue(can_access_client_record(superadmin, client))
 
+    def test_subadmin_can_view_assigned_client_broker_activity_only(self):
+        subadmin_role, _ = Role.objects.get_or_create(name="Sub-Admin", defaults={"status": "active"})
+        subadmin = User.objects.create_user(
+            email="broker-activity-subadmin@example.com",
+            firstName="Broker",
+            lastName="Subadmin",
+            phoneNumber="9999999908",
+            password="Pass@123",
+            role=subadmin_role,
+        )
+        assigned_client = User.objects.create_user(
+            email="broker-activity-client@example.com",
+            firstName="Assigned",
+            lastName="Client",
+            phoneNumber="9999999907",
+            password="Pass@123",
+            type_of_user="is_client",
+            is_client="True",
+            assigned_client=subadmin,
+        )
+        unassigned_client = User.objects.create_user(
+            email="broker-activity-other@example.com",
+            firstName="Other",
+            lastName="Client",
+            phoneNumber="9999999906",
+            password="Pass@123",
+            type_of_user="is_client",
+            is_client="True",
+        )
+        access_token = str(RefreshToken.for_user(subadmin).access_token)
+
+        allowed_response = self.client.get(
+            f"/api/broker-log-activity/{assigned_client.id}/",
+            HTTP_AUTHORIZATION=f"Bearer {access_token}",
+        )
+        denied_response = self.client.get(
+            f"/api/broker-log-activity/{unassigned_client.id}/",
+            HTTP_AUTHORIZATION=f"Bearer {access_token}",
+        )
+
+        self.assertEqual(allowed_response.status_code, 200)
+        self.assertEqual(denied_response.status_code, 403)
+
     def test_disabled_client_webhook_skip_does_not_reach_trade_history(self):
         disabled_client = User.objects.create_user(
             email="disabled-history@example.com",

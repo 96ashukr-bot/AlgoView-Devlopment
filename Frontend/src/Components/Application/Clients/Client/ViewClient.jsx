@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Container, Row, Col, Card, CardBody, Form, FormGroup, Label, Input, Button } from 'reactstrap';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import {
@@ -34,8 +34,9 @@ const ClientView = () => {
 
     const location = useLocation();
     const navigate = useNavigate();
+    const { id: routeClientId } = useParams();
 
-    const clientId = location.state?.clientId;
+    const clientId = location.state?.clientId || routeClientId;
     const [apiStatus, setApiStatus] = useState({
         is_enable: null,
         username: '',
