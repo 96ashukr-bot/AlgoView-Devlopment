@@ -8,7 +8,7 @@ import { FaArrowUp, FaArrowDown, FaEye, FaPencilAlt, FaTrashAlt } from 'react-ic
 import { useNavigate } from 'react-router-dom';
 import { RotatingLines } from 'react-loader-spinner';
 import Swal from 'sweetalert2';
-import { getClients, deleteClient, fetchUserProfile, updateClientStatus, getLicence, getClientsFilter, SearchAllClients, getTradeCounts } from '../../../../Services/Authentication';
+import { getClients, deleteClient, fetchUserProfile, updateClientStatus, updateClientTradeStatus, getLicence, getClientsFilter, SearchAllClients, getTradeCounts } from '../../../../Services/Authentication';
 import { maskEmail, maskLastFiveDigits } from '../../../../Utils/masking';
 import './Clients.css';
 
@@ -160,6 +160,27 @@ const AllClients = () => {
         } catch (error) {
             console.error('Error updating client status:', error);
             Swal.fire('Error!', 'Could not update client status. Please try again.', 'error');
+        }
+    };
+
+    const handleToggleTradingStatus = async (clientId, currentState) => {
+        const payload = { is_enable: !currentState };
+        try {
+            const response = await updateClientTradeStatus(clientId, payload);
+            const updatedEnableState = response?.data?.is_enable ?? payload.is_enable;
+            Swal.fire(
+                'Success!',
+                `Trading status updated to ${updatedEnableState ? '"ON"' : '"OFF"'}.`,
+                'success'
+            );
+            setClients((previousClients) =>
+                previousClients.map((client) =>
+                    client.id === clientId ? { ...client, is_enable: updatedEnableState } : client
+                )
+            );
+        } catch (error) {
+            console.error('Error updating trading status:', error);
+            Swal.fire('Error!', error.message || 'Could not update trading status. Please try again.', 'error');
         }
     };
 
@@ -456,15 +477,14 @@ const AllClients = () => {
                                                     </label>
                                                 </td>
                                                 <td>
-                                                    <div
-                                                        style={{
-                                                            width: '12px',
-                                                            height: '12px',
-                                                            borderRadius: '50%',
-                                                            backgroundColor: client.is_enable ? 'green' : 'red',
-                                                            marginLeft: '20px'
-                                                        }}
-                                                    />
+                                                    <label className="switch">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={Boolean(client.is_enable)}
+                                                            onChange={() => handleToggleTradingStatus(client.id, client.is_enable)}
+                                                        />
+                                                        <span className="slider round"></span>
+                                                    </label>
                                                 </td>
 
                                                 <td>
