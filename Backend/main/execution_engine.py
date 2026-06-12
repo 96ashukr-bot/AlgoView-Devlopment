@@ -65,6 +65,7 @@ from main.fyersapi import place_fyers_orders
 from main.models import ClientBrokerdetails, ClientTradeSetting
 from main.broker_registry import normalize_broker_name
 from main.brokers.exchange_mapping import normalize_broker_exchange
+from main.brokers.position_guard import is_force_broker_squareoff, prepare_close_order_from_open_position
 from main.risk_manager import get_risk_manager
 from main.services.execution_router import route_order_to_execution_node
 from main.services.proxy_utils import build_requests_proxy_config
@@ -415,6 +416,10 @@ class ExecutionEngine:
         if quantity_validation:
             return quantity_validation
 
+        exit_contract_validation = self._align_exit_request_with_open_position(request)
+        if exit_contract_validation:
+            return exit_contract_validation
+
         market_hours = self._validate_market_hours()
         if market_hours:
             return market_hours
@@ -469,6 +474,71 @@ class ExecutionEngine:
         }
 
         return {"status": "success", **context}
+
+    def _align_exit_request_with_open_position(self, request: ExecutionRequest) -> Optional[Dict[str, Any]]:
+        if request.transaction_type.upper() != "SELL" or request.is_multi_leg_order:
+            return None
+        if not isinstance(request.order_params, dict) or is_force_broker_squareoff(request.order_params):
+            return None
+
+        order = {
+            **request.order_params,
+            "symbol": request.underlying_symbol,
+            "underlying": request.underlying_symbol,
+            "group_service": request.group_service,
+            "transaction_type": "SELL",
+            "option_type": request.option_type_value,
+            "Type": request.option_type_value,
+            "quantity": request.quantity_int,
+            "strike": request.strike_value,
+            "strike_price": request.strike_value,
+            "Entry_type": request.Entry_type,
+            "Entry_price": request.Entry_price,
+            "EntryQty": request.EntryQty,
+            "day": request.day,
+            "month": request.month,
+            "year": request.year,
+            "fullyear": request.fullyear,
+        }
+        close_order, open_position, close_error = prepare_close_order_from_open_position(
+            request.user,
+            order,
+            request.broker_name,
+        )
+        if close_error:
+            message = close_error.get("data", {}).get("message") or "No open BUY position found to close."
+            return {"status": "error", "message": message, "error_code": "NO_OPEN_BUY_POSITION"}
+        if not open_position:
+            return None
+
+        original_strike = request.order_params.get("strike") or request.order_params.get("strike_price") or request.strike
+        resolved_strike = close_order.get("strike") or close_order.get("strike_price") or request.strike
+        resolved_option_type = close_order.get("option_type") or close_order.get("Type") or request.option_type
+        resolved_quantity = close_order.get("quantity") or request.quantity
+        object.__setattr__(request, "strike", resolved_strike)
+        object.__setattr__(request, "option_type", resolved_option_type)
+        object.__setattr__(request, "quantity", resolved_quantity)
+        object.__setattr__(request, "Entry_type", close_order.get("Entry_type") or request.Entry_type)
+        object.__setattr__(request, "Entry_price", close_order.get("Entry_price") or request.Entry_price)
+        object.__setattr__(request, "EntryQty", close_order.get("EntryQty") or request.EntryQty)
+
+        request.order_params.update(close_order)
+        request.order_params.update(
+            {
+                "strike": resolved_strike,
+                "strike_price": resolved_strike,
+                "default_price": resolved_strike,
+                "option_type": resolved_option_type,
+                "Type": resolved_option_type,
+                "quantity": resolved_quantity,
+                "matched_open_history_id": open_position.history_id,
+                "matched_open_order_id": open_position.order_id,
+                "matched_open_trading_symbol": open_position.trading_symbol,
+            }
+        )
+        if original_strike and str(original_strike) != str(resolved_strike):
+            request.order_params["signal_strike"] = original_strike
+        return None
 
     def _validate_basic_order_fields(self, request: ExecutionRequest) -> Optional[Dict[str, Any]]:
         transaction_type = str(request.transaction_type or "").upper()

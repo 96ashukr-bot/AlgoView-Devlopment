@@ -915,6 +915,88 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertEqual(close_order["option_type"], "CE")
         self.assertEqual(close_order["quantity"], 65)
 
+    def test_execution_engine_exit_history_uses_matched_open_buy_contract(self):
+        from main.execution_engine import ExecutionEngine, ExecutionRequest
+
+        open_history = Tradeorderhistory.objects.create(
+            client=self.client_user,
+            GroupService="Lite",
+            trading_symbol="NIFTY16JUN2623300PE",
+            Index_Symbol="NIFTY",
+            transaction_type="BUY",
+            trade_order_status="OPEN",
+            order_status="completed",
+            order_id="open-23300-pe",
+            broker="Upstox",
+            Entry_type="BUY",
+            EntryQty=65,
+            Entry_Price=Decimal("115.10"),
+            order_params={"symbol": "NIFTY", "strike": 23300, "option_type": "PE"},
+        )
+        request = ExecutionRequest(
+            LivePrice=Decimal("108.65"),
+            group_service="Lite",
+            trade=SimpleNamespace(broker="Upstox"),
+            user=self.client_user,
+            transaction_type="SELL",
+            symbol="NIFTY",
+            quantity=65,
+            strategy="Sparks Lite",
+            ordertype="LIMIT",
+            product_type="INTRADAY",
+            price=Decimal("108.65"),
+            Lots=1,
+            trade_order_status="CLOSE",
+            Entry_type=None,
+            Exit_type="SELL",
+            Entry_price=None,
+            Exit_price=None,
+            EntryQty=None,
+            ExitQty=65,
+            webhook_signal={"ordertype": "BUY-C", "signalprice": 23355.20},
+            Exchange="NFO",
+            Segment="FNO",
+            Index_Symbol="NIFTY",
+            triggerPrice=0,
+            day="16",
+            month="JUN",
+            year="26",
+            fullyear="2026",
+            strike=23400,
+            option_type="PE",
+            order_params={
+                "symbol": "NIFTY",
+                "group_service": "Lite",
+                "strike": 23400,
+                "strike_price": 23400,
+                "default_price": 23400,
+                "option_type": "PE",
+                "transaction_type": "SELL",
+            },
+            history_id="exit-history-display-uses-open-buy",
+        )
+        engine = ExecutionEngine()
+
+        result = engine._align_exit_request_with_open_position(request)
+        engine._finalize_execution(
+            request,
+            {"data": {"status": "complete", "order_id": "exit-23300-pe", "message": "Order placed."}},
+            {},
+            None,
+            None,
+            time.perf_counter(),
+        )
+
+        self.assertIsNone(result)
+        exit_history = Tradeorderhistory.objects.get(history_id="exit-history-display-uses-open-buy")
+        self.assertEqual(exit_history.order_params["strike"], "23300")
+        self.assertEqual(exit_history.order_params["strike_price"], "23300")
+        self.assertEqual(exit_history.order_params["default_price"], "23300")
+        self.assertEqual(exit_history.order_params["signal_strike"], 23400)
+        self.assertEqual(exit_history.order_params["matched_open_history_id"], open_history.history_id)
+        self.assertEqual(exit_history.order_params["matched_open_order_id"], "open-23300-pe")
+        self.assertEqual(exit_history.order_params["matched_open_trading_symbol"], "NIFTY16JUN2623300PE")
+
     def test_exit_matches_broker_accepted_open_buy_order(self):
         Tradeorderhistory.objects.create(
             client=self.client_user,
