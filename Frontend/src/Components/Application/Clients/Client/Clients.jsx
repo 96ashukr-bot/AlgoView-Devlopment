@@ -95,7 +95,7 @@ const Clients = () => {
                     console.error('Error deleting client:', error);
                     Swal.fire(
                         'Error!',
-                        'There was an issue deleting the client. Please try again later.',
+                        error.message || 'There was an issue deleting the client. Please try again later.',
                         'error'
                     );
                 }

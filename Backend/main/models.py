@@ -401,7 +401,13 @@ class ClientAgreementAcceptance(models.Model):
         (STATUS_EMAIL_FAILED, "Email Failed"),
     )
 
-    client = models.ForeignKey(User, on_delete=models.PROTECT, related_name="agreement_acceptances")
+    client = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="agreement_acceptances",
+    )
     agreement = models.ForeignKey(LegalAgreement, on_delete=models.PROTECT, related_name="acceptances")
     agreement_version = models.CharField(max_length=50)
     terms_version_hash = models.CharField(max_length=64, db_index=True)

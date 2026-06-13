@@ -137,7 +137,7 @@ class LegalAcceptancePDFDownloadAPIView(APIView):
 
     def get(self, request, acceptance_id):
         acceptance = get_object_or_404(ClientAgreementAcceptance, id=acceptance_id)
-        if not can_access_client_record(request.user, acceptance.client):
+        if not is_platform_admin(request.user) and not can_access_client_record(request.user, acceptance.client):
             return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
         if not acceptance.pdf_file:
             return Response({"detail": "Agreement PDF not found."}, status=status.HTTP_404_NOT_FOUND)

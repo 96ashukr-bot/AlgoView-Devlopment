@@ -68,6 +68,7 @@ from django.contrib.auth.signals import user_logged_in, user_logged_out
 from django.dispatch import receiver
 from django.db.models import Q
 from django.db.models import Count, Prefetch
+from django.db.models.deletion import ProtectedError
 import pandas as pd
 from datetime import datetime
 from django.core.cache import cache
@@ -2684,6 +2685,12 @@ class ClientCreateView(APIView):
             broker = _get_accessible_client_or_403(request.user, client_id)
             broker.delete()
             return Response({"detail": "client deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
+        except ProtectedError:
+            logger.exception("Client %s could not be deleted because protected records still reference it.", client_id)
+            return Response(
+                {"detail": "This client cannot be deleted because protected records still reference it."},
+                status=status.HTTP_409_CONFLICT,
+            )
         except User.DoesNotExist:
             return Response({"detail": "client_id not found."}, status=status.HTTP_404_NOT_FOUND)
 
