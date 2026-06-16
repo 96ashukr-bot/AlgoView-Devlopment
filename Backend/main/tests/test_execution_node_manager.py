@@ -42,7 +42,7 @@ from main.sl_tp_watcher_service import SLTPWatcherService, SUCCESS_EXIT_STATUSES
 from main.services.upstox_market_data import UpstoxInstrumentResolver, get_active_option_instruments
 from main.serializers import ClientBrokerDetailsUpdateSerializer, TradeorderhistorySerializer
 from main.trade_history_service import save_trade_order_history
-from main.views import _process_webhook_trade, _resolve_webhook_request_context, place_order_broker
+from main.views import _build_regular_trade_exit_request, _process_webhook_trade, _resolve_webhook_request_context, place_order_broker
 
 
 TEST_CACHES = {
@@ -1109,6 +1109,39 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertIsNone(open_position)
         self.assertEqual(close_order["strike"], 23600)
         self.assertTrue(close_order["force_broker_squareoff"])
+
+    def test_kill_switch_exit_requests_use_limit_orders(self):
+        trade_history = Tradeorderhistory.objects.create(
+            client=self.client_user,
+            GroupService="Lite",
+            trading_symbol="NIFTY16JUN2623900PE",
+            Index_Symbol="NIFTY",
+            transaction_type="BUY",
+            trade_order_status="open",
+            order_status="complete",
+            order_id="26061600086435",
+            EntryQty=65,
+            Entry_Price=Decimal("21.10"),
+            order_params={
+                "symbol": "NIFTY",
+                "strike": 23900,
+                "option_type": "PE",
+                "day": "16",
+                "month": "JUN",
+                "year": "26",
+                "fullyear": "2026",
+                "quantity": 65,
+            },
+        )
+
+        regular_request = _build_regular_trade_exit_request(trade_history)
+        force_request = _build_regular_trade_exit_request(trade_history, force_broker_squareoff=True)
+
+        self.assertEqual(regular_request.order_type_name, "LIMIT")
+        self.assertEqual(force_request.order_type_name, "LIMIT")
+        self.assertIsNone(regular_request.limit_price)
+        self.assertIsNone(force_request.limit_price)
+        self.assertEqual(force_request.order_params["order_action"], "force_kill_switch_exit")
 
     def test_routed_open_exit_does_not_close_buy_position(self):
         buy_history = Tradeorderhistory.objects.create(
