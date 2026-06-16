@@ -6,10 +6,13 @@ from main.services.option_ltp_fallback import cache_option_ltp, fetch_nse_option
 from main.trade_history_service import save_trade_order_history
 import logging
 import requests
+import time
 logger = logging.getLogger('main')
 
 KITE_LTP_URL = "https://api.kite.trade/quote/ltp"
 ZERODHA_MAX_LIMIT_BUFFER_PERCENTAGE = 0.5
+ZERODHA_ORDER_HISTORY_ATTEMPTS = 3
+ZERODHA_ORDER_HISTORY_RETRY_SECONDS = 1
 
 
 def _zerodha_buffer_percentage(buffer_percentage=None):
@@ -61,17 +64,23 @@ def get_trading_symbol(exchange, symbol, kite, user=None):
         return None
     
 def get_order_details(order_id, kite, user=None):
-    try:
-        order_history = kite.order_history(order_id)
-        if order_history:
-            logger.info(f"{user} : order history.....: {order_history}")            
-            return order_history
-        else:
-            logger.info(f"{user}: No order history found for the given order ID")
-            return {"status": "Failed", "error": "No order history found for the given order ID."}
-    except Exception as e:
-        logger.info(f"{user} : Failed to fetch order history: {str(e)}")
-        return {"status": "Failed", "error": f"Failed to fetch order history: {str(e)}"}
+    last_error = None
+    for attempt in range(1, ZERODHA_ORDER_HISTORY_ATTEMPTS + 1):
+        try:
+            order_history = kite.order_history(order_id)
+            if order_history:
+                logger.info(f"{user} : order history.....: {order_history}")            
+                return order_history
+            last_error = "No order history found for the given order ID."
+            logger.info(f"{user}: {last_error}")
+        except Exception as e:
+            last_error = f"Failed to fetch order history: {str(e)}"
+            logger.info(f"{user} : {last_error}")
+
+        if attempt < ZERODHA_ORDER_HISTORY_ATTEMPTS:
+            time.sleep(ZERODHA_ORDER_HISTORY_RETRY_SECONDS)
+
+    return {"status": "Failed", "error": last_error or "No order history found for the given order ID."}
 
 def make_serializable(data):
     """Convert non-serializable objects in a data structure to serializable formats"""
@@ -277,9 +286,9 @@ def place_zerodha_orders(
             order_history_response = get_order_details(order_id, kite, user)
             logger.info(f"[{user}] Fetched order history: {order_history_response}")
 
-            if isinstance(order_history_response, dict) and order_history_response.get("error") == "Failed":
+            if isinstance(order_history_response, dict) and str(order_history_response.get("status", "")).lower() == "failed":
                 logger.error(f"[{user}] Order history error: {order_history_response}")
-                message = "Order details not found"
+                message = order_history_response.get("error") or "Order details not found"
                 response = {"data": {"status": "Failed", "message": message}}
                 save_trade_order_history(LivePrice, group_service, transaction_type, trade_order_status, user, symbol, order_id, "Failed", order_history_response.get("error"), message,
                                          strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,

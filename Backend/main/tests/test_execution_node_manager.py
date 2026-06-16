@@ -2640,6 +2640,87 @@ class ExecutionNodeManagerTests(TestCase):
             user=self.client_user,
         )
 
+    @mock.patch("main.zerodha.time.sleep", return_value=None)
+    def test_zerodha_order_details_retries_transient_missing_history(self, mock_sleep):
+        from main.zerodha import get_order_details
+
+        kite = SimpleNamespace(
+            order_history=mock.Mock(
+                side_effect=[
+                    Exception("Order details not ready"),
+                    [],
+                    [{"status": "OPEN", "transaction_type": "SELL"}],
+                ]
+            )
+        )
+
+        response = get_order_details("kite-order-open", kite, user=self.client_user)
+
+        self.assertIsInstance(response, list)
+        self.assertEqual(response[-1]["status"], "OPEN")
+        self.assertEqual(kite.order_history.call_count, 3)
+        self.assertEqual(mock_sleep.call_count, 2)
+
+    @mock.patch("main.zerodha.fetch_nse_option_chain_ltp", return_value=10)
+    @mock.patch("main.zerodha.requests.get")
+    @mock.patch("main.zerodha.KiteConnect")
+    def test_zerodha_order_history_failure_keeps_real_error_message(self, mock_kite_class, mock_get, mock_fallback):
+        from django.core.cache import cache
+        from main.zerodha import place_zerodha_orders
+
+        cache.clear()
+        proxy_config = {"http": "http://proxy.example.com:8080", "https": "http://proxy.example.com:8080"}
+        kite = mock_kite_class.return_value
+        kite.VARIETY_REGULAR = "regular"
+        kite.profile.return_value = {"user_id": "kite-user"}
+        kite.instruments.return_value = [{"tradingsymbol": "NIFTY26MAY24400CE"}]
+        kite.ltp.side_effect = Exception("Insufficient permission for that call.")
+        kite.place_order.return_value = "kite-order-no-history"
+        kite.order_history.return_value = []
+        mock_get.return_value = SimpleNamespace(
+            status_code=403,
+            content=b"{}",
+            json=lambda: {"status": "error", "message": "Insufficient permission for that call."},
+        )
+
+        with mock.patch("main.zerodha.time.sleep", return_value=None):
+            response = place_zerodha_orders(
+                24087.5,
+                "Lite",
+                "kite-access",
+                "kite-api",
+                "NIFTY26MAY24400CE",
+                "SELL",
+                "NIFTY",
+                65,
+                "strategy",
+                "LIMIT",
+                "MIS",
+                None,
+                self.client_user,
+                1,
+                "LE",
+                None,
+                10,
+                None,
+                65,
+                65,
+                None,
+                "NFO",
+                "FNO",
+                "NIFTY",
+                None,
+                "CLOSE",
+                "kite-history-missing",
+                proxy_config=proxy_config,
+            )
+
+        self.assertEqual(response["data"]["status"], "Failed")
+        self.assertIn("No order history found", response["data"]["message"])
+        history = Tradeorderhistory.objects.get(history_id="kite-history-missing")
+        self.assertEqual(history.order_status, "Failed")
+        self.assertIn("No order history found", history.failure_reason)
+
     @mock.patch("main.zerodha.KiteConnect")
     def test_zerodha_option_limit_ignores_far_explicit_price_and_uses_ltp_buffer(self, mock_kite_class):
         from main.zerodha import place_zerodha_orders
