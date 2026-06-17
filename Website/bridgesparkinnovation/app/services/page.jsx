@@ -6,7 +6,7 @@ import { services } from "@/lib/site";
 
 export const metadata = pageMetadata({
   title: "Services",
-  description: "Python software development, API integration, API bridging, TradingView Pine Script development, broker API integration, dashboards, databases, cloud deployment, and technical support.",
+  description: "Python software development, API integration, API bridging, custom automation script development, third-party API integration, dashboards, databases, cloud deployment, and technical support.",
   path: "/services",
 });
 

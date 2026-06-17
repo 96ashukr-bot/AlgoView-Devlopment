@@ -22,7 +22,7 @@ export const termsSections = [
   {
     title: "Third-Party Platforms and APIs",
     body:
-      "Some solutions may connect with third-party APIs, cloud providers, brokers, data providers, software platforms, payment gateways, messaging tools, or hosting services. Their availability, pricing, policies, performance, and changes are controlled by the respective third-party providers.",
+      "Some solutions may connect with third-party APIs, cloud providers, third-party providers, data providers, software platforms, payment gateways, messaging tools, or hosting services. Their availability, pricing, policies, performance, and changes are controlled by the respective third-party providers.",
   },
   {
     title: "Intellectual Property",
@@ -42,7 +42,7 @@ export const termsSections = [
   {
     title: "Limitation of Liability",
     body:
-      "Sparkbridge Innovations is not liable for indirect, incidental, consequential, business, operational, data, platform, network, market, or third-party losses arising from use of this website, third-party systems, or delivered software, except where liability cannot be limited under applicable law.",
+      "Sparkbridge Innovations is not liable for indirect, incidental, consequential, business, operational, data, platform, network, third-party losses arising from use of this website, third-party systems, or delivered software, except where liability cannot be limited under applicable law.",
   },
   {
     title: "Changes to Terms",
@@ -55,7 +55,7 @@ export const disclaimerSections = [
   {
     title: "Technology Information Only",
     body:
-      "The information on this website is provided to describe Sparkbridge Innovations, our software development services, technology products, automation capabilities, and support offerings. It should not be treated as professional, legal, tax, financial, investment, or regulatory advice.",
+      "The information on this website is provided to describe Sparkbridge Innovations, our software development services, technology products, automation capabilities, and support offerings. It should not be treated as professional, legal, tax, business or regulatory advice.",
   },
   {
     title: "Software Development Company",
@@ -83,9 +83,9 @@ export const disclaimerSections = [
       "Software can improve workflows, reporting, automation, and operational efficiency, but Sparkbridge Innovations does not guarantee revenue growth, business performance, uptime under all conditions, commercial results, or specific operational outcomes.",
   },
   {
-    title: "Financial Market Related Development",
+    title: "Specialized Workflow Development",
     body:
-      "Where clients request technology for market data, workflow automation, broker API connectivity, or trading-related software, Sparkbridge Innovations acts only as a technical implementation partner. We do not provide investment advice, trading recommendations, portfolio management, stock tips, financial advisory services, or guaranteed returns.",
+      "Where clients request technology for data integration, workflow automation, third-party API connectivity, or workflow automation software, Sparkbridge Innovations acts only as a technical implementation partner. We do not provide business advice, software recommendations, project management, business tips, business advisory services, or guaranteed outcomes.",
   },
 ];
 

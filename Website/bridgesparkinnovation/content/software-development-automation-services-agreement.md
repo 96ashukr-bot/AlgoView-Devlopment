@@ -37,9 +37,9 @@ Services may include but are not limited to:
 * Desktop application development
 * API development and integration
 * API bridging solutions
-* TradingView Pine Script development
-* Broker API integration
-* Trading automation software development
+* custom automation script development
+* Third-party API integration
+* Automation software development
 * Dashboard development
 * Cloud deployment and server configuration
 * Database development and maintenance
@@ -50,7 +50,7 @@ The Client acknowledges that all fees charged by the Company are strictly for so
 
 ---
 
-# 3. COMPANY IS NOT A FINANCIAL SERVICE PROVIDER
+# 3. COMPANY ROLE AND SERVICE BOUNDARY
 
 The Client expressly acknowledges and agrees that:
 
@@ -58,28 +58,28 @@ a) The Company is an Information Technology and Software Development Company.
 
 b) The Company is NOT:
 
-* A stock broker
-* A sub-broker
-* A portfolio manager
-* An investment adviser
+* A third-party provider
+* A third-party service provider
+* A project manager
+* A business adviser
 * A research analyst
-* A financial planner
-* A fund manager
-* A wealth management company
-* An exchange-approved algorithmic trading vendor
-* A provider of financial advisory services
+* A business planner
+* A resource manager
+* A business management company
+* A certified automation vendor
+* A provider of business advisory services
 
 c) The Company does not provide:
 
-* Buy recommendations
-* Sell recommendations
-* Stock tips
-* Trading tips
-* Investment advice
-* Portfolio management
-* Financial advisory services
-* Assured returns
-* Profit guarantees
+* Business purchase recommendations
+* Business sale recommendations
+* Business tips
+* Workflow tips
+* Business advice
+* Project management
+* Business advisory services
+* Assured outcomes
+* Outcome guarantees
 
 d) The Company merely develops software, automation tools, APIs, dashboards, strategies, and integrations according to the Client's requirements.
 
@@ -89,11 +89,11 @@ d) The Company merely develops software, automation tools, APIs, dashboards, str
 
 Where the Client requests development of:
 
-* TradingView strategies
-* Pine Script indicators
-* Automated trading logic
-* Broker integrations
-* Trading algorithms
+* Automation workflows
+* Custom script components
+* Automated workflow logic
+* Third-party integrations
+* Automation workflows
 * Risk management rules
 * Alert systems
 
@@ -102,53 +102,52 @@ the Company acts solely as a technical implementation partner.
 The Client shall be solely responsible for:
 
 * Strategy design
-* Trading logic
-* Trading rules
+* Workflow logic
+* Workflow rules
 * Entry and exit conditions
 * Risk management decisions
 * Capital allocation
 
-The Company does not verify, certify, recommend, or guarantee the effectiveness, profitability, legality, or suitability of any strategy provided by the Client.
+The Company does not verify, certify, recommend, or guarantee the effectiveness, business outcome, legality, or suitability of any strategy provided by the Client.
 
 ---
 
-# 5. NO INVESTMENT ADVICE
+# 5. NO BUSINESS ADVICE
 
 The Client agrees that:
 
-* All trading and investment decisions are made solely by the Client.
-* The Company does not influence any investment decision.
-* The Company does not recommend any financial instrument.
-* The Company is not responsible for any trading outcome.
+* All workflow and business decisions are made solely by the Client.
+* The Company does not influence any business decision.
+* The Company does not recommend any third-party product.
+* The Company is not responsible for any software outcome.
 
 Any software, automation, API integration, or strategy developed by the Company is purely a technical implementation of Client requirements.
 
 ---
 
-# 6. NO GUARANTEE OF PROFITS OR PERFORMANCE
+# 6. NO GUARANTEE OF OUTCOMES OR PERFORMANCE
 
 The Client acknowledges that:
 
-Financial markets involve substantial risk.
+External platforms and business workflows may involve operational risk.
 
 The Company makes no representation or warranty regarding:
 
-* Profitability
-* Trading success
+* Business outcome
+* Automation success
 * Future performance
-* Accuracy of predictions
-* Return on investment
+* Accuracy of projections
 * Strategy effectiveness
 
 The Company does not guarantee:
 
-* Profits
-* Returns
-* Winning trades
-* Reduced losses
-* Successful execution under all market conditions
+* Specific business outcomes
+* Specific operational results
+* Error-free operation
+* Reduced operational loss
+* Successful execution under all operating conditions
 
-Past performance, backtests, simulations, or paper-trading results do not guarantee future results.
+Past performance, backtests, simulations, or paper-testing results do not guarantee future results.
 
 ---
 
@@ -156,10 +155,10 @@ Past performance, backtests, simulations, or paper-trading results do not guaran
 
 The Client shall be solely responsible for:
 
-* Trading decisions
-* Investment decisions
+* Workflow decisions
+* Business decisions
 * Risk management
-* Broker account management
+* Third-party account management
 * Regulatory compliance
 * Tax obligations
 * Capital management
@@ -173,22 +172,22 @@ The Client agrees that all use of the software is entirely at their own risk.
 
 The software may integrate with third-party services including but not limited to:
 
-* TradingView
-* Broker APIs
-* Market data providers
+* Automation Platform
+* Third-party APIs
+* Data integration providers
 * Cloud service providers
 * Hosting providers
 * Messaging services
-* Exchanges
+* External platforms
 
 The Company shall not be liable for:
 
 * API failures
-* Exchange outages
-* Broker outages
+* Platform outages
+* Third-party outages
 * Data inaccuracies
 * Network failures
-* Delayed market data
+* Delayed data
 * Third-party service interruptions
 * Rate limits
 * Authentication failures
@@ -211,11 +210,11 @@ The Client acknowledges that all payments made to the Company are solely for:
 
 The fees charged are NOT for:
 
-* Trading services
-* Financial advice
-* Portfolio management
-* Investment consulting
-* Profit-sharing arrangements
+* Automation services
+* Business advice
+* Project management
+* Business consulting
+* Outcome-sharing arrangements
 * Revenue-sharing arrangements
 
 ---
@@ -232,24 +231,24 @@ b) No refund shall be provided for:
 
 * Software development work
 * Custom software solutions
-* TradingView Pine Script development
+* custom automation script development
 * API integration work
-* Trading automation development
+* Automation development
 * Consulting services
 * Technical support
 * Maintenance services
 * Server setup and deployment
 * Change requests already implemented
 * Client change of mind
-* Trading losses
-* Investment losses
+* Automation losses
+* Business losses
 * Dissatisfaction with strategy performance
-* Broker-related issues
+* Third-party platform issues
 * Third-party service failures
 
 c) Once development work has commenced, no full or partial refund shall be payable.
 
-d) Trading performance, profitability, investment returns, or market outcomes shall not constitute grounds for any refund claim.
+d) Software performance, business outcome, business operational results, or business outcomes shall not constitute grounds for any refund claim.
 
 e) Any exception to this policy shall be solely at the Company's discretion and must be approved in writing.
 
@@ -259,15 +258,15 @@ e) Any exception to this policy shall be solely at the Company's discretion and 
 
 Under no circumstances shall the Company be liable for:
 
-* Trading losses
-* Investment losses
+* Automation losses
+* Business losses
 * Missed opportunities
-* Lost profits
+* Lost business outcomes
 * Data delays
 * System downtime
 * Strategy failures
-* Broker rejections
-* Exchange outages
+* Third-party platform rejections
+* Platform outages
 * Technical failures beyond reasonable control
 
 The maximum liability of the Company under any circumstances shall not exceed the total amount actually paid by the Client for the specific project.
@@ -278,13 +277,13 @@ The maximum liability of the Company under any circumstances shall not exceed th
 
 The Client agrees to indemnify and hold harmless the Company, its directors, employees, contractors, consultants, and representatives against any claims, losses, damages, liabilities, penalties, legal expenses, or proceedings arising from:
 
-* Trading activities
-* Investment activities
+* Automation activities
+* Business activities
 * Client-provided strategies
 * Regulatory violations by the Client
 * Misuse of software
 * Unauthorized use of software
-* Financial losses incurred by the Client
+* Business losses incurred by the Client
 
 ---
 
@@ -326,10 +325,10 @@ Any dispute arising out of this Agreement shall be subject to the exclusive juri
 By signing below, the Client confirms that:
 
 * The Company is only providing software development and technical services.
-* The Company is not providing investment advice.
-* The Company is not an exchange-approved algorithmic trading vendor.
-* The Company does not guarantee profits or returns.
-* The Client assumes full responsibility for all trading and investment decisions.
+* The Company is not providing business advice.
+* The Company is not an certified automation vendor.
+* The Company does not guarantee business outcomes or operational results.
+* The Client assumes full responsibility for all workflow and business decisions.
 * The Client has read and accepted the No Refund Policy.
 * The Client agrees to all terms and conditions contained in this Agreement.
 

@@ -6,7 +6,7 @@ import { site } from "@/lib/site";
 
 export const metadata = pageMetadata({
   description:
-    "Custom Software Development, API Integrations, Automation Systems, TradingView Pine Script Development, Broker API Integration, Cloud Deployment, Dashboard Development, and Technology Solutions.",
+    "Custom Software Development, API Integrations, Automation Systems, Custom Automation Script Development, Third-Party API Integration, Cloud Deployment, Dashboard Development, and Technology Solutions.",
 });
 
 export default function RootLayout({ children }) {

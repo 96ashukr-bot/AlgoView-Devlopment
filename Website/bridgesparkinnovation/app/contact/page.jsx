@@ -34,7 +34,7 @@ export default function ContactPage() {
               </p>
               <p className="flex items-center gap-3">
                 <MapPin className="text-teal" size={20} />
-                Serving clients across India
+                {site.address}
               </p>
             </div>
             <p className="mt-8 text-sm leading-7 text-slate-600">

@@ -8,7 +8,7 @@ import { products } from "@/lib/site";
 
 export const metadata = pageMetadata({
   title: "Products",
-  description: "Software platforms from Sparkbridge Innovations including AlgoView Platform, API Bridge Engine, Trading Automation Suite, Strategy Deployment System, Market Data Engine, and Client Support Portal.",
+  description: "Software platforms from Sparkbridge Innovations including AlgoView Platform, API Bridge Engine, Automation Suite, Strategy Deployment System, Data Integration Engine, and Client Support Portal.",
   path: "/products",
 });
 

@@ -24,6 +24,7 @@ export const site = {
     "Sparkbridge Innovations builds custom software, API integrations, automation systems, dashboards, cloud infrastructure, and digital products for businesses and professionals.",
   email: "support@bridgesparkinnovation.com",
   phone: "8586078471",
+  address: "2nd Floor, B-56, Sector 64, Noida, Uttar Pradesh 201301",
   gst: "09EOFPB1620N1ZZ",
 };
 
@@ -54,18 +55,18 @@ export const services = [
     icon: Workflow,
   },
   {
-    title: "TradingView Pine Script Development",
+    title: "Custom Automation Script Development",
     description:
-      "Custom Pine Script indicators, strategies, alerts, dashboards, and automation workflows.",
+      "Custom scripts, alerts, dashboards, and automation workflows.",
     icon: LineChart,
   },
   {
-    title: "Broker API Integration",
-    description: "Integration of broker APIs for automation, reporting, and workflow management.",
+    title: "Third-Party API Integration",
+    description: "Integration of third-party APIs for automation, reporting, and workflow management.",
     icon: Blocks,
   },
   {
-    title: "Trading Automation Software",
+    title: "Automation Software",
     description:
       "Client-defined automation systems, execution workflows, monitoring tools, and process automation.",
     icon: Bot,
@@ -105,8 +106,8 @@ export const products = [
     description: "Reliable middleware platform connecting multiple APIs and software systems.",
   },
   {
-    title: "Trading Automation Suite",
-    slug: "trading-automation-suite",
+    title: "Automation Suite",
+    slug: "automation-suite",
     description: "Technology platform for automating client-defined workflows and execution logic.",
   },
   {
@@ -115,9 +116,9 @@ export const products = [
     description: "Centralized platform for deploying and managing automation strategies and logic.",
   },
   {
-    title: "Market Data Engine",
-    slug: "market-data-engine",
-    description: "Centralized real-time market data collection, processing, monitoring, and distribution system.",
+    title: "Data Integration Engine",
+    slug: "data-integration-engine",
+    description: "Centralized real-time data integration collection, processing, monitoring, and distribution system.",
   },
   {
     title: "Client Support Portal",
@@ -147,9 +148,9 @@ export const serviceOptions = [
   "Python Software Development",
   "API Development & Integration",
   "API Bridging Solutions",
-  "TradingView Pine Script Development",
-  "Broker API Integration",
-  "Trading Automation Software",
+  "Custom Automation Script Development",
+  "Third-Party API Integration",
+  "Automation Software",
   "Dashboard Development",
   "Cloud Deployment",
   "Database Development",
