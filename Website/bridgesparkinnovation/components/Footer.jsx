@@ -4,6 +4,7 @@ import { navLinks, site } from "@/lib/site";
 const legalLinks = [
   { label: "Terms & Conditions", href: "/legal/terms-and-conditions" },
   { label: "Refund Policy", href: "/legal/refund-policy" },
+  { label: "Service Delivery Policy", href: "/legal/service-delivery-policy" },
   { label: "Disclaimer", href: "/legal/disclaimer" },
   { label: "Privacy Policy", href: "/legal/privacy-policy" },
 ];
