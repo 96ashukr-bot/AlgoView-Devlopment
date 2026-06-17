@@ -10,6 +10,7 @@ const routes = [
   "/legal/disclaimer",
   "/legal/terms-and-conditions",
   "/legal/refund-policy",
+  "/legal/cancellation-policy",
   "/legal/service-delivery-policy",
   "/legal/privacy-policy",
 ];
