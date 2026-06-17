@@ -1864,6 +1864,80 @@ class ExecutionNodeManagerTests(TestCase):
 
         self.assertEqual(history.Entry_Price, Decimal("845"))
 
+    def test_trade_history_completed_order_prefers_nested_broker_average_price(self):
+        history = save_trade_order_history(
+            Decimal("166.80"),
+            "Lite",
+            "BUY",
+            "OPEN",
+            self.client_user,
+            "NIFTY23JUN2624000CE",
+            "angel-complete-167",
+            "complete",
+            {
+                "data": {
+                    "status": "complete",
+                    "price": 175.0,
+                    "executed_price": 175.0,
+                    "ltp": 166.8,
+                    "reference_price": 166.8,
+                    "order_id": "angel-complete-167",
+                    "broker_order": {
+                        "orderstatus": "complete",
+                        "averageprice": 167.05,
+                        "filledshares": "65",
+                    },
+                }
+            },
+            "Success",
+            "Sparks Lite",
+            "LE",
+            None,
+            None,
+            None,
+            None,
+            None,
+            {"ordertype": "BUY"},
+            "NFO",
+            "FNO",
+            "NIFTY",
+            {"price": 175.0},
+            broker="Angel One",
+            history_id="angel-complete-nested-average-price",
+        )
+
+        self.assertEqual(history.Entry_Price, Decimal("167.05"))
+        self.assertEqual(history.EntryQty, 65)
+
+    def test_sl_tp_snapshot_prefers_nested_broker_average_over_buffered_limit(self):
+        from main.execution_engine import ExecutionEngine
+
+        request = SimpleNamespace(
+            trade=SimpleNamespace(sl_type="POINTS", stop_loss=10, target=15),
+            transaction_type="BUY",
+            LivePrice=Decimal("166.80"),
+        )
+        snapshot = ExecutionEngine()._build_sl_tp_snapshot(
+            request,
+            {"validated_price": 175.0, "ltp": 166.8},
+            {
+                "data": {
+                    "status": "complete",
+                    "price": 175.0,
+                    "executed_price": 175.0,
+                    "ltp": 166.8,
+                    "broker_order": {
+                        "averageprice": 167.05,
+                        "filledshares": "65",
+                    },
+                }
+            },
+        )
+
+        self.assertEqual(snapshot["entry_reference_price"], 167.05)
+        self.assertEqual(snapshot["effective_stop_loss_price"], 157.05)
+        self.assertEqual(snapshot["effective_target_price"], 182.05)
+
     @mock.patch("main.services.broker_fill_reconciliation.get_broker_adapter")
     def test_broker_fill_refresh_updates_entry_price_and_sltp_thresholds(self, mock_get_adapter):
         from main.services.broker_fill_reconciliation import refresh_trade_fill_from_broker

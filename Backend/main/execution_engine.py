@@ -1418,10 +1418,13 @@ class ExecutionEngine:
             data = {}
         status = str(data.get("status") or "").strip().lower()
 
-        for key in ("average_price", "averageprice", "traded_price", "tradedPrice", "executed_price"):
-            price = self._to_float(data.get(key))
-            if price is not None and price > 0:
-                return price
+        fill_price = self._fill_price_from_payload(data)
+        if fill_price is not None:
+            return fill_price
+
+        executed_price = self._to_float(data.get("executed_price"))
+        if executed_price is not None and executed_price > 0:
+            return executed_price
 
         if status in {"complete", "completed", "success", "traded"}:
             price = self._to_float(data.get("price"))
@@ -1438,6 +1441,37 @@ class ExecutionEngine:
             price = self._to_float(candidate)
             if price is not None and price > 0:
                 return price
+        return None
+
+    def _fill_price_from_payload(self, value: Any) -> Optional[float]:
+        if isinstance(value, dict):
+            for key in (
+                "average_price",
+                "averageprice",
+                "averagePrice",
+                "AveragePrice",
+                "avg_price",
+                "avgPrice",
+                "avgTradePrice",
+                "averageTradePrice",
+                "traded_price",
+                "tradedPrice",
+                "TradedPrice",
+                "fill_price",
+                "filled_price",
+            ):
+                price = self._to_float(value.get(key))
+                if price is not None and price > 0:
+                    return price
+            for child in value.values():
+                price = self._fill_price_from_payload(child)
+                if price is not None:
+                    return price
+        elif isinstance(value, list):
+            for item in value:
+                price = self._fill_price_from_payload(item)
+                if price is not None:
+                    return price
         return None
 
     def _build_sl_tp_snapshot(self, request: ExecutionRequest, validation_context: Dict[str, Any], normalized: Dict[str, Any]) -> Dict[str, Any]:

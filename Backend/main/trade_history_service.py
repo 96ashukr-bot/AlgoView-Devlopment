@@ -185,14 +185,71 @@ def _price_from_payload(payload, *keys):
     return None
 
 
+def _walk_payload_dicts(value):
+    if isinstance(value, dict):
+        yield value
+        for child in value.values():
+            yield from _walk_payload_dicts(child)
+    elif isinstance(value, list):
+        for item in value:
+            yield from _walk_payload_dicts(item)
+
+
+def _fill_price_from_payload(value):
+    for payload in _walk_payload_dicts(value):
+        price = _price_from_payload(
+            payload,
+            "average_price",
+            "averageprice",
+            "averagePrice",
+            "AveragePrice",
+            "avg_price",
+            "avgPrice",
+            "avgTradePrice",
+            "averageTradePrice",
+            "traded_price",
+            "tradedPrice",
+            "TradedPrice",
+            "fill_price",
+            "filled_price",
+        )
+        if price is not None:
+            return price
+    return None
+
+
+def _quantity_from_payload(value):
+    for payload in _walk_payload_dicts(value):
+        quantity = _to_int(
+            _first_non_empty(
+                payload.get("filled_quantity"),
+                payload.get("filledQuantity"),
+                payload.get("filled_qty"),
+                payload.get("filledQty"),
+                payload.get("filledshares"),
+                payload.get("filledShares"),
+                payload.get("Fillshares"),
+                payload.get("quantity"),
+                payload.get("Quantity"),
+                payload.get("qty"),
+                payload.get("Qty"),
+            )
+        )
+        if quantity is not None:
+            return quantity
+    return None
+
+
 def _effective_trade_price(nested_response, meta_response, order_payload, entry_price, exit_price, is_exit_signal):
     nested_response = nested_response if isinstance(nested_response, dict) else {}
     meta_response = meta_response if isinstance(meta_response, dict) else {}
     order_payload = order_payload if isinstance(order_payload, dict) else {}
 
     fill_price = (
-        _price_from_payload(nested_response, "average_price", "averageprice", "traded_price", "tradedPrice", "executed_price")
-        or _price_from_payload(meta_response, "average_price", "averageprice", "traded_price", "tradedPrice", "executed_price")
+        _fill_price_from_payload(nested_response)
+        or _fill_price_from_payload(meta_response)
+        or _price_from_payload(nested_response, "executed_price")
+        or _price_from_payload(meta_response, "executed_price")
     )
     if fill_price is not None:
         return fill_price
@@ -298,6 +355,8 @@ def save_trade_order_history(*args, **kwargs):
         )
         effective_quantity = _to_int(
             _first_non_empty(
+                _quantity_from_payload(nested_response),
+                _quantity_from_payload(meta_response),
                 nested_response.get("filled_quantity") if isinstance(nested_response, dict) else None,
                 nested_response.get("filled_qty") if isinstance(nested_response, dict) else None,
                 nested_response.get("quantity") if isinstance(nested_response, dict) else None,
