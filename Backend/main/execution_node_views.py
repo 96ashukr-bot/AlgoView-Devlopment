@@ -18,7 +18,7 @@ from rest_framework.views import APIView
 
 from main.brokers import get_broker_adapter
 from main.models import ClientBrokerdetails, ExecutionNode, ExecutionNodeLog, ExecutionOrderJob, User
-from main.permissions import is_superadmin_user
+from main.permissions import can_access_client_record, is_superadmin_user
 from main.services.execution_nodes import assign_execution_node_to_client, release_execution_node
 from main.services.execution_router import route_order_to_execution_node
 from main.services.node_security import verify_node_signature
@@ -429,13 +429,23 @@ class ExecutionNodeTestBrokerLoginAPIView(APIView):
 class ClientExecutionNodeAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
+    def _target_client(self, request):
+        client_id = request.query_params.get("client") or request.data.get("client")
+        if not client_id:
+            return request.user
+        if not can_access_client_record(request.user, client_id):
+            raise PermissionDenied("You do not have access to this client.")
+        return User.objects.get(pk=client_id)
+
     def get(self, request):
-        node = ExecutionNode.objects.filter(assigned_client=request.user).first()
+        client = self._target_client(request)
+        node = ExecutionNode.objects.filter(assigned_client=client).first()
         return Response({"node": ClientExecutionNodeSerializer(node).data if node else None})
 
     @transaction.atomic
     def post(self, request):
-        if ExecutionNode.objects.filter(assigned_client=request.user).exists():
+        client = self._target_client(request)
+        if ExecutionNode.objects.filter(assigned_client=client).exists():
             return Response(
                 {"detail": "This client already has an execution IP. Update the existing IP instead."},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -443,7 +453,7 @@ class ClientExecutionNodeAPIView(APIView):
         serializer = ClientExecutionNodeSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         node = serializer.save(
-            assigned_client=request.user,
+            assigned_client=client,
             status=ExecutionNode.STATUS_ASSIGNED,
             is_verified_with_broker=False,
         )
@@ -451,13 +461,14 @@ class ClientExecutionNodeAPIView(APIView):
         if raw_secret:
             node.set_node_secret(raw_secret)
             node.save(update_fields=["node_secret", "updated_at"])
-        ClientBrokerdetails.objects.filter(client=request.user).update(execution_node=node)
-        node.mark_log("client_created", "Execution node created by assigned client.", client=request.user)
+        ClientBrokerdetails.objects.filter(client=client).update(execution_node=node)
+        node.mark_log("client_created", "Execution node created by assigned client.", client=client)
         return Response(ClientExecutionNodeSerializer(node).data, status=status.HTTP_201_CREATED)
 
     @transaction.atomic
     def patch(self, request):
-        node = ExecutionNode.objects.select_for_update().filter(assigned_client=request.user).first()
+        client = self._target_client(request)
+        node = ExecutionNode.objects.select_for_update().filter(assigned_client=client).first()
         if not node:
             return Response({"detail": "No execution IP is assigned to this client."}, status=status.HTTP_404_NOT_FOUND)
         serializer = ClientExecutionNodeSerializer(node, data=request.data, partial=True)
@@ -467,12 +478,13 @@ class ClientExecutionNodeAPIView(APIView):
         if raw_secret:
             node.set_node_secret(raw_secret)
             node.save(update_fields=["node_secret", "updated_at"])
-        ClientBrokerdetails.objects.filter(client=request.user).update(execution_node=node)
-        node.mark_log("client_updated", "Execution node updated by assigned client.", client=request.user)
+        ClientBrokerdetails.objects.filter(client=client).update(execution_node=node)
+        node.mark_log("client_updated", "Execution node updated by assigned client.", client=client)
         return Response(ClientExecutionNodeSerializer(node).data)
 
     def delete(self, request):
-        node = release_execution_node(request.user)
+        client = self._target_client(request)
+        node = release_execution_node(client)
         return Response({"status": "released", "node_id": node.id if node else None})
 
 
@@ -480,7 +492,13 @@ class ClientExecutionNodeVerifyProxyAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        node = ExecutionNode.objects.filter(assigned_client=request.user).first()
+        client_id = request.query_params.get("client") or request.data.get("client")
+        client = request.user
+        if client_id:
+            if not can_access_client_record(request.user, client_id):
+                raise PermissionDenied("You do not have access to this client.")
+            client = User.objects.get(pk=client_id)
+        node = ExecutionNode.objects.filter(assigned_client=client).first()
         if not node:
             return Response({"detail": "No execution IP is assigned to this client."}, status=status.HTTP_404_NOT_FOUND)
         result = verify_proxy_public_ip(node)

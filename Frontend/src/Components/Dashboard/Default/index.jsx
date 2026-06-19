@@ -94,7 +94,7 @@ const Dashboard = () => {
           </div>
         ) : (
           <Row className="widget-grid">
-            {!viewedClientId && <ClientHeader />}
+            <ClientHeader clientId={viewedClientId} />
             {isClient && <GreetingCard userProfile={userProfile} clientId={viewedClientId} />}
             <ClientAlert />
           </Row>

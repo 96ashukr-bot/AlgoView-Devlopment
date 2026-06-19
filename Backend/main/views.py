@@ -4562,10 +4562,11 @@ class ClientBrokerDetailsView(APIView):
 
     def get(self, request):
         """
-        Retrieve broker details for the authenticated client.
+        Retrieve broker details for the authenticated client, or an accessible selected client.
         """
         try:
-            user = request.user
+            client_id = request.query_params.get("client")
+            user = _get_accessible_client_or_403(request.user, client_id) if client_id else request.user
             broker_detail = ClientBrokerdetails.objects.filter(client_id=user.id).first()
             available_brokers = _ensure_default_broker_catalog()
             serializer = ClientBrokerDetailsSerializer(
@@ -4579,11 +4580,12 @@ class ClientBrokerDetailsView(APIView):
     def put(self, request):
 
         """
-        Create or update broker details for a specific client.
+        Create or update broker details for the authenticated client, or an accessible selected client.
         Omitted fields are preserved to avoid accidental credential loss.
         """
         try:
-            user = request.user
+            client_id = request.data.get("client") or request.query_params.get("client")
+            user = _get_accessible_client_or_403(request.user, client_id) if client_id else request.user
 
             # Fetch or create broker details for the client
             broker_detail, created = ClientBrokerdetails.objects.get_or_create(client_id=user.id)

@@ -3066,7 +3066,7 @@ export const EnableDisableBroker = async (data) => {
   throw new Error(errorMessage);
 };
 
-export const UpdateClientBroker = async (data) => {
+export const UpdateClientBroker = async (data, clientId = "") => {
   const token = getAuthToken();
   if (!token) {
     throw new Error("No authentication token found.");
@@ -3127,7 +3127,8 @@ export const UpdateClientBroker = async (data) => {
   for (const candidateBaseUrl of candidateBaseUrls) {
     try {
       let candidateToken = getAuthToken() || token;
-      const executeRequest = async (authToken) => axios.put(`${candidateBaseUrl}/update-client-broker/`, data, {
+      const payload = clientId ? { ...data, client: clientId } : data;
+      const executeRequest = async (authToken) => axios.put(`${candidateBaseUrl}/update-client-broker/`, payload, {
         headers: {
           'Authorization': `Bearer ${authToken}`,
           'Content-Type': 'application/json',
@@ -3284,7 +3285,7 @@ export const getClientBrokerLoginActivity = async (clientId) => {
   }
 };
 
-export const getClientBrokerDetail = async () => {
+export const getClientBrokerDetail = async (clientId = "") => {
   const token = getAuthToken();
   if (!token) {
     throw new Error("No authentication token found.");
@@ -3301,6 +3302,7 @@ export const getClientBrokerDetail = async () => {
           Authorization: `Bearer ${authToken}`,
           'Content-Type': 'application/json',
         },
+        params: clientId ? { client: clientId } : {},
         skipAuthRefresh: true,
       });
 
@@ -4831,7 +4833,7 @@ export const releaseExecutionNodeFromClient = async (clientId) => {
   }
 };
 
-export const getMyExecutionNode = async () => {
+export const getMyExecutionNode = async (clientId = "") => {
   const token = getAuthToken();
   if (!token) {
     throw new Error("No authentication token found.");
@@ -4843,6 +4845,7 @@ export const getMyExecutionNode = async () => {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
+      params: clientId ? { client: clientId } : {},
     });
     return response.data;
   } catch (error) {
@@ -4851,7 +4854,7 @@ export const getMyExecutionNode = async () => {
   }
 };
 
-export const saveMyExecutionNode = async (payload, hasExistingNode = false) => {
+export const saveMyExecutionNode = async (payload, hasExistingNode = false, clientId = "") => {
   const token = getAuthToken();
   if (!token) {
     throw new Error("No authentication token found.");
@@ -4859,11 +4862,12 @@ export const saveMyExecutionNode = async (payload, hasExistingNode = false) => {
 
   try {
     const request = hasExistingNode ? axios.patch : axios.post;
-    const response = await request(`${baseUrl}/client/execution-node/`, payload, {
+    const response = await request(`${baseUrl}/client/execution-node/`, clientId ? { ...payload, client: clientId } : payload, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
+      params: clientId ? { client: clientId } : {},
     });
     return response.data;
   } catch (error) {
@@ -4872,7 +4876,7 @@ export const saveMyExecutionNode = async (payload, hasExistingNode = false) => {
   }
 };
 
-export const releaseMyExecutionNode = async () => {
+export const releaseMyExecutionNode = async (clientId = "") => {
   const token = getAuthToken();
   if (!token) {
     throw new Error("No authentication token found.");
@@ -4884,6 +4888,8 @@ export const releaseMyExecutionNode = async () => {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
+      data: clientId ? { client: clientId } : {},
+      params: clientId ? { client: clientId } : {},
     });
     return response.data;
   } catch (error) {
@@ -4892,18 +4898,19 @@ export const releaseMyExecutionNode = async () => {
   }
 };
 
-export const verifyMyExecutionProxy = async () => {
+export const verifyMyExecutionProxy = async (clientId = "") => {
   const token = getAuthToken();
   if (!token) {
     throw new Error("No authentication token found.");
   }
 
   try {
-    const response = await axios.post(`${baseUrl}/client/execution-node/verify-proxy/`, {}, {
+    const response = await axios.post(`${baseUrl}/client/execution-node/verify-proxy/`, clientId ? { client: clientId } : {}, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
+      params: clientId ? { client: clientId } : {},
     });
     return response.data;
   } catch (error) {

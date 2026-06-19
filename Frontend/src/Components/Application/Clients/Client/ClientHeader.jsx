@@ -159,7 +159,7 @@ const normalizeBrokerName = (name) => {
   return normalized;
 };
 
-const ClientHeader = () => {
+const ClientHeader = ({ clientId = "" }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [brokerList, setBrokerList] = useState([]);
   const [selectedBroker, setSelectedBroker] = useState("");
@@ -215,7 +215,7 @@ const ClientHeader = () => {
 
   const fetchBrokerRuntime = async () => {
     try {
-      const runtime = await getBrokerRuntimeStatus();
+      const runtime = clientId ? brokerRuntimeStatus : await getBrokerRuntimeStatus();
       setBrokerRuntimeStatus(runtime);
       window.dispatchEvent(new CustomEvent("broker-runtime-updated", { detail: runtime }));
     } catch (error) {
@@ -225,7 +225,7 @@ const ClientHeader = () => {
 
   const fetchClientExecutionNode = async () => {
     try {
-      const response = await getMyExecutionNode();
+      const response = await getMyExecutionNode(clientId);
       const node = response?.node || null;
       setExecutionNode(node);
       setExecutionNodeInput({
@@ -304,7 +304,7 @@ const ClientHeader = () => {
       if (isProxy && executionNodeInput.proxy_password) {
         payload.proxy_password = executionNodeInput.proxy_password;
       }
-      const savedNode = await saveMyExecutionNode(payload, Boolean(executionNode));
+      const savedNode = await saveMyExecutionNode(payload, Boolean(executionNode), clientId);
       setExecutionNode(savedNode);
       setExecutionNodeInput((previous) => ({ ...previous, node_secret: "" }));
       Swal.fire("Success", "Execution IP saved successfully.", "success");
@@ -330,7 +330,7 @@ const ClientHeader = () => {
     }
     setIsExecutionSaving(true);
     try {
-      await releaseMyExecutionNode();
+      await releaseMyExecutionNode(clientId);
       setExecutionNode(null);
       setExecutionNodeInput({
         name: "",
@@ -358,7 +358,7 @@ const ClientHeader = () => {
   const handleVerifyExecutionProxy = async () => {
     setIsExecutionSaving(true);
     try {
-      const response = await verifyMyExecutionProxy();
+      const response = await verifyMyExecutionProxy(clientId);
       await fetchClientExecutionNode();
       const result = response?.result || {};
       Swal.fire(result.status === "success" ? "Success" : "Error", result.message || "Executional Client IP verification completed.", result.status === "success" ? "success" : "error");
@@ -371,7 +371,7 @@ const ClientHeader = () => {
 
   const fetchSavedBrokerDetails = async (availableBrokers = brokerList) => {
     try {
-      const brokerDetails = await getClientBrokerDetail();
+      const brokerDetails = await getClientBrokerDetail(clientId);
       if (brokerDetails?.data) {
         const payload = brokerDetails.data.available_brokers?.length
           ? brokerDetails.data
@@ -601,7 +601,7 @@ const ClientHeader = () => {
 
     setIsSubmitting(true);
     try {
-      const response = await UpdateClientBroker({ broker_name: selectedBrokerData.id });
+      const response = await UpdateClientBroker({ broker_name: selectedBrokerData.id }, clientId);
       applyBrokerDetails(response.data || {});
       await fetchBrokerRuntime();
       setSetupStep("configure");
@@ -622,7 +622,7 @@ const ClientHeader = () => {
       let activeSchema = brokerSetup;
       let activeBrokerName = existingSelectedBroker || selectedBroker;
 
-      const brokerDetails = await getClientBrokerDetail();
+      const brokerDetails = await getClientBrokerDetail(clientId);
       brokerData = brokerDetails?.data || {};
       if (brokerData) {
         applyBrokerDetails(brokerData);
@@ -718,7 +718,7 @@ const ClientHeader = () => {
       const payload = buildBrokerPayload();
 
       try {
-        const response = await UpdateClientBroker(payload);
+        const response = await UpdateClientBroker(payload, clientId);
         if (response?.data) {
           applyBrokerDetails(response.data);
         }
