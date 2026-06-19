@@ -442,7 +442,7 @@ const AllClients = () => {
                                             <th className='custom-col-design'>Status</th>
                                             <th className='custom-col-design'>Trading Status</th>
                                             <th className='custom-col-design'>View Client</th>
-                                            {!isSubAdmin && <th className='custom-col-design'>Client Dashboard</th>}
+                                            {!isSubAdmin && <th className='custom-col-design'></th>}
                                             {!isSubAdmin && <th style={{ backgroundColor: '#283F7B', color: 'white' }}>Actions</th>}
                                         </tr>
                                     </thead>
