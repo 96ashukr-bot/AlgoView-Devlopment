@@ -1,5 +1,5 @@
 import React, { Fragment, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Container, Row } from "reactstrap";
 import { Breadcrumbs } from "../../../AbstractElements";
 import { RotatingLines } from "react-loader-spinner";
@@ -14,6 +14,8 @@ const SUPPORT_CHAT_BADGE_INTERVAL_MS = 30000;
 const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [supportChatUnreadCount, setSupportChatUnreadCount] = useState(0);
+  const [searchParams] = useSearchParams();
+  const viewedClientId = searchParams.get("client_id") || "";
 
   const userProfile = {
     role: {
@@ -92,8 +94,8 @@ const Dashboard = () => {
           </div>
         ) : (
           <Row className="widget-grid">
-            <ClientHeader />
-            {isClient && <GreetingCard userProfile={userProfile} />}
+            {!viewedClientId && <ClientHeader />}
+            {isClient && <GreetingCard userProfile={userProfile} clientId={viewedClientId} />}
             <ClientAlert />
           </Row>
         )}

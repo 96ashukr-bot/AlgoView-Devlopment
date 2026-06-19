@@ -13,7 +13,7 @@ import useWebSocket from 'react-use-websocket';
 import './Dashboards.css';
 import Swal from 'sweetalert2';
 
-const GreetingCard = ({ userProfile }) => {
+const GreetingCard = ({ userProfile, clientId = "" }) => {
   const isClient = userProfile?.role?.name === 'client';
   const navigate = useNavigate();
 
@@ -35,7 +35,7 @@ const GreetingCard = ({ userProfile }) => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [clientId]);
 
   useEffect(() => {
     if (lastMessage !== null) {
@@ -68,8 +68,8 @@ const GreetingCard = ({ userProfile }) => {
   const fetchData = async () => {
     try {
       const [response, multiLegResponse] = await Promise.all([
-        getClientSegmentsList(),
-        getClientMultiLegSettings({ include_locked: true }),
+        getClientSegmentsList(clientId ? { client: clientId } : {}),
+        getClientMultiLegSettings({ include_locked: true, ...(clientId ? { client: clientId } : {}) }),
       ]);
       console.log('Fetched client segments:', response);
       setClientSegments(response?.client_segment_list || []);
@@ -118,6 +118,7 @@ const GreetingCard = ({ userProfile }) => {
       segment: segment.segment.id,
       sub_segment: segment.sub_segment.id,
       is_trade_status: !segment.is_tread_status,
+      ...(clientId ? { client: clientId } : {}),
     };
 
     try {
@@ -177,6 +178,7 @@ const GreetingCard = ({ userProfile }) => {
     const payload = {
       strategy: strategy.strategy,
       is_trade_status: !strategy.is_tread_status,
+      ...(clientId ? { client: clientId } : {}),
     };
 
     try {

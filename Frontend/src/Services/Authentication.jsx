@@ -2335,11 +2335,12 @@ export const updateClientStatus = async (id, data) => {
   }
 };
 
-export const getClientSegmentsList = async (segment = "") => {
+export const getClientSegmentsList = async (filters = "") => {
   const token = getAuthToken();
   if (!token) {
     throw new Error("No authentication token found.");
   }
+  const params = typeof filters === "string" ? (filters ? { segment: filters } : {}) : (filters || {});
 
   try {
     const response = await axios.get(`${baseUrl}/get-client-segments-list/`, {
@@ -2347,7 +2348,7 @@ export const getClientSegmentsList = async (segment = "") => {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-      params: segment ? { segment } : {},
+      params,
     });
 
     console.log("Fetched Client Segments List:", response.data);

@@ -3163,7 +3163,13 @@ class ClientMultiLegTradeSettingAPIView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def patch(self, request, *args, **kwargs):
-        user = request.user
+        client_id = request.data.get('client')
+        if client_id:
+            if not can_access_client_record(request.user, client_id):
+                return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
+            user = User.objects.get(id=client_id)
+        else:
+            user = request.user
         strategy_id = request.data.get('strategy')
         is_trade_status = request.data.get('is_trade_status')
 
@@ -3227,8 +3233,14 @@ class UpdateTradeSettingStatusView(APIView):
 
     def get(self, request, *args, **kwargs):
         try:
-            # Get the authenticated client
-            client = request.user
+            # Get the authenticated client, or an accessible client selected by an admin/subadmin.
+            client_id = request.query_params.get('client', None)
+            if client_id:
+                if not can_access_client_record(request.user, client_id):
+                    return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
+                client = User.objects.get(id=client_id)
+            else:
+                client = request.user
             
             # Get the 'segment' parameter from the query string
             segment_name = request.query_params.get('segment', None)
@@ -3348,8 +3360,14 @@ class UpdateTradeSettingStatusView(APIView):
 
 
     def patch(self, request, *args, **kwargs):
-        # Get the authenticated user
-        user = request.user
+        # Get the authenticated user, or an accessible client selected by an admin/subadmin.
+        client_id = request.data.get('client')
+        if client_id:
+            if not can_access_client_record(request.user, client_id):
+                return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
+            user = User.objects.get(id=client_id)
+        else:
+            user = request.user
         
         # Extract segment, sub_segment, and is_trade_status from request data
         segment = request.data.get('segment')
@@ -3394,7 +3412,13 @@ class UpdateTradeStatusView(APIView):
 
     def patch(self, request, *args, **kwargs):
         # Get the authenticated user
-        user = request.user
+        client_id = request.data.get('client')
+        if client_id:
+            if not can_access_client_record(request.user, client_id):
+                return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
+            user = User.objects.get(id=client_id)
+        else:
+            user = request.user
         
         # Extract query parameters
         segment_name = request.query_params.get('segment')
