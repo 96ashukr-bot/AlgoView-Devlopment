@@ -60,6 +60,35 @@
   min-width: 800px;
 }
 
+.client-panel-button {
+  align-items: center;
+  background-color: #283f7b;
+  border: 1px solid #283f7b;
+  border-radius: 6px;
+  color: #ffffff;
+  cursor: pointer;
+  display: inline-flex;
+  height: 34px;
+  justify-content: center;
+  line-height: 1;
+  padding: 0;
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+  width: 34px;
+}
+
+.client-panel-button:hover,
+.client-panel-button:focus {
+  background-color: #1f315f;
+  border-color: #1f315f;
+  color: #ffffff;
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.client-panel-button:focus-visible {
+  box-shadow: 0 0 0 3px rgba(40, 63, 123, 0.25);
+}
+
 .toggle-switch {
   position: relative;
   display: inline-block;

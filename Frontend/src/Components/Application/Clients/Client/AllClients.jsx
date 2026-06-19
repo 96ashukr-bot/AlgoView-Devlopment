@@ -4,7 +4,7 @@ import {
     Input, Button, Form, FormGroup, Label, Row
 } from 'reactstrap';
 import { H3 } from '../../../../AbstractElements';
-import { FaArrowUp, FaArrowDown, FaEye, FaPencilAlt, FaTrashAlt } from 'react-icons/fa';
+import { FaArrowUp, FaArrowDown, FaEye, FaPencilAlt, FaTrashAlt, FaExternalLinkAlt } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import { RotatingLines } from 'react-loader-spinner';
 import Swal from 'sweetalert2';
@@ -192,6 +192,10 @@ const AllClients = () => {
     const handleViewClient = (client) => {
         console.log('View client Details:', client);
         navigate(`/client/all-clients-list/client-details/${client.id}`, { state: { clientId: client.id } });
+    };
+
+    const handleOpenClientPanel = (client) => {
+        navigate(`/client/all-clients-list/edit-client/${client.id}`);
     };
 
     const handleDelete = (client) => {
@@ -438,6 +442,7 @@ const AllClients = () => {
                                             <th className='custom-col-design'>Status</th>
                                             <th className='custom-col-design'>Trading Status</th>
                                             <th className='custom-col-design'>View Client</th>
+                                            {!isSubAdmin && <th className='custom-col-design'>Client Panel</th>}
                                             {!isSubAdmin && <th style={{ backgroundColor: '#283F7B', color: 'white' }}>Actions</th>}
                                         </tr>
                                     </thead>
@@ -493,6 +498,19 @@ const AllClients = () => {
                                                         style={{ cursor: 'pointer', marginLeft: '20px', fontSize: '18px' }}
                                                     />
                                                 </td>
+                                                {!isSubAdmin && (
+                                                    <td>
+                                                        <button
+                                                            type="button"
+                                                            className="client-panel-button"
+                                                            onClick={() => handleOpenClientPanel(client)}
+                                                            title="Open client panel"
+                                                            aria-label={`Open client panel for ${client.fullName || client.userName || 'client'}`}
+                                                        >
+                                                            <FaExternalLinkAlt />
+                                                        </button>
+                                                    </td>
+                                                )}
                                                 {!isSubAdmin && (
                                                     <td>
                                                         <FaPencilAlt onClick={() => handleEdit(client)} style={{ cursor: 'pointer', marginRight: '10px', color: '#6d62e7' }} />
