@@ -1,7 +1,7 @@
 import os
 import re
 import subprocess
-from datetime import datetime
+from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from unittest import mock
@@ -16,6 +16,7 @@ from django.test import RequestFactory, TestCase, override_settings
 from rest_framework.test import APIRequestFactory, force_authenticate
 
 from main.angelone.managers.session_manager import SessionManager, SessionStatus
+from main.angelone.managers.position_manager import PositionManager, PositionSide
 from main.angelone.managers.contract_manager import Contract
 from main.angelone.constants import MARKET_CLOSE_HOUR, MARKET_CLOSE_MINUTE, TIMEZONE
 from main.angelone.services.state_service import CallbackStateService
@@ -1191,6 +1192,100 @@ class AngelOneExecutionValidationTests(TestCase):
         self.assertEqual(service._normalize_product_type("MIS"), "INTRADAY")
         self.assertEqual(service._normalize_product_type("NRML"), "CARRYFORWARD")
         self.assertEqual(service._normalize_product_type("CNC"), "DELIVERY")
+
+    def test_order_service_clears_stale_tracked_position_after_successful_exit(self):
+        service = OrderService.__new__(OrderService)
+        manager = PositionManager()
+        service._position_manager = manager
+
+        position = manager.add_position(
+            client_id=str(self.user.id),
+            symbol="NIFTY23JUN2624100CE",
+            underlying="NIFTY",
+            side=PositionSide.LONG,
+            quantity=65,
+            price=50,
+            strike=24100,
+            option_type="CE",
+            order_id="entry-order-1",
+        )
+        position.entry_time = datetime.now() - timedelta(minutes=30)
+
+        open_history = Tradeorderhistory.objects.create(
+            client=self.user,
+            broker="Angel One",
+            trading_symbol="NIFTY23JUN2624100CE",
+            transaction_type="BUY",
+            order_status="complete",
+            order_id="entry-order-1",
+            history_id="entry-history-1",
+            order_params={
+                "symbol": "NIFTY",
+                "strike_price": 24100,
+                "option_type": "CE",
+                "transaction_type": "BUY",
+            },
+        )
+        Tradeorderhistory.objects.create(
+            client=self.user,
+            broker="Angel One",
+            trading_symbol="NIFTY23JUN2624100CE",
+            transaction_type="SELL",
+            order_status="complete",
+            order_id="exit-order-1",
+            history_id="exit-history-1",
+            order_params={
+                "symbol": "NIFTY",
+                "strike_price": 24100,
+                "option_type": "CE",
+                "transaction_type": "SELL",
+                "matched_open_history_id": open_history.history_id,
+                "matched_open_order_id": open_history.order_id,
+            },
+        )
+
+        cleared = service._clear_stale_position_if_closed(
+            client_id=str(self.user.id),
+            underlying="NIFTY",
+            strike=24100,
+            option_type="CE",
+            side="BUY",
+            request_id="new-entry-1",
+            reason=f"Already have long position: {position.position_id}",
+        )
+
+        self.assertTrue(cleared)
+        self.assertFalse(manager.has_open_position(str(self.user.id), "NIFTY", 24100, "CE"))
+
+    def test_order_service_keeps_recent_tracked_position_block(self):
+        service = OrderService.__new__(OrderService)
+        manager = PositionManager()
+        service._position_manager = manager
+
+        position = manager.add_position(
+            client_id=str(self.user.id),
+            symbol="NIFTY23JUN2624100CE",
+            underlying="NIFTY",
+            side=PositionSide.LONG,
+            quantity=65,
+            price=50,
+            strike=24100,
+            option_type="CE",
+            order_id="entry-order-1",
+        )
+
+        cleared = service._clear_stale_position_if_closed(
+            client_id=str(self.user.id),
+            underlying="NIFTY",
+            strike=24100,
+            option_type="CE",
+            side="BUY",
+            request_id="new-entry-1",
+            reason=f"Already have long position: {position.position_id}",
+        )
+
+        self.assertFalse(cleared)
+        self.assertTrue(manager.has_open_position(str(self.user.id), "NIFTY", 24100, "CE"))
 
 
 class SecretLeakageTests(TestCase):

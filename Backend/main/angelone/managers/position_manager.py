@@ -340,6 +340,34 @@ class PositionManager:
                 return None
             
             return self._positions.get(client_id, {}).get(position_id)
+
+    def remove_position(
+        self,
+        client_id: str,
+        underlying: str,
+        strike: Optional[float] = None,
+        option_type: Optional[str] = None,
+    ) -> Optional[Position]:
+        """Remove a tracked position after external reconciliation proves it is stale."""
+        with self._lock:
+            index_key = (client_id, underlying, strike, option_type)
+            position_id = self._position_index.pop(index_key, None)
+            if not position_id:
+                return None
+
+            position = self._positions.get(client_id, {}).pop(position_id, None)
+            if position:
+                position.status = PositionStatus.CLOSED
+                position.exit_time = datetime.now()
+                logger.warning(
+                    "Removed stale tracked position",
+                    client_id=client_id,
+                    position_id=position.position_id,
+                    underlying=underlying,
+                    strike=strike,
+                    option_type=option_type,
+                )
+            return position
     
     def get_client_positions(
         self,

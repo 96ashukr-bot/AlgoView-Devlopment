@@ -37,6 +37,9 @@ from ..constants import (
 
 logger = TradingLogger("order_service")
 
+POSITION_RECONCILIATION_MIN_AGE_SECONDS = 120
+SUCCESSFUL_ORDER_STATUSES = {"complete", "completed", "success", "traded"}
+
 
 def _optional_positive_float(value: Any) -> Optional[float]:
     if value in (None, ""):
@@ -287,9 +290,28 @@ class OrderService:
                     side=side,
                 )
                 if not can_place:
-                    if existing:
-                        self._idempotency_manager.remove_record(existing.idempotency_key)
-                    return self._error_response(reason, request_id)
+                    if self._clear_stale_position_if_closed(
+                        client_id=client_id,
+                        underlying=underlying_symbol,
+                        strike=strike_value,
+                        option_type=option_type_value,
+                        side=side,
+                        request_id=request_id,
+                        reason=reason,
+                    ):
+                        logger.warning(
+                            "Continuing Angel One order after clearing stale tracked position",
+                            user_id=client_id,
+                            symbol=underlying_symbol,
+                            strike=strike_value,
+                            option_type=option_type_value,
+                            request_id=request_id,
+                            original_reason=reason,
+                        )
+                    else:
+                        if existing:
+                            self._idempotency_manager.remove_record(existing.idempotency_key)
+                        return self._error_response(reason, request_id)
 
             ltp = None
             if requested_order_type == OrderType.MARKET.value and not ALLOW_MARKET_ORDERS:
@@ -551,6 +573,138 @@ class OrderService:
                 request_id,
                 **{key: value for key, value in structured_error.items() if key != "message"},
             )
+
+    def _clear_stale_position_if_closed(
+        self,
+        *,
+        client_id: str,
+        underlying: str,
+        strike: Optional[float],
+        option_type: Optional[str],
+        side: str,
+        request_id: str,
+        reason: str,
+    ) -> bool:
+        if side.upper() != TransactionType.BUY.value:
+            return False
+        if "already have long position" not in str(reason or "").lower():
+            return False
+
+        tracked_position = self._position_manager.get_position(client_id, underlying, strike, option_type)
+        if not tracked_position:
+            return False
+
+        position_age_seconds = (datetime.now() - tracked_position.entry_time).total_seconds()
+        if position_age_seconds < POSITION_RECONCILIATION_MIN_AGE_SECONDS:
+            logger.warning(
+                "Recent tracked Angel One position blocked duplicate buy",
+                user_id=client_id,
+                position_id=tracked_position.position_id,
+                symbol=underlying,
+                strike=strike,
+                option_type=option_type,
+                request_id=request_id,
+                position_age_seconds=position_age_seconds,
+            )
+            return False
+
+        if self._has_persisted_open_buy_position(client_id, underlying, strike, option_type):
+            logger.warning(
+                "Persisted open Angel One position confirmed duplicate buy block",
+                user_id=client_id,
+                position_id=tracked_position.position_id,
+                symbol=underlying,
+                strike=strike,
+                option_type=option_type,
+                request_id=request_id,
+            )
+            return False
+
+        removed_position = self._position_manager.remove_position(client_id, underlying, strike, option_type)
+        return removed_position is not None
+
+    def _has_persisted_open_buy_position(
+        self,
+        client_id: str,
+        underlying: str,
+        strike: Optional[float],
+        option_type: Optional[str],
+    ) -> bool:
+        from main.brokers.position_guard import history_option_type, history_strike, _history_matches_underlying
+        from main.models import Tradeorderhistory
+
+        expected_option_type = str(option_type or "").upper()
+        expected_strike = self._normalize_position_strike(strike)
+        buy_histories = (
+            Tradeorderhistory.objects.filter(
+                client_id=client_id,
+                broker__iexact="Angel One",
+                transaction_type__iexact=TransactionType.BUY.value,
+            )
+            .exclude(order_id__isnull=True)
+            .exclude(order_id="")
+            .exclude(order_id="0")
+            .order_by("-id")[:50]
+        )
+
+        for history in buy_histories:
+            order_status = str(history.order_status or "").strip().lower()
+            if order_status not in SUCCESSFUL_ORDER_STATUSES:
+                continue
+            if not _history_matches_underlying(history, underlying):
+                continue
+            if expected_option_type and history_option_type(history) != expected_option_type:
+                continue
+            if expected_strike and self._normalize_position_strike(history_strike(history)) != expected_strike:
+                continue
+            if self._has_successful_exit_for_open_buy(history, expected_strike, expected_option_type):
+                continue
+            return True
+        return False
+
+    def _has_successful_exit_for_open_buy(self, open_history, expected_strike: str, expected_option_type: str) -> bool:
+        from main.brokers.position_guard import history_option_type, history_strike, _history_matches_underlying
+        from main.models import Tradeorderhistory
+
+        exits = (
+            Tradeorderhistory.objects.filter(
+                client_id=open_history.client_id,
+                broker__iexact="Angel One",
+                transaction_type__iexact=TransactionType.SELL.value,
+                id__gt=open_history.id,
+            )
+            .exclude(order_id__isnull=True)
+            .exclude(order_id="")
+            .exclude(order_id="0")
+            .order_by("id")[:100]
+        )
+
+        for exit_history in exits:
+            order_status = str(exit_history.order_status or "").strip().lower()
+            if order_status not in SUCCESSFUL_ORDER_STATUSES:
+                continue
+
+            order_params = exit_history.order_params if isinstance(exit_history.order_params, dict) else {}
+            if open_history.history_id and order_params.get("matched_open_history_id") == open_history.history_id:
+                return True
+            if open_history.order_id and str(order_params.get("matched_open_order_id") or "") == str(open_history.order_id):
+                return True
+            if not _history_matches_underlying(exit_history, open_history.trading_symbol or open_history.Index_Symbol or ""):
+                continue
+            if expected_option_type and history_option_type(exit_history) != expected_option_type:
+                continue
+            if expected_strike and self._normalize_position_strike(history_strike(exit_history)) != expected_strike:
+                continue
+            return True
+        return False
+
+    @staticmethod
+    def _normalize_position_strike(value: Any) -> str:
+        try:
+            parsed = float(value)
+        except (TypeError, ValueError):
+            return str(value or "").strip()
+        return str(int(parsed)) if parsed.is_integer() else str(parsed)
     
     def place_order_async(
         self,
