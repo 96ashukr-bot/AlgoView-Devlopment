@@ -580,8 +580,9 @@ export const changePassword = async (oldPassword, newPassword, confirmNewPasswor
   if (!token) {
     throw new Error("No authentication token found.");
   }
+  const authenticatedBaseUrl = getAuthenticatedApiBaseUrl() || baseUrl;
   try {
-    const response = await axios.post(`${baseUrl}/change-password/`, {
+    const response = await axios.post(`${authenticatedBaseUrl}/change-password/`, {
       OldPassword: oldPassword,
       NewPassword: newPassword,
       ConfirmNewPassword: confirmNewPassword
@@ -599,7 +600,11 @@ export const changePassword = async (oldPassword, newPassword, confirmNewPasswor
       alert("Your session has expired. Please log in again.");
       // Optionally redirect to login page
     }
-    throw new Error(errorMessage);
+    const validationDetails = error.response?.data?.details;
+    const validationMessage = validationDetails
+      ? Object.values(validationDetails).flat().join(" ")
+      : errorMessage;
+    throw new Error(validationMessage);
   }
 };
 

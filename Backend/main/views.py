@@ -1365,6 +1365,8 @@ class PasswordResetConfirmView(generics.GenericAPIView):
             return Response({'detail': 'Invalid or expired token.'}, status=status.HTTP_400_BAD_REQUEST)
         
         user.set_password(NewPassword)
+        user.is_new_password = True
+        user.is_password_temporary = False
         user.save()
         
         return Response({'detail': 'Password has been reset successfully.'}, status=status.HTTP_200_OK)
