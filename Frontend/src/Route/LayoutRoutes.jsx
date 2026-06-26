@@ -4,6 +4,7 @@ import { routes } from './Routes';
 import AppLayout from '../Layout/Layout';
 import LegalGate from './LegalGate';
 import TermsAcceptance from '../Components/Legal/TermsAcceptance';
+import RouteAccess from './RouteAccess';
 
 const LayoutRoutes = () => {
 
@@ -15,7 +16,7 @@ const LayoutRoutes = () => {
         {routes.map(({ path, Component }, i) => (
           <Fragment key={i}>
           <Route element={<AppLayout />} key={i}>
-            <Route path={path} element={Component} />
+            <Route path={path} element={<RouteAccess>{Component}</RouteAccess>} />
           </Route>
           </Fragment>
         ))}

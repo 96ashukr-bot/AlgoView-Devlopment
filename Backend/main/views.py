@@ -2578,7 +2578,7 @@ class ClientFilterView(APIView):
 
 #Client ADD Api
 class ClientCreateView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsAdminOrSuperadmin]
     
     def get(self, request, *args, **kwargs):
         user = request.user 

@@ -18,7 +18,7 @@ from .models import WebsocketDetails
 from django.core.mail import EmailMultiAlternatives
 from main.utils import get_smtp_connection
 from main.angelone.services.state_service import CallbackStateService
-from main.permissions import is_superadmin_user
+from main.permissions import IsAdminOrSuperadmin, is_superadmin_user
 from django.conf import settings
 from urllib.parse import urlencode, urlparse, urlunparse
 import secrets
@@ -407,6 +407,8 @@ class CompanyProfileUpdateView(APIView):
 
     
 class CompanySmtpDetailView(APIView):    
+    permission_classes = [IsAuthenticated, IsAdminOrSuperadmin]
+
     def get(self, request, *args, **kwargs):
         try:
             user=request.user
@@ -430,6 +432,8 @@ class CompanySmtpDetailView(APIView):
                 "message": f"An unexpected error occurred: {str(e)}"
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 class CompanySmtpUpdateView(APIView):             
+    permission_classes = [IsAuthenticated, IsAdminOrSuperadmin]
+
     def put(self, request, *args, **kwargs):
         try:
             user=request.user
@@ -459,6 +463,8 @@ class CompanySmtpUpdateView(APIView):
 
 
 class CompanySmtpTestView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminOrSuperadmin]
+
     def post(self, request, *args, **kwargs):
         try:
             smtp_details = CompanySmtpDetails.objects.get(user=request.user)
