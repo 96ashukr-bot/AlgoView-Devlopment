@@ -1409,15 +1409,18 @@ class GetUser(APIView):
     
 # All sub-admins list     
 class SubadminsView(APIView):
-    permission_classes = [IsAdminOrSuperadmin]
+    permission_classes = [IsAuthenticated]
+
     def get(self, request, *args, **kwargs):
-        user = request.user 
-        try:
-        #     if user.role and user.role.name == 'Super-Admin':
+        user = request.user
+        if is_admin_or_superadmin(user):
             subadmin = User.objects.filter(role__name='Sub-Admin').order_by('-id')
-            serializer = UserSerializer(subadmin,many=True) 
-        except User.DoesNotExist:
-            return Response({"detail": "subadmins not found."}, status=status.HTTP_404_NOT_FOUND)
+        elif is_subadmin_user(user):
+            subadmin = User.objects.filter(id=user.id)
+        else:
+            return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = UserSerializer(subadmin, many=True)
         return Response(serializer.data)
     
 #user crud api for admin
@@ -2579,11 +2582,10 @@ class ClientFilterView(APIView):
 #Client ADD Api
 class ClientCreateView(APIView):
     def get_permissions(self):
-        # Subadmins need read access to the client list, which is already
-        # restricted to their assigned clients by _accessible_clients_for_user.
-        # Mutating client records remains limited to admins and superadmins.
+        # Subadmins can list their assigned clients and create new clients.
+        # Updating and deleting client records remains admin-only.
         permission_classes = [IsAuthenticated]
-        if self.request.method != "GET":
+        if self.request.method not in {"GET", "POST"}:
             permission_classes.append(IsAdminOrSuperadmin)
         return [permission() for permission in permission_classes]
     
@@ -2607,7 +2609,14 @@ class ClientCreateView(APIView):
         return paginator.get_paginated_response(serializer.data)
     
     def post(self, request, *args, **kwargs):
+        if not (is_admin_or_superadmin(request.user) or is_subadmin_user(request.user)):
+            return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
+
         data = request.data.copy()
+        if is_subadmin_user(request.user):
+            # Never trust a submitted assignment when a subadmin creates a
+            # client. The creator always owns the resulting client record.
+            data["assigned_client"] = request.user.id
         start_time=time.time()
         print("data>>>>",data)
         serializer = ClientCreateSerializer(data=data)
