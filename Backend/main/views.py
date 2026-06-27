@@ -2578,7 +2578,14 @@ class ClientFilterView(APIView):
 
 #Client ADD Api
 class ClientCreateView(APIView):
-    permission_classes = [IsAuthenticated, IsAdminOrSuperadmin]
+    def get_permissions(self):
+        # Subadmins need read access to the client list, which is already
+        # restricted to their assigned clients by _accessible_clients_for_user.
+        # Mutating client records remains limited to admins and superadmins.
+        permission_classes = [IsAuthenticated]
+        if self.request.method != "GET":
+            permission_classes.append(IsAdminOrSuperadmin)
+        return [permission() for permission in permission_classes]
     
     def get(self, request, *args, **kwargs):
         user = request.user 
