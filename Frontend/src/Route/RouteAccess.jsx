@@ -72,24 +72,25 @@ const isStaffOnlyPath = (pathname) => {
 
 const RouteAccess = ({ children }) => {
   const location = useLocation();
-  const [state, setState] = useState({ loading: true, role: null });
+  const [state, setState] = useState({ loading: true, role: null, checkedPath: null });
   const staffOnly = useMemo(() => isStaffOnlyPath(location.pathname), [location.pathname]);
 
   useEffect(() => {
     let mounted = true;
     const loadProfile = async () => {
       if (!staffOnly) {
-        setState({ loading: false, role: null });
+        setState({ loading: false, role: null, checkedPath: location.pathname });
         return;
       }
+      setState({ loading: true, role: null, checkedPath: location.pathname });
       try {
         const profile = await fetchUserProfile();
         if (mounted) {
-          setState({ loading: false, role: normalizeRole(profile) });
+          setState({ loading: false, role: normalizeRole(profile), checkedPath: location.pathname });
         }
       } catch (_error) {
         if (mounted) {
-          setState({ loading: false, role: "unknown" });
+          setState({ loading: false, role: "unknown", checkedPath: location.pathname });
         }
       }
     };
@@ -103,7 +104,7 @@ const RouteAccess = ({ children }) => {
     return children;
   }
 
-  if (state.loading) {
+  if (state.loading || state.checkedPath !== location.pathname) {
     return <Loader />;
   }
 

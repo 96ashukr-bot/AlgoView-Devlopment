@@ -1,12 +1,13 @@
 import React, { Fragment, useEffect, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, Navigate, useSearchParams } from "react-router-dom";
+import { ArrowLeft } from "react-feather";
 import { Container, Row } from "reactstrap";
 import { Breadcrumbs } from "../../../AbstractElements";
 import { RotatingLines } from "react-loader-spinner";
 import ClientHeader from "../../Application/Clients/Client/ClientHeader";
 import GreetingCard from "./GreetingCard";
 import ClientAlert from "../../Application/Clients/Client/ClientAlert";
-import { getSupportChatUnreadCount } from "../../../Services/Authentication";
+import { fetchUserProfile, getSupportChatUnreadCount } from "../../../Services/Authentication";
 import "./Dashboards.css";
 
 const SUPPORT_CHAT_BADGE_INTERVAL_MS = 30000;
@@ -14,22 +15,41 @@ const SUPPORT_CHAT_BADGE_INTERVAL_MS = 30000;
 const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [supportChatUnreadCount, setSupportChatUnreadCount] = useState(0);
+  const [userProfile, setUserProfile] = useState(null);
   const [searchParams] = useSearchParams();
-  const viewedClientId = searchParams.get("client_id") || "";
+  const requestedClientId = searchParams.get("client_id") || "";
+  const viewedClientId = /^\d+$/.test(requestedClientId) ? requestedClientId : "";
 
-  const userProfile = {
-    role: {
-      name: "client",
-    },
-  };
-
-  const isClient = userProfile?.role?.name === "client";
+  const roleName = String(userProfile?.role?.name || "").trim().toLowerCase();
+  const isClient = ["client", "user"].includes(roleName);
+  const isStaffUser = [
+    "admin",
+    "super-admin",
+    "superadmin",
+    "sub-admin",
+    "subadmin",
+  ].includes(roleName);
+  const isStaffPreview = Boolean(viewedClientId) && isStaffUser;
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setLoading(false);
     },);
     return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    fetchUserProfile()
+      .then((profile) => {
+        if (mounted) setUserProfile(profile);
+      })
+      .catch(() => {
+        if (mounted) setUserProfile(null);
+      });
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -71,8 +91,24 @@ const Dashboard = () => {
     };
   }, [isClient]);
 
+  if (userProfile && isStaffUser && !viewedClientId) {
+    return <Navigate to="/dashboard/algoviewtech/admin" replace />;
+  }
+
   return (
     <Fragment>
+      {isStaffPreview ? (
+        <div className="client-preview-toolbar">
+          <div>
+            <strong>Client dashboard preview</strong>
+            <span>You are still signed in as an administrator.</span>
+          </div>
+          <Link to="/client/all-clients-list" className="btn btn-primary btn-sm">
+            <ArrowLeft size={15} />
+            Back to Client List
+          </Link>
+        </div>
+      ) : null}
       <Breadcrumbs mainTitle="Default" parent="Dashboard" title="Default" />
       <Container fluid={true}>
         {loading ? (
@@ -95,8 +131,8 @@ const Dashboard = () => {
         ) : (
           <Row className="widget-grid">
             <ClientHeader clientId={viewedClientId} />
-            {isClient && <GreetingCard userProfile={userProfile} clientId={viewedClientId} />}
-            <ClientAlert />
+            {(isClient || isStaffPreview) && <GreetingCard userProfile={userProfile} clientId={viewedClientId} />}
+            {isClient ? <ClientAlert /> : null}
           </Row>
         )}
       </Container>

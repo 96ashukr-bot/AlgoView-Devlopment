@@ -14,7 +14,8 @@ import './Dashboards.css';
 import Swal from 'sweetalert2';
 
 const GreetingCard = ({ userProfile, clientId = "" }) => {
-  const isClient = userProfile?.role?.name === 'client';
+  const roleName = String(userProfile?.role?.name || '').trim().toLowerCase();
+  const canViewClientScripts = ['client', 'user'].includes(roleName) || Boolean(clientId);
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState('1');
@@ -147,16 +148,16 @@ const GreetingCard = ({ userProfile, clientId = "" }) => {
       return;
     }
 
-    const clientId = segment?.client;
+    const targetClientId = segment?.client || clientId;
     const segmentId = segment?.segment?.id;
     const subSegmentId = segment?.sub_segment?.id;
 
-    if (!clientId || !segmentId || !subSegmentId) {
-      console.error('Missing required segment data:', { clientId, segmentId, subSegmentId });
+    if (!targetClientId || !segmentId || !subSegmentId) {
+      console.error('Missing required segment data:', { clientId: targetClientId, segmentId, subSegmentId });
       return;
     }
 
-    navigate(`/dashboard/segments/update-segment/${clientId}/${segmentId}/${subSegmentId}`);
+    navigate(`/dashboard/segments/update-segment/${targetClientId}/${segmentId}/${subSegmentId}`);
   };
 
   const handleMultiLegEdit = (strategy) => {
@@ -195,7 +196,7 @@ const GreetingCard = ({ userProfile, clientId = "" }) => {
     }
   };
 
-  if (!isClient) {
+  if (!canViewClientScripts) {
     return null;
   }
 
