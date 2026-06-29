@@ -13,6 +13,7 @@ class LegalAgreementAcceptanceMiddleware:
         "/api/verify-otp/",
         "/api/resend-otp/",
         "/api/token/refresh/",
+        "/api/change-password/",
         "/api/password-reset-request/",
         "/api/password-reset-confirm/",
         "/api/legal/current-agreement/",

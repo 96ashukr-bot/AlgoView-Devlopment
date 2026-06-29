@@ -515,9 +515,8 @@ class OTPVerifySerializer(serializers.Serializer):
         # Mark OTP as verified
         otp_instance.is_verified = True
         otp_instance.save()
-        # If OTP is verified, issue JWT tokens
-        user.is_password_temporary = False
-        user.save()
+        # OTP verification authenticates the session only. Password state is
+        # finalized after ChangePasswordSerializer successfully saves the hash.
         refresh = RefreshToken.for_user(user)
         # Log user login activity after OTP verification
         request = self.context.get('request')  # Get the request context
