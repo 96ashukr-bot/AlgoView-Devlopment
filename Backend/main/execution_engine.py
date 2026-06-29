@@ -10,7 +10,7 @@ from __future__ import annotations
 import time
 import uuid
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, time as datetime_time
 from typing import Any, Optional, Dict
 from zoneinfo import ZoneInfo
@@ -90,6 +90,18 @@ def _optional_positive_float(value: Any) -> Optional[float]:
     if parsed <= 0:
         return None
     return parsed
+
+
+def _symbol_strike(value: Any) -> str:
+    if value in (None, ""):
+        return ""
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return str(value).strip()
+    if parsed.is_integer():
+        return str(int(parsed))
+    return str(parsed).rstrip("0").rstrip(".")
 
 
 @dataclass(frozen=True)
@@ -515,12 +527,31 @@ class ExecutionEngine:
         resolved_strike = close_order.get("strike") or close_order.get("strike_price") or request.strike
         resolved_option_type = close_order.get("option_type") or close_order.get("Type") or request.option_type
         resolved_quantity = close_order.get("quantity") or request.quantity
+        open_order_params = open_position.order_params if isinstance(open_position.order_params, dict) else {}
+        broker_order = {}
+        if isinstance(open_position.response_data, dict):
+            response_payload = open_position.response_data.get("data")
+            if isinstance(response_payload, dict) and isinstance(response_payload.get("broker_order"), dict):
+                broker_order = response_payload["broker_order"]
+        entry_product_type = (
+            open_order_params.get("product_type")
+            or open_order_params.get("product")
+            or broker_order.get("producttype")
+        )
         object.__setattr__(request, "strike", resolved_strike)
         object.__setattr__(request, "option_type", resolved_option_type)
         object.__setattr__(request, "quantity", resolved_quantity)
         object.__setattr__(request, "Entry_type", close_order.get("Entry_type") or request.Entry_type)
         object.__setattr__(request, "Entry_price", close_order.get("Entry_price") or request.Entry_price)
         object.__setattr__(request, "EntryQty", close_order.get("EntryQty") or request.EntryQty)
+        if entry_product_type:
+            object.__setattr__(request, "product_type", str(entry_product_type).strip().upper())
+            if request.order_config:
+                object.__setattr__(
+                    request,
+                    "order_config",
+                    replace(request.order_config, product_type=str(entry_product_type).strip().upper()),
+                )
 
         request.order_params.update(close_order)
         request.order_params.update(
@@ -534,6 +565,7 @@ class ExecutionEngine:
                 "matched_open_history_id": open_position.history_id,
                 "matched_open_order_id": open_position.order_id,
                 "matched_open_trading_symbol": open_position.trading_symbol,
+                **({"product_type": request.product_type_name} if entry_product_type else {}),
             }
         )
         if original_strike and str(original_strike) != str(resolved_strike):
@@ -1166,8 +1198,8 @@ class ExecutionEngine:
 
         trade_symbol = self._resolved_trade_symbol(
             request,
-            f"{request.underlying_symbol}{request.year}{request.month}{request.strike_value}{request.option_type_value}",
-        )
+            f"{request.underlying_symbol}{request.year}{request.month}{_symbol_strike(request.strike_value)}{request.option_type_value}",
+        ).upper()
         if request.transaction_type.upper() == "SELL" and not request.is_multi_leg_order:
             return exit_existing_buy_position_zerodha_order(
                 request.LivePrice, request.group_service, request.option_type_value, request.day,

@@ -73,15 +73,17 @@ def process_webhook_signal_task(self, *, trade_ids, context, history_mode="defau
     context = dict(context or {})
     results = []
 
-    trades_by_id = ClientTradeSetting.objects.select_related(
-        "client",
-        "segment",
-        "sub_segment",
-    ).in_bulk(trade_ids)
-
     for index, trade_id in enumerate(trade_ids, start=1):
-        trade = trades_by_id.get(trade_id)
-        if not trade:
+        trade = (
+            ClientTradeSetting.objects.select_related(
+                "client",
+                "segment",
+                "sub_segment",
+            )
+            .filter(pk=trade_id)
+            .first()
+        )
+        if trade is None:
             results.append({
                 "trade_setting_id": trade_id,
                 "status": "skipped",

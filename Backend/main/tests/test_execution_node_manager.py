@@ -43,6 +43,7 @@ from main.services.upstox_market_data import UpstoxInstrumentResolver, get_activ
 from main.serializers import ClientBrokerDetailsUpdateSerializer, TradeorderhistorySerializer
 from main.trade_history_service import save_trade_order_history
 from main.views import _build_regular_trade_exit_request, _process_webhook_trade, _resolve_webhook_request_context, place_order_broker
+from main.tasks import process_webhook_signal_task
 
 
 TEST_CACHES = {
@@ -692,6 +693,35 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertIn("Client trading is disabled", result["skip_reasons"])
         self.assertFalse(Tradeorderhistory.objects.filter(client=disabled_client).exists())
 
+    @mock.patch("main.views._process_webhook_trade")
+    def test_webhook_worker_reloads_each_trade_setting_before_execution(self, mock_process_trade):
+        first_trade = ClientTradeSetting.objects.create(
+            client=self.client_user,
+            symbol="NIFTY",
+            product_type="NRML",
+        )
+        second_trade = ClientTradeSetting.objects.create(
+            client=self.other_client,
+            symbol="BANKNIFTY",
+            product_type="NRML",
+        )
+
+        def process_side_effect(trade, index, context, history_id=None):
+            if trade.pk == first_trade.pk:
+                ClientTradeSetting.objects.filter(pk=second_trade.pk).update(product_type="MIS")
+            return {"status": "success", "trade_setting_id": trade.pk, "product_type": trade.product_type}
+
+        mock_process_trade.side_effect = process_side_effect
+
+        result = process_webhook_signal_task.run(
+            trade_ids=[first_trade.pk, second_trade.pk],
+            context={},
+            history_mode="default",
+        )
+
+        self.assertEqual(result["summary"]["successful"], 2)
+        self.assertEqual(mock_process_trade.call_args_list[1].args[0].product_type, "MIS")
+
     @mock.patch("main.views.place_order_broker")
     def test_expired_trade_expiry_skips_webhook_before_broker_execution(self, mock_place_order):
         trade = ClientTradeSetting.objects.create(
@@ -974,7 +1004,7 @@ class ExecutionNodeManagerTests(TestCase):
             Entry_type="BUY",
             EntryQty=65,
             Entry_Price=Decimal("115.10"),
-            order_params={"symbol": "NIFTY", "strike": 23300, "option_type": "PE"},
+            order_params={"symbol": "NIFTY", "strike": 23300, "option_type": "PE", "product_type": "NRML"},
         )
         request = ExecutionRequest(
             LivePrice=Decimal("108.65"),
@@ -1039,6 +1069,8 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertEqual(exit_history.order_params["matched_open_history_id"], open_history.history_id)
         self.assertEqual(exit_history.order_params["matched_open_order_id"], "open-23300-pe")
         self.assertEqual(exit_history.order_params["matched_open_trading_symbol"], "NIFTY16JUN2623300PE")
+        self.assertEqual(exit_history.order_params["product_type"], "NRML")
+        self.assertEqual(request.product_type_name, "NRML")
 
     def test_exit_matches_broker_accepted_open_buy_order(self):
         Tradeorderhistory.objects.create(
@@ -1126,6 +1158,7 @@ class ExecutionNodeManagerTests(TestCase):
                 "symbol": "NIFTY",
                 "strike": 23900,
                 "option_type": "PE",
+                "product_type": "NRML",
                 "day": "16",
                 "month": "JUN",
                 "year": "26",
@@ -1142,6 +1175,9 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertIsNone(regular_request.limit_price)
         self.assertIsNone(force_request.limit_price)
         self.assertEqual(force_request.order_params["order_action"], "force_kill_switch_exit")
+        self.assertEqual(regular_request.product_type_name, "NRML")
+        self.assertEqual(force_request.product_type_name, "NRML")
+        self.assertEqual(force_request.order_params["product_type"], "NRML")
 
     def test_routed_open_exit_does_not_close_buy_position(self):
         buy_history = Tradeorderhistory.objects.create(

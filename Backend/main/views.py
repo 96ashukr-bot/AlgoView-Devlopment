@@ -4002,6 +4002,19 @@ def _extract_force_exit_message(response):
     )
 
 
+def _trade_history_entry_product_type(trade_history):
+    order_params = trade_history.order_params if isinstance(trade_history.order_params, dict) else {}
+    response_data = trade_history.response_data if isinstance(trade_history.response_data, dict) else {}
+    response_payload = response_data.get("data") if isinstance(response_data.get("data"), dict) else {}
+    broker_order = response_payload.get("broker_order") if isinstance(response_payload.get("broker_order"), dict) else {}
+    return str(
+        order_params.get("product_type")
+        or order_params.get("product")
+        or broker_order.get("producttype")
+        or "INTRADAY"
+    ).strip().upper()
+
+
 def _build_regular_trade_exit_request(trade_history, *, force_broker_squareoff=False, source="client_trade_history_kill_switch", reason=None, initiated_by=None):
     contract = _parse_trade_history_contract(trade_history)
     order_params = trade_history.order_params if isinstance(trade_history.order_params, dict) else {}
@@ -4013,6 +4026,7 @@ def _build_regular_trade_exit_request(trade_history, *, force_broker_squareoff=F
         raise ValueError("Unable to resolve open trade contract.")
 
     order_action = "force_kill_switch_exit" if force_broker_squareoff else "kill_switch_exit"
+    entry_product_type = _trade_history_entry_product_type(trade_history)
     return ExecutionRequest(
         LivePrice=trade_history.LivePrice or trade_history.Entry_Price or 0,
         group_service=trade_history.GroupService,
@@ -4023,7 +4037,7 @@ def _build_regular_trade_exit_request(trade_history, *, force_broker_squareoff=F
         quantity=quantity,
         strategy=trade_history.strategy or "Kill Switch",
         ordertype="LIMIT",
-        product_type="INTRADAY",
+        product_type=entry_product_type,
         price=None,
         Lots=trade_history.Lot or 1,
         trade_order_status="CLOSE",
@@ -4039,6 +4053,7 @@ def _build_regular_trade_exit_request(trade_history, *, force_broker_squareoff=F
             "force_broker_squareoff": bool(force_broker_squareoff),
             "reason": reason or "",
             "initiated_by": getattr(initiated_by, "id", None),
+            "product_type": entry_product_type,
         },
         Exchange=trade_history.Exchange or "NFO",
         Segment=trade_history.Segment,
@@ -4055,6 +4070,7 @@ def _build_regular_trade_exit_request(trade_history, *, force_broker_squareoff=F
             "source": "trade_history",
             "original_history_id": trade_history.history_id or trade_history.id,
             "tradingsymbol": contract["trading_symbol"],
+            "product_type": entry_product_type,
             "force_broker_squareoff": bool(force_broker_squareoff),
             "reason": reason or "",
             "initiated_by": getattr(initiated_by, "id", None),
