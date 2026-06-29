@@ -46,6 +46,23 @@ class PasswordStateTests(TestCase):
         self.assertTrue(self.user.is_new_password)
         self.assertFalse(self.user.is_password_temporary)
 
+    def test_password_change_rejects_an_incorrect_old_password(self):
+        request = RequestFactory().post("/api/change-password/")
+        request.user = self.user
+        serializer = ChangePasswordSerializer(
+            data={
+                "OldPassword": "Incorrect@1234",
+                "NewPassword": "Permanent@1234",
+                "ConfirmNewPassword": "Permanent@1234",
+            },
+            context={"request": request},
+        )
+
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("OldPassword", serializer.errors)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password("Temporary@1234"))
+
     def test_password_reset_marks_password_as_permanent(self):
         uid = urlsafe_base64_encode(force_bytes(self.user.pk))
         token = default_token_generator.make_token(self.user)
