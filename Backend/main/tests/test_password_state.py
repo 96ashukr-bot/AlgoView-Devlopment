@@ -6,12 +6,12 @@ from django.test import RequestFactory, TestCase
 from django.utils import timezone
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
-from rest_framework.test import APIRequestFactory
+from rest_framework.test import APIRequestFactory, force_authenticate
 
 from main.legal_middleware import LegalAgreementAcceptanceMiddleware
 from main.models import LegalAgreement, OTP, Role, User
 from main.serializers import ChangePasswordSerializer, OTPVerifySerializer
-from main.views import PasswordResetConfirmView
+from main.views import ChangePasswordView, PasswordResetConfirmView
 
 
 class PasswordStateTests(TestCase):
@@ -60,6 +60,25 @@ class PasswordStateTests(TestCase):
 
         self.assertFalse(serializer.is_valid())
         self.assertIn("OldPassword", serializer.errors)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password("Temporary@1234"))
+
+    def test_password_change_endpoint_returns_validation_error_for_wrong_password(self):
+        request = APIRequestFactory().post(
+            "/api/change-password/",
+            {
+                "OldPassword": "Incorrect@1234",
+                "NewPassword": "Permanent@1234",
+                "ConfirmNewPassword": "Permanent@1234",
+            },
+            format="json",
+        )
+        force_authenticate(request, user=self.user)
+
+        response = ChangePasswordView.as_view()(request)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("OldPassword", response.data["details"])
         self.user.refresh_from_db()
         self.assertTrue(self.user.check_password("Temporary@1234"))
 

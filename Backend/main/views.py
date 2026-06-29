@@ -14,6 +14,7 @@ from rest_framework import generics, status, permissions
 from rest_framework.permissions import IsAdminUser,IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.exceptions import ValidationError as DRFValidationError
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.tokens import default_token_generator
@@ -1289,7 +1290,7 @@ class ChangePasswordView(generics.GenericAPIView):
                 'message': 'Password successfully changed please login with new password.'
             }, status=status.HTTP_200_OK)
 
-        except ValidationError as e:
+        except DRFValidationError as e:
             return Response({
                 'error': 'Validation error',
                 'details': e.detail
