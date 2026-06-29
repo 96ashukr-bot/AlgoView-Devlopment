@@ -1,5 +1,5 @@
 import React, { Fragment } from 'react';
-import { Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router-dom';
 import { routes } from './Routes';
 import AppLayout from '../Layout/Layout';
 import LegalGate from './LegalGate';
@@ -20,6 +20,7 @@ const LayoutRoutes = () => {
           </Route>
           </Fragment>
         ))}
+          <Route path="*" element={<Navigate to="/dashboard/algoviewtech/user" replace />} />
         </Route>
       </Routes>
     </>

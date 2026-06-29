@@ -33,6 +33,8 @@ const CLIENT_ALLOWED_PATHS = [
   "/dashboard/segments/update-segment",
   "/dashboard/optionchain",
   "/tradedetails/client-trade-history",
+  "/tradedetails/signals",
+  "/tradedetails/complete-trade-history",
   "/support-chat",
   "/dashboard/helpcenter",
   "/callback",
@@ -109,7 +111,7 @@ const RouteAccess = ({ children }) => {
   }
 
   if (!["admin", "subadmin"].includes(state.role)) {
-    return <Navigate to="/dashboard/user" replace />;
+    return <Navigate to="/dashboard/algoviewtech/user" replace />;
   }
 
   return children;

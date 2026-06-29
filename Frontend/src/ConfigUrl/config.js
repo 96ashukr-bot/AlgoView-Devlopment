@@ -13,6 +13,18 @@ const browserWsOrigin =
         ? `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}`
         : "";
 
+const normalizeWsBaseUrl = (value) => {
+    const normalizedValue = String(value || "").replace(/\/$/, "");
+    if (
+        typeof window !== "undefined" &&
+        window.location.protocol === "https:" &&
+        normalizedValue.startsWith("ws://")
+    ) {
+        return browserWsOrigin;
+    }
+    return normalizedValue;
+};
+
 export const getWsBaseUrlForApi = (apiBaseUrl = BASE_URL) => {
     const normalizedApiBaseUrl = String(apiBaseUrl || BASE_URL).replace(/\/$/, "");
     if (/^https?:\/\//i.test(normalizedApiBaseUrl)) {
@@ -22,7 +34,9 @@ export const getWsBaseUrlForApi = (apiBaseUrl = BASE_URL) => {
 };
 
 export const REMOTE_API_BASE_URL = (process.env.REACT_APP_API_BASE_URL || BASE_URL).replace(/\/$/, "");
-export const REMOTE_WS_BASE_URL = (process.env.REACT_APP_WS_BASE_URL || getWsBaseUrlForApi(REMOTE_API_BASE_URL)).replace(/\/$/, "");
+export const REMOTE_WS_BASE_URL = normalizeWsBaseUrl(
+    process.env.REACT_APP_WS_BASE_URL || getWsBaseUrlForApi(REMOTE_API_BASE_URL)
+);
 
 const configuredApiBaseUrl = process.env.REACT_APP_API_BASE_URL;
 const configuredWsBaseUrl = process.env.REACT_APP_WS_BASE_URL;
@@ -61,7 +75,9 @@ const defaultWsBaseUrl = process.env.REACT_APP_WS_BASE_URL || getWsBaseUrlForApi
 
 const resolvedApiBaseUrl = configuredApiBaseUrl || authenticatedApiBaseUrl || storedApiBaseUrl || defaultApiBaseUrl;
 
-const resolvedWsBaseUrl = configuredWsBaseUrl || authenticatedWsBaseUrl || storedWsBaseUrl || defaultWsBaseUrl;
+const resolvedWsBaseUrl = normalizeWsBaseUrl(
+    configuredWsBaseUrl || authenticatedWsBaseUrl || storedWsBaseUrl || defaultWsBaseUrl
+);
 
 export let baseUrl = resolvedApiBaseUrl.replace(/\/$/, "");
 let wsBaseUrl = resolvedWsBaseUrl.replace(/\/$/, "");
@@ -72,14 +88,14 @@ export const setPreferredBackend = ({ apiBaseUrl, wsBaseUrl: nextWsBaseUrl, forc
             window.localStorage.setItem("preferred_api_base_url", apiBaseUrl);
         }
         if (nextWsBaseUrl) {
-            window.localStorage.setItem("preferred_ws_base_url", nextWsBaseUrl);
+            window.localStorage.setItem("preferred_ws_base_url", normalizeWsBaseUrl(nextWsBaseUrl));
         }
     }
     if (apiBaseUrl) {
         baseUrl = apiBaseUrl.replace(/\/$/, "");
     }
     if (nextWsBaseUrl) {
-        wsBaseUrl = nextWsBaseUrl.replace(/\/$/, "");
+        wsBaseUrl = normalizeWsBaseUrl(nextWsBaseUrl);
     }
 };
 
@@ -89,7 +105,7 @@ export const clearPreferredBackend = () => {
         window.localStorage.removeItem("preferred_ws_base_url");
     }
     baseUrl = (configuredApiBaseUrl || defaultApiBaseUrl).replace(/\/$/, "");
-    wsBaseUrl = (configuredWsBaseUrl || defaultWsBaseUrl).replace(/\/$/, "");
+    wsBaseUrl = normalizeWsBaseUrl(configuredWsBaseUrl || defaultWsBaseUrl);
 };
 
 export const getLocalApiBaseUrl = () => BASE_URL;

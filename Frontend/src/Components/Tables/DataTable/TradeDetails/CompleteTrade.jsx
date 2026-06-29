@@ -188,7 +188,19 @@ const CompleteTradeHistory = () => {
 
         const socketUrl = getStockSymbolLivePriceSocketUrl(symbols.join(','));
         console.log('Connecting to WebSocket:', socketUrl);
-        ws.current = new WebSocket(socketUrl);
+        try {
+            ws.current = new WebSocket(socketUrl);
+        } catch (error) {
+            console.error('Unable to initialize live-price WebSocket:', error);
+            setLivePrices((prev) => {
+                const updated = { ...prev };
+                symbols.forEach((symbol) => {
+                    updated[symbol] = { status: 'error', message: 'Live price unavailable' };
+                });
+                return updated;
+            });
+            return;
+        }
 
         setLivePrices((prev) => {
             const updated = { ...prev };
