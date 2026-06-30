@@ -1018,7 +1018,7 @@ class ExecutionEngine:
             "history_id": request.history_id,
             "broker": request.broker_name,
             "LivePrice": request.LivePrice,
-            "trade_symbol": self._resolved_trade_symbol(request, ""),
+            "trade_symbol": self._resolved_broker_trade_symbol(request),
             "symbol": request.underlying_symbol,
             "strike": request.strike_value,
             "option_type": request.option_type_value,
@@ -1196,10 +1196,7 @@ class ExecutionEngine:
         if not access_token or not api_key:
             return self._failed_response("API credentials token not found for this Zerodha client.")
 
-        trade_symbol = self._resolved_trade_symbol(
-            request,
-            f"{request.underlying_symbol}{request.year}{request.month}{_symbol_strike(request.strike_value)}{request.option_type_value}",
-        ).upper()
+        trade_symbol = self._resolved_broker_trade_symbol(request)
         if request.transaction_type.upper() == "SELL" and not request.is_multi_leg_order:
             return exit_existing_buy_position_zerodha_order(
                 request.LivePrice, request.group_service, request.option_type_value, request.day,
@@ -1345,6 +1342,19 @@ class ExecutionEngine:
         if request.contract_info and request.contract_info.tradingsymbol:
             return str(request.contract_info.tradingsymbol).strip()
         return fallback
+
+    @classmethod
+    def _resolved_broker_trade_symbol(cls, request: ExecutionRequest) -> str:
+        candidate = cls._resolved_trade_symbol(request, "").strip().upper()
+        underlying = request.underlying_symbol.strip().upper()
+        if candidate and candidate != underlying:
+            return candidate
+        if request.broker_name == "zerodha":
+            return (
+                f"{underlying}{request.year}{request.month}"
+                f"{_symbol_strike(request.strike_value)}{request.option_type_value}"
+            ).upper()
+        return candidate
 
     @staticmethod
     def _get_access_token(client_broker):

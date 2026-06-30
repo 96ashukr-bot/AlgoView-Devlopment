@@ -1180,6 +1180,38 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertEqual(force_request.product_type_name, "NRML")
         self.assertEqual(force_request.order_params["product_type"], "NRML")
 
+    def test_zerodha_kill_switch_reconstructs_contract_from_generic_history_symbol(self):
+        from main.execution_engine import ExecutionEngine
+
+        trade_history = Tradeorderhistory.objects.create(
+            client=self.client_user,
+            GroupService="Lite",
+            broker="zerodha",
+            trading_symbol="NIFTY",
+            Index_Symbol="NIFTY",
+            transaction_type="BUY",
+            trade_order_status="OPEN",
+            order_status="OPEN",
+            order_id="2071818666588020736",
+            EntryQty=65,
+            Entry_Price=Decimal("52.90"),
+            order_params={
+                "symbol": "NIFTY",
+                "tradingsymbol": "NIFTY",
+                "strike": 23900,
+                "option_type": "CE",
+                "product_type": "MIS",
+                "expiry": "2026-06-30",
+                "quantity": 65,
+            },
+        )
+
+        request = _build_regular_trade_exit_request(trade_history, force_broker_squareoff=True)
+
+        self.assertEqual(request.order_params["tradingsymbol"], "NIFTY26JUN23900CE")
+        self.assertEqual(request.order_params["original_broker_order_id"], "2071818666588020736")
+        self.assertEqual(ExecutionEngine._resolved_broker_trade_symbol(request), "NIFTY26JUN23900CE")
+
     @mock.patch("main.views.get_execution_engine")
     def test_force_kill_switch_allows_assigned_subadmin_and_client_only(self, mock_engine_factory):
         mock_engine_factory.return_value.execute_order.return_value = {

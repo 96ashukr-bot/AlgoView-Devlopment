@@ -3883,6 +3883,15 @@ def _parse_trade_history_contract(trade_history):
         or trade_history.Index_Symbol
         or ""
     ).strip().upper()
+    if trading_symbol == underlying:
+        trading_symbol = next(
+            (
+                candidate.strip().upper()
+                for candidate in candidates
+                if candidate.strip() and candidate.strip().upper() != underlying
+            ),
+            "",
+        )
 
     symbol_patterns = [
         r"^([A-Z]+)(\d{2})([A-Z]{3})(\d{2})(\d+)(CE|PE)$",
@@ -4027,6 +4036,14 @@ def _build_regular_trade_exit_request(trade_history, *, force_broker_squareoff=F
 
     order_action = "force_kill_switch_exit" if force_broker_squareoff else "kill_switch_exit"
     entry_product_type = _trade_history_entry_product_type(trade_history)
+    trading_symbol = contract["trading_symbol"]
+    if not trading_symbol and str(trade_history.broker or "").strip().lower() == "zerodha":
+        strike = float(contract["strike"])
+        strike_text = str(int(strike)) if strike.is_integer() else str(strike).rstrip("0").rstrip(".")
+        trading_symbol = (
+            f"{contract['underlying']}{contract['year']}{contract['month']}"
+            f"{strike_text}{contract['option_type']}"
+        ).upper()
     return ExecutionRequest(
         LivePrice=trade_history.LivePrice or trade_history.Entry_Price or 0,
         group_service=trade_history.GroupService,
@@ -4069,7 +4086,8 @@ def _build_regular_trade_exit_request(trade_history, *, force_broker_squareoff=F
             "order_action": order_action,
             "source": "trade_history",
             "original_history_id": trade_history.history_id or trade_history.id,
-            "tradingsymbol": contract["trading_symbol"],
+            "original_broker_order_id": trade_history.order_id,
+            "tradingsymbol": trading_symbol,
             "product_type": entry_product_type,
             "force_broker_squareoff": bool(force_broker_squareoff),
             "reason": reason or "",
