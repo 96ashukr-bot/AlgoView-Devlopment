@@ -9,6 +9,7 @@ from main.services.proxy_utils import build_requests_proxy_config
 
 
 SUCCESS_STATUSES = {"complete", "completed", "success", "traded", "filled"}
+TERMINAL_FAILURE_STATUSES = {"rejected", "cancelled", "canceled"}
 BROKER_STATUS_KEYS = ("status", "order_status", "orderStatus", "orderstatus", "Status")
 ORDER_ID_KEYS = (
     "order_id",
@@ -229,7 +230,7 @@ def refresh_trade_fill_from_broker(trade_order: Tradeorderhistory, broker_detail
         return False
 
     match = find_broker_fill(orderbook, trade_order.order_id)
-    if not match or match.get("price") is None:
+    if not match:
         return False
 
     price = match["price"]
@@ -238,7 +239,7 @@ def refresh_trade_fill_from_broker(trade_order: Tradeorderhistory, broker_detail
     changed = False
     update_fields = []
 
-    if str(trade_order.transaction_type or "").upper() == "SELL":
+    if str(trade_order.transaction_type or "").upper() == "SELL" and price is not None:
         if trade_order.Exit_Price != price:
             trade_order.Exit_Price = price
             update_fields.append("Exit_Price")
@@ -247,7 +248,7 @@ def refresh_trade_fill_from_broker(trade_order: Tradeorderhistory, broker_detail
             trade_order.ExitQty = quantity
             update_fields.append("ExitQty")
             changed = True
-    else:
+    elif price is not None:
         if trade_order.Entry_Price != price:
             trade_order.Entry_Price = price
             update_fields.append("Entry_Price")
@@ -269,6 +270,33 @@ def refresh_trade_fill_from_broker(trade_order: Tradeorderhistory, broker_detail
     if status and status != current_status:
         trade_order.order_status = status
         update_fields.append("order_status")
+        changed = True
+
+    status_field = "Exit_status" if str(trade_order.transaction_type or "").upper() == "SELL" else "Entry_status"
+    if status and _normalize(getattr(trade_order, status_field, None)) != status:
+        setattr(trade_order, status_field, status)
+        update_fields.append(status_field)
+        changed = True
+
+    broker_record = match.get("record") or {}
+    if broker_record and trade_order.response_data != broker_record:
+        trade_order.response_data = broker_record
+        update_fields.append("response_data")
+        changed = True
+
+    if status in TERMINAL_FAILURE_STATUSES:
+        failure_reason = str(
+            broker_record.get("status_message")
+            or broker_record.get("status_message_raw")
+            or f"Broker order was {status}."
+        )
+        if trade_order.failure_reason != failure_reason:
+            trade_order.failure_reason = failure_reason
+            update_fields.append("failure_reason")
+            changed = True
+    elif status in SUCCESS_STATUSES and trade_order.failure_reason:
+        trade_order.failure_reason = None
+        update_fields.append("failure_reason")
         changed = True
 
     if changed:

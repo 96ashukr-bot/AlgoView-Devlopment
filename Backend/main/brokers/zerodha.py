@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from kiteconnect import KiteConnect
+
 from main.brokers.base import BaseBroker
 from main.brokers.position_guard import mark_open_position_closed, prepare_close_order_from_open_position
 from main.brokers.utils import broker_order_exchange, build_trade_symbol, common_order_kwargs, get_access_token, get_order_payload
@@ -58,3 +60,15 @@ class ZerodhaBroker(BaseBroker):
         )
         mark_open_position_closed(open_position, response)
         return response
+
+    def get_orderbook(self, proxy_config=None):
+        proxy_config = self.require_proxy_config(proxy_config)
+        kite = KiteConnect(api_key=self.broker_details.broker_API_KEY, proxies=proxy_config)
+        kite.set_access_token(get_access_token(self.broker_details))
+        return kite.orders()
+
+    def get_positions(self, proxy_config=None):
+        proxy_config = self.require_proxy_config(proxy_config)
+        kite = KiteConnect(api_key=self.broker_details.broker_API_KEY, proxies=proxy_config)
+        kite.set_access_token(get_access_token(self.broker_details))
+        return kite.positions()

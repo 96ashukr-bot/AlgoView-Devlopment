@@ -7,12 +7,14 @@ from main.trade_history_service import save_trade_order_history
 import logging
 import requests
 import time
+from django.db import transaction
 logger = logging.getLogger('main')
 
 KITE_LTP_URL = "https://api.kite.trade/quote/ltp"
 ZERODHA_MAX_LIMIT_BUFFER_PERCENTAGE = 0.5
 ZERODHA_ORDER_HISTORY_ATTEMPTS = 3
 ZERODHA_ORDER_HISTORY_RETRY_SECONDS = 1
+ZERODHA_TERMINAL_ORDER_STATUSES = {"COMPLETE", "REJECTED", "CANCELLED", "CANCELED"}
 
 
 def _zerodha_buffer_percentage(buffer_percentage=None):
@@ -65,14 +67,20 @@ def get_trading_symbol(exchange, symbol, kite, user=None):
     
 def get_order_details(order_id, kite, user=None):
     last_error = None
+    latest_history = None
     for attempt in range(1, ZERODHA_ORDER_HISTORY_ATTEMPTS + 1):
         try:
             order_history = kite.order_history(order_id)
             if order_history:
-                logger.info(f"{user} : order history.....: {order_history}")            
-                return order_history
-            last_error = "No order history found for the given order ID."
-            logger.info(f"{user}: {last_error}")
+                latest_history = order_history
+                latest_status = str(order_history[-1].get("status") or "").strip().upper()
+                logger.info(f"{user} : order history attempt {attempt}, status {latest_status}: {order_history}")
+                if latest_status in ZERODHA_TERMINAL_ORDER_STATUSES:
+                    return order_history
+                last_error = f"Order remains non-terminal with status {latest_status or 'UNKNOWN'}."
+            else:
+                last_error = "No order history found for the given order ID."
+                logger.info(f"{user}: {last_error}")
         except Exception as e:
             last_error = f"Failed to fetch order history: {str(e)}"
             logger.info(f"{user} : {last_error}")
@@ -80,7 +88,24 @@ def get_order_details(order_id, kite, user=None):
         if attempt < ZERODHA_ORDER_HISTORY_ATTEMPTS:
             time.sleep(ZERODHA_ORDER_HISTORY_RETRY_SECONDS)
 
+    if latest_history:
+        return latest_history
     return {"status": "Failed", "error": last_error or "No order history found for the given order ID."}
+
+
+def _schedule_zerodha_order_reconciliation(trade_history):
+    if not trade_history or not trade_history.pk:
+        return
+
+    def enqueue():
+        from main.tasks import reconcile_zerodha_order_task
+
+        reconcile_zerodha_order_task.apply_async(
+            kwargs={"trade_history_id": trade_history.pk},
+            countdown=5,
+        )
+
+    transaction.on_commit(enqueue)
 
 def make_serializable(data):
     """Convert non-serializable objects in a data structure to serializable formats"""
@@ -287,12 +312,14 @@ def place_zerodha_orders(
             logger.info(f"[{user}] Fetched order history: {order_history_response}")
 
             if isinstance(order_history_response, dict) and str(order_history_response.get("status", "")).lower() == "failed":
-                logger.error(f"[{user}] Order history error: {order_history_response}")
-                message = order_history_response.get("error") or "Order details not found"
-                response = {"data": {"status": "Failed", "message": message}}
-                save_trade_order_history(LivePrice, group_service, transaction_type, trade_order_status, user, symbol, order_id, "Failed", order_history_response.get("error"), message,
-                                         strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
-                                         webhook_signal, Exchange, Segment, Index_Symbol, history_order_params, broker="zerodha", history_id=history_id)
+                logger.warning(f"[{user}] Order history is not available yet: {order_history_response}")
+                detail = order_history_response.get("error") or "Order details not found"
+                message = f"Order was accepted by Zerodha but final status is pending verification. {detail}"
+                response = {"data": {"status": "pending", "message": message, "order_id": order_id}}
+                history = save_trade_order_history(LivePrice, group_service, transaction_type, trade_order_status, user, trade_symbol, order_id, "pending", order_history_response, message,
+                                                   strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
+                                                   webhook_signal, Exchange, Segment, Index_Symbol, history_order_params, broker="zerodha", history_id=history_id)
+                _schedule_zerodha_order_reconciliation(history)
                 return response
 
             if isinstance(order_history_response, list) and order_history_response:
@@ -361,17 +388,19 @@ def place_zerodha_orders(
                         res_data = make_serializable(res_data)
                         logger.info(f"[{user}] Make serializable status: {res_data}")
 
-                    save_trade_order_history(LivePrice, group_service, transaction_type, trade_order_status, user, trade_symbol, order_id, "pending", res_data, message,
-                                             strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
-                                             webhook_signal, Exchange, Segment, Index_Symbol, history_order_params, broker="zerodha", history_id=history_id)
+                    history = save_trade_order_history(LivePrice, group_service, transaction_type, trade_order_status, user, trade_symbol, order_id, "pending", res_data, message,
+                                                       strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
+                                                       webhook_signal, Exchange, Segment, Index_Symbol, history_order_params, broker="zerodha", history_id=history_id)
+                    _schedule_zerodha_order_reconciliation(history)
                     return {"data": {"status": "pending", "message": message}}
 
                 else:
                     message = latest_status.get("status_message") or f"Zerodha order status is {status}."
                     logger.info(f"[{user}] Non-terminal status: {status}")
-                    save_trade_order_history(LivePrice, group_service, transaction_type, trade_order_status, user, trade_symbol, order_id, status, res_data, message,
-                                             strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
-                                             webhook_signal, Exchange, Segment, Index_Symbol, history_order_params, broker="zerodha", history_id=history_id)
+                    history = save_trade_order_history(LivePrice, group_service, transaction_type, trade_order_status, user, trade_symbol, order_id, status, res_data, message,
+                                                       strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
+                                                       webhook_signal, Exchange, Segment, Index_Symbol, history_order_params, broker="zerodha", history_id=history_id)
+                    _schedule_zerodha_order_reconciliation(history)
                     return {
                         "data": {
                             "status": status,

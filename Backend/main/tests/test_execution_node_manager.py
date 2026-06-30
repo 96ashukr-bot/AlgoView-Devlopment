@@ -2153,6 +2153,43 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertEqual(history.order_params["effective_target_price"], 875.0)
         self.assertEqual(history.sltp_metadata["entry_option_price"], 845.0)
 
+    @mock.patch("main.services.broker_fill_reconciliation.get_broker_adapter")
+    def test_broker_reconciliation_updates_terminal_status_without_fill_price(self, mock_get_adapter):
+        from main.services.broker_fill_reconciliation import refresh_trade_fill_from_broker
+
+        history = Tradeorderhistory.objects.create(
+            client=self.client_user,
+            broker="Zerodha",
+            transaction_type="BUY",
+            trade_order_status="OPEN",
+            order_status="OPEN",
+            order_id="kite-rejected-1",
+            trading_symbol="NIFTY26JUN23900CE",
+            Index_Symbol="NIFTY",
+            EntryQty=65,
+        )
+        mock_get_adapter.return_value = SimpleNamespace(
+            get_orderbook=mock.Mock(
+                return_value=[
+                    {
+                        "order_id": "kite-rejected-1",
+                        "status": "REJECTED",
+                        "filled_quantity": 0,
+                        "average_price": 0,
+                        "status_message": "Insufficient funds",
+                    }
+                ]
+            )
+        )
+
+        changed = refresh_trade_fill_from_broker(history, self.broker_details)
+
+        self.assertTrue(changed)
+        history.refresh_from_db()
+        self.assertEqual(history.order_status, "rejected")
+        self.assertEqual(history.Entry_status, "rejected")
+        self.assertEqual(history.failure_reason, "Insufficient funds")
+
     def test_force_exit_history_saves_without_trade_setting_fk(self):
         from main.execution_engine import ExecutionEngine, ExecutionRequest
 
@@ -2877,10 +2914,55 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertEqual(kite.order_history.call_count, 3)
         self.assertEqual(mock_sleep.call_count, 2)
 
+    @mock.patch("main.zerodha.time.sleep", return_value=None)
+    def test_zerodha_order_details_polls_open_order_until_terminal(self, mock_sleep):
+        from main.zerodha import get_order_details
+
+        kite = SimpleNamespace(
+            order_history=mock.Mock(
+                side_effect=[
+                    [{"status": "OPEN", "transaction_type": "BUY"}],
+                    [
+                        {"status": "OPEN", "transaction_type": "BUY"},
+                        {"status": "COMPLETE", "transaction_type": "BUY"},
+                    ],
+                ]
+            )
+        )
+
+        response = get_order_details("kite-order-complete", kite, user=self.client_user)
+
+        self.assertEqual(response[-1]["status"], "COMPLETE")
+        self.assertEqual(kite.order_history.call_count, 2)
+        mock_sleep.assert_called_once()
+
+    @mock.patch("main.brokers.zerodha.KiteConnect")
+    def test_zerodha_adapter_reads_orderbook_through_proxy(self, mock_kite_class):
+        zerodha_broker = Broker.objects.create(broker_name="Zerodha", is_active=True)
+        broker_details = ClientBrokerdetails.objects.create(
+            client=self.other_client,
+            broker_name=zerodha_broker,
+            broker_API_KEY="kite-api",
+            access_token="kite-access",
+        )
+        mock_kite_class.return_value.orders.return_value = [
+            {"order_id": "kite-order-1", "status": "COMPLETE"}
+        ]
+        proxy_config = {
+            "http": "http://proxy.example.com:8080",
+            "https": "http://proxy.example.com:8080",
+        }
+
+        result = get_broker_adapter(broker_details).get_orderbook(proxy_config=proxy_config)
+
+        self.assertEqual(result[0]["status"], "COMPLETE")
+        mock_kite_class.assert_called_once_with(api_key="kite-api", proxies=proxy_config)
+        mock_kite_class.return_value.set_access_token.assert_called_once_with("kite-access")
+
     @mock.patch("main.zerodha.fetch_nse_option_chain_ltp", return_value=10)
     @mock.patch("main.zerodha.requests.get")
     @mock.patch("main.zerodha.KiteConnect")
-    def test_zerodha_order_history_failure_keeps_real_error_message(self, mock_kite_class, mock_get, mock_fallback):
+    def test_zerodha_missing_order_history_is_reconciled_asynchronously(self, mock_kite_class, mock_get, mock_fallback):
         from django.core.cache import cache
         from main.zerodha import place_zerodha_orders
 
@@ -2899,43 +2981,23 @@ class ExecutionNodeManagerTests(TestCase):
             json=lambda: {"status": "error", "message": "Insufficient permission for that call."},
         )
 
-        with mock.patch("main.zerodha.time.sleep", return_value=None):
+        with mock.patch("main.zerodha.time.sleep", return_value=None), mock.patch(
+            "main.tasks.reconcile_zerodha_order_task.apply_async"
+        ) as mock_reconcile, self.captureOnCommitCallbacks(execute=True):
             response = place_zerodha_orders(
-                24087.5,
-                "Lite",
-                "kite-access",
-                "kite-api",
-                "NIFTY26MAY24400CE",
-                "SELL",
-                "NIFTY",
-                65,
-                "strategy",
-                "LIMIT",
-                "MIS",
-                None,
-                self.client_user,
-                1,
-                "LE",
-                None,
-                10,
-                None,
-                65,
-                65,
-                None,
-                "NFO",
-                "FNO",
-                "NIFTY",
-                None,
-                "CLOSE",
-                "kite-history-missing",
+                24087.5, "Lite", "kite-access", "kite-api", "NIFTY26MAY24400CE",
+                "SELL", "NIFTY", 65, "strategy", "LIMIT", "MIS", None,
+                self.client_user, 1, "LE", None, 10, None, 65, 65, None,
+                "NFO", "FNO", "NIFTY", None, "CLOSE", "kite-history-missing",
                 proxy_config=proxy_config,
             )
 
-        self.assertEqual(response["data"]["status"], "Failed")
-        self.assertIn("No order history found", response["data"]["message"])
+        self.assertEqual(response["data"]["status"], "pending")
+        self.assertIn("pending verification", response["data"]["message"])
         history = Tradeorderhistory.objects.get(history_id="kite-history-missing")
-        self.assertEqual(history.order_status, "Failed")
-        self.assertIn("No order history found", history.failure_reason)
+        self.assertEqual(history.order_status, "pending")
+        self.assertIsNone(history.failure_reason)
+        mock_reconcile.assert_called_once_with(kwargs={"trade_history_id": history.id}, countdown=5)
 
     @mock.patch("main.zerodha.KiteConnect")
     def test_zerodha_option_limit_ignores_far_explicit_price_and_uses_ltp_buffer(self, mock_kite_class):

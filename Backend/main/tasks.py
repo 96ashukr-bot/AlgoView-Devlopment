@@ -54,6 +54,45 @@ def route_execution_order_task(self, *, client_id, broker_details_id, order_payl
     return route_order_to_execution_node(client, broker_details, payload)
 
 
+@shared_task(bind=True, autoretry_for=(), max_retries=20, acks_late=True)
+def reconcile_zerodha_order_task(self, *, trade_history_id):
+    """Refresh a non-terminal Zerodha order from the client's broker order book."""
+    from main.broker_registry import normalize_broker_name
+    from main.models import ClientBrokerdetails, Tradeorderhistory
+    from main.services.broker_fill_reconciliation import refresh_trade_fill_from_broker
+
+    terminal_statuses = {"complete", "completed", "rejected", "cancelled", "canceled"}
+    trade_history = Tradeorderhistory.objects.select_related("client").filter(pk=trade_history_id).first()
+    if trade_history is None:
+        return {"status": "missing", "trade_history_id": trade_history_id}
+
+    current_status = str(trade_history.order_status or "").strip().lower()
+    if current_status in terminal_statuses:
+        return {"status": current_status, "trade_history_id": trade_history_id}
+
+    broker_details = next(
+        (
+            details
+            for details in ClientBrokerdetails.objects.select_related("broker_name", "execution_node").filter(
+                client=trade_history.client
+            )
+            if normalize_broker_name(getattr(details.broker_name, "broker_name", "")) == "zerodha"
+        ),
+        None,
+    )
+    if broker_details is None:
+        return {"status": "broker_details_missing", "trade_history_id": trade_history_id}
+
+    refresh_trade_fill_from_broker(trade_history, broker_details)
+    trade_history.refresh_from_db()
+    current_status = str(trade_history.order_status or "").strip().lower()
+    if current_status in terminal_statuses:
+        return {"status": current_status, "trade_history_id": trade_history_id}
+
+    countdown = min(15 + (self.request.retries * 5), 60)
+    raise self.retry(countdown=countdown)
+
+
 @shared_task(
     bind=True,
     autoretry_for=(),
