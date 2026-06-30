@@ -408,7 +408,7 @@ const TradeHistory = () => {
         try {
             const response = await forceKillSwitchSelectedTrades({
                 trade_history_ids: selectedTradeIds,
-                reason: 'Superadmin selected force kill switch',
+                reason: 'Authorized user selected force kill switch',
             });
             await fetchTradeHistory();
             const failedCount = response?.failed_count || 0;

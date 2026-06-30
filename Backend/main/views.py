@@ -4136,9 +4136,6 @@ class SuperadminForceKillSwitchAPIView(APIView):
         return None
 
     def post(self, request, *args, **kwargs):
-        if not is_superadmin_user(request.user):
-            return Response({"detail": "Only superadmin can run force kill switch."}, status=status.HTTP_403_FORBIDDEN)
-
         trade_ids = request.data.get("trade_history_ids") or request.data.get("trade_ids") or []
         if not isinstance(trade_ids, list):
             return Response({"detail": "trade_history_ids must be a list."}, status=status.HTTP_400_BAD_REQUEST)
@@ -4154,10 +4151,14 @@ class SuperadminForceKillSwitchAPIView(APIView):
         if len(trade_ids) > 100:
             return Response({"detail": "You can force square off a maximum of 100 trades at once."}, status=status.HTTP_400_BAD_REQUEST)
 
-        reason = request.data.get("reason") or "Superadmin force kill switch"
+        reason = request.data.get("reason") or "Authorized user force kill switch"
+        accessible_clients = get_accessible_clients_queryset(request.user)
         trades = {
             trade.id: trade
-            for trade in Tradeorderhistory.objects.select_related("client").filter(id__in=trade_ids)
+            for trade in Tradeorderhistory.objects.select_related("client").filter(
+                id__in=trade_ids,
+                client__in=accessible_clients,
+            )
         }
 
         results = []
@@ -4184,7 +4185,7 @@ class SuperadminForceKillSwitchAPIView(APIView):
                 exit_request = _build_regular_trade_exit_request(
                     trade_history,
                     force_broker_squareoff=True,
-                    source="superadmin_force_kill_switch",
+                    source="authorized_force_kill_switch",
                     reason=reason,
                     initiated_by=request.user,
                 )

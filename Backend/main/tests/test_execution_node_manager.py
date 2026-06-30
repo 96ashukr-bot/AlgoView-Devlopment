@@ -1,4 +1,5 @@
 import os
+import json
 import tempfile
 import time
 from datetime import timedelta
@@ -1178,6 +1179,79 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertEqual(regular_request.product_type_name, "NRML")
         self.assertEqual(force_request.product_type_name, "NRML")
         self.assertEqual(force_request.order_params["product_type"], "NRML")
+
+    @mock.patch("main.views.get_execution_engine")
+    def test_force_kill_switch_allows_assigned_subadmin_and_client_only(self, mock_engine_factory):
+        mock_engine_factory.return_value.execute_order.return_value = {
+            "data": {"status": "complete", "message": "Exit placed", "order_id": "exit-order-1"}
+        }
+        subadmin_role, _ = Role.objects.get_or_create(name="Sub-Admin", defaults={"status": "active"})
+        assigned_subadmin = User.objects.create_user(
+            email="kill-assigned-subadmin@example.com",
+            firstName="Assigned",
+            lastName="Subadmin",
+            phoneNumber="9999999811",
+            password="Pass@123",
+            role=subadmin_role,
+        )
+        unassigned_subadmin = User.objects.create_user(
+            email="kill-unassigned-subadmin@example.com",
+            firstName="Unassigned",
+            lastName="Subadmin",
+            phoneNumber="9999999812",
+            password="Pass@123",
+            role=subadmin_role,
+        )
+        self.client_user.assigned_client = assigned_subadmin
+        self.client_user.type_of_user = "is_client"
+        self.client_user.is_client = "True"
+        self.client_user.save(update_fields=["assigned_client", "type_of_user", "is_client"])
+        trade = Tradeorderhistory.objects.create(
+            client=self.client_user,
+            GroupService="Lite",
+            trading_symbol="NIFTY16JUN2623900PE",
+            Index_Symbol="NIFTY",
+            transaction_type="BUY",
+            trade_order_status="OPEN",
+            order_status="complete",
+            order_id="kill-entry-order",
+            history_id="kill-entry-history",
+            EntryQty=65,
+            Entry_Price=Decimal("21.10"),
+            order_params={
+                "symbol": "NIFTY",
+                "strike": 23900,
+                "option_type": "PE",
+                "product_type": "MIS",
+                "day": "16",
+                "month": "JUN",
+                "year": "26",
+                "fullyear": "2026",
+                "quantity": 65,
+            },
+        )
+
+        for actor in (assigned_subadmin, self.client_user):
+            token = str(RefreshToken.for_user(actor).access_token)
+            response = self.client.post(
+                "/api/superadmin/force-kill-switch/",
+                data=json.dumps({"trade_history_ids": [trade.id], "reason": "Scoped exit"}),
+                content_type="application/json",
+                HTTP_AUTHORIZATION=f"Bearer {token}",
+            )
+            self.assertEqual(response.status_code, 200, response.data)
+            self.assertEqual(response.data["sent_count"], 1)
+
+        unassigned_token = str(RefreshToken.for_user(unassigned_subadmin).access_token)
+        denied_response = self.client.post(
+            "/api/superadmin/force-kill-switch/",
+            data=json.dumps({"trade_history_ids": [trade.id]}),
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Bearer {unassigned_token}",
+        )
+        self.assertEqual(denied_response.status_code, 207)
+        self.assertEqual(denied_response.data["sent_count"], 0)
+        self.assertEqual(mock_engine_factory.return_value.execute_order.call_count, 2)
 
     def test_routed_open_exit_does_not_close_buy_position(self):
         buy_history = Tradeorderhistory.objects.create(
