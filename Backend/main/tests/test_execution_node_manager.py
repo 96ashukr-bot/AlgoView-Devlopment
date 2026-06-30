@@ -2177,6 +2177,7 @@ class ExecutionNodeManagerTests(TestCase):
                         "filled_quantity": 0,
                         "average_price": 0,
                         "status_message": "Insufficient funds",
+                        "order_timestamp": timezone.now(),
                     }
                 ]
             )
@@ -2189,6 +2190,7 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertEqual(history.order_status, "rejected")
         self.assertEqual(history.Entry_status, "rejected")
         self.assertEqual(history.failure_reason, "Insufficient funds")
+        self.assertIsInstance(history.response_data["order_timestamp"], str)
 
     def test_force_exit_history_saves_without_trade_setting_fk(self):
         from main.execution_engine import ExecutionEngine, ExecutionRequest

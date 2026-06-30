@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import json
 from decimal import Decimal
 from typing import Any, Iterable, Optional
+
+from django.core.serializers.json import DjangoJSONEncoder
 
 from main.brokers.registry import get_broker_adapter
 from main.models import ClientBrokerdetails, ClientTradeSetting, Tradeorderhistory
@@ -278,7 +281,7 @@ def refresh_trade_fill_from_broker(trade_order: Tradeorderhistory, broker_detail
         update_fields.append(status_field)
         changed = True
 
-    broker_record = match.get("record") or {}
+    broker_record = json.loads(json.dumps(match.get("record") or {}, cls=DjangoJSONEncoder))
     if broker_record and trade_order.response_data != broker_record:
         trade_order.response_data = broker_record
         update_fields.append("response_data")
