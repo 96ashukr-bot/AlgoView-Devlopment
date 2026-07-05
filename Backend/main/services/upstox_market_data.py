@@ -243,20 +243,6 @@ def get_active_option_instruments() -> list[UpstoxInstrument]:
             continue
         order_params = trade.order_params if isinstance(trade.order_params, dict) else {}
         metadata = trade.sltp_metadata if isinstance(getattr(trade, "sltp_metadata", None), dict) else {}
-        has_sltp = any(
-            value not in (None, "", 0, "0", 0.0, "0.0")
-            for value in (
-                metadata.get("calculated_stoploss_price"),
-                metadata.get("calculated_target_price"),
-                order_params.get("effective_stop_loss_price"),
-                order_params.get("effective_target_price"),
-                order_params.get("stop_loss_input"),
-                order_params.get("target_input"),
-            )
-        )
-        if not has_sltp:
-            continue
-
         instrument_key = str(metadata.get("instrument_key") or order_params.get("instrument_key") or "").strip()
         if instrument_key:
             instrument = resolver.resolve_contract(

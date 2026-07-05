@@ -2916,6 +2916,38 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertEqual(kite.order_history.call_count, 3)
         self.assertEqual(mock_sleep.call_count, 2)
 
+    @mock.patch("main.zerodha.get_live_price")
+    @mock.patch("main.zerodha._central_ltp_resolver")
+    def test_zerodha_ltp_uses_central_websocket_cache_before_broker_quote(self, mock_resolver, mock_get_live_price):
+        from main.zerodha import fetch_zerodha_option_ltp
+
+        mock_resolver.resolve.return_value = SimpleNamespace(instrument_key="NSE_FO|central-123")
+        mock_get_live_price.return_value = {
+            "instrument_key": "NSE_FO|central-123",
+            "ltp": 126.25,
+            "is_fresh": True,
+            "source": "upstox-websocket",
+        }
+        kite = SimpleNamespace(ltp=mock.Mock())
+
+        ltp = fetch_zerodha_option_ltp(
+            kite,
+            "kite-api",
+            "kite-access",
+            "NFO",
+            "NIFTY26JUL24000CE",
+            {"https": "http://proxy.example.com:8080"},
+            user=self.client_user,
+            underlying="NIFTY",
+        )
+
+        self.assertEqual(ltp, 126.25)
+        kite.ltp.assert_not_called()
+        mock_get_live_price.assert_called_once_with(
+            instrument_key="NSE_FO|central-123",
+            max_age_seconds=5,
+        )
+
     @mock.patch("main.zerodha.time.sleep", return_value=None)
     def test_zerodha_order_details_polls_open_order_until_terminal(self, mock_sleep):
         from main.zerodha import get_order_details
