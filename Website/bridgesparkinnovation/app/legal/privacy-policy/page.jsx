@@ -3,7 +3,7 @@ import { pageMetadata } from "@/lib/seo";
 
 export const metadata = pageMetadata({
   title: "Privacy Policy",
-  description: "Privacy policy for Sparkbridge Innovations covering information collection, contact form submissions, data storage, security practices, user rights, cookies, and communication preferences.",
+  description: "Privacy policy for Sparkbridge Innovations covering information collection, contact form submissions, data storage, data retention, security practices, user rights, cookies, and communication preferences.",
   path: "/legal/privacy-policy",
 });
 
@@ -19,6 +19,10 @@ const sections = [
   {
     title: "Data Storage",
     body: "Submitted information may be stored in secure application storage, business systems, or communication tools used by Sparkbridge Innovations for enquiry management and support.",
+  },
+  {
+    title: "Data Retention Policy",
+    body: "We retain submitted personal and business information only for as long as necessary to respond to enquiries, provide requested services, maintain business and support records, comply with legal, tax, accounting, and regulatory obligations, resolve disputes, and enforce agreements. When information is no longer required, we may securely delete, anonymize, or archive it in accordance with applicable requirements and internal business needs.",
   },
   {
     title: "Security Practices",

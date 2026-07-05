@@ -97,32 +97,38 @@ export const products = [
   {
     title: "Automation Platform",
     slug: "automation-platform",
+    price: "INR 40,000/- onwards",
     description:
       "Multi-user software platform supporting automation, workflow management, reporting, API integrations, and operational control.",
   },
   {
     title: "API Bridge Engine",
     slug: "api-bridge-engine",
+    price: "INR 15,000/- onwards",
     description: "Reliable middleware platform connecting multiple APIs and software systems.",
   },
   {
     title: "Automation Suite",
     slug: "automation-suite",
+    price: "INR 10,000/- onwards",
     description: "Technology platform for automating client-defined workflows and execution logic.",
   },
   {
     title: "Strategy Deployment System",
     slug: "strategy-deployment-system",
+    price: "INR 7,000/- onwards",
     description: "Centralized platform for deploying and managing automation strategies and logic.",
   },
   {
     title: "Data Integration Engine",
     slug: "data-integration-engine",
+    price: "INR 25,000/- onwards",
     description: "Centralized real-time data integration collection, processing, monitoring, and distribution system.",
   },
   {
     title: "Client Support Portal",
     slug: "client-support-portal",
+    price: "INR 35,000/- onwards",
     description: "Role-based communication and support management platform for clients and administrators.",
   },
 ];
