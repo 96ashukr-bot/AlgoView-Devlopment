@@ -20,13 +20,15 @@ from django.core.asgi import get_asgi_application
 from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.auth import AuthMiddlewareStack
 
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'algoview.settings')
+django_asgi_app = get_asgi_application()
+
 from main import routing
 # import main.routing  # You'll define your routing in routing.py
 # /home/digiprima/Desktop/jyoti/Django/AlgoView-Devlopment/Backend/main/routing.py
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'algoview.settings')
 
 application = ProtocolTypeRouter({
-    "http": get_asgi_application(),
+    "http": django_asgi_app,
     "websocket": AuthMiddlewareStack(
         URLRouter(
             routing.websocket_urlpatterns  # Define your WebSocket URLs
