@@ -1,4 +1,4 @@
-import React, { Fragment, useEffect, useMemo, useState } from "react";
+import React, { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import {
   Badge,
   Button,
@@ -15,6 +15,8 @@ import {
 import { RotatingLines } from "react-loader-spinner";
 import { H3 } from "../../../../AbstractElements";
 import { getSLTPWatcherStatus } from "../../../../Services/Authentication";
+import { getSLTPWatcherLiveSocketUrl } from "../../../../ConfigUrl/config";
+import { getAccessToken } from "../../../../Services/authStorage";
 import "./TradeDetails.css";
 
 const badgeColorByStatus = {
@@ -52,9 +54,19 @@ const SLTPWatcher = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const filtersRef = useRef(filters);
+  const requestInFlightRef = useRef(false);
+  const socketRef = useRef(null);
+  const reconnectTimerRef = useRef(null);
+  const [liveConnected, setLiveConnected] = useState(false);
 
-  const fetchWatcherStatus = async (appliedFilters = filters) => {
-    setLoading(true);
+  const fetchWatcherStatus = async (
+    appliedFilters = filtersRef.current,
+    { silent = false, resetPage = false } = {}
+  ) => {
+    if (requestInFlightRef.current) return;
+    requestInFlightRef.current = true;
+    if (!silent) setLoading(true);
     try {
       const response = await getSLTPWatcherStatus({
         client_id: appliedFilters.clientId || undefined,
@@ -70,25 +82,83 @@ const SLTPWatcher = () => {
           failed: 0,
         }
       );
-      setCurrentPage(1);
+      if (resetPage) setCurrentPage(1);
     } catch (error) {
       console.error("Failed to fetch SL/TP watcher status:", error);
-      setItems([]);
-      setSummary({
-        total: 0,
-        monitoring: 0,
-        triggered: 0,
-        skipped: 0,
-        failed: 0,
-      });
+      if (!silent) {
+        setItems([]);
+        setSummary({ total: 0, monitoring: 0, triggered: 0, skipped: 0, failed: 0 });
+      }
     } finally {
-      setLoading(false);
+      requestInFlightRef.current = false;
+      if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchWatcherStatus();
+    fetchWatcherStatus(filtersRef.current, { resetPage: true });
+    const intervalId = window.setInterval(() => {
+      fetchWatcherStatus(filtersRef.current, { silent: true });
+    }, 10000);
+    return () => window.clearInterval(intervalId);
   }, []);
+
+  useEffect(() => {
+    let disposed = false;
+    let reconnectDelay = 1000;
+
+    const connect = () => {
+      const token = getAccessToken();
+      if (!token || disposed) return;
+      const socket = new window.WebSocket(getSLTPWatcherLiveSocketUrl());
+      socketRef.current = socket;
+
+      socket.onopen = () => {
+        reconnectDelay = 1000;
+        socket.send(JSON.stringify({
+          type: "authenticate",
+          token,
+          client_id: filtersRef.current.clientId || undefined,
+          history_id: filtersRef.current.historyId || undefined,
+        }));
+      };
+      socket.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          if (message.type === "authenticated") setLiveConnected(true);
+          if (message.type === "price_ticks" && Array.isArray(message.ticks)) {
+            const ticksByTrade = new Map(message.ticks.map((tick) => [tick.trade_id, tick]));
+            setItems((current) => current.map((item) => {
+              const tick = ticksByTrade.get(item.trade_id);
+              return tick ? { ...item, ...tick } : item;
+            }));
+          }
+        } catch (error) {
+          console.error("Invalid SL/TP live-price message:", error);
+        }
+      };
+      socket.onclose = () => {
+        setLiveConnected(false);
+        socketRef.current = null;
+        if (!disposed) {
+          reconnectTimerRef.current = window.setTimeout(connect, reconnectDelay);
+          reconnectDelay = Math.min(reconnectDelay * 2, 15000);
+        }
+      };
+      socket.onerror = () => socket.close();
+    };
+
+    connect();
+    return () => {
+      disposed = true;
+      if (reconnectTimerRef.current) window.clearTimeout(reconnectTimerRef.current);
+      if (socketRef.current) socketRef.current.close();
+    };
+  }, []);
+
+  useEffect(() => {
+    filtersRef.current = filters;
+  }, [filters]);
 
   const filteredItems = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -130,14 +200,18 @@ const SLTPWatcher = () => {
   };
 
   const handleApplyFilters = () => {
-    fetchWatcherStatus(filters);
+    filtersRef.current = filters;
+    fetchWatcherStatus(filters, { resetPage: true });
+    if (socketRef.current) socketRef.current.close();
   };
 
   const handleReset = () => {
     const resetFilters = { clientId: "", historyId: "" };
     setFilters(resetFilters);
     setSearchQuery("");
-    fetchWatcherStatus(resetFilters);
+    filtersRef.current = resetFilters;
+    fetchWatcherStatus(resetFilters, { resetPage: true });
+    if (socketRef.current) socketRef.current.close();
   };
 
   return (
@@ -164,6 +238,9 @@ const SLTPWatcher = () => {
                 </Badge>
                 <Badge color="light-success" pill>
                   Total: {summary.total}
+                </Badge>
+                <Badge color={liveConnected ? "light-success" : "light-secondary"} pill>
+                  {liveConnected ? "Live prices" : "Reconnecting"}
                 </Badge>
               </div>
             </div>

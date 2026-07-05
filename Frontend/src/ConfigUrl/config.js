@@ -123,6 +123,8 @@ export const getStockSymbolLivePriceSocketUrl = () =>{
     return `${wsBaseUrl}/ws/stock-symbol-live-price/?name=BANKNIFTY,NIFTY,FINNIFTY,MIDCPNIFTY,SENSEX`
 }
 
+export const getSLTPWatcherLiveSocketUrl = () => `${wsBaseUrl}/ws/sl-tp-watcher/`;
+
 export const getAuthToken = () => {
     return getAccessToken();
 };
