@@ -1,0 +1,17 @@
+[Unit]
+Description=SparkBridge Django ASGI WebSocket server
+After=network.target redis-server.service postgresql.service
+Requires=redis-server.service postgresql.service
+
+[Service]
+Type=simple
+User=ubuntu
+Group=www-data
+WorkingDirectory=/var/www/sparkbridge/Backend
+EnvironmentFile=/var/www/sparkbridge/Backend/.env
+ExecStart=/var/www/sparkbridge/Backend/venv/bin/daphne -b 127.0.0.1 -p 8001 algoview.asgi:application
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
