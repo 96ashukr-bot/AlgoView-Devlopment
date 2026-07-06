@@ -145,6 +145,71 @@ class BrokerCallbackRoutingTests(TestCase):
         broker_details.refresh_from_db()
         self.assertTrue(broker_details.request_token)
 
+    def test_admin_can_start_alice_blue_connect_for_accessible_client(self):
+        admin = User.objects.create_superuser(
+            email="broker-admin@example.com",
+            firstName="Broker",
+            lastName="Admin",
+            phoneNumber="9999999988",
+            password="Pass@1234",
+        )
+        client = User.objects.create_user(
+            email="alice-client@example.com",
+            firstName="Alice",
+            lastName="Client",
+            phoneNumber="9999999987",
+            password="Pass@1234",
+            type_of_user="is_client",
+            is_client=True,
+        )
+        broker = Broker.objects.create(broker_name="Alice Blue", is_active=True)
+        broker_details = ClientBrokerdetails.objects.create(
+            client=client,
+            broker_name=broker,
+            broker_API_UID="857958",
+            broker_API_KEY="client-app-code",
+            broker_API_SKEY="alice-secret",
+        )
+        self._attach_verified_proxy(broker_details, node_id="alice-admin-connect-node")
+
+        request = APIRequestFactory().get(
+            f"/api/broker_auth_login/?broker=alice%20blue&client={client.id}"
+        )
+        force_authenticate(request, user=admin)
+        response = BrokerLoginRedirectView.as_view()(request)
+
+        self.assertEqual(response.status_code, 200)
+        redirect_query = parse_qs(urlparse(response.data["redirect_url"]).query)
+        self.assertEqual(redirect_query["appcode"][0], "client-app-code")
+
+    def test_client_cannot_start_broker_connect_for_another_client(self):
+        actor = User.objects.create_user(
+            email="broker-actor@example.com",
+            firstName="Broker",
+            lastName="Actor",
+            phoneNumber="9999999986",
+            password="Pass@1234",
+            type_of_user="is_client",
+            is_client=True,
+        )
+        other_client = User.objects.create_user(
+            email="broker-other@example.com",
+            firstName="Broker",
+            lastName="Other",
+            phoneNumber="9999999985",
+            password="Pass@1234",
+            type_of_user="is_client",
+            is_client=True,
+        )
+
+        request = APIRequestFactory().get(
+            f"/api/broker_auth_login/?broker=alice%20blue&client={other_client.id}"
+        )
+        force_authenticate(request, user=actor)
+        response = BrokerLoginRedirectView.as_view()(request)
+
+        self.assertEqual(response.status_code, 403)
+
     @mock.patch("main.dematemodule.get_alice_vendor_session")
     def test_alice_blue_auth_code_callback_exchanges_session(self, mock_vendor_session):
         user = User.objects.create_user(

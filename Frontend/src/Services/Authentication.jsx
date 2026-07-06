@@ -3863,7 +3863,7 @@ export const BrokerAuthLogin = async () => {
   }
 };
 
-export const startBrokerConnectFlow = async (connectPath) => {
+export const startBrokerConnectFlow = async (connectPath, clientId = "") => {
   const initialAccessToken = getAuthToken();
   if (!initialAccessToken) {
     throw new Error("No authentication token found.");
@@ -3971,7 +3971,12 @@ export const startBrokerConnectFlow = async (connectPath) => {
       /^172\.(1[6-9]|2\d|3[0-1])\./.test(browserHost);
 
     const localBaseUrl = getLocalApiBaseUrl();
-    const normalizedConnectPath = String(connectPath || "");
+    const normalizedConnectPath = (() => {
+      const path = String(connectPath || "");
+      if (!clientId) return path;
+      const separator = path.includes("?") ? "&" : "?";
+      return `${path}${separator}client=${encodeURIComponent(clientId)}`;
+    })();
     const isAngelOneBrokerConnect =
       normalizedConnectPath.includes("/broker_auth_login/") &&
       normalizedConnectPath.toLowerCase().includes("broker=angel%20one");

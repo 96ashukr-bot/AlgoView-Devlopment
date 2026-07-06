@@ -639,7 +639,7 @@ const ClientHeader = ({ clientId = "" }) => {
       }
 
       if (normalizedActiveBroker === "angel one") {
-        const connectResponse = await startBrokerConnectFlow("/broker_auth_login/?broker=angel%20one");
+        const connectResponse = await startBrokerConnectFlow("/broker_auth_login/?broker=angel%20one", clientId);
         window.location.assign(connectResponse.redirect_url);
         return;
       }
@@ -683,7 +683,7 @@ const ClientHeader = ({ clientId = "" }) => {
         return;
       }
 
-      const connectResponse = await startBrokerConnectFlow(activeSchema.connect_path);
+      const connectResponse = await startBrokerConnectFlow(activeSchema.connect_path, clientId);
       if (connectResponse?.redirect_url) {
         window.location.assign(connectResponse.redirect_url);
         return;

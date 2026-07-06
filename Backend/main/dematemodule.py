@@ -17,6 +17,7 @@ from main.models import ClientBrokerdetails, MarketDataCredential, Tradeorderhis
 from main.upstock import place_upstox_orders
 from main.zerodha import place_zerodha_orders
 from main.broker_registry import get_broker_setup_spec, broker_field_is_configured
+from main.permissions import can_access_client_record
 from main.angelone.services.state_service import CallbackStateService
 from main.angelone.utils.redaction import redact_secrets
 from main.services.login_activity_service import LoginActivityService
@@ -877,11 +878,23 @@ class BrokerLoginRedirectView(APIView):
     permission_classes = [IsAuthenticated]  
 
     def get(self, request, *args, **kwargs):
-        user = request.user  
-        if not user.is_authenticated:
+        actor = request.user
+        if not actor.is_authenticated:
             return Response({"error": "User not authenticated"}, status=403)
 
         try:
+            user = actor
+            requested_client_id = request.GET.get("client") or request.GET.get("client_id")
+            if requested_client_id:
+                from main.models import User
+
+                try:
+                    user = User.objects.get(id=int(requested_client_id))
+                except (TypeError, ValueError, User.DoesNotExist):
+                    return Response({"error": "Client not found."}, status=404)
+                if not can_access_client_record(actor, user):
+                    return Response({"error": "You do not have access to this client."}, status=403)
+
             broker_name_hint = _normalize_broker_name_for_redirect(request.GET.get("broker", ""))
             broker_details = _get_active_broker_details_for_user(user, broker_name_hint)
             if not broker_details or not broker_details.broker_name:
