@@ -1091,6 +1091,7 @@ class ExecutionNodeManagerTests(TestCase):
                     "status": "open",
                     "message": "Success",
                     "order_id": "26060100028066",
+                    "filled_quantity": 65,
                     "response": {
                         "status": "Ok",
                         "message": "Success",
@@ -1355,6 +1356,7 @@ class ExecutionNodeManagerTests(TestCase):
             order_id="nifty-ce-pending-open",
             EntryQty=65,
             Entry_Price=203.95,
+            response_data={"filled_quantity": 65},
             order_params={"transaction_type": "BUY", "option_type": "CE", "symbol": "NIFTY", "strike": 23700},
         )
 
@@ -1375,6 +1377,38 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertEqual(close_order["transaction_type"], "SELL")
         self.assertEqual(close_order["option_type"], "CE")
         self.assertEqual(close_order["quantity"], 65)
+
+    def test_exit_position_does_not_match_unfilled_open_broker_order(self):
+        Tradeorderhistory.objects.create(
+            client=self.client_user,
+            GroupService="Lite",
+            trading_symbol="NIFTY26JUL24400PE",
+            Index_Symbol="NIFTY",
+            transaction_type="BUY",
+            trade_order_status="OPEN",
+            order_status="OPEN",
+            order_id="unfilled-open-buy",
+            EntryQty=65,
+            Entry_Price=67,
+            response_data={"status": "OPEN", "filled_quantity": 0, "pending_quantity": 65},
+            order_params={"option_type": "PE", "symbol": "NIFTY", "strike": 24400},
+        )
+
+        close_order, open_position, close_error = prepare_close_order_from_open_position(
+            self.client_user,
+            {
+                "symbol": "NIFTY",
+                "group_service": "Lite",
+                "transaction_type": "SELL",
+                "option_type": "PE",
+                "quantity": 65,
+            },
+            "zerodha",
+        )
+
+        self.assertIsNone(open_position)
+        self.assertEqual(close_order["transaction_type"], "SELL")
+        self.assertIn("No open BUY PE position", close_error["data"]["message"])
 
     def test_exit_position_does_not_match_open_buy_without_broker_order_id(self):
         Tradeorderhistory.objects.create(

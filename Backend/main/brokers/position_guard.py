@@ -145,9 +145,38 @@ def _history_matches_open_buy(history, option_type):
         return False
     if order_status == "open" and not has_order_id:
         return False
+    if order_status in {"open", "pending", "put order req received", "transit"}:
+        if history_filled_quantity(history) <= 0:
+            return False
     if trade_status in CLOSED_TRADE_STATUSES:
         return False
     return history_option_type(history) == option_type
+
+
+def history_filled_quantity(history):
+    response_data = getattr(history, "response_data", None)
+    candidates = []
+
+    def collect(value):
+        if isinstance(value, dict):
+            for key in ("filled_quantity", "filledshares", "filled_qty"):
+                if value.get(key) not in (None, ""):
+                    candidates.append(value.get(key))
+            for nested in value.values():
+                collect(nested)
+        elif isinstance(value, list):
+            for nested in value:
+                collect(nested)
+
+    collect(response_data)
+    for value in candidates:
+        try:
+            quantity = int(float(value))
+        except (TypeError, ValueError):
+            continue
+        if quantity > 0:
+            return quantity
+    return 0
 
 
 def _response_indicates_broker_acceptance(value):
@@ -258,7 +287,8 @@ def prepare_close_order_from_open_position(client, order, broker_name):
     if option_type:
         order["option_type"] = option_type
         order["Type"] = option_type
-    order["quantity"] = int(open_position.EntryQty or values["quantity"])
+    filled_quantity = history_filled_quantity(open_position)
+    order["quantity"] = int(filled_quantity or open_position.EntryQty or values["quantity"])
     order["Entry_type"] = open_position.Entry_type or values["Entry_type"]
     order["Entry_price"] = open_position.Entry_Price or values["Entry_price"]
     order["EntryQty"] = open_position.EntryQty or values["EntryQty"]
