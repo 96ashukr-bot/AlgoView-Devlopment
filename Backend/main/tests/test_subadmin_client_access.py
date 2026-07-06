@@ -2,7 +2,7 @@ from django.test import TestCase
 from rest_framework.test import APIClient
 from unittest import mock
 
-from main.models import Role, User
+from main.models import ClientTradeSetting, Role, Segment, SubSegment, User
 
 
 class SubadminClientAccessTests(TestCase):
@@ -58,6 +58,17 @@ class SubadminClientAccessTests(TestCase):
         self.api_client = APIClient()
         self.api_client.force_authenticate(self.subadmin)
 
+        self.segment = Segment.objects.create(name="FNO")
+        self.sub_segment = SubSegment.objects.create(segment=self.segment, name="NIFTY")
+        self.trade_setting = ClientTradeSetting.objects.create(
+            client=self.assigned_client,
+            segment=self.segment,
+            sub_segment=self.sub_segment,
+            symbol="NIFTY",
+            broker="Zerodha",
+            quantity=65,
+        )
+
     def test_subadmin_can_list_only_assigned_clients(self):
         response = self.api_client.get("/api/get-client-list/")
 
@@ -110,3 +121,46 @@ class SubadminClientAccessTests(TestCase):
         response = self.api_client.post("/api/create-client/", {}, format="json")
 
         self.assertEqual(response.status_code, 403)
+
+    def test_admin_can_update_selected_clients_trade_setting(self):
+        self.api_client.force_authenticate(self.admin)
+
+        response = self.api_client.put(
+            "/api/client-trade-settings/update/",
+            {
+                "client": self.assigned_client.id,
+                "segment": self.segment.id,
+                "sub_segment": self.sub_segment.id,
+                "quantity": 130,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200, response.data)
+        self.trade_setting.refresh_from_db()
+        self.assertEqual(self.trade_setting.quantity, 130)
+        self.assertEqual(self.trade_setting.client_id, self.assigned_client.id)
+
+    def test_subadmin_cannot_update_unassigned_clients_trade_setting(self):
+        other_setting = ClientTradeSetting.objects.create(
+            client=self.other_client,
+            segment=self.segment,
+            sub_segment=self.sub_segment,
+            symbol="NIFTY",
+            quantity=65,
+        )
+
+        response = self.api_client.put(
+            "/api/client-trade-settings/update/",
+            {
+                "client": self.other_client.id,
+                "segment": self.segment.id,
+                "sub_segment": self.sub_segment.id,
+                "quantity": 130,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 403)
+        other_setting.refresh_from_db()
+        self.assertEqual(other_setting.quantity, 65)

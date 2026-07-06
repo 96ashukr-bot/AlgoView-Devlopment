@@ -2975,8 +2975,18 @@ class UpdateClientTradeSettingAPIView(UpdateAPIView):
     serializer_class = ClientTradeSettingSerializer
 
     def update(self, request, *args, **kwargs):
-        # Get the authenticated client from the request
         client = request.user
+        requested_client_id = request.data.get("client") or request.data.get("client_id")
+        if requested_client_id:
+            try:
+                client = User.objects.get(id=int(requested_client_id))
+            except (TypeError, ValueError, User.DoesNotExist):
+                return Response({"detail": "Client not found."}, status=status.HTTP_404_NOT_FOUND)
+            if not can_access_client_record(request.user, client):
+                return Response(
+                    {"detail": "You do not have access to this client."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
         
         # Extract segment and sub_segment from the request data
         segment = request.data.get('segment')
@@ -3011,7 +3021,7 @@ class UpdateClientTradeSettingAPIView(UpdateAPIView):
                 serializer.validated_data["buffer_percentage"] = None
 
             # Save the updated trade setting
-            serializer.save()
+            serializer.save(client=client)
             return Response(serializer.data, status=status.HTTP_200_OK)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

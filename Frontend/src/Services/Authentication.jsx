@@ -2757,7 +2757,7 @@ export const updateTradeClient = async (clientId, payload) => {
   try {
     const response = await axios.put(
       `${baseUrl}/client-trade-settings/update/`,
-      payload,
+      clientId ? { ...payload, client: clientId } : payload,
       {
         headers: {
           Authorization: `Bearer ${token}`,
