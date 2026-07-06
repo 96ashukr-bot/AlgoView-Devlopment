@@ -245,9 +245,44 @@ class BrokerCallbackRoutingTests(TestCase):
         self.assertEqual(mock_vendor_session.call_args.args[1], "alice-auth-code")
         broker_details.refresh_from_db()
         self.assertEqual(broker_details.access_token, "alice-session-token")
+        self.assertIsNone(CallbackStateService().get("alice-state"))
         expiry = timezone.localtime(broker_details.access_token_expiry)
         self.assertEqual(expiry.hour, 23)
         self.assertEqual(expiry.minute, 59)
+
+    @mock.patch("main.dematemodule.get_alice_vendor_session")
+    def test_failed_alice_blue_exchange_keeps_callback_state_for_retry(self, mock_vendor_session):
+        user = User.objects.create_user(
+            email="alice-retry@example.com",
+            firstName="Alice",
+            lastName="Retry",
+            phoneNumber="9999999984",
+            password="Pass@1234",
+        )
+        broker = Broker.objects.create(broker_name="Alice Blue", is_active=True)
+        broker_details = ClientBrokerdetails.objects.create(
+            client=user,
+            broker_name=broker,
+            broker_API_UID="857958",
+            broker_API_KEY="alice-app-code",
+            broker_API_SKEY="alice-secret",
+        )
+        self._attach_verified_proxy(broker_details, node_id="alice-retry-node")
+        CallbackStateService().create(
+            state="alice-retry-state",
+            user_id=user.id,
+            broker_details_id=broker_details.id,
+            client_code="alice-client",
+        )
+        mock_vendor_session.return_value = (None, "Alice Blue rejected the auth code.")
+
+        response = self.client.get(
+            "/api/broker/callback/",
+            {"authCode": "invalid-code", "state": "alice-retry-state"},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIsNotNone(CallbackStateService().get("alice-retry-state"))
 
     @mock.patch("main.dematemodule.requests.post")
     def test_browser_broker_callback_redirects_without_token_json(self, mock_post):

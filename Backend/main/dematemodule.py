@@ -1001,7 +1001,10 @@ class BrokerLoginRedirectView(APIView):
 
         state = _create_broker_callback_state(request, broker_details, "alice blue")
         broker_details.request_token = state
-        ClientBrokerdetails.objects.filter(pk=broker_details.pk).update(request_token=state)
+        ClientBrokerdetails.objects.filter(pk=broker_details.pk).update(
+            request_token=state,
+            tokenCreatedAt=now(),
+        )
 
         callback_url = _broker_callback_url_with_params({"broker": "alice blue", "state": state})
         params = urlencode(
@@ -1257,6 +1260,8 @@ class BrokerCallbackView(APIView):
         return HttpResponseRedirect(f"{return_url}{separator}{params}")
 
     def _finalize_callback_response(self, request, response, state_record, broker_name):
+        if state_record and 200 <= response.status_code < 300:
+            CallbackStateService().consume(state_record.state)
         if self._should_redirect_browser_callback(request, response):
             return self._browser_callback_redirect(request, state_record, broker_name)
         return response
@@ -1270,7 +1275,7 @@ class BrokerCallbackView(APIView):
         # Get the authorization code and state from the URL
         try:
             broker_state = _broker_callback_param(request, "state", "State", "redirect_params") or ""
-            state_record = CallbackStateService().consume(broker_state) if broker_state else None
+            state_record = CallbackStateService().get(broker_state) if broker_state else None
             if state_record:
                 if state_record.broker_details_id == 0 and state_record.client_code == "market-data-upstox":
                     request_token = _broker_callback_param(request, "code")
