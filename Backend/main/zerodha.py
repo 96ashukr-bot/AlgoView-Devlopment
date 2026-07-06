@@ -4,7 +4,7 @@ from main.models import ClientBrokerdetails, CompanySmtpDetails
 from main.broker_order_utils import extract_ltp_from_quote_payload, is_option_symbol, normalize_order_type, resolve_limit_price, resolve_limit_reference_price, to_float
 from main.services.option_ltp_fallback import cache_option_ltp, fetch_nse_option_chain_ltp, get_cached_option_ltp
 from main.services.live_price_cache import get_live_price
-from main.services.upstox_market_data import UpstoxInstrumentResolver
+from main.services.upstox_market_data import UpstoxInstrumentResolver, fetch_central_upstox_option_ltp
 from main.trade_history_service import save_trade_order_history
 import logging
 import requests
@@ -157,6 +157,14 @@ def fetch_zerodha_option_ltp(
                     trading_symbol,
                 )
                 return ltp
+        central_ltp = fetch_central_upstox_option_ltp(instrument)
+        if central_ltp is not None:
+            logger.info(
+                "[%s] Using central Upstox on-demand LTP for Zerodha contract %s.",
+                user,
+                trading_symbol,
+            )
+            return central_ltp
 
     try:
         ltp_response = kite.ltp(quote_key)

@@ -40,7 +40,7 @@ from main.permissions import can_access_client_record
 from main.services.live_price_cache import build_live_price_payload, cache_live_price, get_live_price
 from main.services.option_ltp_fallback import cache_option_ltp, fetch_nse_option_chain_ltp, get_cached_option_ltp
 from main.sl_tp_watcher_service import SLTPWatcherService, SUCCESS_EXIT_STATUSES
-from main.services.upstox_market_data import UpstoxInstrumentResolver, get_active_option_instruments
+from main.services.upstox_market_data import UpstoxInstrumentResolver, _parse_option_symbol, get_active_option_instruments
 from main.serializers import ClientBrokerDetailsUpdateSerializer, TradeorderhistorySerializer
 from main.trade_history_service import save_trade_order_history
 from main.views import _build_regular_trade_exit_request, _process_webhook_trade, _resolve_webhook_request_context, place_order_broker
@@ -3012,6 +3012,45 @@ class ExecutionNodeManagerTests(TestCase):
             instrument_key="NSE_FO|central-123",
             max_age_seconds=5,
         )
+
+    def test_upstox_resolver_parses_zerodha_nifty_weekly_symbol(self):
+        parsed = _parse_option_symbol("NIFTY2670724400CE", underlying="NIFTY")
+
+        self.assertEqual(parsed["underlying"], "NIFTY")
+        self.assertEqual(parsed["expiry"].strftime("%Y-%m-%d"), "2026-07-07")
+        self.assertEqual(parsed["strike"], 24400.0)
+        self.assertEqual(parsed["option_type"], "CE")
+        self.assertFalse(parsed["month_only"])
+
+    @mock.patch("main.zerodha.fetch_central_upstox_option_ltp", return_value=121.5)
+    @mock.patch("main.zerodha.get_live_price", return_value=None)
+    @mock.patch("main.zerodha._central_ltp_resolver")
+    def test_zerodha_ltp_uses_single_central_on_demand_quote_before_client_api(
+        self,
+        mock_resolver,
+        _mock_get_live_price,
+        mock_central_ltp,
+    ):
+        from main.zerodha import fetch_zerodha_option_ltp
+
+        instrument = SimpleNamespace(instrument_key="NSE_FO|44654")
+        mock_resolver.resolve.return_value = instrument
+        kite = SimpleNamespace(ltp=mock.Mock())
+
+        ltp = fetch_zerodha_option_ltp(
+            kite,
+            "kite-api",
+            "kite-access",
+            "NFO",
+            "NIFTY2670724400CE",
+            {"https": "http://proxy.example.com:8080"},
+            user=self.client_user,
+            underlying="NIFTY",
+        )
+
+        self.assertEqual(ltp, 121.5)
+        mock_central_ltp.assert_called_once_with(instrument)
+        kite.ltp.assert_not_called()
 
     @mock.patch("main.zerodha.time.sleep", return_value=None)
     def test_zerodha_order_details_polls_open_order_until_terminal(self, mock_sleep):

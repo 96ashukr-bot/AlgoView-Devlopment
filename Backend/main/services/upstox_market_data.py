@@ -3,7 +3,9 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import re
 import ssl
+import time
 from contextlib import nullcontext
 from dataclasses import dataclass
 from datetime import datetime
@@ -13,6 +15,7 @@ import requests
 import websockets
 from asgiref.sync import sync_to_async
 from django.conf import settings
+from django.core.cache import cache
 from django.db.models import Q
 from django.utils import timezone
 from google.protobuf.json_format import MessageToDict
@@ -22,7 +25,7 @@ from main.broker_instrument_cache import load_upstox_instruments
 from main.brokers.utils import get_access_token
 from main.models import ClientBrokerdetails, MarketDataCredential, Tradeorderhistory
 from main.services.egress_guard import allow_direct_market_data_egress
-from main.services.live_price_cache import build_live_price_payload, cache_live_price, normalize_symbol_key
+from main.services.live_price_cache import build_live_price_payload, cache_live_price, get_live_price, normalize_symbol_key
 from main.services.option_ltp_fallback import cache_option_ltp
 from main.services.proxy_utils import build_requests_proxy_config
 
@@ -40,6 +43,11 @@ OPEN_ORDER_STATUSES = {
 }
 
 SUPPORTED_INDEX_UNDERLYINGS = {"NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX", "BANKEX"}
+UPSTOX_MARKET_QUOTE_LTP_URL = "https://api.upstox.com/v2/market-quote/ltp"
+ZERODHA_WEEKLY_MONTH_CODES = {
+    "1": 1, "2": 2, "3": 3, "4": 4, "5": 5, "6": 6,
+    "7": 7, "8": 8, "9": 9, "O": 10, "N": 11, "D": 12,
+}
 
 
 @dataclass(frozen=True)
@@ -208,6 +216,27 @@ def _parse_option_symbol(symbol: Any, *, underlying: Any = None) -> Optional[dic
         if not under or not raw.startswith(under):
             continue
         tail = raw[len(under):]
+        if under == "NIFTY":
+            weekly_match = re.match(r"^(\d{2})([1-9OND])(\d{2})(\d+)(CE|PE)$", tail)
+            if weekly_match:
+                year, month_code, day, strike_text, option_type = weekly_match.groups()
+                try:
+                    expiry = datetime(
+                        2000 + int(year),
+                        ZERODHA_WEEKLY_MONTH_CODES[month_code],
+                        int(day),
+                    )
+                    strike = float(strike_text)
+                except (KeyError, ValueError):
+                    pass
+                else:
+                    return {
+                        "underlying": under,
+                        "expiry": expiry,
+                        "strike": strike,
+                        "option_type": option_type,
+                        "month_only": False,
+                    }
         for fmt in ("%d%b%y", "%y%b%d", "%y%m%d", "%y%b"):
             date_len = {"%d%b%y": 7, "%y%b%d": 7, "%y%m%d": 6, "%y%b": 5}[fmt]
             if len(tail) <= date_len + 2:
@@ -331,6 +360,79 @@ def get_market_data_broker_details() -> Optional[ClientBrokerdetails]:
             continue
         return broker_details
     return None
+
+
+def fetch_central_upstox_option_ltp(instrument: UpstoxInstrument) -> Optional[float]:
+    cached_payload = get_live_price(instrument_key=instrument.instrument_key, max_age_seconds=5)
+    if cached_payload and cached_payload.get("is_fresh"):
+        return _to_float(cached_payload.get("ltp"))
+
+    lock_key = f"market-data:on-demand:{normalize_symbol_key(instrument.instrument_key)}"
+    has_lock = cache.add(lock_key, "1", timeout=5)
+    if not has_lock:
+        for _ in range(20):
+            time.sleep(0.1)
+            cached_payload = get_live_price(instrument_key=instrument.instrument_key, max_age_seconds=10)
+            if cached_payload and cached_payload.get("is_fresh"):
+                return _to_float(cached_payload.get("ltp"))
+        return None
+
+    try:
+        credential = get_market_data_broker_details()
+        if not credential:
+            return None
+        access_token = get_access_token(credential)
+        if not access_token:
+            return None
+        node = getattr(credential, "execution_node", None)
+        proxies = build_requests_proxy_config(node) if node else None
+        request_context = allow_direct_market_data_egress() if not proxies else nullcontext()
+        with request_context:
+            response = requests.get(
+                UPSTOX_MARKET_QUOTE_LTP_URL,
+                headers={"Authorization": f"Bearer {access_token}", "Accept": "application/json"},
+                params={"instrument_key": instrument.instrument_key},
+                timeout=5,
+                proxies=proxies,
+            )
+        payload = response.json() if response.content else {}
+        if response.status_code != 200:
+            logger.warning(
+                "Central Upstox on-demand LTP failed for %s: %s %s",
+                instrument.instrument_key,
+                response.status_code,
+                str(payload)[:200],
+            )
+            return None
+        quote_data = payload.get("data") if isinstance(payload, dict) else None
+        quote = next(iter(quote_data.values()), {}) if isinstance(quote_data, dict) else {}
+        ltp = _to_float(quote.get("last_price") or quote.get("ltp")) if isinstance(quote, dict) else None
+        live_payload = build_live_price_payload(
+            instrument_key=instrument.instrument_key,
+            ltp=ltp,
+            source="upstox-central-rest",
+            trading_symbol=instrument.trading_symbol,
+            underlying=instrument.underlying,
+            expiry_date=instrument.expiry_date,
+            strike=instrument.strike,
+            option_type=instrument.option_type,
+        )
+        if not live_payload:
+            return None
+        cache_live_price(live_payload, aliases=instrument.aliases)
+        cache_option_ltp(
+            instrument.trading_symbol,
+            live_payload["ltp"],
+            expiry_date=instrument.expiry_date,
+            underlying=instrument.underlying,
+            source="upstox-central-rest",
+        )
+        return live_payload["ltp"]
+    except Exception as exc:
+        logger.warning("Central Upstox on-demand LTP exception for %s: %s", instrument.instrument_key, exc)
+        return None
+    finally:
+        cache.delete(lock_key)
 
 
 class UpstoxMarketDataCollector:
