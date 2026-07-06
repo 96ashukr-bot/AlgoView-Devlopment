@@ -16,6 +16,7 @@ logs/
 *.pem
 
 # Django static/media
+Backend/main/dhantoken.csv
 staticfiles/
 media/
 
