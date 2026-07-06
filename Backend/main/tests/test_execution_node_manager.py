@@ -1213,6 +1213,37 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertEqual(request.order_params["original_broker_order_id"], "2071818666588020736")
         self.assertEqual(ExecutionEngine._resolved_broker_trade_symbol(request), "NIFTY26JUN23900CE")
 
+    def test_zerodha_execution_uses_weekly_symbol_for_seven_july_expiry(self):
+        from main.execution_engine import ExecutionEngine
+
+        trade_history = Tradeorderhistory.objects.create(
+            client=self.client_user,
+            GroupService="Lite",
+            broker="zerodha",
+            trading_symbol="NIFTY",
+            Index_Symbol="NIFTY",
+            transaction_type="BUY",
+            trade_order_status="OPEN",
+            order_status="OPEN",
+            order_id="weekly-symbol-regression",
+            EntryQty=65,
+            Entry_Price=Decimal("67.00"),
+            order_params={
+                "symbol": "NIFTY",
+                "tradingsymbol": "NIFTY",
+                "strike": 24400,
+                "option_type": "PE",
+                "product_type": "MIS",
+                "expiry": "2026-07-07",
+                "quantity": 65,
+            },
+        )
+
+        request = _build_regular_trade_exit_request(trade_history, force_broker_squareoff=True)
+
+        self.assertEqual(request.day, "07")
+        self.assertEqual(ExecutionEngine._resolved_broker_trade_symbol(request), "NIFTY2670724400PE")
+
     @mock.patch("main.views.get_execution_engine")
     def test_force_kill_switch_allows_assigned_subadmin_and_client_only(self, mock_engine_factory):
         mock_engine_factory.return_value.execute_order.return_value = {

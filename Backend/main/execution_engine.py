@@ -66,6 +66,7 @@ from main.models import ClientBrokerdetails, ClientTradeSetting
 from main.broker_registry import normalize_broker_name
 from main.brokers.exchange_mapping import normalize_broker_exchange
 from main.brokers.position_guard import is_force_broker_squareoff, prepare_close_order_from_open_position
+from main.brokers.utils import build_trade_symbol
 from main.risk_manager import get_risk_manager
 from main.services.execution_router import route_order_to_execution_node
 from main.services.proxy_utils import build_requests_proxy_config
@@ -1347,13 +1348,21 @@ class ExecutionEngine:
     def _resolved_broker_trade_symbol(cls, request: ExecutionRequest) -> str:
         candidate = cls._resolved_trade_symbol(request, "").strip().upper()
         underlying = request.underlying_symbol.strip().upper()
+        if request.broker_name == "zerodha":
+            return build_trade_symbol(
+                {
+                    "symbol": underlying,
+                    "strike": request.strike_value,
+                    "option_type": request.option_type_value,
+                    "day": request.day,
+                    "month": request.month,
+                    "year": request.year,
+                    "fullyear": request.fullyear,
+                },
+                "zerodha",
+            ).upper()
         if candidate and candidate != underlying:
             return candidate
-        if request.broker_name == "zerodha":
-            return (
-                f"{underlying}{request.year}{request.month}"
-                f"{_symbol_strike(request.strike_value)}{request.option_type_value}"
-            ).upper()
         return candidate
 
     @staticmethod
