@@ -13,6 +13,7 @@ import {
 import { H3 } from "../../../AbstractElements";
 import {
   createSupportChatThread,
+  deleteSupportChatThread,
   fetchUserProfile,
   getSupportChatClients,
   getSupportChatThread,
@@ -20,11 +21,12 @@ import {
   sendSupportChatMessage,
   updateSupportChatThread,
 } from "../../../Services/Authentication";
+import Swal from "sweetalert2";
 import "./SupportChat.css";
 
 const roleName = (profile) => String(profile?.role?.name || "").toLowerCase();
 const isStaffProfile = (profile) => ["super-admin", "superadmin", "admin", "sub-admin", "subadmin"].includes(roleName(profile));
-const isSuperProfile = (profile) => ["super-admin", "superadmin", "admin"].includes(roleName(profile));
+const isSuperProfile = (profile) => Boolean(profile?.is_superuser) || ["super-admin", "superadmin"].includes(roleName(profile));
 const CHAT_REFRESH_INTERVAL_MS = 5000;
 
 const formatDateTime = (value) => {
@@ -53,6 +55,7 @@ const SupportChat = () => {
   const [reply, setReply] = useState("");
   const [loading, setLoading] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [error, setError] = useState("");
   const selectedThreadIdRef = useRef(null);
   const filtersRef = useRef(filters);
@@ -255,6 +258,37 @@ const SupportChat = () => {
     }
   };
 
+  const handleDeleteThread = async () => {
+    if (!selectedThreadId || !superStaff) return;
+    const result = await Swal.fire({
+      title: "Delete support chat?",
+      text: "This will permanently delete the complete conversation.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Delete",
+      confirmButtonColor: "#dc3545",
+    });
+    if (!result.isConfirmed) return;
+
+    setDeleteLoading(true);
+    setError("");
+    try {
+      await deleteSupportChatThread(selectedThreadId);
+      const remainingThreads = threads.filter((thread) => thread.id !== selectedThreadId);
+      const nextThreadId = remainingThreads[0]?.id || null;
+      setThreads(remainingThreads);
+      selectedThreadIdRef.current = nextThreadId;
+      setSelectedThreadId(nextThreadId);
+      setThreadDetail(null);
+      await loadThreads();
+      await Swal.fire("Deleted", "The support chat has been deleted.", "success");
+    } catch (err) {
+      setError(err?.response?.data?.message || err.message || "Unable to delete chat.");
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   const selectedThread = threadDetail?.thread;
   const messages = threadDetail?.messages || [];
   const latestMessageId = messages.length > 0 ? messages[messages.length - 1].id : null;
@@ -410,6 +444,12 @@ const SupportChat = () => {
                             onClick={() => handleStatusChange(selectedThread.status === "open" ? "resolved" : "open")}
                           >
                             {selectedThread.status === "open" ? "Resolve" : "Reopen"}
+                          </Button>
+                        ) : null}
+                        {superStaff ? (
+                          <Button color="danger" size="sm" onClick={handleDeleteThread} disabled={deleteLoading}>
+                            <i className="fa fa-trash me-1" />
+                            {deleteLoading ? "Deleting..." : "Delete"}
                           </Button>
                         ) : null}
                       </div>

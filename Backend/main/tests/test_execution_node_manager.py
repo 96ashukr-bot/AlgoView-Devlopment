@@ -1801,6 +1801,44 @@ class ExecutionNodeManagerTests(TestCase):
         )
         self.assertEqual(allowed_response.status_code, 200)
 
+    def test_only_superadmin_can_delete_support_chat(self):
+        subadmin_role, _ = Role.objects.get_or_create(name="Sub-Admin", defaults={"status": "active"})
+        subadmin = User.objects.create_user(
+            email="chat-delete-subadmin@example.com",
+            firstName="Delete",
+            lastName="Subadmin",
+            phoneNumber="9999999111",
+            password="Pass@123",
+            role=subadmin_role,
+        )
+        thread = ChatThread.objects.create(client=self.client_user, assigned_subadmin=subadmin, subject="Delete access")
+        ChatMessage.objects.create(thread=thread, sender=self.client_user, sender_role=ChatMessage.SENDER_CLIENT, message="Delete me")
+
+        subadmin_token = str(RefreshToken.for_user(subadmin).access_token)
+        denied_response = self.client.delete(
+            f"/api/support-chat/threads/{thread.id}/",
+            HTTP_AUTHORIZATION=f"Bearer {subadmin_token}",
+        )
+        self.assertEqual(denied_response.status_code, 403)
+        self.assertTrue(ChatThread.objects.filter(id=thread.id).exists())
+
+        superadmin = User.objects.create_user(
+            email="chat-delete-superadmin@example.com",
+            firstName="Delete",
+            lastName="Superadmin",
+            phoneNumber="9999999112",
+            password="Pass@123",
+            is_superuser=True,
+        )
+        superadmin_token = str(RefreshToken.for_user(superadmin).access_token)
+        deleted_response = self.client.delete(
+            f"/api/support-chat/threads/{thread.id}/",
+            HTTP_AUTHORIZATION=f"Bearer {superadmin_token}",
+        )
+        self.assertEqual(deleted_response.status_code, 204)
+        self.assertFalse(ChatThread.objects.filter(id=thread.id).exists())
+        self.assertFalse(ChatMessage.objects.filter(thread_id=thread.id).exists())
+
     @mock.patch("main.brokers.angelone.place_angel_one_order")
     def test_angel_one_adapter_supports_proxy_and_passes_config(self, mock_place_order):
         adapter = get_broker_adapter(self.broker_details)

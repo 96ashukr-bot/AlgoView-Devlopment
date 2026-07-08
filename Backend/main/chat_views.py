@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from main.models import ChatMessage, ChatThread, User
-from main.permissions import can_access_client_record, get_accessible_clients_queryset, is_end_user, is_platform_admin, is_subadmin_user
+from main.permissions import can_access_client_record, get_accessible_clients_queryset, is_end_user, is_platform_admin, is_subadmin_user, is_superadmin_user
 from main.serializers import ChatMessageSerializer, ChatThreadSerializer
 
 
@@ -173,6 +173,18 @@ class ChatThreadDetailAPIView(APIView):
         thread.save(update_fields=["status", "updated_at"])
         thread = _annotate_thread_queryset(ChatThread.objects.select_related("client", "assigned_subadmin").filter(id=thread.id), request.user).first()
         return Response(ChatThreadSerializer(thread).data)
+
+    def delete(self, request, thread_id):
+        if not is_superadmin_user(request.user):
+            return Response(
+                {"message": "Only superadmin can delete support chats."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        thread = ChatThread.objects.filter(id=thread_id).first()
+        if not thread:
+            return Response({"message": "Chat thread not found."}, status=status.HTTP_404_NOT_FOUND)
+        thread.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class ChatMessageCreateAPIView(APIView):

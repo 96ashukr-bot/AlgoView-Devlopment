@@ -5018,6 +5018,10 @@ export const updateSupportChatThread = async (threadId, payload) => {
   return response.data;
 };
 
+export const deleteSupportChatThread = async (threadId) => {
+  await axios.delete(`${baseUrl}/support-chat/threads/${threadId}/`);
+};
+
 export const getSupportChatClients = async () => {
   const response = await axios.get(`${baseUrl}/support-chat/clients/`);
   return response.data;
