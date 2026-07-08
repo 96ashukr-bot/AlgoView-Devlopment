@@ -5759,11 +5759,36 @@ class ManualTradeExecuteAPIView(APIView):
             batch = get_object_or_404(ManualTradeBatch.objects.select_for_update(), pk=pk)
             if batch.status != ManualTradeBatch.STATUS_PREVIEW:
                 return Response({"detail": f"This manual trade batch is already {batch.status}."}, status=status.HTTP_409_CONFLICT)
+            pending_results = batch.results.filter(status=ManualTradeResult.STATUS_PENDING)
+            selected_client_ids = request.data.get("client_ids")
+            if selected_client_ids is not None:
+                if not isinstance(selected_client_ids, list):
+                    return Response({"detail": "client_ids must be a list."}, status=status.HTTP_400_BAD_REQUEST)
+                try:
+                    selected_client_ids = {int(client_id) for client_id in selected_client_ids}
+                except (TypeError, ValueError):
+                    return Response({"detail": "client_ids contains an invalid client ID."}, status=status.HTTP_400_BAD_REQUEST)
+                available_client_ids = set(pending_results.values_list("client_id", flat=True))
+                if not selected_client_ids:
+                    return Response({"detail": "Select at least one eligible client."}, status=status.HTTP_400_BAD_REQUEST)
+                if not selected_client_ids.issubset(available_client_ids):
+                    return Response({"detail": "One or more selected clients are not eligible for this preview."}, status=status.HTTP_400_BAD_REQUEST)
+                pending_results.exclude(client_id__in=selected_client_ids).update(
+                    status=ManualTradeResult.STATUS_SKIPPED,
+                    reason="Not selected for this manual trade.",
+                    updated_at=timezone.now(),
+                )
+                batch.eligible_count = len(selected_client_ids)
+                batch.skipped_count = batch.results.filter(status=ManualTradeResult.STATUS_SKIPPED).count()
+                batch.input_snapshot = {
+                    **(batch.input_snapshot or {}),
+                    "selected_client_ids": sorted(selected_client_ids),
+                }
             if not batch.results.filter(status=ManualTradeResult.STATUS_PENDING).exists():
                 return Response({"detail": "No eligible clients are available to execute this manual trade."}, status=status.HTTP_400_BAD_REQUEST)
             batch.status = ManualTradeBatch.STATUS_QUEUED
             batch.confirmed_at = timezone.now()
-            batch.save(update_fields=["status", "confirmed_at", "updated_at"])
+            batch.save(update_fields=["status", "confirmed_at", "eligible_count", "skipped_count", "input_snapshot", "updated_at"])
 
         task = process_manual_trade_batch_task.delay(batch_id=batch.id)
         ManualTradeBatch.objects.filter(pk=batch.id).update(task_id=getattr(task, "id", None), updated_at=timezone.now())

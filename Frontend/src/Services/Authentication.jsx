@@ -5007,9 +5007,9 @@ export const createManualTradePreview = async (payload) => {
   }
 };
 
-export const executeManualTradeBatch = async (batchId) => {
+export const executeManualTradeBatch = async (batchId, clientIds) => {
   try {
-    const response = await axios.post(`${baseUrl}/manual-trades/${batchId}/execute/`, {});
+    const response = await axios.post(`${baseUrl}/manual-trades/${batchId}/execute/`, { client_ids: clientIds });
     return response.data;
   } catch (error) {
     throw new Error(error.response?.data?.detail || "Failed to execute manual trade.");

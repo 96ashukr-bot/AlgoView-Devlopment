@@ -60,6 +60,7 @@ const ManualTrade = () => {
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [executing, setExecuting] = useState(false);
+  const [selectedClientIds, setSelectedClientIds] = useState([]);
 
   const selectedGroup = useMemo(
     () => groupServices.find((item) => String(item.id) === String(selectedGroupId)),
@@ -121,6 +122,9 @@ const ManualTrade = () => {
         strike_price: strikePrice,
       });
       setPreview(response);
+      setSelectedClientIds(
+        (response.results || []).filter((result) => result.status === "PENDING").map((result) => result.client_id)
+      );
       await loadInitialData();
     } catch (error) {
       Swal.fire("Error", error.message, "error");
@@ -130,10 +134,13 @@ const ManualTrade = () => {
   };
 
   const handleExecute = async () => {
-    if (!preview?.id || preview.eligible_count <= 0) return;
+    if (!preview?.id || selectedClientIds.length <= 0) {
+      Swal.fire("Select clients", "Select at least one eligible client for this trade.", "warning");
+      return;
+    }
     const result = await Swal.fire({
       title: "Execute manual trade?",
-      text: `This trade will go to ${preview.eligible_count} eligible client(s).`,
+      text: `This trade will go to ${selectedClientIds.length} selected client(s).`,
       icon: "warning",
       showCancelButton: true,
       confirmButtonText: "Execute Trade",
@@ -144,7 +151,7 @@ const ManualTrade = () => {
 
     setExecuting(true);
     try {
-      const response = await executeManualTradeBatch(preview.id);
+      const response = await executeManualTradeBatch(preview.id, selectedClientIds);
       setPreview(response);
       await loadInitialData();
       Swal.fire("Queued", "Manual trade has been queued for execution.", "success");
@@ -159,6 +166,11 @@ const ManualTrade = () => {
     try {
       const response = await getManualTradeBatch(batchId);
       setPreview(response);
+      setSelectedClientIds(
+        response.status === "PREVIEW"
+          ? (response.results || []).filter((result) => result.status === "PENDING").map((result) => result.client_id)
+          : []
+      );
     } catch (error) {
       Swal.fire("Error", error.message, "error");
     }
@@ -235,8 +247,8 @@ const ManualTrade = () => {
                   {preview.group_service_name} - {preview.symbol} {preview.strike_price} {preview.action}
                 </div>
               </div>
-              <Button color="success" disabled={executing || preview.status !== "PREVIEW" || preview.eligible_count <= 0} onClick={handleExecute}>
-                {executing ? "Queuing..." : `Execute for ${preview.eligible_count} Client(s)`}
+              <Button color="success" disabled={executing || preview.status !== "PREVIEW" || selectedClientIds.length <= 0} onClick={handleExecute}>
+                {executing ? "Queuing..." : `Execute for ${selectedClientIds.length} Client(s)`}
               </Button>
             </CardHeader>
             <CardBody>
@@ -246,10 +258,29 @@ const ManualTrade = () => {
                 <Col md="3"><strong>Skipped:</strong> {preview.skipped_count}</Col>
                 <Col md="3"><strong>Success/Failed:</strong> {preview.success_count}/{preview.failed_count}</Col>
               </Row>
+              {preview.status === "PREVIEW" && preview.eligible_count > 0 && (
+                <div className="d-flex align-items-center mb-3" style={{ gap: "8px" }}>
+                  <strong>{selectedClientIds.length} client(s) selected</strong>
+                  <Button
+                    size="sm"
+                    color="primary"
+                    outline
+                    onClick={() => setSelectedClientIds(
+                      (preview.results || []).filter((result) => result.status === "PENDING").map((result) => result.client_id)
+                    )}
+                  >
+                    Select All
+                  </Button>
+                  <Button size="sm" color="secondary" outline onClick={() => setSelectedClientIds([])}>
+                    Clear
+                  </Button>
+                </div>
+              )}
               <div className="table-responsive">
                 <Table bordered hover>
                   <thead>
                     <tr>
+                      {preview.status === "PREVIEW" && <th style={{ width: "48px" }}>Select</th>}
                       <th>Client</th>
                       <th>Broker</th>
                       <th>Expiry</th>
@@ -262,6 +293,21 @@ const ManualTrade = () => {
                   <tbody>
                     {(preview.results || []).map((result) => (
                       <tr key={result.id}>
+                        {preview.status === "PREVIEW" && (
+                          <td className="text-center">
+                            <Input
+                              type="checkbox"
+                              aria-label={`Select ${clientName(result)}`}
+                              disabled={result.status !== "PENDING"}
+                              checked={selectedClientIds.includes(result.client_id)}
+                              onChange={(event) => setSelectedClientIds((current) => (
+                                event.target.checked
+                                  ? Array.from(new Set([...current, result.client_id]))
+                                  : current.filter((clientId) => clientId !== result.client_id)
+                              ))}
+                            />
+                          </td>
+                        )}
                         <td>{clientName(result)}<br /><small>{result.email}</small></td>
                         <td>{result.broker || "-"}</td>
                         <td>{result.request_snapshot?.expiry_date || "-"}</td>
