@@ -13,6 +13,7 @@ Features:
 import threading
 import time
 import requests
+import re
 from datetime import datetime, timedelta
 from typing import Optional, Dict, List, Any, Tuple
 from dataclasses import dataclass, field
@@ -78,7 +79,7 @@ class ContractIndex:
             self.by_symbol[contract.symbol].append(contract)
             
             # Extract underlying from symbol
-            underlying = self._extract_underlying(contract.symbol)
+            underlying = self._extract_underlying(contract)
             if underlying:
                 self.by_underlying[underlying].append(contract)
             
@@ -97,14 +98,18 @@ class ContractIndex:
                 )
                 self.options_index[key] = contract
     
-    def _extract_underlying(self, symbol: str) -> Optional[str]:
-        """Extract underlying from symbol"""
-        known = ['NIFTY', 'BANKNIFTY', 'FINNIFTY', 'MIDCPNIFTY', 'SENSEX']
-        symbol_upper = symbol.upper()
-        for u in known:
-            if symbol_upper.startswith(u):
-                return u
-        return None
+    def _extract_underlying(self, contract: Contract) -> Optional[str]:
+        """Extract index or stock underlying from an option contract."""
+        if not contract.option_type:
+            return None
+
+        name = re.sub(r"\s+", "", str(contract.name or "").strip().upper())
+        if name and name not in {"NA", "N/A", "NONE"}:
+            return name
+
+        symbol = str(contract.symbol or "").strip().upper()
+        match = re.match(r"^([A-Z&-]+?)(?=\d)", symbol)
+        return match.group(1) if match else None
     
     def clear(self):
         with self._lock:

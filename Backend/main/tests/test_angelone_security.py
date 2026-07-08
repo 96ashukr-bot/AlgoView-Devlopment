@@ -17,7 +17,7 @@ from rest_framework.test import APIRequestFactory, force_authenticate
 
 from main.angelone.managers.session_manager import SessionManager, SessionStatus
 from main.angelone.managers.position_manager import PositionManager, PositionSide
-from main.angelone.managers.contract_manager import Contract
+from main.angelone.managers.contract_manager import Contract, ContractIndex
 from main.angelone.constants import MARKET_CLOSE_HOUR, MARKET_CLOSE_MINUTE, TIMEZONE
 from main.angelone.services.state_service import CallbackStateService
 from main.angelone_views import angelone_callback
@@ -864,6 +864,30 @@ class AngelOneExecutionValidationTests(TestCase):
         manager.get_expiries_for_underlying.assert_called_once_with("MIDCPNIFTY")
         self.assertEqual(response.data["symbol"], "MIDCPNIFTY")
         self.assertEqual(response.data["expiry_dates"], ["30JUN2026"])
+
+    def test_contract_index_supports_stock_option_underlyings(self):
+        contract_index = ContractIndex()
+        expiry = datetime(2026, 7, 30)
+        contract_index.add(
+            Contract(
+                token="hdfc-option-token",
+                symbol="HDFCBANK30JUL262000CE",
+                name="HDFCBANK",
+                expiry=expiry,
+                strike=2000,
+                lot_size=550,
+                instrument_type="OPTSTK",
+                exchange="NFO",
+                tick_size=0.05,
+                option_type="CE",
+            )
+        )
+
+        self.assertEqual(contract_index.by_underlying["HDFCBANK"][0].token, "hdfc-option-token")
+        self.assertEqual(
+            contract_index.options_index[("HDFCBANK", 2000, "20260730", "CE")].token,
+            "hdfc-option-token",
+        )
 
     def test_zero_like_limit_price_is_treated_as_auto_buffer_price(self):
         request = self._request()
