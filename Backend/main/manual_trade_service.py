@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+from datetime import datetime, timezone as datetime_timezone
 from decimal import Decimal, InvalidOperation
 from typing import Any, Dict, Iterable, Optional
 
@@ -9,6 +10,7 @@ from django.db.models import Q
 from django.utils import timezone
 
 from main.execution_engine import ExecutionRequest, get_execution_engine
+from main.broker_instrument_cache import load_upstox_instruments
 from main.models import (
     ClientBrokerdetails,
     ClientTradeSetting,
@@ -156,6 +158,36 @@ def _eligibility_reason(setting: ClientTradeSetting, broker_info: Dict[str, Any]
     return None
 
 
+def _upstox_contract_reason(setting: ClientTradeSetting, symbol: str, strike: Decimal, option_type: str) -> Optional[str]:
+    if str(setting.broker or "").strip().lower() != "upstox" or not setting.expiry_date:
+        return None
+    try:
+        expiry = timezone.localtime(setting.expiry_date).date()
+        candidates = []
+        for instrument in load_upstox_instruments("NSE"):
+            if str(instrument.get("underlying_symbol") or "").strip().upper() != symbol:
+                continue
+            if str(instrument.get("instrument_type") or "").strip().upper() != option_type:
+                continue
+            instrument_expiry = datetime.fromtimestamp(
+                float(instrument.get("expiry")) / 1000,
+                tz=datetime_timezone.utc,
+            ).date()
+            if instrument_expiry == expiry:
+                candidates.append(Decimal(str(instrument.get("strike_price"))))
+        if not candidates or strike in candidates:
+            return None
+        nearest = sorted(set(candidates), key=lambda value: (abs(value - strike), value))[:2]
+        nearest_text = " or ".join(f"{value:g}" for value in sorted(nearest))
+        return (
+            f"Strike {strike:g} is not available for {symbol} {option_type} expiring "
+            f"{expiry:%d %b %Y}. Select {nearest_text}."
+        )
+    except Exception:
+        # A stale/unavailable reference file must not prevent otherwise valid orders.
+        return None
+
+
 def build_manual_trade_idempotency_key(company_id, group_service_id, symbol, action, strike_price) -> str:
     payload = "|".join([
         str(company_id or "platform"),
@@ -211,6 +243,8 @@ def create_manual_trade_preview(*, actor, group_service_id, symbol, action, stri
         for setting in settings:
             broker_info = _broker_status(setting.client, setting)
             reason = _eligibility_reason(setting, broker_info)
+            if not reason:
+                reason = _upstox_contract_reason(setting, symbol, strike, ACTION_TO_ORDER[action][1])
             status = ManualTradeResult.STATUS_SKIPPED if reason else ManualTradeResult.STATUS_PENDING
             if reason:
                 skipped_count += 1
