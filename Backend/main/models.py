@@ -1267,6 +1267,75 @@ class Tradeorderhistory(models.Model):
 
     def __str__(self):
         return f"Order ID: {self.order_id}"
+
+
+class ManualTradeBatch(models.Model):
+    STATUS_PREVIEW = "PREVIEW"
+    STATUS_QUEUED = "QUEUED"
+    STATUS_PROCESSING = "PROCESSING"
+    STATUS_COMPLETED = "COMPLETED"
+    STATUS_PARTIAL = "PARTIAL"
+    STATUS_FAILED = "FAILED"
+    STATUS_CANCELLED = "CANCELLED"
+    STATUS_CHOICES = tuple((value, value.title()) for value in (
+        STATUS_PREVIEW, STATUS_QUEUED, STATUS_PROCESSING, STATUS_COMPLETED,
+        STATUS_PARTIAL, STATUS_FAILED, STATUS_CANCELLED,
+    ))
+    ACTION_BUY_CE = "BUY_CE"
+    ACTION_BUY_PE = "BUY_PE"
+    ACTION_CHOICES = ((ACTION_BUY_CE, "BUY CE"), (ACTION_BUY_PE, "BUY PE"))
+
+    requested_by = models.ForeignKey('User', on_delete=models.SET_NULL, null=True, blank=True, related_name="manual_trade_batches")
+    group_service = models.ForeignKey(GroupService, on_delete=models.PROTECT, related_name="manual_trade_batches")
+    symbol = models.CharField(max_length=50)
+    action = models.CharField(max_length=20, choices=ACTION_CHOICES)
+    strike_price = models.DecimalField(max_digits=12, decimal_places=2)
+    idempotency_key = models.CharField(max_length=120, unique=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PREVIEW)
+    preview_count = models.PositiveIntegerField(default=0)
+    eligible_count = models.PositiveIntegerField(default=0)
+    skipped_count = models.PositiveIntegerField(default=0)
+    success_count = models.PositiveIntegerField(default=0)
+    failed_count = models.PositiveIntegerField(default=0)
+    task_id = models.CharField(max_length=255, null=True, blank=True)
+    input_snapshot = models.JSONField(default=dict, blank=True)
+    summary = models.JSONField(default=dict, blank=True)
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [models.Index(fields=["status", "created_at"]), models.Index(fields=["idempotency_key"])]
+
+
+class ManualTradeResult(models.Model):
+    STATUS_PENDING = "PENDING"
+    STATUS_SKIPPED = "SKIPPED"
+    STATUS_PROCESSING = "PROCESSING"
+    STATUS_SUCCESS = "SUCCESS"
+    STATUS_FAILED = "FAILED"
+    STATUS_CHOICES = tuple((value, value.title()) for value in (
+        STATUS_PENDING, STATUS_SKIPPED, STATUS_PROCESSING, STATUS_SUCCESS, STATUS_FAILED,
+    ))
+
+    batch = models.ForeignKey(ManualTradeBatch, on_delete=models.CASCADE, related_name="results")
+    client = models.ForeignKey('User', on_delete=models.CASCADE, related_name="manual_trade_results")
+    trade_setting = models.ForeignKey(ClientTradeSetting, on_delete=models.SET_NULL, null=True, blank=True, related_name="manual_trade_results")
+    broker = models.CharField(max_length=100, null=True, blank=True)
+    broker_status = models.CharField(max_length=100, null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    reason = models.TextField(null=True, blank=True)
+    order_id = models.CharField(max_length=255, null=True, blank=True)
+    history_id = models.CharField(max_length=120, null=True, blank=True)
+    request_snapshot = models.JSONField(default=dict, blank=True)
+    response_snapshot = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ("batch", "client")
+        indexes = [models.Index(fields=["batch", "status"]), models.Index(fields=["client", "created_at"])]
 class CompanyProfileDetails(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="company_profile",null=True, blank=True)
     company_name = models.CharField(max_length=255, blank=True, null=True)

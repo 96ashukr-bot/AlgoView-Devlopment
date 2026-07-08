@@ -24,6 +24,7 @@ const STAFF_ONLY_PATHS = [
   "/tradedetails/trading-status",
   "/tradedetails/webhook-diagnostics",
   "/tradedetails/sl-tp-watcher",
+  "/tradedetails/manual-trade",
   "/openposition/optionchainlist",
 ];
 

@@ -184,6 +184,7 @@ import SLTPWatcher from "../Components/Tables/DataTable/TradeDetails/SLTPWatcher
 import IPPool from "../Components/Application/IPPool/IPPool";
 import SupportChat from "../Components/Application/SupportChat/SupportChat";
 import AgreementAcceptanceManagement from "../Components/Legal/AgreementAcceptanceManagement";
+import ManualTrade from "../Components/Tables/DataTable/TradeDetails/ManualTrade";
 
 export const routes = [
   { path: `/dashboard/algoviewtech/user`, Component: <Default /> },
@@ -215,6 +216,7 @@ export const routes = [
   { path: `/tradedetails/trading-status`, Component: <TradingStatus />},
   { path: `/tradedetails/webhook-diagnostics`, Component: <WebhookDiagnostics />},
   { path: `/tradedetails/sl-tp-watcher`, Component: <SLTPWatcher />},
+  { path: `/tradedetails/manual-trade`, Component: <ManualTrade />},
   { path: `/service-manage/all-service-list`, Component: <AllService />},
   { path: `/service-manage/group-services-list`, Component: <GroupService />},
   { path: `/service-manage/add-groupservice`, Component: <AddGroupService />},

@@ -64,6 +64,10 @@ from main.legal_views import (
     MyAgreementPDFAPIView,
 )
 urlpatterns = [
+    path('manual-trades/', ManualTradeAPIView.as_view(), name='manual-trade-list'),
+    path('manual-trades/preview/', ManualTradeAPIView.as_view(), name='manual-trade-preview'),
+    path('manual-trades/<int:pk>/', ManualTradeAPIView.as_view(), name='manual-trade-detail'),
+    path('manual-trades/<int:pk>/execute/', ManualTradeExecuteAPIView.as_view(), name='manual-trade-execute'),
     path('signup/', UserRegistrationView.as_view(), name='user-registration'),
     path('login/', CustomLoginView.as_view(), name='login'),
     path('logout/', LogoutView.as_view(), name='logout'),

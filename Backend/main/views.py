@@ -70,6 +70,7 @@ from django.dispatch import receiver
 from django.db.models import Q
 from django.db.models import Count, Prefetch
 from django.db.models.deletion import ProtectedError
+from django.db import IntegrityError, transaction
 import pandas as pd
 from datetime import datetime
 from django.core.cache import cache
@@ -5666,6 +5667,108 @@ class TradeOrderResponseDataView(APIView):
 
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+def _serialize_manual_trade_result(result):
+    client = result.client
+    return {
+        "id": result.id,
+        "client_id": result.client_id,
+        "client_name": getattr(client, "fullName", None) or client.get_full_name() or client.email,
+        "email": client.email,
+        "trade_setting_id": result.trade_setting_id,
+        "broker": result.broker,
+        "broker_status": result.broker_status,
+        "status": result.status,
+        "reason": result.reason,
+        "order_id": result.order_id,
+        "history_id": result.history_id,
+        "request_snapshot": result.request_snapshot,
+        "response_snapshot": result.response_snapshot,
+    }
+
+
+def _serialize_manual_trade_batch(batch, include_results=False):
+    data = {
+        "id": batch.id,
+        "requested_by": getattr(batch.requested_by, "email", None),
+        "group_service_id": batch.group_service_id,
+        "group_service_name": batch.group_service.group_name,
+        "symbol": batch.symbol,
+        "action": batch.action,
+        "strike_price": str(batch.strike_price),
+        "status": batch.status,
+        "preview_count": batch.preview_count,
+        "eligible_count": batch.eligible_count,
+        "skipped_count": batch.skipped_count,
+        "success_count": batch.success_count,
+        "failed_count": batch.failed_count,
+        "task_id": batch.task_id,
+        "input_snapshot": batch.input_snapshot,
+        "summary": batch.summary,
+        "confirmed_at": batch.confirmed_at,
+        "completed_at": batch.completed_at,
+        "created_at": batch.created_at,
+        "updated_at": batch.updated_at,
+    }
+    if include_results:
+        data["results"] = [_serialize_manual_trade_result(item) for item in batch.results.select_related("client", "trade_setting").order_by("id")]
+    return data
+
+
+class ManualTradeAPIView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminOrSuperadmin]
+
+    def _queryset(self):
+        return ManualTradeBatch.objects.select_related("requested_by", "group_service").order_by("-created_at")
+
+    def get(self, request, pk=None, *args, **kwargs):
+        if pk:
+            return Response(_serialize_manual_trade_batch(get_object_or_404(self._queryset(), pk=pk), include_results=True))
+        paginator = Paginator(self._queryset(), int(request.query_params.get("page_size") or 20))
+        page = paginator.get_page(request.query_params.get("page_number") or request.query_params.get("page") or 1)
+        return Response({"count": paginator.count, "num_pages": paginator.num_pages, "results": [_serialize_manual_trade_batch(item) for item in page.object_list]})
+
+    def post(self, request, *args, **kwargs):
+        from main.manual_trade_service import create_manual_trade_preview
+
+        try:
+            batch = create_manual_trade_preview(
+                actor=request.user,
+                group_service_id=request.data.get("group_service_id"),
+                symbol=request.data.get("symbol"),
+                action=request.data.get("action"),
+                strike_price=request.data.get("strike_price"),
+            )
+        except GroupService.DoesNotExist:
+            return Response({"detail": "Group service not found."}, status=status.HTTP_404_NOT_FOUND)
+        except IntegrityError:
+            return Response({"detail": "A matching manual trade preview already exists in the duplicate-protection window."}, status=status.HTTP_409_CONFLICT)
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(_serialize_manual_trade_batch(batch, include_results=True), status=status.HTTP_201_CREATED)
+
+
+class ManualTradeExecuteAPIView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminOrSuperadmin]
+
+    def post(self, request, pk, *args, **kwargs):
+        from main.tasks import process_manual_trade_batch_task
+
+        with transaction.atomic():
+            batch = get_object_or_404(ManualTradeBatch.objects.select_for_update(), pk=pk)
+            if batch.status != ManualTradeBatch.STATUS_PREVIEW:
+                return Response({"detail": f"This manual trade batch is already {batch.status}."}, status=status.HTTP_409_CONFLICT)
+            if not batch.results.filter(status=ManualTradeResult.STATUS_PENDING).exists():
+                return Response({"detail": "No eligible clients are available to execute this manual trade."}, status=status.HTTP_400_BAD_REQUEST)
+            batch.status = ManualTradeBatch.STATUS_QUEUED
+            batch.confirmed_at = timezone.now()
+            batch.save(update_fields=["status", "confirmed_at", "updated_at"])
+
+        task = process_manual_trade_batch_task.delay(batch_id=batch.id)
+        ManualTradeBatch.objects.filter(pk=batch.id).update(task_id=getattr(task, "id", None), updated_at=timezone.now())
+        batch.refresh_from_db()
+        return Response(_serialize_manual_trade_batch(batch, include_results=True), status=status.HTTP_202_ACCEPTED)
         
         
        

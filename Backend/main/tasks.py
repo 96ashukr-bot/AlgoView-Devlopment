@@ -93,6 +93,16 @@ def reconcile_zerodha_order_task(self, *, trade_history_id):
     raise self.retry(countdown=countdown)
 
 
+@shared_task(bind=True, autoretry_for=(), max_retries=0, acks_late=True, soft_time_limit=300, time_limit=360)
+def process_manual_trade_batch_task(self, *, batch_id):
+    from main.manual_trade_service import execute_manual_trade_batch
+
+    logger.info("Manual trade batch task started batch_id=%s task_id=%s", batch_id, getattr(self.request, "id", None))
+    result = execute_manual_trade_batch(batch_id)
+    logger.info("Manual trade batch task completed batch_id=%s result=%s", batch_id, result)
+    return result
+
+
 @shared_task(
     bind=True,
     autoretry_for=(),

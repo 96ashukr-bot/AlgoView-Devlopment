@@ -4998,6 +4998,42 @@ export const getSupportChatThreads = async (params = {}) => {
   return response.data;
 };
 
+export const createManualTradePreview = async (payload) => {
+  try {
+    const response = await axios.post(`${baseUrl}/manual-trades/preview/`, payload);
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.detail || "Failed to create manual trade preview.");
+  }
+};
+
+export const executeManualTradeBatch = async (batchId) => {
+  try {
+    const response = await axios.post(`${baseUrl}/manual-trades/${batchId}/execute/`, {});
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.detail || "Failed to execute manual trade.");
+  }
+};
+
+export const getManualTradeBatch = async (batchId) => {
+  try {
+    const response = await axios.get(`${baseUrl}/manual-trades/${batchId}/`);
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.detail || "Failed to fetch manual trade batch.");
+  }
+};
+
+export const getManualTradeBatches = async (page_number = 1, page_size = 10) => {
+  try {
+    const response = await axios.get(`${baseUrl}/manual-trades/`, { params: { page_number, page_size } });
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.detail || "Failed to fetch manual trade batches.");
+  }
+};
+
 export const createSupportChatThread = async (payload) => {
   const response = await axios.post(`${baseUrl}/support-chat/threads/`, payload);
   return response.data;
