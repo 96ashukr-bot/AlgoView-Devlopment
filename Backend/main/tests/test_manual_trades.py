@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone as datetime_timezone
 from unittest import mock
 
 from django.urls import reverse
@@ -9,6 +9,7 @@ from main.models import (
     Broker, ClientBrokerdetails, ClientTradeSetting, ExecutionNode, GroupService,
     ManualTradeBatch, ManualTradeResult, Role, Segment, SubSegment, User,
 )
+from main.manual_trade_service import _build_execution_request
 
 
 class ManualTradeTests(APITestCase):
@@ -62,6 +63,23 @@ class ManualTradeTests(APITestCase):
         self.assertEqual(result["client_id"], self.client_user.id)
         self.assertEqual(result["request_snapshot"]["quantity"], 50)
         self.assertEqual(result["request_snapshot"]["order_type"], "LIMIT")
+
+    def test_midnight_ist_expiry_does_not_shift_to_previous_utc_date(self):
+        self.setting.expiry_date = datetime(2026, 7, 13, 18, 30, tzinfo=datetime_timezone.utc)
+        self.setting.save(update_fields=["expiry_date", "updated_at"])
+        response = self.client.post(reverse("manual-trade-preview"), {
+            "group_service_id": self.group.id, "symbol": "NIFTY",
+            "action": "BUY_CE", "strike_price": "22900",
+        }, format="json")
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data["results"][0]["request_snapshot"]["expiry_date"], "2026-07-14")
+        result = ManualTradeResult.objects.select_related("batch", "trade_setting", "client").get(
+            id=response.data["results"][0]["id"]
+        )
+        request = _build_execution_request(result)
+        self.assertEqual(request.order_params["expiry"], "2026-07-14")
+        self.assertEqual((request.day, request.month, request.year), ("14", "Jul", "26"))
 
     @mock.patch("main.tasks.process_manual_trade_batch_task.delay")
     def test_execute_can_only_be_confirmed_once(self, mock_delay):

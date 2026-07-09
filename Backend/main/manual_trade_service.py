@@ -61,6 +61,14 @@ def _local_expiry(expiry_date):
     return timezone.localtime(expiry_date) if timezone.is_aware(expiry_date) else expiry_date
 
 
+def _local_expiry_date(expiry_date):
+    if not expiry_date:
+        return None
+    if timezone.is_naive(expiry_date):
+        expiry_date = timezone.make_aware(expiry_date)
+    return timezone.localtime(expiry_date).date()
+
+
 def _client_name(client) -> str:
     return (
         getattr(client, "fullName", None)
@@ -122,7 +130,7 @@ def _select_one_setting_per_client(settings_queryset) -> list[ClientTradeSetting
 
 def _result_snapshot(setting: Optional[ClientTradeSetting], broker_info: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     client = setting.client if setting else None
-    expiry = _local_expiry(getattr(setting, "expiry_date", None))
+    expiry = _local_expiry_date(getattr(setting, "expiry_date", None))
     return {
         "client_id": getattr(client, "id", None),
         "client_name": _client_name(client) if client else "",
@@ -283,6 +291,7 @@ def _build_execution_request(result: ManualTradeResult) -> ExecutionRequest:
     setting = result.trade_setting
     transaction_type, option_type = ACTION_TO_ORDER[batch.action]
     expiry = _local_expiry(setting.expiry_date)
+    expiry_date = _local_expiry_date(setting.expiry_date)
     day, month, year, fullyear = _date_parts(expiry)
     history_id = f"manual_{batch.id}_{result.client_id}_{timezone.now().strftime('%Y%m%d%H%M%S%f')}"
     order_params = {
@@ -298,7 +307,7 @@ def _build_execution_request(result: ManualTradeResult) -> ExecutionRequest:
         "option_type": option_type,
         "Type": option_type,
         "quantity": setting.quantity,
-        "expiry": expiry.date().isoformat() if expiry else None,
+        "expiry": expiry_date.isoformat() if expiry_date else None,
         "order_type": setting.order_type,
         "product_type": setting.product_type,
         "buffer_percentage": float(setting.buffer_percentage) if setting.buffer_percentage is not None else None,

@@ -2724,7 +2724,7 @@ class ClientOnboardingStatsView(APIView):
         try:
             # Get the filter type from the request
             filter_type = request.GET.get('filter', None)
-            today = datetime.now().date()
+            today = timezone.localdate()
             start_date = None
             end_date = None
 
@@ -2901,7 +2901,7 @@ class ClientsDataView(APIView):
     def get(self, request, *args, **kwargs):
         try:
             # Get the current date
-            current_date = timezone.now().date()
+            current_date = timezone.localdate()
             print(current_date)
             # Fetch clients whose end_date_client has expired and who are of type 'is_client'
             expiry_client = _accessible_clients_for_user(request.user).filter(client_expiry_status=True)
@@ -3513,7 +3513,7 @@ class clientActiveInactiveView(APIView):
         except User.DoesNotExist:
             return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
         
-        current_date = timezone.now().date()
+        current_date = timezone.localdate()
 
         try:
             # Retrieve active clients and set client_status to "active"
@@ -3605,7 +3605,7 @@ class ActiveClientsView(APIView):
     
     def get(self, request, *args, **kwargs):
         user = request.user
-        current_date = timezone.now().date()
+        current_date = timezone.localdate()
 
         clients = _accessible_clients_for_user(user).filter(client_status=True)
         search_query = request.query_params.get('q', '').strip()    
@@ -3626,7 +3626,7 @@ class InactiveClientsView(APIView):
 
     def get(self, request, *args, **kwargs):
         user = request.user
-        current_date = timezone.now().date()
+        current_date = timezone.localdate()
 
         clients = _accessible_clients_for_user(user).filter(client_status=False)
         search_query = request.query_params.get('q', '').strip()    
@@ -3649,7 +3649,7 @@ class ExpiryClientsView(APIView):
     
     def get(self, request, *args, **kwargs):
         user = request.user
-        current_date = timezone.now().date()
+        current_date = timezone.localdate()
 
         clients = _accessible_clients_for_user(user).filter(end_date_client__lte=current_date)
         
@@ -4599,7 +4599,7 @@ class ClientsTradeStatusView(APIView):
     
     def get(self, request, *args, **kwargs):
         user = request.user
-        current_date = timezone.now().date()
+        current_date = timezone.localdate()
 
         clients = _accessible_clients_for_user(user)
         # 🔍 **Search Filter (Client name, broker, index symbol, trading symbol)**
