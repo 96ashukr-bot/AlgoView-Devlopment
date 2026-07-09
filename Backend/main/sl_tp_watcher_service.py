@@ -717,38 +717,30 @@ class SLTPWatcherService:
                 message="No active stop-loss or target is configured.",
             )
 
-        current_ltp, price_status, cache_age, subscription_status = self._get_cached_payload_status(trade_order)
-        if price_status:
-            self._mark_sltp_state(trade_order, status=price_status, action="SKIPPED", failure_reason=price_status)
+        cached_ltp, price_status, cache_age, subscription_status = self._get_cached_payload_status(trade_order)
+        current_ltp, ltp_error = self._get_current_ltp(trade_order, broker_details)
+        if current_ltp is not None and current_ltp > 0 and price_status:
+            subscription_status = "broker_fallback"
+
+        if current_ltp is None or current_ltp <= 0:
+            status_code = price_status or "PRICE_MISSING"
+            if not price_status:
+                if ltp_error and "stale" in ltp_error.lower():
+                    status_code = "PRICE_STALE"
+                elif ltp_error and "match" in ltp_error.lower():
+                    status_code = "WRONG_CONTRACT"
             message_map = {
                 "PRICE_MISSING": "Option live price is not available in the central cache.",
                 "PRICE_STALE": f"Live price is stale. Age: {cache_age}s.",
                 "WRONG_CONTRACT": "Cached live price does not match the option contract.",
             }
-            return self._build_watch_result(
-                trade_order,
-                status="skipped",
-                message=message_map.get(price_status, price_status),
-                current_ltp=current_ltp,
-                stop_loss_price=stop_loss_price,
-                target_price=target_price,
-                cache_age_seconds=cache_age,
-                subscription_status=subscription_status,
-            )
-
-        current_ltp, ltp_error = self._get_current_ltp(trade_order, broker_details)
-        if current_ltp is None or current_ltp <= 0:
-            status_code = "PRICE_MISSING"
-            if ltp_error and "stale" in ltp_error.lower():
-                status_code = "PRICE_STALE"
-            elif ltp_error and "match" in ltp_error.lower():
-                status_code = "WRONG_CONTRACT"
+            message = ltp_error or message_map.get(status_code, status_code)
             self._mark_sltp_state(trade_order, status=status_code, action="SKIPPED", failure_reason=ltp_error or "Live price could not be fetched.")
             return self._build_watch_result(
                 trade_order,
                 status="skipped",
-                message=ltp_error or "Live price could not be fetched.",
-                current_ltp=current_ltp,
+                message=message,
+                current_ltp=cached_ltp,
                 stop_loss_price=stop_loss_price,
                 target_price=target_price,
                 cache_age_seconds=cache_age,

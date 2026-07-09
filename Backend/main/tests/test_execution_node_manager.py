@@ -4506,6 +4506,59 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertIsNone(ltp)
         self.assertEqual(error, "Cached live price does not match the option contract.")
 
+    def test_sl_tp_watcher_uses_broker_ltp_fallback_when_cache_is_missing(self):
+        trade_setting = ClientTradeSetting.objects.create(
+            client=self.client_user,
+            symbol="NIFTY",
+            strategy="test",
+            broker="Angel One",
+            product_type="MIS",
+            order_type="LIMIT",
+            quantity=50,
+            group_service="Test",
+            expiry_date=timezone.datetime(2026, 6, 26),
+            sl_type="POINTS",
+            stop_loss=20,
+            target=10,
+        )
+        trade_order = Tradeorderhistory.objects.create(
+            client=self.client_user,
+            trade_setting=trade_setting,
+            GroupService="Test",
+            trading_symbol="NIFTY26JUN24000CE",
+            Index_Symbol="NIFTY",
+            order_id="entry-1",
+            order_status="complete",
+            broker="Angel One",
+            transaction_type="BUY",
+            strategy="test",
+            Entry_Price=Decimal("100.00"),
+            EntryQty=50,
+            Exchange="NFO",
+            Segment="FNO",
+            Lot=1,
+            trade_order_status="OPEN",
+            history_id="entry-history-1",
+        )
+        service = SLTPWatcherService()
+        service._get_cached_payload_status = mock.Mock(return_value=(None, "PRICE_MISSING", None, "missing"))
+        service._get_current_ltp = mock.Mock(return_value=(111.0, None))
+        service._market_is_open_now = mock.Mock(return_value=True)
+        service._broker_token_invalid = mock.Mock(return_value=False)
+        service._build_exit_request = mock.Mock(return_value=SimpleNamespace(history_id="entry-history-1_sltp_exit"))
+        service._execution_engine = SimpleNamespace(
+            execute_order=mock.Mock(return_value={"data": {"status": "complete", "message": "Exited"}})
+        )
+
+        result = service.process_trade(trade_order)
+        trade_order.refresh_from_db()
+
+        self.assertEqual(result.status, "triggered")
+        self.assertEqual(result.trigger_reason, "TARGET")
+        self.assertEqual(result.subscription_status, "broker_fallback")
+        self.assertEqual(trade_order.trade_order_status, "CLOSE")
+        service._execution_engine.execute_order.assert_called_once()
+
     def test_sl_tp_exit_cooldown_uses_long_pause_for_rate_limit_response(self):
         service = SLTPWatcherService()
         trade_order = SimpleNamespace(history_id="rate-limited-history", id=1)
