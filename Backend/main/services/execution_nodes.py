@@ -66,3 +66,10 @@ def get_execution_node_for_client(client: User) -> ExecutionNode | None:
         .first()
     )
     return broker_node.execution_node if broker_node else None
+
+
+def sync_client_broker_execution_nodes(client: User) -> ExecutionNode | None:
+    node = get_execution_node_for_client(client)
+    if node:
+        ClientBrokerdetails.objects.filter(client=client, execution_node__isnull=True).update(execution_node=node)
+    return node

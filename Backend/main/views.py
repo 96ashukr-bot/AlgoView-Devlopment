@@ -28,6 +28,7 @@ from main.angleapi_upgraded import exit_existing_buy_position_angleone, get_toke
 from main.angelone_views import login_angelone_redirect, angelone_callback, angelone_callbackaa, place_angel_one_trade
 from main.execution_engine import ExecutionRequest, get_execution_engine
 from main.services.multileg_execution import get_multileg_execution_engine
+from main.services.execution_nodes import sync_client_broker_execution_nodes
 from main.dematemodule import  exit_existing_buy_position_5PaisaOrder, exit_existing_buy_position_Aliceblue, exit_existing_buy_position_DhanOrder, exit_existing_buy_position_Upstox, exit_existing_buy_position_fyers_order, exit_existing_buy_position_zerodha_order, trading_Symbol_sum
 from main.dhanapi import place_dhan_orders
 from main.fivepaisa import fetch_access_token_5paisa, place_5paisa_order
@@ -39,6 +40,7 @@ from main.permissions import (
     get_accessible_clients_queryset,
     is_admin_or_superadmin,
     is_admin_user,
+    is_platform_admin,
     is_subadmin_user,
     is_superadmin_user,
 )
@@ -3677,11 +3679,34 @@ class GetclientdataView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)  
 
 #order -logs -list
+def _signal_log_group_service(log):
+    json_data = log.json_data if isinstance(log.json_data, dict) else {}
+    return str(
+        json_data.get("group_service")
+        or json_data.get("strategyid")
+        or json_data.get("stratergyid")
+        or json_data.get("strategyTag")
+        or log.strategy
+        or ""
+    ).strip()
+
+
 class OrderLogListView(APIView):
     pagination_class = None
+    permission_classes = [IsAuthenticated]
+
     def get(self, request, *args, **kwargs):
-        # Fetch all the order logs from the database
         order_logs = SignalOrderLog.objects.all().order_by('-id')
+        if not is_platform_admin(request.user) and not is_subadmin_user(request.user):
+            assigned_group = getattr(request.user, "Group_service", None)
+            if not assigned_group:
+                order_logs = SignalOrderLog.objects.none()
+            else:
+                assigned_group_name = str(assigned_group.group_name or "").strip().casefold()
+                order_logs = [
+                    log for log in order_logs
+                    if _signal_log_group_service(log).casefold() == assigned_group_name
+                ]
         
         # Serialize the data
         serializer = OrderLogSerializer(order_logs, many=True)
@@ -3714,10 +3739,13 @@ class GetAliceTreadBook(APIView):
 # Save the order log to the database
 from django.utils import timezone  
 
-def save_webhook_signals_logs(order_type,symbol,price,strategy,json=None):#user,status,failure_reason,json=None):
+def save_webhook_signals_logs(order_type,symbol,price,strategy,json=None, group_service=None):#user,status,failure_reason,json=None):
                                   
     """Save order details and status into the log table."""
     try:
+        json_payload = dict(json or {})
+        if group_service:
+            json_payload["group_service"] = str(group_service)
         SignalOrderLog.objects.create(
             signal_time=timezone.now(),  # You can change this to the actual signal time
             order_type=order_type,
@@ -3727,7 +3755,7 @@ def save_webhook_signals_logs(order_type,symbol,price,strategy,json=None):#user,
             # user=user,  # Store the client ID here
             # status=status,
             # failure_reason=failure_reason,
-            json_data=json
+            json_data=json_payload
         )
         
         logger.info(f"signal order log saved ")
@@ -4427,8 +4455,8 @@ class PlaceOrderWebhookView(APIView):
 
         alert_data = context["alert_data"]
         symbols = context["symbols"]
-        save_webhook_signals_logs(context["buy_sell"], symbols, context["default_price"], context["strategy_tag"], json=alert_data)
         candidate_trades, strategy_id = _get_matching_webhook_trades(alert_data, symbols.upper())
+        save_webhook_signals_logs(context["buy_sell"], symbols, context["default_price"], context["strategy_tag"], json=alert_data, group_service=strategy_id)
         trade_ids = list(candidate_trades.values_list("id", flat=True))
         from main.tasks import process_webhook_signal_task
 
@@ -4481,8 +4509,8 @@ class MyPlaceOrderWebhookView(APIView):
 
         alert_data = context["alert_data"]
         symbols = context["symbols"]
-        save_webhook_signals_logs(context["buy_sell"], symbols, context["default_price"], context["strategy_tag"], json=alert_data)
         candidate_trades, strategy_id = _get_matching_webhook_trades(alert_data, symbols.upper())
+        save_webhook_signals_logs(context["buy_sell"], symbols, context["default_price"], context["strategy_tag"], json=alert_data, group_service=strategy_id)
         trade_ids = list(candidate_trades.values_list("id", flat=True))
         from main.tasks import process_webhook_signal_task
 
@@ -4654,6 +4682,9 @@ class ClientBrokerDetailsView(APIView):
 
             # Fetch or create broker details for the client
             broker_detail, created = ClientBrokerdetails.objects.get_or_create(client_id=user.id)
+            if not broker_detail.execution_node_id:
+                sync_client_broker_execution_nodes(user)
+                broker_detail.refresh_from_db(fields=["execution_node"])
 
             # Use the serializer with partial=True to update only provided fields
             serializer = ClientBrokerDetailsUpdateSerializer(broker_detail, data=request.data, partial=True)

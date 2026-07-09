@@ -26,6 +26,7 @@ from main.broker_registry import (
     normalize_broker_name,
 )
 from main.permissions import is_end_user
+from main.services.execution_nodes import sync_client_broker_execution_nodes
 from main.trade_history_service import resolve_trade_failure_reason
 from main.services.contract_display import build_option_display_symbol
 import json
@@ -845,9 +846,80 @@ class RolePermissionSerializer(serializers.ModelSerializer):
         ]
         return formatted_permissions
 class OrderLogSerializer(serializers.ModelSerializer):
+    display_symbol = serializers.SerializerMethodField()
+    strike_price = serializers.SerializerMethodField()
+    option_type = serializers.SerializerMethodField()
+    action = serializers.SerializerMethodField()
+    group_service = serializers.SerializerMethodField()
+
     class Meta:
         model = SignalOrderLog
-        fields = ['id','signal_time', 'order_type', 'symbol', 'json_data','price', 'strategy', 'created_at']#'user','status','failure_reason']
+        fields = [
+            'id', 'signal_time', 'order_type', 'symbol', 'json_data', 'price',
+            'strategy', 'created_at', 'display_symbol', 'strike_price',
+            'option_type', 'action', 'group_service'
+        ]#'user','status','failure_reason']
+
+    def _json_data(self, obj):
+        return obj.json_data if isinstance(obj.json_data, dict) else {}
+
+    def _raw_order_type(self, obj):
+        return str(self._json_data(obj).get("ordertype") or obj.order_type or "").strip().upper()
+
+    def get_display_symbol(self, obj):
+        json_data = self._json_data(obj)
+        raw_symbol = str(obj.symbol or json_data.get("text") or "").strip().upper()
+        if raw_symbol in {"NIFTY 50", "NIFTY50"}:
+            return "NIFTY"
+        if raw_symbol in {"NIFTY BANK", "BANK NIFTY", "BANKNIFTY"}:
+            return "BANKNIFTY"
+        return raw_symbol
+
+    def get_strike_price(self, obj):
+        if obj.price is None:
+            return None
+        return obj.price
+
+    def get_option_type(self, obj):
+        order_type = self._raw_order_type(obj)
+        option_type_map = {
+            "BUY-O": "CE",
+            "SELL-C": "CE",
+            "SELL-C_O": "CE/PE",
+            "SELL-O": "PE",
+            "BUY-C": "PE",
+            "BUY-C_O": "PE/CE",
+        }
+        return option_type_map.get(order_type, obj.order_type or "")
+
+    def get_action(self, obj):
+        order_type = self._raw_order_type(obj)
+        action_map = {
+            "BUY-O": "BUY",
+            "SELL-C": "SELL",
+            "SELL-C_O": "SELL/BUY",
+            "SELL-O": "BUY",
+            "BUY-C": "SELL",
+            "BUY-C_O": "SELL/BUY",
+        }
+        if order_type in action_map:
+            return action_map[order_type]
+        if order_type.startswith("BUY"):
+            return "BUY"
+        if order_type.startswith("SELL"):
+            return "SELL"
+        return ""
+
+    def get_group_service(self, obj):
+        json_data = self._json_data(obj)
+        return str(
+            json_data.get("group_service")
+            or json_data.get("strategyid")
+            or json_data.get("stratergyid")
+            or json_data.get("strategyTag")
+            or obj.strategy
+            or ""
+        ).strip()
 class UserActivityLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserActivityLog
@@ -1814,6 +1886,9 @@ class ClientBrokerDetailsUpdateSerializer(serializers.ModelSerializer):
         if instance.is_angel_one_broker():
             instance.clear_legacy_angel_sensitive_fields()
         instance.save()
+        if instance.client_id and not instance.execution_node_id:
+            sync_client_broker_execution_nodes(instance.client)
+            instance.refresh_from_db(fields=["execution_node"])
         return instance
 
 
@@ -2115,7 +2190,10 @@ class TradeorderhistorySerializer(serializers.ModelSerializer):
             strategy__iexact=obj.strategy or "",
         ).order_by("-updated_at", "-id").first()
         if trade_setting and trade_setting.expiry_date:
-            return trade_setting.expiry_date.date().isoformat()
+            expiry = trade_setting.expiry_date
+            if timezone.is_aware(expiry):
+                expiry = timezone.localtime(expiry)
+            return expiry.date().isoformat()
         return None
 
     def get_Total(self, obj):

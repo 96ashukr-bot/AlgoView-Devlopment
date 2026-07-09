@@ -68,6 +68,7 @@ from main.brokers.exchange_mapping import normalize_broker_exchange
 from main.brokers.position_guard import is_force_broker_squareoff, prepare_close_order_from_open_position
 from main.brokers.utils import build_trade_symbol
 from main.risk_manager import get_risk_manager
+from main.services.execution_nodes import get_execution_node_for_client
 from main.services.execution_router import route_order_to_execution_node
 from main.services.proxy_utils import build_requests_proxy_config
 from main.upstock import place_upstox_orders
@@ -708,6 +709,23 @@ class ExecutionEngine:
                 }
         return None
 
+    @staticmethod
+    def _is_auth_error(error_message: Any) -> bool:
+        text = str(error_message or "").strip().lower()
+        return any(
+            marker in text
+            for marker in (
+                "invalid api key",
+                "invalid api",
+                "invalid token",
+                "unauthorized",
+                "forbidden",
+                "ag8004",
+                "session expired",
+                "jwt",
+            )
+        )
+
     def _validate_generic_broker_access(self, request: ExecutionRequest) -> Optional[Dict[str, Any]]:
         supported_brokers = {"fyers", "dhan", "5paisa", "zerodha", "upstox", "alice blue", "groww"}
         if request.broker_name not in supported_brokers:
@@ -905,6 +923,15 @@ class ExecutionEngine:
                 symbol=contract.symbol,
             )
             if ltp is None or ltp < MIN_VALID_LTP or ltp > MAX_VALID_LTP:
+                ltp_error = str(getattr(self._ltp_service, "last_error", "") or "")
+                if self._is_auth_error(ltp_error):
+                    client_broker.isTokenExpired = True
+                    client_broker.save(update_fields=["isTokenExpired"])
+                    return {
+                        "status": "error",
+                        "message": f"Angel One rejected the saved API key/session: {ltp_error}. Please save the correct Angel One API key and generate token again.",
+                        "error_code": "INVALID_CREDENTIALS",
+                    }
                 return {
                     "status": "error",
                     "message": "Live price validation failed for Angel One order placement.",
@@ -1010,7 +1037,11 @@ class ExecutionEngine:
         if not client_broker:
             return self._failed_response("No broker details found for this client.")
         if not client_broker.execution_node_id:
-            return self._failed_response("No verified execution node/proxy is assigned. Direct broker execution is blocked.")
+            assigned_node = get_execution_node_for_client(request.user)
+            if not assigned_node:
+                return self._failed_response("No verified execution node/proxy is assigned. Direct broker execution is blocked.")
+            client_broker.execution_node = assigned_node
+            client_broker.save(update_fields=["execution_node"])
         contract = validation_context.get("contract")
         contract_expiry = getattr(contract, "expiry", None)
         broker_exchange = self._broker_exchange_name(request)

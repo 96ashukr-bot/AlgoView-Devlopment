@@ -3,8 +3,10 @@ import { Col, Card, Table, CardHeader, Pagination, PaginationItem, PaginationLin
 import { H3 } from '../../../../AbstractElements';
 import './TradeDetails.css';
 import { RotatingLines } from 'react-loader-spinner';
-import { baseUrl } from '../../../../ConfigUrl/config';
 import { FaArrowUp, FaArrowDown } from 'react-icons/fa';
+import axios from 'axios';
+import { baseUrl } from '../../../../ConfigUrl/config';
+import { getAccessToken } from '../../../../Services/authStorage';
 
 const Signals = () => {
     const [signals, setSignals] = useState([]);
@@ -18,6 +20,7 @@ const Signals = () => {
 
     useEffect(() => {
         fetchSignals();
+        const signalsRefreshInterval = setInterval(fetchSignals, 30000);
 
         const handleResize = () => {
             setIsMobile(window.innerWidth <= 768);
@@ -26,26 +29,41 @@ const Signals = () => {
         handleResize();
         window.addEventListener('resize', handleResize);
 
-        return () => window.removeEventListener('resize', handleResize);
+        return () => {
+            clearInterval(signalsRefreshInterval);
+            window.removeEventListener('resize', handleResize);
+        };
 
     }, []);
 
     const pagesPerGroup = isMobile ? 2 : 4;
 
+    const getLocalDateKey = (value) => {
+        if (!value) return '';
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return '';
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
     const fetchSignals = async () => {
         try {
-            const response = await fetch(`${baseUrl}/order-logs-list`);
-            const result = await response.json();
+            const token = getAccessToken();
+            const response = await axios.get(`${baseUrl}/order-logs-list/`, {
+                headers: token ? { Authorization: `Bearer ${token}` } : {},
+            });
+            const result = response.data;
 
             if (result.status === 'success') {
                 const allSignals = result.data;
 
-                // Get today's date in YYYY-MM-DD format
-                const today = new Date().toISOString().split('T')[0];
+                const today = getLocalDateKey(new Date());
 
                 // Filter signals with today's date
                 const todaysSignals = allSignals.filter(signal =>
-                    signal.signal_time.startsWith(today)
+                    getLocalDateKey(signal.signal_time) === today
                 );
 
                 if (todaysSignals.length > 0) {
@@ -58,11 +76,11 @@ const Signals = () => {
                     );
 
                     if (sortedSignals.length > 0) {
-                        const lastDate = sortedSignals[0].signal_time.split('T')[0];
+                        const lastDate = getLocalDateKey(sortedSignals[0].signal_time);
 
                         // Filter all signals with this last available date
                         const lastDateSignals = sortedSignals.filter(signal =>
-                            signal.signal_time.startsWith(lastDate)
+                            getLocalDateKey(signal.signal_time) === lastDate
                         );
 
                         setSignals(lastDateSignals);
@@ -104,9 +122,10 @@ const Signals = () => {
         return (
             (signalDate && signalDate.includes(searchLower)) ||
             (signal.order_type && signal.order_type.toLowerCase().includes(searchLower)) ||
-            (signal.symbol && signal.symbol.toLowerCase().includes(searchLower)) ||
-            (signal.strategy && signal.strategy.toLowerCase().includes(searchLower)) ||
-            (signal.price && signal.price.toString().includes(searchLower))
+            (signal.display_symbol && signal.display_symbol.toLowerCase().includes(searchLower)) ||
+            (signal.option_type && signal.option_type.toLowerCase().includes(searchLower)) ||
+            (signal.action && signal.action.toLowerCase().includes(searchLower)) ||
+            (signal.strike_price && signal.strike_price.toString().includes(searchLower))
         );
     });
 
@@ -171,17 +190,16 @@ const Signals = () => {
                                         <tr>
                                             <th className='custom-col-design'>S.No.</th>
                                             <th onClick={() => handleSort('signal_time')} className='custom-col-design'>Signal Time <FaArrowUp className="arrow-icon" /> <FaArrowDown className="arrow-icon" /></th>
-                                            <th onClick={() => handleSort('order_type')} className='custom-col-design'>Order Type <FaArrowUp className="arrow-icon" /> <FaArrowDown className="arrow-icon" /></th>
-                                            <th onClick={() => handleSort('symbol')} className='custom-col-design'>Symbol <FaArrowUp className="arrow-icon" /> <FaArrowDown className="arrow-icon" /></th>
-                                            <th onClick={() => handleSort('price')} className='custom-col-design'>Price <FaArrowUp className="arrow-icon" /> <FaArrowDown className="arrow-icon" /></th>
-                                            <th onClick={() => handleSort('strategy')} className='custom-col-design'>Strategy <FaArrowUp className="arrow-icon" /> <FaArrowDown className="arrow-icon" /></th>
-                                            <th onClick={() => handleSort('created_at')} className='custom-col-design'>Created At <FaArrowUp className="arrow-icon" /> <FaArrowDown className="arrow-icon" /></th>
+                                            <th onClick={() => handleSort('display_symbol')} className='custom-col-design'>Symbol <FaArrowUp className="arrow-icon" /> <FaArrowDown className="arrow-icon" /></th>
+                                            <th onClick={() => handleSort('strike_price')} className='custom-col-design'>Strike Price <FaArrowUp className="arrow-icon" /> <FaArrowDown className="arrow-icon" /></th>
+                                            <th onClick={() => handleSort('option_type')} className='custom-col-design'>Order Type <FaArrowUp className="arrow-icon" /> <FaArrowDown className="arrow-icon" /></th>
+                                            <th onClick={() => handleSort('action')} className='custom-col-design'>Action <FaArrowUp className="arrow-icon" /> <FaArrowDown className="arrow-icon" /></th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {loading ? (
                                             <tr>
-                                                <td colSpan="9" style={{ textAlign: 'center', height: '100px' }}>
+                                                <td colSpan="6" style={{ textAlign: 'center', height: '100px' }}>
                                                     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
                                                         <RotatingLines
                                                             strokeColor="#283F7B"
@@ -198,16 +216,15 @@ const Signals = () => {
                                                 <tr key={index}>
                                                     <td>{indexOfFirstSignal + index + 1}</td>
                                                     <td>{new Date(signal.signal_time).toLocaleString()}</td>
-                                                    <td>{signal.order_type}</td>
-                                                    <td>{signal.symbol}</td>
-                                                    <td>{signal.price}</td>
-                                                    <td>{signal.strategy}</td>
-                                                    <td>{new Date(signal.created_at).toLocaleString()}</td>
+                                                    <td>{signal.display_symbol || signal.symbol || '-'}</td>
+                                                    <td>{signal.strike_price || '-'}</td>
+                                                    <td>{signal.option_type || signal.order_type || '-'}</td>
+                                                    <td>{signal.action || '-'}</td>
                                                 </tr>
                                             ))
                                         ) : (
                                             <tr>
-                                                <td colSpan="7" style={{ textAlign: 'center', padding: '10px' }}>
+                                                <td colSpan="6" style={{ textAlign: 'center', padding: '10px' }}>
                                                     No Signals Found
                                                 </td>
                                             </tr>

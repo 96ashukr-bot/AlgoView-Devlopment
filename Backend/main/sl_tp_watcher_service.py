@@ -497,6 +497,8 @@ class SLTPWatcherService:
         expiry = expiry or getattr(market_instrument, "expiry_date", None) or getattr(trade_setting, "expiry_date", None)
         if not expiry:
             raise ValueError("Expiry could not be resolved for auto-exit")
+        if timezone.is_aware(expiry):
+            expiry = timezone.localtime(expiry)
         underlying = str(order_params.get("symbol") or (parsed.underlying if parsed.is_option else market_instrument.underlying)).upper()
         strike = order_params.get("strike") or order_params.get("strike_price") or (parsed.strike if parsed.is_option else market_instrument.strike)
         option_type = str(order_params.get("option_type") or order_params.get("Type") or (parsed.option_type if parsed.is_option else market_instrument.option_type)).upper()

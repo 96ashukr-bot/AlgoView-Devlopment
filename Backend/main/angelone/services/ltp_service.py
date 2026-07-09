@@ -117,6 +117,8 @@ class LTPService:
         self._lock = threading.RLock()
         self._last_request_time = 0.0
         self._rate_limit = RATE_LIMIT_SECONDS
+        self.last_error: Optional[str] = None
+        self.last_response: Optional[Dict[str, Any]] = None
     
     @classmethod
     def get_instance(cls) -> 'LTPService':
@@ -167,10 +169,13 @@ class LTPService:
             return cached.ltp
         
         last_error = None
+        self.last_error = None
+        self.last_response = None
         for attempt in range(1, max_retries + 1):
             try:
                 self._rate_limit_wait()
                 data = smart_connect.ltpData(exchange, symbol, token)
+                self.last_response = data if isinstance(data, dict) else {"response": data}
 
                 if data.get("status") and data.get("data"):
                     ltp = float(data["data"].get("ltp", 0) or 0)
@@ -199,6 +204,10 @@ class LTPService:
                     last_error = "LTP missing in broker response"
                 else:
                     last_error = data.get("message") if isinstance(data, dict) else "Invalid LTP response"
+                    error_code = data.get("errorCode") if isinstance(data, dict) else None
+                    if error_code:
+                        last_error = f"{last_error} ({error_code})"
+                    self.last_error = last_error
 
                 logger.warning(
                     "LTP fetch attempt failed",
@@ -209,6 +218,7 @@ class LTPService:
                 )
             except Exception as e:
                 last_error = str(e)
+                self.last_error = last_error
                 logger.error(
                     "LTP fetch error",
                     token=token,
@@ -226,6 +236,7 @@ class LTPService:
             symbol=symbol,
             error=last_error or "Unknown LTP error",
         )
+        self.last_error = last_error or "Unknown LTP error"
         return None
     
     def get_batch_ltp(

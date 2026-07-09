@@ -966,8 +966,7 @@ class BrokerLoginRedirectView(APIView):
             return Response({"error": "Zerodha credentials are incomplete."}, status=400)
         state = _create_broker_callback_state(request, broker_details, "zerodha")
         broker_details.request_token = state
-        broker_details.tokenCreatedAt = now()
-        broker_details.save(update_fields=["request_token", "tokenCreatedAt"])
+        broker_details.save(update_fields=["request_token"])
         params = urlencode({"api_key": api_key, "v": "3", "redirect_params": state})
         zerodha_url = f"https://kite.zerodha.com/connect/login?{params}"
         return Response({"redirect_url": zerodha_url})
@@ -978,8 +977,7 @@ class BrokerLoginRedirectView(APIView):
             return Response({"error": "5Paisa credentials are incomplete."}, status=400)
         state = _create_broker_callback_state(request, broker_details, "5paisa")
         broker_details.request_token = state
-        broker_details.tokenCreatedAt = now()
-        broker_details.save(update_fields=["request_token", "tokenCreatedAt"])
+        broker_details.save(update_fields=["request_token"])
         response_url = _broker_callback_url_with_params({"broker": "5paisa", "state": state})
         params = urlencode({"VendorKey": VENDOR_KEY, "ResponseURL": response_url, "State": state})
         paisa_url = f"https://dev-openapi.5paisa.com/WebVendorLogin/VLogin/Index?{params}"
@@ -1003,7 +1001,6 @@ class BrokerLoginRedirectView(APIView):
         broker_details.request_token = state
         ClientBrokerdetails.objects.filter(pk=broker_details.pk).update(
             request_token=state,
-            tokenCreatedAt=now(),
         )
 
         callback_url = _broker_callback_url_with_params({"broker": "alice blue", "state": state})
@@ -1098,8 +1095,7 @@ class BrokerLoginRedirectView(APIView):
         params = urlencode({"consentAppId": consent_app_id, "state": state})
         login_url = f"https://auth.dhan.co/login/consentApp-login?{params}"
         broker_details.request_token = consent_app_id
-        broker_details.tokenCreatedAt = now()
-        broker_details.save(update_fields=["request_token", "tokenCreatedAt"])
+        broker_details.save(update_fields=["request_token"])
         return Response({"redirect_url": login_url, "consent_app_id": consent_app_id})
 
     def generate_groww_token(self, request, broker_details):

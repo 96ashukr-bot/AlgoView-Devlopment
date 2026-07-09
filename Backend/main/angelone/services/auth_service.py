@@ -331,7 +331,7 @@ class AuthService:
                         refresh_token=session.refresh_token,
                         feed_token=session.feed_token,
                         expiry=session.session_expiry,
-                        mark_token_created=True,
+                        mark_token_created=False,
                     )
                     broker_details.broker_last_logout_at = None
                     broker_details.clear_legacy_angel_sensitive_fields()
@@ -341,7 +341,6 @@ class AuthService:
                         "encrypted_feed_token",
                         "access_token_expiry",
                         "isTokenExpired",
-                        "tokenCreatedAt",
                         "broker_last_logout_at",
                         "access_token",
                         "refreshToken",

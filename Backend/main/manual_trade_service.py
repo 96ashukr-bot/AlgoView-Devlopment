@@ -9,7 +9,7 @@ from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 
-from main.execution_engine import ExecutionRequest, get_execution_engine
+from main.execution_engine import ContractInfo, ExecutionRequest, get_execution_engine
 from main.broker_instrument_cache import load_upstox_instruments
 from main.models import (
     ClientBrokerdetails,
@@ -53,6 +53,12 @@ def _date_parts(expiry_date):
         expiry_date.strftime("%y"),
         str(expiry_date.year),
     )
+
+
+def _local_expiry(expiry_date):
+    if not expiry_date:
+        return None
+    return timezone.localtime(expiry_date) if timezone.is_aware(expiry_date) else expiry_date
 
 
 def _client_name(client) -> str:
@@ -116,7 +122,7 @@ def _select_one_setting_per_client(settings_queryset) -> list[ClientTradeSetting
 
 def _result_snapshot(setting: Optional[ClientTradeSetting], broker_info: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     client = setting.client if setting else None
-    expiry = getattr(setting, "expiry_date", None)
+    expiry = _local_expiry(getattr(setting, "expiry_date", None))
     return {
         "client_id": getattr(client, "id", None),
         "client_name": _client_name(client) if client else "",
@@ -276,7 +282,8 @@ def _build_execution_request(result: ManualTradeResult) -> ExecutionRequest:
     batch = result.batch
     setting = result.trade_setting
     transaction_type, option_type = ACTION_TO_ORDER[batch.action]
-    day, month, year, fullyear = _date_parts(setting.expiry_date)
+    expiry = _local_expiry(setting.expiry_date)
+    day, month, year, fullyear = _date_parts(expiry)
     history_id = f"manual_{batch.id}_{result.client_id}_{timezone.now().strftime('%Y%m%d%H%M%S%f')}"
     order_params = {
         "source": "manual_trade",
@@ -291,7 +298,7 @@ def _build_execution_request(result: ManualTradeResult) -> ExecutionRequest:
         "option_type": option_type,
         "Type": option_type,
         "quantity": setting.quantity,
-        "expiry": setting.expiry_date.date().isoformat() if setting.expiry_date else None,
+        "expiry": expiry.date().isoformat() if expiry else None,
         "order_type": setting.order_type,
         "product_type": setting.product_type,
         "buffer_percentage": float(setting.buffer_percentage) if setting.buffer_percentage is not None else None,
@@ -335,6 +342,13 @@ def _build_execution_request(result: ManualTradeResult) -> ExecutionRequest:
         option_type=option_type,
         order_params=order_params,
         history_id=history_id,
+        contract_info=ContractInfo(
+            symbol=batch.symbol,
+            strike=float(batch.strike_price),
+            option_type=option_type,
+            exchange=getattr(getattr(setting, "sub_segment", None), "Exchange", None) or "NFO",
+            expiry=expiry,
+        ),
     )
 
 
