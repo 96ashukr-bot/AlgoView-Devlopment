@@ -377,37 +377,70 @@ class SLTPWatcherService:
         if cached_ltp is not None:
             return cached_ltp, None
 
-        trading_symbol = str(trade_order.trading_symbol or "").strip().upper()
-        if not trading_symbol:
-            return None, cache_error or "Trading symbol is missing."
-
-        if self._has_option_contract_metadata(trade_order) and not self._looks_like_option_symbol(trading_symbol):
-            return None, cache_error or "Option trading symbol is missing."
-
         broker = str(trade_order.broker or "").strip().lower()
         if broker not in {"angel one", "angle one"}:
             return None, cache_error
 
-        self._contract_manager.initialize(blocking=True)
-        contract = next(iter(self._contract_manager.get_contracts_by_symbol(trading_symbol)), None)
-        if contract:
-            ltp = get_ltp(
-                symbol_token=contract.token,
-                exchange=contract.exchange or trade_order.Exchange or "NFO",
-                tradingsymbol=contract.symbol,
-                broker_details=broker_details,
-            )
-            return ltp or None, None if ltp else cache_error
+        order_params = trade_order.order_params if isinstance(trade_order.order_params, dict) else {}
+        metadata = trade_order.sltp_metadata if isinstance(getattr(trade_order, "sltp_metadata", None), dict) else {}
+        trading_symbol = str(trade_order.trading_symbol or "").strip().upper()
+        display_symbol = build_option_display_symbol(
+            current_symbol=trade_order.trading_symbol,
+            index_symbol=trade_order.Index_Symbol,
+            order_params=order_params,
+            metadata=metadata,
+        )
+        candidate_symbols = [
+            metadata.get("resolved_trading_symbol"),
+            order_params.get("trading_symbol"),
+            order_params.get("tradingsymbol"),
+            display_symbol,
+            trading_symbol,
+        ]
+        candidate_symbols = list(
+            dict.fromkeys(str(symbol or "").strip().upper() for symbol in candidate_symbols if str(symbol or "").strip())
+        )
+        option_candidates = [symbol for symbol in candidate_symbols if self._looks_like_option_symbol(symbol)]
+        if self._has_option_contract_metadata(trade_order) and option_candidates:
+            candidate_symbols = option_candidates
+        elif self._has_option_contract_metadata(trade_order) and not option_candidates:
+            return None, cache_error or "Option trading symbol is missing."
+        elif not candidate_symbols:
+            return None, cache_error or "Trading symbol is missing."
 
-        parsed = self._symbol_parser.parse(trading_symbol)
-        if not parsed.is_option:
+        self._contract_manager.initialize(blocking=True)
+        for candidate_symbol in candidate_symbols:
+            contract = next(iter(self._contract_manager.get_contracts_by_symbol(candidate_symbol)), None)
+            if contract:
+                ltp = get_ltp(
+                    symbol_token=contract.token,
+                    exchange=contract.exchange or trade_order.Exchange or "NFO",
+                    tradingsymbol=contract.symbol,
+                    broker_details=broker_details,
+                )
+                return ltp or None, None if ltp else cache_error
+
+        parsed = next(
+            (parsed_symbol for parsed_symbol in (self._symbol_parser.parse(symbol) for symbol in candidate_symbols) if parsed_symbol.is_option),
+            None,
+        )
+        expiry = self._expiry_from_order_params(order_params)
+        underlying = str(metadata.get("underlying") or order_params.get("symbol") or order_params.get("underlying") or "").strip().upper()
+        strike = self._to_float(metadata.get("strike") or order_params.get("strike") or order_params.get("strike_price"))
+        option_type = str(metadata.get("option_type") or order_params.get("option_type") or order_params.get("Type") or "").strip().upper()
+
+        if parsed:
+            expiry = expiry or parsed.expiry_date
+            underlying = underlying or parsed.underlying
+            strike = strike if strike is not None else self._to_float(parsed.strike)
+            option_type = option_type or parsed.option_type
+        if not (underlying and strike is not None and option_type in {"CE", "PE"}):
             return None, cache_error
 
-        expiry = parsed.expiry_date
         contract, _resolution = self._contract_manager.resolve_option_contract(
-            underlying=parsed.underlying,
-            strike=float(parsed.strike),
-            option_type=parsed.option_type,
+            underlying=underlying,
+            strike=float(strike),
+            option_type=option_type,
             exchange=trade_order.Exchange or "NFO",
             expiry=expiry,
             prefer_weekly=True,

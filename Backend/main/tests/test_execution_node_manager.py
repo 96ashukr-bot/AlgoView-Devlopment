@@ -4325,8 +4325,8 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertEqual(result.entry_price, 123.45)
         self.assertEqual(result.quantity, 50)
 
-    def test_sl_tp_success_statuses_include_routed_open_order(self):
-        self.assertIn("open", SUCCESS_EXIT_STATUSES)
+    def test_sl_tp_success_statuses_exclude_routed_open_order(self):
+        self.assertNotIn("open", SUCCESS_EXIT_STATUSES)
 
     def test_sl_tp_exit_request_uses_separate_history_id(self):
         trade_order = SimpleNamespace(
@@ -4505,6 +4505,43 @@ class ExecutionNodeManagerTests(TestCase):
 
         self.assertIsNone(ltp)
         self.assertEqual(error, "Cached live price does not match the option contract.")
+
+    @mock.patch("main.sl_tp_watcher_service.get_ltp", return_value=151.25)
+    def test_sl_tp_angel_fallback_uses_resolved_option_symbol_from_metadata(self, mock_get_ltp):
+        service = SLTPWatcherService()
+        service._get_cached_current_ltp = mock.Mock(return_value=(None, "Option live price is not available in the central cache."))
+        contract = SimpleNamespace(token="12345", exchange="NFO", symbol="NIFTY14JUL2624100CE")
+        service._contract_manager = SimpleNamespace(
+            initialize=mock.Mock(),
+            get_contracts_by_symbol=mock.Mock(side_effect=lambda symbol: [contract] if symbol == "NIFTY14JUL2624100CE" else []),
+            resolve_option_contract=mock.Mock(return_value=(None, None)),
+        )
+        trade_order = SimpleNamespace(
+            broker="Angel One",
+            trading_symbol="NIFTY",
+            Index_Symbol="NIFTY",
+            Exchange="NFO",
+            order_params={
+                "symbol": "NIFTY",
+                "expiry": "2026-07-14",
+                "strike": 24100,
+                "option_type": "CE",
+            },
+            sltp_metadata={
+                "underlying": "NIFTY",
+                "expiry": "2026-07-14",
+                "strike": 24100,
+                "option_type": "CE",
+                "resolved_trading_symbol": "NIFTY14JUL2624100CE",
+            },
+        )
+
+        ltp, error = service._get_current_ltp(trade_order, self.broker_details)
+
+        self.assertEqual(ltp, 151.25)
+        self.assertIsNone(error)
+        service._contract_manager.get_contracts_by_symbol.assert_any_call("NIFTY14JUL2624100CE")
+        mock_get_ltp.assert_called_once()
 
     def test_sl_tp_watcher_uses_broker_ltp_fallback_when_cache_is_missing(self):
         trade_setting = ClientTradeSetting.objects.create(
