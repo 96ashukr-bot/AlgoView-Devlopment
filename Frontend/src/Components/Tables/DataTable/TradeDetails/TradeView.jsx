@@ -11,6 +11,7 @@ import { getClientTradeHistory, getTradeStrategy, getBroker, TradeViewSearch } f
 import { H3 } from '../../../../AbstractElements';
 import { FaArrowUp, FaArrowDown } from 'react-icons/fa';
 import { getTradeSymbolDisplay } from '../../../../Utils/tradeSymbolDisplay';
+import { getISTDateString } from '../../../../Utils/dateTime';
 
 const TradeView = () => {
     const [currentPage, setCurrentPage] = useState(1);
@@ -81,8 +82,8 @@ const TradeView = () => {
         try {
             setLoading(true);
 
-            // Get today's date in YYYY-MM-DD format
-            const today = new Date().toISOString().split('T')[0];
+            // Get today's IST date in YYYY-MM-DD format
+            const today = getISTDateString();
 
             // Determine the dates to use for the API call
             const fromDate = formData.fromDate || today; // Use fromDate if provided, otherwise default to today

@@ -13,6 +13,7 @@ import { Modal, ModalHeader, ModalBody, ModalFooter } from 'reactstrap';
 import { getStockSymbolLivePriceSocketUrl } from '../../../../ConfigUrl/config';
 import Swal from 'sweetalert2';
 import { getTradeSymbolDisplay } from '../../../../Utils/tradeSymbolDisplay';
+import { getISTDateString } from '../../../../Utils/dateTime';
 
 const TradeHistoryClient = () => {
     const [currentPage, setCurrentPage] = useState(1);
@@ -311,8 +312,8 @@ const TradeHistoryClient = () => {
         try {
             setLoading(true);
 
-            // Get today's date in YYYY-MM-DD format
-            const today = new Date().toISOString().split('T')[0];
+            // Get today's IST date in YYYY-MM-DD format
+            const today = getISTDateString();
 
             // Determine the dates to use for the API call
             const fromDate = formData.fromDate || today; // Use fromDate if provided, otherwise default to today

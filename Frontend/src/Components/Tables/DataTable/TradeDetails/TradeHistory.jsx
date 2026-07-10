@@ -13,6 +13,7 @@ import { Modal, ModalHeader, ModalBody, ModalFooter } from 'reactstrap';
 import { getStockSymbolLivePriceSocketUrl } from '../../../../ConfigUrl/config';
 import { getTradeSymbolDisplay } from '../../../../Utils/tradeSymbolDisplay';
 import Swal from 'sweetalert2';
+import { getISTDateString } from '../../../../Utils/dateTime';
 
 const TradeHistory = () => {
     const [currentPage, setCurrentPage] = useState(1);
@@ -311,7 +312,7 @@ const TradeHistory = () => {
         try {
             setLoading(true);
 
-            const today = new Date().toISOString().split('T')[0];
+            const today = getISTDateString();
 
             const fromDate = formData.fromDate || today;
             const toDate = formData.toDate || today;
