@@ -2,7 +2,7 @@ import os
 import json
 import tempfile
 import time
-from datetime import timedelta
+from datetime import datetime, timedelta
 from decimal import Decimal
 from types import SimpleNamespace
 from unittest import mock
@@ -45,6 +45,7 @@ from main.serializers import ClientBrokerDetailsUpdateSerializer, Tradeorderhist
 from main.trade_history_service import save_trade_order_history
 from main.views import _build_regular_trade_exit_request, _process_webhook_trade, _resolve_webhook_request_context, place_order_broker
 from main.tasks import process_webhook_signal_task
+from main.angelone.managers.contract_manager import ContractMasterManager
 
 
 TEST_CACHES = {
@@ -105,7 +106,67 @@ class ExecutionNodeManagerTests(TestCase):
             self.assertEqual(normalize_broker_exchange("Angel One", "NFO", underlying), "NFO")
             self.assertEqual(normalize_broker_exchange("Dhan", "NFO", underlying), "NFO")
             self.assertEqual(normalize_broker_exchange("Fyers", "NFO", underlying), "NFO")
-            self.assertEqual(normalize_fivepaisa_exchange("NFO", underlying), ("nse_fo", "N"))
+        self.assertEqual(normalize_fivepaisa_exchange("NFO", underlying), ("nse_fo", "N"))
+
+    def test_angel_contract_master_refresh_writes_disk_cache(self):
+        with tempfile.TemporaryDirectory() as tmpdir, override_settings(BASE_DIR=tmpdir):
+            ContractMasterManager._instance = None
+            manager = ContractMasterManager.get_instance()
+            payload = [
+                {
+                    "token": "51379",
+                    "symbol": "NIFTY14JUL2624200CE",
+                    "name": "NIFTY",
+                    "expiry": "14JUL2026",
+                    "strike": "2420000",
+                    "lotsize": "65",
+                    "instrumenttype": "OPTIDX",
+                    "exch_seg": "NFO",
+                    "tick_size": "0.05",
+                }
+            ]
+            response = mock.Mock()
+            response.json.return_value = payload
+            response.raise_for_status.return_value = None
+
+            with mock.patch("main.angelone.managers.contract_manager.requests.get", return_value=response):
+                self.assertTrue(manager._refresh_contracts())
+
+            cache_path = manager._cache_path()
+            self.assertTrue(cache_path.exists())
+            contract, match = manager.resolve_option_contract("NIFTY", 24200, "CE", expiry=datetime(2026, 7, 14))
+            self.assertEqual(contract.token, "51379")
+            self.assertEqual(match["match_type"], "exact")
+
+    def test_angel_contract_master_uses_disk_cache_when_refresh_fails(self):
+        with tempfile.TemporaryDirectory() as tmpdir, override_settings(BASE_DIR=tmpdir):
+            ContractMasterManager._instance = None
+            manager = ContractMasterManager.get_instance()
+            cache_path = manager._cache_path()
+            cache_path.parent.mkdir(parents=True, exist_ok=True)
+            cache_path.write_text(
+                json.dumps([
+                    {
+                        "token": "51379",
+                        "symbol": "NIFTY14JUL2624200CE",
+                        "name": "NIFTY",
+                        "expiry": "14JUL2026",
+                        "strike": "2420000",
+                        "lotsize": "65",
+                        "instrumenttype": "OPTIDX",
+                        "exch_seg": "NFO",
+                        "tick_size": "0.05",
+                    }
+                ]),
+                encoding="utf-8",
+            )
+
+            with mock.patch("main.angelone.managers.contract_manager.requests.get", side_effect=requests.ConnectionError("download failed")):
+                self.assertTrue(manager.initialize(blocking=True))
+
+            contract, match = manager.resolve_option_contract("NIFTY", 24200, "CE", expiry=datetime(2026, 7, 14))
+            self.assertEqual(contract.symbol, "NIFTY14JUL2624200CE")
+            self.assertEqual(match["match_type"], "exact")
 
     @mock.patch("main.brokers.angelone.place_angel_one_order")
     def test_angel_one_adapter_maps_sensex_to_bfo(self, mock_place_order):

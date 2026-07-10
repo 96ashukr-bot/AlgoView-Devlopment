@@ -14,10 +14,14 @@ import threading
 import time
 import requests
 import re
+import json
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Optional, Dict, List, Any, Tuple
 from dataclasses import dataclass, field
 from collections import defaultdict
+
+from django.conf import settings
 
 from ..utils.logging_utils import TradingLogger
 from ..constants import (
@@ -28,6 +32,9 @@ from ..constants import (
 )
 
 logger = TradingLogger("contract_manager")
+
+
+ANGEL_CONTRACT_CACHE_FILENAME = "angelone_contract_master.json"
 
 
 @dataclass
@@ -145,6 +152,10 @@ class ContractMasterManager:
         self._refresh_thread: Optional[threading.Thread] = None
         self._stop_refresh = threading.Event()
         self._fallback_data: List[Dict] = []
+
+    @staticmethod
+    def _cache_path() -> Path:
+        return Path(settings.BASE_DIR) / "main" / ANGEL_CONTRACT_CACHE_FILENAME
     
     @classmethod
     def get_instance(cls) -> 'ContractMasterManager':
@@ -168,14 +179,21 @@ class ContractMasterManager:
         if self._initialized and self._is_cache_valid():
             return True
         
+        if self._load_cached_contracts(require_fresh=True):
+            return True
+
         if blocking:
-            return self._refresh_contracts()
+            if self._refresh_contracts():
+                return True
+            return self._load_cached_contracts(require_fresh=False)
         else:
             thread = threading.Thread(
                 target=self._refresh_contracts,
                 daemon=True,
                 name="ContractMasterInit"
             )
+            if not self._initialized:
+                self._load_cached_contracts(require_fresh=False)
             thread.start()
             return True
     
@@ -253,6 +271,7 @@ class ContractMasterManager:
                 self._last_refresh = datetime.now()
                 self._initialized = True
                 self._fallback_data = data
+            self._write_cached_contracts(data)
             
             elapsed = time.time() - start_time
             logger.info(
@@ -272,6 +291,12 @@ class ContractMasterManager:
             # Use fallback if available
             if self._fallback_data and not self._initialized:
                 self._load_fallback()
+            elif self._load_cached_contracts(require_fresh=False):
+                logger.warning(
+                    "Using cached Angel One contract master after refresh failed",
+                    path=str(self._cache_path()),
+                    error=str(e),
+                )
             
             return False
             
@@ -294,6 +319,69 @@ class ContractMasterManager:
             logger.warning("Loaded from fallback data")
         except Exception as e:
             logger.error("Fallback load failed", error=str(e))
+
+    def _write_cached_contracts(self, data: List[Dict]) -> None:
+        """Persist the last valid Angel One contract master for market-hour fallback."""
+        try:
+            cache_path = self._cache_path()
+            cache_path.parent.mkdir(parents=True, exist_ok=True)
+            tmp_path = cache_path.with_suffix(f"{cache_path.suffix}.tmp")
+            tmp_path.write_text(json.dumps(data), encoding="utf-8")
+            tmp_path.replace(cache_path)
+            logger.info(
+                "Angel One contract master cached",
+                path=str(cache_path),
+                contracts_count=len(data),
+            )
+        except Exception as exc:
+            logger.error("Angel One contract master cache write failed", error=str(exc))
+
+    def _load_cached_contracts(self, *, require_fresh: bool = False) -> bool:
+        """Load the last valid Angel One contract master from disk."""
+        cache_path = self._cache_path()
+        if not cache_path.exists() or cache_path.stat().st_size <= 0:
+            return False
+
+        cache_modified = datetime.fromtimestamp(cache_path.stat().st_mtime)
+        if require_fresh and cache_modified.date() != datetime.now().date():
+            return False
+
+        try:
+            data = json.loads(cache_path.read_text(encoding="utf-8"))
+            if not isinstance(data, list) or not data:
+                return False
+
+            new_index = ContractIndex()
+            for item in data:
+                contract = self._parse_contract(item)
+                if contract:
+                    new_index.add(contract)
+
+            if not new_index.by_token:
+                return False
+
+            with self._lock:
+                self._index = new_index
+                self._raw_data = data
+                self._fallback_data = data
+                self._last_refresh = cache_modified
+                self._initialized = True
+
+            logger.info(
+                "Angel One contract master loaded from cache",
+                path=str(cache_path),
+                contracts_count=len(new_index.by_token),
+                cache_modified=cache_modified.isoformat(),
+                stale=cache_modified.date() != datetime.now().date(),
+            )
+            return True
+        except Exception as exc:
+            logger.error(
+                "Angel One contract master cache load failed",
+                path=str(cache_path),
+                error=str(exc),
+            )
+            return False
     
     def _parse_contract(self, item: Dict) -> Optional[Contract]:
         """Parse contract from API response"""
