@@ -168,12 +168,40 @@ class User(AbstractBaseUser, PermissionsMixin):
             
             self.fullName = f"{self.firstName} {self.lastName} "
         self.calculate_dates()    
+        self.client_expiry_status = self.is_service_expired()
+        update_fields = kwargs.get("update_fields")
+        if update_fields is not None:
+            kwargs["update_fields"] = set(update_fields) | {"client_expiry_status"}
         super().save(*args, **kwargs)
+
+    def is_service_started(self, today=None):
+        today = today or get_business_local_date()
+        if self.start_date_client and self.start_date_client > today:
+            return False
+        return True
+
+    def is_service_expired(self, today=None):
+        today = today or get_business_local_date()
+        return bool(self.end_date_client and self.end_date_client < today)
+
+    def service_access_error(self, today=None):
+        today = today or get_business_local_date()
+        if not self.is_service_started(today):
+            return "Your service has not started yet. Please contact the administrator."
+        if self.is_service_expired(today):
+            return "Your license has expired. Please renew it to continue using the service."
+        return None
     
     def calculate_dates(self):
         """Calculate client service dates from the selected license."""
         today = get_business_local_date()
         license_type = (getattr(self.license, 'name', '') or '').strip().lower()
+        original = None
+        if self.pk:
+            original = User.objects.filter(pk=self.pk).only(
+                "license_id", "to_month", "start_date_client", "end_date_client"
+            ).first()
+        end_date_changed = bool(original and original.end_date_client != self.end_date_client)
 
         if license_type == "live":
             try:
@@ -183,15 +211,40 @@ class User(AbstractBaseUser, PermissionsMixin):
 
             if 1 <= months <= 12:
                 self.to_month = months
-                self.start_date_client = today
-                self.end_date_client = today + relativedelta(months=months)
+                self.start_date_client = self.start_date_client or today
+                should_recalculate = (
+                    not self.end_date_client
+                    or (
+                        original
+                        and not end_date_changed
+                        and (
+                            original.license_id != self.license_id
+                            or original.to_month != self.to_month
+                            or original.start_date_client != self.start_date_client
+                        )
+                    )
+                )
+                if should_recalculate:
+                    self.end_date_client = self.start_date_client + relativedelta(months=months)
             else:
                 self.start_date_client = None
                 self.end_date_client = None
         elif license_type == "demo":
             self.to_month = None
-            self.start_date_client = today
-            self.end_date_client = today + timedelta(days=5)
+            self.start_date_client = self.start_date_client or today
+            should_recalculate = (
+                not self.end_date_client
+                or (
+                    original
+                    and not end_date_changed
+                    and (
+                        original.license_id != self.license_id
+                        or original.start_date_client != self.start_date_client
+                    )
+                )
+            )
+            if should_recalculate:
+                self.end_date_client = self.start_date_client + timedelta(days=5)
         else:
             self.to_month = None
             self.start_date_client = None

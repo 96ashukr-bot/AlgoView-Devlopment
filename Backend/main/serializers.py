@@ -324,8 +324,10 @@ class CustomLoginSerializer(serializers.Serializer):
             raise serializers.ValidationError('Invalid credentials')
         if is_end_user(user) or (not user.role and user.external_user == "true"):
                 messages = []
-                if user.client_expiry_status:
-                    messages.append("Your license has expired. Please renew it to continue using the service.")
+                service_error = user.service_access_error()
+                if service_error:
+                    messages.append(service_error)
+                    User.objects.filter(pk=user.pk).update(client_expiry_status=user.is_service_expired())
                 if not user.client_status:
                     messages.append("Your account is inactive. Please contact the administrator for assistance.")
                 if messages:
@@ -1238,12 +1240,8 @@ class ClientCreateSerializer(serializers.ModelSerializer):
             if not 1 <= months <= 12:
                 raise serializers.ValidationError({'to_month': 'Live license duration must be between 1 and 12 months.'})
             data['to_month'] = months
-            data['start_date_client'] = None
-            data['end_date_client'] = None
         elif license_name == 'demo':
             data['to_month'] = None
-            data['start_date_client'] = None
-            data['end_date_client'] = None
 
         return data
 
@@ -1334,12 +1332,8 @@ class ClientupdateListSerializer(serializers.ModelSerializer):
             if not 1 <= months <= 12:
                 raise serializers.ValidationError({'to_month': 'Live license duration must be between 1 and 12 months.'})
             data['to_month'] = months
-            data['start_date_client'] = None
-            data['end_date_client'] = None
         elif license_name == 'demo':
             data['to_month'] = None
-            data['start_date_client'] = None
-            data['end_date_client'] = None
 
         return data
     
