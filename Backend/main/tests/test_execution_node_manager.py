@@ -2040,6 +2040,54 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertEqual(response["data"]["status"], "Failed")
         self.assertEqual(response["data"]["message"], "Invalid LTP")
 
+    @mock.patch("main.Alice_Blue_Api.get_alice_saved_session")
+    @mock.patch("main.Alice_Blue_Api.fetch_instrument_data")
+    @mock.patch("main.Alice_Blue_Api._alice_a3_request")
+    def test_alice_blue_empty_success_result_is_not_reported_as_success(self, mock_request, mock_fetch, mock_session):
+        from main.Alice_Blue_Api import place_alice_orders
+
+        alice = SimpleNamespace(
+            alice_session_id="alice-session",
+            get_instrument_by_symbol=lambda exchange, symbol: SimpleNamespace(token="51375"),
+            get_scrip_info=lambda instrument: {"LTP": 120.25},
+        )
+        mock_session.return_value = (alice, None)
+        mock_request.return_value = {"result": [], "status": "Ok", "message": "Success", "http_status_code": 200}
+
+        response = place_alice_orders(
+            LivePrice=0,
+            group_service="Sparks Pro",
+            api_skey="api-key",
+            api_uid="2701394",
+            trading_symbol_aliceblue="NIFTY14JUL26P24200",
+            transaction_type="BUY",
+            symbol="NIFTY",
+            quantity=65,
+            strategy=None,
+            order_type="LIMIT",
+            product_type="MIS",
+            price=None,
+            user=self.client_user,
+            Lots=1,
+            trade_order_status=None,
+            Entry_type=None,
+            Exit_type=None,
+            Entry_price=None,
+            Exit_price=None,
+            EntryQty=None,
+            ExitQty=None,
+            webhook_signal={},
+            Exchange="NFO",
+            Segment="FNO",
+            Index_Symbol="NIFTY",
+            history_id="alice-empty-result",
+            proxy_config={"https": "http://proxy.example.com:8080"},
+            session_id="alice-session",
+        )
+
+        self.assertEqual(response["data"]["status"], "Failed")
+        self.assertIn("did not provide a broker order id", response["data"]["message"])
+
     def test_execution_engine_normalizes_nested_error_status_to_failed(self):
         from main.execution_engine import ExecutionEngine
 

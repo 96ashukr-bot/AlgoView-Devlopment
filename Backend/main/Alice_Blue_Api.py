@@ -765,6 +765,11 @@ def place_alice_orders(
             }
 
         message = _extract_alice_response_message(response) or "Broker rejected Alice Blue order."
+        if str(message).strip().lower() == "success" and not _extract_alice_order_id(response):
+            message = (
+                "Alice Blue returned Success but did not provide a broker order id. "
+                "Order was not confirmed by broker; check Alice Blue order book before retrying."
+            )
         return _alice_failed_response(message, response=response)
 
     except Exception as e:
