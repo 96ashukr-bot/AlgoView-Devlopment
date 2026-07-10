@@ -1181,6 +1181,102 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertEqual(force_request.product_type_name, "NRML")
         self.assertEqual(force_request.order_params["product_type"], "NRML")
 
+    def test_force_kill_switch_reuses_saved_angel_contract_details(self):
+        from main.views import _build_regular_trade_exit_request
+
+        trade_history = Tradeorderhistory.objects.create(
+            client=self.client_user,
+            GroupService="Lite",
+            broker="Angel One",
+            trading_symbol="NIFTY",
+            Index_Symbol="NIFTY2624200CE14JUL",
+            transaction_type="BUY",
+            trade_order_status="complete",
+            order_status="complete",
+            order_id="260710000415114",
+            EntryQty=65,
+            Entry_Price=Decimal("104.70"),
+            response_data={
+                "data": {
+                    "broker_order": {
+                        "tradingsymbol": "NIFTY14JUL2624200CE",
+                        "symboltoken": "51379",
+                        "producttype": "INTRADAY",
+                    }
+                }
+            },
+            order_params={
+                "symbol": "NIFTY",
+                "strike": 24200,
+                "option_type": "CE",
+                "product_type": "MIS",
+                "day": "14",
+                "month": "JUL",
+                "year": "26",
+                "fullyear": "2026",
+                "quantity": 65,
+            },
+        )
+
+        request = _build_regular_trade_exit_request(trade_history, force_broker_squareoff=True)
+
+        self.assertEqual(request.order_params["symboltoken"], "51379")
+        self.assertEqual(request.order_params["broker_tradingsymbol"], "NIFTY14JUL2624200CE")
+
+    def test_angel_force_kill_validation_skips_contract_master_refresh_for_saved_contract(self):
+        from main.execution_engine import ExecutionEngine
+        from main.views import _build_regular_trade_exit_request
+
+        self.broker_details.isTokenExpired = False
+        self.broker_details.access_token_expiry = timezone.now() + timedelta(hours=1)
+        self.broker_details.save(update_fields=["isTokenExpired", "access_token_expiry"])
+        trade_history = Tradeorderhistory.objects.create(
+            client=self.client_user,
+            GroupService="Lite",
+            broker="Angel One",
+            trading_symbol="NIFTY",
+            Index_Symbol="NIFTY2624200CE14JUL",
+            transaction_type="BUY",
+            trade_order_status="complete",
+            order_status="complete",
+            order_id="260710000415114",
+            EntryQty=65,
+            Entry_Price=Decimal("104.70"),
+            response_data={
+                "data": {
+                    "broker_order": {
+                        "tradingsymbol": "NIFTY14JUL2624200CE",
+                        "symboltoken": "51379",
+                        "producttype": "INTRADAY",
+                    }
+                }
+            },
+            order_params={
+                "symbol": "NIFTY",
+                "strike": 24200,
+                "option_type": "CE",
+                "product_type": "MIS",
+                "day": "14",
+                "month": "JUL",
+                "year": "26",
+                "fullyear": "2026",
+                "quantity": 65,
+            },
+        )
+        request = _build_regular_trade_exit_request(trade_history, force_broker_squareoff=True)
+        engine = ExecutionEngine()
+        engine._auth_service.ensure_valid_session = mock.Mock(
+            return_value={"status": "success", "session": SimpleNamespace(smart_connect=object())}
+        )
+        engine._ltp_service.get_ltp = mock.Mock(return_value=90.15)
+        engine._contract_manager.initialize = mock.Mock(side_effect=AssertionError("contract refresh should be skipped"))
+
+        result = engine._validate_angel_one_request(request)
+
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["contract"].token, "51379")
+        self.assertEqual(result["contract"].symbol, "NIFTY14JUL2624200CE")
+
     def test_zerodha_kill_switch_reconstructs_contract_from_generic_history_symbol(self):
         from main.execution_engine import ExecutionEngine
 

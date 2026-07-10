@@ -4063,9 +4063,17 @@ def _trade_history_entry_product_type(trade_history):
     ).strip().upper()
 
 
+def _trade_history_broker_order(trade_history):
+    response_data = trade_history.response_data if isinstance(trade_history.response_data, dict) else {}
+    response_payload = response_data.get("data") if isinstance(response_data.get("data"), dict) else {}
+    broker_order = response_payload.get("broker_order") if isinstance(response_payload.get("broker_order"), dict) else {}
+    return broker_order
+
+
 def _build_regular_trade_exit_request(trade_history, *, force_broker_squareoff=False, source="client_trade_history_kill_switch", reason=None, initiated_by=None):
     contract = _parse_trade_history_contract(trade_history)
     order_params = trade_history.order_params if isinstance(trade_history.order_params, dict) else {}
+    broker_order = _trade_history_broker_order(trade_history)
     quantity = trade_history.EntryQty or trade_history.ExitQty or order_params.get("quantity") or order_params.get("qty") or 0
     quantity = int(quantity or 0)
     if quantity <= 0:
@@ -4127,6 +4135,8 @@ def _build_regular_trade_exit_request(trade_history, *, force_broker_squareoff=F
             "original_history_id": trade_history.history_id or trade_history.id,
             "original_broker_order_id": trade_history.order_id,
             "tradingsymbol": trading_symbol,
+            "broker_tradingsymbol": broker_order.get("tradingsymbol"),
+            "symboltoken": broker_order.get("symboltoken"),
             "product_type": entry_product_type,
             "force_broker_squareoff": bool(force_broker_squareoff),
             "reason": reason or "",

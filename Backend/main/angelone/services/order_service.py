@@ -14,6 +14,7 @@ Features:
 
 import uuid
 import time
+from types import SimpleNamespace
 from typing import Dict, Any, Optional, List
 from datetime import datetime
 
@@ -119,6 +120,8 @@ class OrderService:
         request_id: Optional[str] = None,
         broker_details=None,
         proxy_config: Optional[Dict[str, str]] = None,
+        symbol_token: Optional[str] = None,
+        trading_symbol: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Place an order synchronously.
@@ -161,7 +164,6 @@ class OrderService:
         existing = None
 
         try:
-            self._contract_manager.initialize(blocking=True)
             if not symbol:
                 return self._error_response("Symbol is required.", request_id, error_code="INVALID_INPUT")
             if side.upper() not in {TransactionType.BUY.value, TransactionType.SELL.value}:
@@ -181,8 +183,28 @@ class OrderService:
             session = session_result.get("session")
             smart_connect = session.smart_connect
 
+            direct_symbol_token = str(symbol_token or "").strip()
+            direct_trading_symbol = str(trading_symbol or "").strip().upper()
             parsed = None
-            if underlying and option_type and strike is not None:
+            if direct_symbol_token and direct_trading_symbol and underlying and option_type and strike is not None:
+                underlying_symbol = str(underlying).upper()
+                strike_value = self._contract_manager._normalize_strike(strike)
+                option_type_value = str(option_type).upper()
+                is_option = True
+                contract = SimpleNamespace(
+                    token=direct_symbol_token,
+                    symbol=direct_trading_symbol,
+                    expiry=expiry_override,
+                    lot_size=int(quantity),
+                    tick_size=DEFAULT_TICK_SIZE,
+                )
+                contract_resolution = {
+                    "match_type": "saved_force_exit_contract",
+                    "fallback_used": False,
+                    "source": "original_broker_order",
+                }
+            elif underlying and option_type and strike is not None:
+                self._contract_manager.initialize(blocking=True)
                 underlying_symbol = str(underlying).upper()
                 strike_value = self._contract_manager._normalize_strike(strike)
                 option_type_value = str(option_type).upper()
@@ -190,6 +212,7 @@ class OrderService:
                 parsed_expiry_date = expiry_override
                 parsed_expiry_str = None
             else:
+                self._contract_manager.initialize(blocking=True)
                 parsed = self._symbol_parser.parse(symbol)
                 underlying_symbol = parsed.underlying
                 strike_value = parsed.strike
@@ -198,34 +221,35 @@ class OrderService:
                 parsed_expiry_date = parsed.expiry_date
                 parsed_expiry_str = parsed.expiry_str
 
-            self._expiry_handler.set_available_expiries(
-                underlying_symbol,
-                self._contract_manager.get_expiries_for_underlying(underlying_symbol),
-            )
-            expiry_info = None
-            if is_option:
-                expiry_info = self._expiry_handler.resolve_expiry(
-                    underlying=underlying_symbol,
-                    expiry_override=expiry_override or parsed_expiry_date,
-                    expiry_str=parsed_expiry_str,
-                    prefer_weekly=True,
+            if not (direct_symbol_token and direct_trading_symbol):
+                self._expiry_handler.set_available_expiries(
+                    underlying_symbol,
+                    self._contract_manager.get_expiries_for_underlying(underlying_symbol),
                 )
-                if not expiry_info:
-                    return self._error_response(f"Could not resolve expiry for {underlying_symbol}", request_id)
+                expiry_info = None
+                if is_option:
+                    expiry_info = self._expiry_handler.resolve_expiry(
+                        underlying=underlying_symbol,
+                        expiry_override=expiry_override or parsed_expiry_date,
+                        expiry_str=parsed_expiry_str,
+                        prefer_weekly=True,
+                    )
+                    if not expiry_info:
+                        return self._error_response(f"Could not resolve expiry for {underlying_symbol}", request_id)
 
-                contract, contract_resolution = self._contract_manager.resolve_option_contract(
-                    underlying=underlying_symbol,
-                    strike=strike_value,
-                    option_type=option_type_value,
-                    exchange=exchange,
-                    expiry=expiry_info.date,
-                    prefer_weekly=True,
-                    allow_strike_fallback=allow_strike_fallback,
-                )
-            else:
-                contracts = self._contract_manager.get_contracts_by_symbol(symbol)
-                contract = contracts[0] if contracts else None
-                contract_resolution = {"match_type": "symbol_lookup", "fallback_used": False}
+                    contract, contract_resolution = self._contract_manager.resolve_option_contract(
+                        underlying=underlying_symbol,
+                        strike=strike_value,
+                        option_type=option_type_value,
+                        exchange=exchange,
+                        expiry=expiry_info.date,
+                        prefer_weekly=True,
+                        allow_strike_fallback=allow_strike_fallback,
+                    )
+                else:
+                    contracts = self._contract_manager.get_contracts_by_symbol(symbol)
+                    contract = contracts[0] if contracts else None
+                    contract_resolution = {"match_type": "symbol_lookup", "fallback_used": False}
 
             if not contract:
                 return self._error_response(

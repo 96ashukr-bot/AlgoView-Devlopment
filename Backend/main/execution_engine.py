@@ -12,6 +12,7 @@ import uuid
 import re
 from dataclasses import dataclass, replace
 from datetime import datetime, time as datetime_time
+from types import SimpleNamespace
 from typing import Any, Optional, Dict
 from zoneinfo import ZoneInfo
 
@@ -834,23 +835,48 @@ class ExecutionEngine:
                 "error_code": "INVALID_SESSION",
             }
 
-        self._contract_manager.initialize(blocking=True)
+        saved_symbol_token = ""
+        saved_trading_symbol = ""
+        if isinstance(request.order_params, dict) and is_force_broker_squareoff(request.order_params):
+            saved_symbol_token = str(request.order_params.get("symboltoken") or "").strip()
+            saved_trading_symbol = str(
+                request.order_params.get("broker_tradingsymbol")
+                or request.order_params.get("tradingsymbol")
+                or ""
+            ).strip().upper()
+
         expiry = request.resolved_expiry
-        if not expiry:
+        if not expiry and not (saved_symbol_token and saved_trading_symbol):
+            self._contract_manager.initialize(blocking=True)
             expiries = self._contract_manager.get_expiries_for_underlying(request.underlying_symbol)
             expiry = expiries[0] if expiries else None
         if not expiry:
             return {"status": "error", "message": "Unable to resolve contract expiry.", "error_code": "INVALID_EXPIRY"}
 
-        contract, contract_resolution = self._contract_manager.resolve_option_contract(
-            underlying=request.underlying_symbol,
-            strike=request.strike_value,
-            option_type=request.option_type_value,
-            exchange=broker_exchange,
-            expiry=expiry,
-            prefer_weekly=True,
-            allow_strike_fallback=ALLOW_STRIKE_FALLBACK,
-        )
+        if saved_symbol_token and saved_trading_symbol:
+            contract = SimpleNamespace(
+                token=saved_symbol_token,
+                symbol=saved_trading_symbol,
+                expiry=expiry,
+                lot_size=request.quantity_int,
+                tick_size=DEFAULT_TICK_SIZE,
+            )
+            contract_resolution = {
+                "match_type": "saved_force_exit_contract",
+                "fallback_used": False,
+                "source": "original_broker_order",
+            }
+        else:
+            self._contract_manager.initialize(blocking=True)
+            contract, contract_resolution = self._contract_manager.resolve_option_contract(
+                underlying=request.underlying_symbol,
+                strike=request.strike_value,
+                option_type=request.option_type_value,
+                exchange=broker_exchange,
+                expiry=expiry,
+                prefer_weekly=True,
+                allow_strike_fallback=ALLOW_STRIKE_FALLBACK,
+            )
         if not contract:
             logger.error(
                 "Angel One contract resolution failed",
@@ -1085,6 +1111,8 @@ class ExecutionEngine:
             "expiry": contract_expiry.isoformat() if contract_expiry else None,
             "request_id": request.request_id,
             "order_params": request.order_params if isinstance(request.order_params, dict) else {},
+            "symboltoken": request.order_params.get("symboltoken") if isinstance(request.order_params, dict) else None,
+            "broker_tradingsymbol": request.order_params.get("broker_tradingsymbol") if isinstance(request.order_params, dict) else None,
         }
         try:
             result = route_order_to_execution_node(request.user, client_broker, order_payload)

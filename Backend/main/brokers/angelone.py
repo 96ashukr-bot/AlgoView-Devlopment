@@ -48,6 +48,7 @@ class AngelOneBroker(BaseBroker):
 
     def place_order(self, payload, proxy_config=None):
         order = payload.get("order", payload)
+        nested_order_params = order.get("order_params") if isinstance(order.get("order_params"), dict) else {}
         order, open_position, close_error = prepare_close_order_from_open_position(
             self.broker_details.client, order, self.broker_name
         )
@@ -72,6 +73,13 @@ class AngelOneBroker(BaseBroker):
             request_id=order.get("request_id") or order.get("idempotency_key"),
             expiry_override=_parse_expiry_override(order),
             proxy_config=proxy_config,
+            symbol_token=order.get("symboltoken") or nested_order_params.get("symboltoken"),
+            trading_symbol=(
+                order.get("broker_tradingsymbol")
+                or nested_order_params.get("broker_tradingsymbol")
+                or order.get("tradingsymbol")
+                or nested_order_params.get("tradingsymbol")
+            ),
         )
         mark_open_position_closed(open_position, response)
         return response

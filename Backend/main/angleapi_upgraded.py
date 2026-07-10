@@ -196,6 +196,8 @@ def place_angel_one_order(
     request_id: str = None,
     expiry_override: Optional[datetime] = None,
     proxy_config=None,
+    symbol_token: str = None,
+    trading_symbol: str = None,
 ) -> dict:
     """Legacy order facade routed to OrderService."""
     if not proxy_config:
@@ -229,6 +231,8 @@ def place_angel_one_order(
         request_id=request_id,
         broker_details=broker_details,
         proxy_config=proxy_config,
+        symbol_token=symbol_token,
+        trading_symbol=trading_symbol,
     )
 
 
