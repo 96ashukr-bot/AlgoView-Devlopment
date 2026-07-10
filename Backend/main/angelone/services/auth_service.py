@@ -37,6 +37,21 @@ class AuthService:
     def __init__(self):
         self._session_manager = SessionManager.get_instance()
 
+    def _mark_execution_node_broker_verified(self, broker_details, reason: str) -> None:
+        node = getattr(broker_details, "execution_node", None) if broker_details else None
+        if not node or not getattr(node, "is_active", False):
+            return
+        if getattr(node, "execution_type", None) == getattr(node, "EXECUTION_TYPE_PROXY", "proxy") and not getattr(node, "proxy_public_ip_verified", False):
+            return
+        if node.is_verified_with_broker:
+            return
+        node.is_verified_with_broker = True
+        node.save(update_fields=["is_verified_with_broker", "updated_at"])
+        try:
+            node.mark_log("broker_verified", reason, client=broker_details.client)
+        except Exception:
+            logger.debug("Unable to write Angel One execution node broker verification log")
+
     def resolve_login_credentials(
         self,
         *,
@@ -152,6 +167,10 @@ class AuthService:
                         "broker_pass",
                         "broker_Totp_Authcode",
                     ])
+                    self._mark_execution_node_broker_verified(
+                        broker_details,
+                        "Execution node marked broker verified after successful Angel One login.",
+                    )
                 
                 logger.info(
                     "Broker details updated",
@@ -261,6 +280,10 @@ class AuthService:
                 "broker_pass",
                 "broker_Totp_Authcode",
             ])
+            self._mark_execution_node_broker_verified(
+                broker_details,
+                "Execution node marked broker verified after successful Angel One token registration.",
+            )
 
         return {
             "status": "success",
@@ -348,6 +371,10 @@ class AuthService:
                         "broker_pass",
                         "broker_Totp_Authcode",
                     ])
+                    self._mark_execution_node_broker_verified(
+                        broker_details,
+                        "Execution node marked broker verified after successful Angel One session validation.",
+                    )
                 except Exception as e:
                     logger.error("Failed to persist ensured session", client_id=client_id, error=str(e))
         elif result.get("error_code") == "TOKEN_EXPIRED" and broker_details:

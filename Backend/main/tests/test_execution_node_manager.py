@@ -4338,6 +4338,50 @@ class ExecutionNodeManagerTests(TestCase):
         proxy_node.refresh_from_db()
         self.assertTrue(proxy_node.is_verified_with_broker)
 
+    @mock.patch("main.angelone.managers.session_manager.SessionManager.validate_session")
+    def test_angel_one_token_registration_marks_execution_node_broker_verified(self, mock_validate_session):
+        from main.angelone.managers.session_manager import ClientSession
+        from main.angelone.services.auth_service import AuthService
+
+        proxy_node = ExecutionNode.objects.create(
+            name="Angel Token Proxy",
+            ip_address="10.0.0.34",
+            execution_type=ExecutionNode.EXECUTION_TYPE_PROXY,
+            proxy_host="proxy.example.com",
+            proxy_port=8080,
+            proxy_protocol=ExecutionNode.PROXY_PROTOCOL_HTTP,
+            proxy_public_ip_verified=True,
+            is_verified_with_broker=False,
+        )
+        assign_execution_node_to_client(self.client_user, proxy_node)
+        self.broker_details.refresh_from_db()
+        session = ClientSession(
+            client_id="angel-client",
+            api_key="angel-api-key",
+            session_key="angel-client:angel-api-key",
+            access_token="angel-access",
+            refresh_token="angel-refresh",
+            feed_token="angel-feed",
+            session_expiry=timezone.now() + timedelta(hours=8),
+            validated_at=timezone.now(),
+        )
+        mock_validate_session.return_value = {"status": "success", "session": session}
+
+        result = AuthService().register_existing_tokens(
+            client_id="angel-client",
+            api_key="angel-api-key",
+            access_token="angel-access",
+            refresh_token="angel-refresh",
+            feed_token="angel-feed",
+            broker_details=self.broker_details,
+            verify_remote=True,
+            proxy_config={"https": "http://proxy.example.com:8080"},
+        )
+
+        self.assertEqual(result["status"], "success")
+        proxy_node.refresh_from_db()
+        self.assertTrue(proxy_node.is_verified_with_broker)
+
     def test_clear_session_tokens_removes_legacy_token_fields(self):
         self.broker_details.access_token = "legacy-access"
         self.broker_details.refreshToken = "legacy-refresh"
