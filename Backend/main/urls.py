@@ -28,6 +28,7 @@ from main.multileg_views import (
     MultiLegStrategyLogsAPIView,
 )
 from main.execution_node_views import (
+    ExecutionNodeAssignableClientListAPIView,
     ExecutionNodeAssignAPIView,
     ClientExecutionNodeAPIView,
     ClientExecutionNodeVerifyProxyAPIView,
@@ -243,6 +244,7 @@ urlpatterns = [
     path('client/kill-switch/', ClientGlobalKillSwitchAPIView.as_view(), name='client-global-kill-switch'),
     path('superadmin/force-kill-switch/', SuperadminForceKillSwitchAPIView.as_view(), name='superadmin-force-kill-switch'),
     path('execution-nodes/', ExecutionNodeListAPIView.as_view(), name='execution-node-list'),
+    path('execution-nodes/assignable-clients/', ExecutionNodeAssignableClientListAPIView.as_view(), name='execution-node-assignable-clients'),
     path('execution-nodes/<int:node_id>/', ExecutionNodeDetailAPIView.as_view(), name='execution-node-detail'),
     path('execution-nodes/assign/', ExecutionNodeAssignAPIView.as_view(), name='execution-node-assign'),
     path('execution-nodes/<int:node_id>/assign/', ExecutionNodeAssignByIdAPIView.as_view(), name='execution-node-assign-by-id'),

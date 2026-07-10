@@ -9,6 +9,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
+from django.db.models import Q
 from django.db.models.deletion import ProtectedError
 from django.utils import timezone
 from rest_framework import serializers, status
@@ -275,6 +276,47 @@ class ExecutionNodeListAPIView(APIView):
             node.save(update_fields=["node_secret", "updated_at"])
         node.mark_log("created", "Execution node created via API.")
         return Response(ExecutionNodeSerializer(node).data, status=status.HTTP_201_CREATED)
+
+
+class ExecutionNodeAssignableClientListAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        _require_node_admin(request.user)
+        search_query = (request.query_params.get("q") or "").strip()
+        clients = User.objects.filter(Q(is_client=True) | Q(type_of_user="is_client")).order_by("fullName", "email", "id")
+        if search_query:
+            clients = clients.filter(
+                Q(fullName__icontains=search_query)
+                | Q(firstName__icontains=search_query)
+                | Q(lastName__icontains=search_query)
+                | Q(email__icontains=search_query)
+                | Q(phoneNumber__icontains=search_query)
+            )
+
+        assigned_node_by_client = {
+            node.assigned_client_id: node
+            for node in ExecutionNode.objects.filter(assigned_client__isnull=False).only(
+                "id",
+                "ip_address",
+                "assigned_client_id",
+            )
+        }
+        results = []
+        for client in clients[:500]:
+            assigned_node = assigned_node_by_client.get(client.id)
+            results.append(
+                {
+                    "id": client.id,
+                    "email": client.email,
+                    "fullName": client.fullName or f"{client.firstName or ''} {client.lastName or ''}".strip(),
+                    "phoneNumber": client.phoneNumber,
+                    "has_execution_node": bool(assigned_node),
+                    "execution_node_id": assigned_node.id if assigned_node else None,
+                    "execution_node_ip": assigned_node.ip_address if assigned_node else None,
+                }
+            )
+        return Response({"results": results})
 
 
 class ExecutionNodeAssignAPIView(APIView):

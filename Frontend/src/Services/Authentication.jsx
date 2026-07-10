@@ -4732,6 +4732,27 @@ export const getExecutionNodes = async () => {
   }
 };
 
+export const getExecutionNodeAssignableClients = async (query = "") => {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error("No authentication token found.");
+  }
+
+  try {
+    const response = await axios.get(`${baseUrl}/execution-nodes/assignable-clients/`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      params: query ? { q: query } : {},
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching assignable IP clients:', error);
+    throw new Error(error.response?.data?.message || error.response?.data?.detail || "Failed to fetch assignable clients.");
+  }
+};
+
 export const createExecutionNode = async (payload) => {
   const token = getAuthToken();
   if (!token) {

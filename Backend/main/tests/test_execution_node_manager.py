@@ -1629,6 +1629,59 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("results", response.json())
 
+    def test_superadmin_can_search_assignable_ip_clients_after_release(self):
+        superadmin = User.objects.create_user(
+            email="superadmin-assignable-ip-pool@example.com",
+            firstName="Super",
+            lastName="Admin",
+            phoneNumber="9999999993",
+            password="Pass@123",
+            is_superuser=True,
+        )
+        released_client = User.objects.create_user(
+            email="zerodha@yopmail.com",
+            firstName="Zerodha",
+            lastName="Released",
+            phoneNumber="9999999992",
+            password="Pass@123",
+            is_client=True,
+            type_of_user="is_client",
+        )
+        assigned_client = User.objects.create_user(
+            email="assigned-ip-client@example.com",
+            firstName="Assigned",
+            lastName="Client",
+            phoneNumber="9999999991",
+            password="Pass@123",
+            is_client=True,
+            type_of_user="is_client",
+        )
+        assigned_node = ExecutionNode.objects.create(
+            name="Assigned Node",
+            ip_address="10.0.0.20",
+            assigned_client=assigned_client,
+            status=ExecutionNode.STATUS_ASSIGNED,
+        )
+        access_token = str(RefreshToken.for_user(superadmin).access_token)
+
+        response = self.client.get(
+            "/api/execution-nodes/assignable-clients/?q=zerodha",
+            HTTP_AUTHORIZATION=f"Bearer {access_token}",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        results = response.json()["results"]
+        self.assertEqual([item["email"] for item in results], ["zerodha@yopmail.com"])
+        self.assertFalse(results[0]["has_execution_node"])
+
+        assigned_response = self.client.get(
+            "/api/execution-nodes/assignable-clients/?q=assigned-ip-client",
+            HTTP_AUTHORIZATION=f"Bearer {access_token}",
+        )
+        assigned_results = assigned_response.json()["results"]
+        self.assertEqual(assigned_results[0]["execution_node_id"], assigned_node.id)
+        self.assertTrue(assigned_results[0]["has_execution_node"])
+
     def test_superadmin_can_delete_unassigned_ip_pool_node(self):
         superadmin = User.objects.create_user(
             email="superadmin-delete-ip-pool@example.com",

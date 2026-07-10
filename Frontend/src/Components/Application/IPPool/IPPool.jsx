@@ -6,7 +6,7 @@ import {
   assignExecutionNodeToClient,
   createExecutionNode,
   deleteExecutionNode,
-  getClients,
+  getExecutionNodeAssignableClients,
   getExecutionNodes,
   releaseExecutionNodeFromClient,
   updateExecutionNode,
@@ -35,6 +35,7 @@ const IPPool = ({ mode = 'unassigned' }) => {
   const [clients, setClients] = useState([]);
   const [form, setForm] = useState(blankForm);
   const [clientByNode, setClientByNode] = useState({});
+  const [clientSearch, setClientSearch] = useState('');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
@@ -46,8 +47,14 @@ const IPPool = ({ mode = 'unassigned' }) => {
 
   useEffect(() => {
     fetchNodes();
-    fetchClients();
   }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchClients(clientSearch);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [clientSearch]);
 
   const fetchNodes = async () => {
     setLoading(true);
@@ -61,9 +68,9 @@ const IPPool = ({ mode = 'unassigned' }) => {
     }
   };
 
-  const fetchClients = async () => {
+  const fetchClients = async (query = '') => {
     try {
-      const response = await getClients(1, 1000);
+      const response = await getExecutionNodeAssignableClients(query);
       setClients(response?.results || []);
     } catch (error) {
       console.error('Error fetching clients for IP assignment:', error);
@@ -88,6 +95,8 @@ const IPPool = ({ mode = 'unassigned' }) => {
       unassigned: nodes.length - assigned,
     };
   }, [nodes]);
+
+  const assignableClients = useMemo(() => clients.filter((client) => !client.has_execution_node), [clients]);
 
   const handleChange = (event) => {
     const { name, value, type, checked } = event.target;
@@ -405,6 +414,16 @@ const IPPool = ({ mode = 'unassigned' }) => {
   const renderList = () => (
     <Card>
       <CardBody>
+        <Row className="mb-3">
+          <Col md="4">
+            <Label>Search Client</Label>
+            <Input
+              value={clientSearch}
+              onChange={(event) => setClientSearch(event.target.value)}
+              placeholder="Search by name, email, or mobile"
+            />
+          </Col>
+        </Row>
         <div style={{ overflowX: 'auto' }}>
           <Table bordered hover responsive>
             <thead>
@@ -471,9 +490,9 @@ const IPPool = ({ mode = 'unassigned' }) => {
                               style={{ width: '150px' }}
                             >
                               <option value="">Select client</option>
-                              {clients.map((client) => (
+                              {assignableClients.map((client) => (
                                 <option key={client.id} value={client.id}>
-                                  {client.fullName || client.email || `Client #${client.id}`}
+                                  {client.fullName || `Client #${client.id}`}{client.email ? ` - ${client.email}` : ''}
                                 </option>
                               ))}
                             </Input>
