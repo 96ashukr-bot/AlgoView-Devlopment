@@ -874,6 +874,48 @@ def _get_active_broker_details_for_user(user, normalized_broker_name=None):
     return queryset.first()
 
 
+def _get_pending_broker_callback_details(broker_name):
+    normalized_broker = _normalize_broker_name_for_redirect(broker_name)
+    state_service = CallbackStateService()
+    pending_candidates = []
+    queryset = (
+        ClientBrokerdetails.objects.select_related("broker_name")
+        .filter(
+            broker_name__broker_name__iexact=broker_name,
+            request_token__isnull=False,
+        )
+        .exclude(request_token="")
+        .order_by("-id")[:200]
+    )
+    for broker_details in queryset:
+        if not broker_details.broker_name:
+            continue
+        if _normalize_broker_name_for_redirect(broker_details.broker_name.broker_name) != normalized_broker:
+            continue
+        state_record = state_service.get(broker_details.request_token)
+        if not state_record:
+            continue
+        if state_record.broker_details_id != broker_details.id or state_record.user_id != broker_details.client_id:
+            continue
+        pending_candidates.append((state_record.created_at, broker_details))
+
+    if pending_candidates:
+        pending_candidates.sort(key=lambda item: item[0], reverse=True)
+        return pending_candidates[0][1]
+
+    return (
+        ClientBrokerdetails.objects.select_related("broker_name")
+        .filter(
+            broker_name__broker_name__iexact=broker_name,
+            request_token__isnull=False,
+            tokenCreatedAt__gte=now() - timedelta(minutes=15),
+        )
+        .exclude(request_token="")
+        .order_by("-tokenCreatedAt", "-id")
+        .first()
+    )
+
+
 class BrokerLoginRedirectView(APIView):
     permission_classes = [IsAuthenticated]  
 
@@ -1094,7 +1136,7 @@ class BrokerLoginRedirectView(APIView):
         state = _create_broker_callback_state(request, broker_details, "dhan")
         params = urlencode({"consentAppId": consent_app_id, "state": state})
         login_url = f"https://auth.dhan.co/login/consentApp-login?{params}"
-        broker_details.request_token = consent_app_id
+        broker_details.request_token = state
         broker_details.save(update_fields=["request_token"])
         return Response({"redirect_url": login_url, "consent_app_id": consent_app_id})
 
@@ -1284,16 +1326,7 @@ class BrokerCallbackView(APIView):
             else:
                 user = request.user if getattr(request, "user", None) and request.user.is_authenticated else None
                 if not user and _broker_callback_param(request, "tokenId", "token_id"):
-                    broker_details = (
-                        ClientBrokerdetails.objects.select_related("broker_name")
-                        .filter(
-                            broker_name__broker_name__iexact="dhan",
-                            request_token__isnull=False,
-                            tokenCreatedAt__gte=now() - timedelta(minutes=15),
-                        )
-                        .order_by("-tokenCreatedAt", "-id")
-                        .first()
-                    )
+                    broker_details = _get_pending_broker_callback_details("dhan")
                     if broker_details:
                         broker_name = "dhan"
                     else:
@@ -1305,46 +1338,19 @@ class BrokerCallbackView(APIView):
                     or _broker_callback_param(request, "type") == "login"
                     or _broker_callback_param(request, "status") == "success"
                 ):
-                    broker_details = (
-                        ClientBrokerdetails.objects.select_related("broker_name")
-                        .filter(
-                            broker_name__broker_name__iexact="zerodha",
-                            request_token__isnull=False,
-                            tokenCreatedAt__gte=now() - timedelta(minutes=15),
-                        )
-                        .order_by("-tokenCreatedAt", "-id")
-                        .first()
-                    )
+                    broker_details = _get_pending_broker_callback_details("zerodha")
                     if broker_details:
                         broker_name = "zerodha"
                     else:
                         raise ValidationError("Invalid or expired Zerodha callback state")
                 elif not user and _broker_callback_param(request, "RequestToken"):
-                    broker_details = (
-                        ClientBrokerdetails.objects.select_related("broker_name")
-                        .filter(
-                            broker_name__broker_name__iexact="5paisa",
-                            request_token__isnull=False,
-                            tokenCreatedAt__gte=now() - timedelta(minutes=15),
-                        )
-                        .order_by("-tokenCreatedAt", "-id")
-                        .first()
-                    )
+                    broker_details = _get_pending_broker_callback_details("5paisa")
                     if broker_details:
                         broker_name = "5paisa"
                     else:
                         raise ValidationError("Invalid or expired 5Paisa callback state")
                 elif not user and _broker_callback_param(request, "authCode", "authcode", "auth_code"):
-                    broker_details = (
-                        ClientBrokerdetails.objects.select_related("broker_name")
-                        .filter(
-                            broker_name__broker_name__iexact="Alice Blue",
-                            request_token__isnull=False,
-                            tokenCreatedAt__gte=now() - timedelta(minutes=15),
-                        )
-                        .order_by("-tokenCreatedAt", "-id")
-                        .first()
-                    )
+                    broker_details = _get_pending_broker_callback_details("Alice Blue")
                     if broker_details:
                         broker_name = "alice blue"
                     else:

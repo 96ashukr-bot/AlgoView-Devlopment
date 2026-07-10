@@ -362,6 +362,50 @@ class BrokerCallbackRoutingTests(TestCase):
         broker_details.refresh_from_db()
         self.assertEqual(broker_details.access_token, "dhan-access-token")
 
+    @mock.patch("main.dematemodule.requests.get")
+    def test_dhan_no_state_callback_uses_pending_state_when_last_login_is_old(self, mock_get):
+        user = User.objects.create_user(
+            email="dhan-old-owner@example.com",
+            firstName="Dhan",
+            lastName="Old",
+            phoneNumber="9999999966",
+            password="Pass@1234",
+        )
+        broker = Broker.objects.create(broker_name="Dhan", is_active=True)
+        broker_details = ClientBrokerdetails.objects.create(
+            client=user,
+            broker_name=broker,
+            broker_API_KEY="dhan-app-id",
+            broker_API_SKEY="dhan-secret",
+            broker_API_UID="1100000012",
+            request_token="pending-dhan-state",
+        )
+        old_login_at = timezone.now() - timezone.timedelta(days=1)
+        ClientBrokerdetails.objects.filter(pk=broker_details.pk).update(tokenCreatedAt=old_login_at)
+        CallbackStateService().create(
+            state="pending-dhan-state",
+            user_id=user.id,
+            broker_details_id=broker_details.id,
+            client_code="dhan-old-owner",
+            frontend_redirect_url=None,
+        )
+        self._attach_verified_proxy(broker_details, node_id="dhan-old-callback-node")
+        mock_get.return_value = SimpleNamespace(
+            status_code=200,
+            content=b"{}",
+            json=lambda: {
+                "accessToken": "dhan-old-access-token",
+                "dhanClientId": "1100000012",
+                "expiryTime": "2026-05-11T15:30:00+05:30",
+            },
+        )
+
+        response = self.client.get("/api/broker/callback/", {"tokenId": "dhan-token-id"})
+
+        self.assertEqual(response.status_code, 200)
+        broker_details.refresh_from_db()
+        self.assertEqual(broker_details.access_token, "dhan-old-access-token")
+
     @mock.patch("main.dematemodule.KiteConnect")
     def test_zerodha_request_token_callback_is_exchanged_without_state(self, mock_kite_class):
         user = User.objects.create_user(
@@ -408,6 +452,57 @@ class BrokerCallbackRoutingTests(TestCase):
         expiry = timezone.localtime(broker_details.access_token_expiry)
         self.assertEqual(expiry.hour, 23)
         self.assertEqual(expiry.minute, 59)
+
+    @mock.patch("main.dematemodule.KiteConnect")
+    def test_zerodha_no_state_callback_uses_pending_state_when_last_login_is_old(self, mock_kite_class):
+        user = User.objects.create_user(
+            email="zerodha-old-owner@example.com",
+            firstName="Zerodha",
+            lastName="Old",
+            phoneNumber="9999999965",
+            password="Pass@1234",
+        )
+        broker = Broker.objects.create(broker_name="Zerodha", is_active=True)
+        broker_details = ClientBrokerdetails.objects.create(
+            client=user,
+            broker_name=broker,
+            broker_API_KEY="kite-api-old",
+            broker_API_SKEY="kite-secret-old",
+            request_token="pending-zerodha-state",
+        )
+        old_login_at = timezone.now() - timezone.timedelta(days=1)
+        ClientBrokerdetails.objects.filter(pk=broker_details.pk).update(tokenCreatedAt=old_login_at)
+        CallbackStateService().create(
+            state="pending-zerodha-state",
+            user_id=user.id,
+            broker_details_id=broker_details.id,
+            client_code="zerodha-old-owner",
+            frontend_redirect_url=None,
+        )
+        self._attach_verified_proxy(broker_details, node_id="zerodha-old-callback-node")
+        kite = mock_kite_class.return_value
+        kite.generate_session.return_value = {"access_token": "kite-old-access-token"}
+
+        response = self.client.get(
+            "/api/broker/callback/",
+            {
+                "action": "login",
+                "type": "login",
+                "status": "success",
+                "request_token": "kite-old-request-token",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        mock_kite_class.assert_called_once_with(
+            api_key="kite-api-old",
+            proxies={
+                "http": "http://proxy.example.com:8080",
+                "https": "http://proxy.example.com:8080",
+            },
+        )
+        broker_details.refresh_from_db()
+        self.assertEqual(broker_details.access_token, "kite-old-access-token")
 
     @mock.patch("main.dematemodule.fetch_access_token_5paisa")
     def test_fivepaisa_request_token_callback_is_exchanged_without_state(self, mock_fetch):
