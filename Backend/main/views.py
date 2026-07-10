@@ -3746,7 +3746,7 @@ def save_webhook_signals_logs(order_type,symbol,price,strategy,json=None, group_
         json_payload = dict(json or {})
         if group_service:
             json_payload["group_service"] = str(group_service)
-        SignalOrderLog.objects.create(
+        signal_log = SignalOrderLog.objects.create(
             signal_time=timezone.now(),  # You can change this to the actual signal time
             order_type=order_type,
             symbol=symbol,
@@ -3759,8 +3759,10 @@ def save_webhook_signals_logs(order_type,symbol,price,strategy,json=None, group_
         )
         
         logger.info(f"signal order log saved ")
+        return signal_log
     except Exception as e:
         logger.error(f"Failed to save webhook signal order log . Reason: {str(e)}")
+        return None
         
 def round_price(price):
     # Get the last two digits of the price before the decimal
@@ -4466,7 +4468,12 @@ class PlaceOrderWebhookView(APIView):
         alert_data = context["alert_data"]
         symbols = context["symbols"]
         candidate_trades, strategy_id = _get_matching_webhook_trades(alert_data, symbols.upper())
-        save_webhook_signals_logs(context["buy_sell"], symbols, context["default_price"], context["strategy_tag"], json=alert_data, group_service=strategy_id)
+        signal_log = save_webhook_signals_logs(context["buy_sell"], symbols, context["default_price"], context["strategy_tag"], json=alert_data, group_service=strategy_id)
+        if signal_log:
+            context["signal_log_id"] = signal_log.id
+            context["signal_time"] = signal_log.signal_time
+            context["alert_data"] = dict(context["alert_data"] or {})
+            context["alert_data"].setdefault("signal_time", signal_log.signal_time)
         trade_ids = list(candidate_trades.values_list("id", flat=True))
         from main.tasks import process_webhook_signal_task
 
@@ -4520,7 +4527,12 @@ class MyPlaceOrderWebhookView(APIView):
         alert_data = context["alert_data"]
         symbols = context["symbols"]
         candidate_trades, strategy_id = _get_matching_webhook_trades(alert_data, symbols.upper())
-        save_webhook_signals_logs(context["buy_sell"], symbols, context["default_price"], context["strategy_tag"], json=alert_data, group_service=strategy_id)
+        signal_log = save_webhook_signals_logs(context["buy_sell"], symbols, context["default_price"], context["strategy_tag"], json=alert_data, group_service=strategy_id)
+        if signal_log:
+            context["signal_log_id"] = signal_log.id
+            context["signal_time"] = signal_log.signal_time
+            context["alert_data"] = dict(context["alert_data"] or {})
+            context["alert_data"].setdefault("signal_time", signal_log.signal_time)
         trade_ids = list(candidate_trades.values_list("id", flat=True))
         from main.tasks import process_webhook_signal_task
 

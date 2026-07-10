@@ -116,7 +116,7 @@ def process_single_webhook_trade_task(self, *, trade_id, index, context, history
     """Execute one webhook-matched trade so slow clients cannot block the batch."""
     from django.utils import timezone
     from main.models import ClientTradeSetting
-    from main.views import _process_webhook_trade
+    from main.views import _get_trade_execution_symbol, _process_webhook_trade, _save_webhook_trade_skip
 
     context = dict(context or {})
     trade = (
@@ -135,8 +135,11 @@ def process_single_webhook_trade_task(self, *, trade_id, index, context, history
             "reason": "Trade setting was not found when the webhook task executed.",
         }
 
+    signal_log_id = context.get("signal_log_id") or context.get("webhook_signal_log_id")
     history_id = None
-    if history_mode == "legacy":
+    if signal_log_id:
+        history_id = f"webhook_{signal_log_id}_{trade.client_id}_{trade.id}"
+    elif history_mode == "legacy":
         history_id = f"{timezone.now().strftime('%Y%m%d%H%M%S%f')}_{trade.client_id}_{trade.id}"
 
     try:
@@ -147,10 +150,49 @@ def process_single_webhook_trade_task(self, *, trade_id, index, context, history
             trade_id,
             getattr(self.request, "id", None),
         )
+        fallback_history_id = history_id or f"webhook_failed_{timezone.now().strftime('%Y%m%d%H%M%S%f')}_{trade.client_id}_{trade.id}"
+        reason = f"Webhook worker failed before broker execution: {str(exc)}"
+        trade_symbol = _get_trade_execution_symbol(trade) or str(context.get("symbols") or "").strip()
+        index_symbol = trade_symbol or str(context.get("symbols") or "").strip() or None
+        order_params = {
+            "symbol": trade_symbol,
+            "Exchange": context.get("exch_seg"),
+            "quantity": trade.quantity or context.get("default_quantity") or 0,
+            "product_type": trade.product_type,
+            "transaction_type": context.get("buy_sell"),
+            "strike": context.get("default_price"),
+            "strike_price": context.get("default_price"),
+            "ordertype": context.get("default_ordertype"),
+            "order_type": context.get("default_ordertype"),
+            "strategy": getattr(trade, "strategy", None),
+        }
+        try:
+            _save_webhook_trade_skip(
+                trade=trade,
+                history_id=fallback_history_id,
+                live_price=context.get("live_price"),
+                group_service=trade.group_service,
+                transaction_type=context.get("transaction_type") or "UNKNOWN",
+                strategy=trade.strategy,
+                webhook_signal=context.get("alert_data") or {},
+                exchange=context.get("exch_seg"),
+                segment=trade.segment.name if trade.segment else None,
+                index_symbol=index_symbol,
+                order_params=order_params,
+                reason_message=reason,
+                skip_reasons=[reason],
+            )
+        except Exception:
+            logger.exception(
+                "Failed to save fallback webhook failure history for trade_setting=%s history_id=%s",
+                trade_id,
+                fallback_history_id,
+            )
         return {
+            "history_id": fallback_history_id,
             "trade_setting_id": trade_id,
             "status": "failed",
-            "reason": str(exc),
+            "reason": reason,
         }
 
 

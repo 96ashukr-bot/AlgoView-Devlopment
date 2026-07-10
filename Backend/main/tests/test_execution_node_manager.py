@@ -45,7 +45,7 @@ from main.services.upstox_market_data import UpstoxInstrumentResolver, _parse_op
 from main.serializers import ClientBrokerDetailsUpdateSerializer, TradeorderhistorySerializer
 from main.trade_history_service import save_trade_order_history
 from main.views import _build_regular_trade_exit_request, _process_webhook_trade, _resolve_webhook_request_context, place_order_broker
-from main.tasks import process_webhook_signal_task
+from main.tasks import process_single_webhook_trade_task, process_webhook_signal_task
 from main.angelone.managers.contract_manager import ContractMasterManager
 
 
@@ -756,8 +756,12 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertIn("Client trading is disabled", result["skip_reasons"])
         self.assertFalse(Tradeorderhistory.objects.filter(client=disabled_client).exists())
 
-    @mock.patch("main.views._process_webhook_trade")
-    def test_webhook_worker_reloads_each_trade_setting_before_execution(self, mock_process_trade):
+    @mock.patch("main.tasks.process_single_webhook_trade_task.apply_async")
+    def test_webhook_dispatch_queues_each_matched_trade(self, mock_apply_async):
+        mock_apply_async.side_effect = [
+            SimpleNamespace(id="task-one"),
+            SimpleNamespace(id="task-two"),
+        ]
         first_trade = ClientTradeSetting.objects.create(
             client=self.client_user,
             symbol="NIFTY",
@@ -769,21 +773,83 @@ class ExecutionNodeManagerTests(TestCase):
             product_type="NRML",
         )
 
-        def process_side_effect(trade, index, context, history_id=None):
-            if trade.pk == first_trade.pk:
-                ClientTradeSetting.objects.filter(pk=second_trade.pk).update(product_type="MIS")
-            return {"status": "success", "trade_setting_id": trade.pk, "product_type": trade.product_type}
-
-        mock_process_trade.side_effect = process_side_effect
-
         result = process_webhook_signal_task.run(
             trade_ids=[first_trade.pk, second_trade.pk],
-            context={},
+            context={"signal_log_id": 123},
             history_mode="default",
         )
 
-        self.assertEqual(result["summary"]["successful"], 2)
-        self.assertEqual(mock_process_trade.call_args_list[1].args[0].product_type, "MIS")
+        self.assertEqual(result["summary"]["total"], 2)
+        self.assertEqual(result["summary"]["queued"], 2)
+        self.assertEqual(mock_apply_async.call_count, 2)
+        self.assertEqual(
+            mock_apply_async.call_args_list[0].kwargs["kwargs"]["trade_id"],
+            first_trade.pk,
+        )
+        self.assertEqual(
+            mock_apply_async.call_args_list[1].kwargs["kwargs"]["trade_id"],
+            second_trade.pk,
+        )
+
+    @mock.patch("main.views._process_webhook_trade")
+    def test_webhook_single_worker_reloads_trade_setting_before_execution(self, mock_process_trade):
+        trade = ClientTradeSetting.objects.create(
+            client=self.client_user,
+            symbol="NIFTY",
+            product_type="NRML",
+        )
+        ClientTradeSetting.objects.filter(pk=trade.pk).update(product_type="MIS")
+
+        mock_process_trade.return_value = {"status": "success", "trade_setting_id": trade.pk}
+
+        process_single_webhook_trade_task.run(
+            trade_id=trade.pk,
+            index=1,
+            context={"signal_log_id": 123},
+            history_mode="default",
+        )
+
+        self.assertEqual(mock_process_trade.call_args.args[0].product_type, "MIS")
+        self.assertEqual(mock_process_trade.call_args.kwargs["history_id"], f"webhook_123_{self.client_user.pk}_{trade.pk}")
+
+    @mock.patch("main.views._process_webhook_trade", side_effect=RuntimeError("early failure"))
+    def test_webhook_single_worker_records_failure_history_on_unhandled_exception(self, mock_process_trade):
+        trade = ClientTradeSetting.objects.create(
+            client=self.client_user,
+            symbol="NIFTY",
+            group_service="Lite",
+            broker="Alice Blue",
+            product_type="MIS",
+            quantity=65,
+            trade_limit=10,
+            is_tread_status=True,
+        )
+        context = {
+            "alert_data": {"symbol": "NIFTY", "signal_time": timezone.now()},
+            "symbols": "NIFTY",
+            "exch_seg": "NFO",
+            "default_price": 24196.75,
+            "default_quantity": 65,
+            "live_price": 24196.75,
+            "transaction_type": "BUY-O",
+            "buy_sell": "CE",
+            "default_ordertype": "LIMIT",
+            "signal_log_id": 456,
+        }
+
+        result = process_single_webhook_trade_task.run(
+            trade_id=trade.pk,
+            index=1,
+            context=context,
+            history_mode="default",
+        )
+
+        expected_history_id = f"webhook_456_{self.client_user.pk}_{trade.pk}"
+        history = Tradeorderhistory.objects.get(history_id=expected_history_id)
+        self.assertEqual(result["status"], "failed")
+        self.assertEqual(history.order_status, "Failed")
+        self.assertEqual(history.trade_order_status, "SKIPPED")
+        self.assertIn("Webhook worker failed before broker execution", history.failure_reason)
 
     @mock.patch("main.views.place_order_broker")
     def test_expired_trade_expiry_skips_webhook_before_broker_execution(self, mock_place_order):
