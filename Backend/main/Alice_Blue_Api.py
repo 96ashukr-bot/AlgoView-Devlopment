@@ -440,6 +440,11 @@ def _extract_alice_response_message(payload):
     if not isinstance(payload, dict):
         return str(payload)
 
+    for key in ("result", "data", "response", "body"):
+        message = _extract_alice_response_message(payload.get(key))
+        if message and str(message).strip().lower() not in {"ok", "success", "completed", "complete"}:
+            return message
+
     for key in ("emsg", "message", "Message", "error", "Error", "remarks", "rejectreason", "rejReason"):
         value = payload.get(key)
         if value:
@@ -567,9 +572,11 @@ def _alice_a3_product(product_type):
     if value in {"MIS", "INTRADAY", "I"}:
         return "INTRADAY"
     if value in {"NRML", "NORMAL", "CARRYFORWARD", "MARGIN"}:
-        return "NORMAL"
+        return "LONGTERM"
     if value in {"CNC", "DELIVERY", "LONGTERM"}:
-        return "DELIVERY"
+        return "LONGTERM"
+    if value == "MTF":
+        return "MTF"
     return "INTRADAY"
 
 

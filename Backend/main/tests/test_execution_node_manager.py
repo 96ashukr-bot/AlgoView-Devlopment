@@ -2256,6 +2256,29 @@ class ExecutionNodeManagerTests(TestCase):
 
         self.assertEqual(message, "Invalid symbol")
 
+    def test_alice_blue_nested_rejection_message_overrides_top_level_success(self):
+        from main.Alice_Blue_Api import _extract_alice_response_message
+
+        message = _extract_alice_response_message({
+            "result": [{
+                "status": "EC092",
+                "message": "Invalid parameter: product should be INTRADAY, LONGTERM or MTF.",
+                "brokerOrderId": "",
+            }],
+            "status": "Ok",
+            "message": "Success",
+        })
+
+        self.assertIn("Invalid parameter", message)
+
+    def test_alice_blue_a3_product_maps_nrml_to_longterm(self):
+        from main.Alice_Blue_Api import _alice_a3_product
+
+        self.assertEqual(_alice_a3_product("MIS"), "INTRADAY")
+        self.assertEqual(_alice_a3_product("NRML"), "LONGTERM")
+        self.assertEqual(_alice_a3_product("CNC"), "LONGTERM")
+        self.assertEqual(_alice_a3_product("MTF"), "MTF")
+
     def test_alice_blue_pre_placement_errors_are_failed(self):
         from main.Alice_Blue_Api import _alice_failed_response
 
