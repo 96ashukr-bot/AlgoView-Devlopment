@@ -486,6 +486,38 @@ def _extract_alice_order_id(payload):
     return None
 
 
+def _alice_value_matches(left, right):
+    if left in (None, "") or right in (None, ""):
+        return False
+    return str(left).strip() == str(right).strip()
+
+
+def _alice_order_matches_history(order, history_id):
+    if not isinstance(order, dict) or not history_id:
+        return False
+    for key in (
+        "orderTag",
+        "order_tag",
+        "tag",
+        "remarks",
+        "orderSource",
+        "clientOrderId",
+        "client_order_id",
+    ):
+        if _alice_value_matches(order.get(key), history_id):
+            return True
+    return False
+
+
+def _find_alice_orderbook_match(orderbook_response, history_id):
+    if not history_id:
+        return None
+    for item in _alice_nested_values(orderbook_response):
+        if _alice_order_matches_history(item, history_id) and _extract_alice_order_id(item):
+            return item
+    return None
+
+
 def _extract_alice_order_status(payload):
     for item in _alice_nested_values(payload):
         for key in ("orderStatus", "order_status", "status", "stat"):
@@ -561,6 +593,27 @@ def get_alice_a3_orderbook(session_id, proxy_config=None):
     if not session_id:
         return {"status": "Not_ok", "message": "Alice Blue session token is missing."}
     return _alice_a3_request("GET", A3_ORDER_BOOK_URL, session_id=session_id, proxy_config=proxy_config)
+
+
+def _reconcile_alice_empty_success_order(broker_session_id, proxy_config, history_id):
+    if not history_id:
+        return None
+    try:
+        orderbook = get_alice_a3_orderbook(broker_session_id, proxy_config=proxy_config)
+    except Exception as exc:
+        logger.warning("Alice Blue orderbook reconciliation failed for %s: %s", history_id, exc)
+        return None
+
+    match = _find_alice_orderbook_match(orderbook, history_id)
+    if not match:
+        return None
+    return {
+        "result": [match],
+        "status": "Ok",
+        "message": _extract_alice_response_message(match) or _alice_order_display_status(match),
+        "orderbook_response": orderbook,
+        "reconciled_from_orderbook": True,
+    }
 
 
 def get_alice_session(user_id, api_key=None, proxy_config=None, api_secret=None, auth_code=None, return_error=False):
@@ -748,6 +801,18 @@ def place_alice_orders(
             json_payload=order_payload,
             proxy_config=proxy_config,
         )
+
+        if (
+            str(_extract_alice_response_message(response) or "").strip().lower() == "success"
+            and not _extract_alice_order_id(response)
+        ):
+            reconciled_response = _reconcile_alice_empty_success_order(
+                broker_session_id,
+                proxy_config,
+                history_id,
+            )
+            if reconciled_response:
+                response = reconciled_response
 
         if _alice_a3_order_succeeded(response):
             return {
