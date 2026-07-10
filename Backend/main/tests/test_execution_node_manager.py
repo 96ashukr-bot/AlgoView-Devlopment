@@ -4,6 +4,7 @@ import tempfile
 import time
 from datetime import datetime, timedelta
 from decimal import Decimal
+from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
 
@@ -2719,24 +2720,23 @@ class ExecutionNodeManagerTests(TestCase):
             self.assertEqual(call.kwargs["headers"]["Authorization"], "Bearer session-token")
             self.assertEqual(call.kwargs["json"]["source"], "API")
 
-    @mock.patch("builtins.open", new_callable=mock.mock_open)
-    @mock.patch("main.Alice_Blue_Api.requests.get")
-    def test_alice_blue_contract_master_uses_proxy(self, mock_get, mock_file):
+    @mock.patch("main.broker_instrument_cache.requests.get")
+    def test_alice_blue_contract_master_uses_durable_cache(self, mock_get):
         from main.Alice_Blue_Api import ProxyAwareAliceblue
 
         proxy_config = {"http": "http://proxy.example.com:8080", "https": "http://proxy.example.com:8080"}
-        mock_get.return_value = SimpleNamespace(
-            status_code=200,
-            text="Exch,Token,Symbol,Trading Symbol,Expiry Date,Lot Size\n",
-            reason="OK",
-            raise_for_status=lambda: None,
-        )
+        response = mock.Mock()
+        response.content = b"Exch,Token,Symbol,Trading Symbol,Expiry Date,Lot Size\n"
+        response.raise_for_status.return_value = None
+        mock_get.return_value = response
         alice = ProxyAwareAliceblue(user_id="alice-user", api_key="alice-api", proxy_config=proxy_config)
 
-        alice.get_contract_master("NFO")
+        with tempfile.TemporaryDirectory() as tmpdir, override_settings(BASE_DIR=tmpdir):
+            with mock.patch("main.broker_instrument_cache.Path.cwd", return_value=Path(tmpdir)):
+                alice.get_contract_master("NFO")
 
-        self.assertEqual(mock_get.call_args.kwargs["proxies"], proxy_config)
-        mock_file.assert_called_once_with("NFO.csv", "w")
+                self.assertTrue((Path(tmpdir) / "main" / "aliceblue_NFO.csv").exists())
+                self.assertTrue((Path(tmpdir) / "NFO.csv").exists())
 
     @mock.patch("main.Alice_Blue_Api.requests.request")
     def test_alice_blue_vendor_session_uses_a3_open_api(self, mock_request):
@@ -5087,6 +5087,7 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertTrue(_is_public_instrument_master_url(angel_master))
         self.assertTrue(_is_public_instrument_master_url("https://assets.upstox.com/market-quote/instruments/exchange/NSE.json.gz"))
         self.assertTrue(_is_public_instrument_master_url("https://images.dhan.co/api-data/api-scrip-master.csv"))
+        self.assertTrue(_is_public_instrument_master_url("https://v2api.aliceblueonline.com/restpy/static/contract_master/NFO.csv"))
         self.assertFalse(_is_public_instrument_master_url("https://api.dhan.co/v2/orders"))
 
     def test_node_idempotency_duplicate_rejection(self):

@@ -33,6 +33,7 @@ PUBLIC_INSTRUMENT_MASTER_PATHS = (
     ("assets.upstox.com", "/market-quote/instruments/exchange/"),
     ("public.fyers.in", "/sym_details/"),
     ("Openapi.5paisa.com".lower(), "/VendorsAPI/Service1.svc/ScripMaster/segment/"),
+    ("v2api.aliceblueonline.com", "/restpy/static/contract_master/"),
 )
 
 _ORIGINAL_REQUEST = None

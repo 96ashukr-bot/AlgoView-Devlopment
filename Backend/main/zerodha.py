@@ -5,6 +5,7 @@ from main.broker_order_utils import extract_ltp_from_quote_payload, is_option_sy
 from main.services.option_ltp_fallback import cache_option_ltp, fetch_nse_option_chain_ltp, get_cached_option_ltp
 from main.services.live_price_cache import get_live_price
 from main.services.upstox_market_data import UpstoxInstrumentResolver, fetch_central_upstox_option_ltp
+from main.broker_instrument_cache import load_zerodha_instruments, save_zerodha_instruments
 from main.trade_history_service import save_trade_order_history
 import logging
 import requests
@@ -54,8 +55,19 @@ def get_trading_symbol(exchange, symbol, kite, user=None):
     try:
         logger.info(f"[{user}] Fetching instruments from exchange: {exchange}")
         instruments = kite.instruments(exchange)
+        try:
+            save_zerodha_instruments(exchange, instruments)
+        except Exception as cache_exc:
+            logger.warning(f"[{user}] Unable to cache Zerodha instruments for {exchange}: {cache_exc}")
         logger.info(f"[{user}] Instruments fetched. Searching for {symbol}")
+    except Exception as e:
+        logger.warning(f"[{user}] Zerodha live instrument fetch failed for '{exchange}', trying cached instruments: {e}")
+        instruments = load_zerodha_instruments(exchange)
+        if not instruments:
+            logger.exception(f"[{user}] Exception occurred while fetching trading symbol '{symbol}' from exchange '{exchange}'")
+            return None
 
+    try:
         for instrument in instruments:
             if instrument['tradingsymbol'] == symbol:
                 logger.info(f"[{user}] Trading Symbol Found: {instrument['tradingsymbol']}")
@@ -65,7 +77,7 @@ def get_trading_symbol(exchange, symbol, kite, user=None):
         return None
 
     except Exception as e:
-        logger.exception(f"[{user}] Exception occurred while fetching trading symbol '{symbol}' from exchange '{exchange}'")
+        logger.exception(f"[{user}] Exception occurred while reading trading symbol '{symbol}' from exchange '{exchange}'")
         return None
     
 def get_order_details(order_id, kite, user=None):

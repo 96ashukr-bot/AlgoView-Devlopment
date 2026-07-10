@@ -87,14 +87,52 @@ class Command(BaseCommand):
             except Exception as exc:
                 record("Groww", "error", str(exc))
 
-        unsupported = []
         if should_run("zerodha"):
-            unsupported.append("Zerodha central public master is not configured; Zerodha instruments are broker-session based in this codebase.")
-        if should_run("alice") or should_run("aliceblue") or should_run("alice blue"):
-            unsupported.append("Alice Blue contract refresh is session/proxy dependent in this codebase; it should remain node/client routed.")
+            try:
+                from kiteconnect import KiteConnect
+                from main.models import ClientBrokerdetails
+                from main.broker_instrument_cache import save_zerodha_instruments
+                from main.services.egress_guard import allow_direct_market_data_egress
 
-        for message in unsupported:
-            record("Unsupported", "warn", message)
+                cached_any = False
+                queryset = ClientBrokerdetails.objects.select_related("broker_name").filter(
+                    broker_name__broker_name__iexact="Zerodha",
+                    broker_API_KEY__isnull=False,
+                )
+                for details in queryset.order_by("-tokenCreatedAt", "-id")[:25]:
+                    access_token = None
+                    getter = getattr(details, "get_access_token_secure", None)
+                    if callable(getter):
+                        access_token = getter()
+                    access_token = access_token or getattr(details, "access_token", None)
+                    if not access_token or not details.broker_API_KEY:
+                        continue
+                    try:
+                        kite = KiteConnect(api_key=details.broker_API_KEY)
+                        kite.set_access_token(access_token)
+                        with allow_direct_market_data_egress():
+                            for exchange in ("NFO", "BFO", "NSE", "BSE"):
+                                instruments = kite.instruments(exchange)
+                                path = save_zerodha_instruments(exchange, instruments)
+                                record("Zerodha", "ok", f"{exchange} instruments ready at {path}")
+                        cached_any = True
+                        break
+                    except Exception as exc:
+                        record("Zerodha", "warn", f"client {details.client_id} session could not refresh instruments: {exc}")
+                if not cached_any:
+                    record("Zerodha", "warn", "no valid Zerodha session was available for pre-market instrument refresh; existing cache will be used if present")
+            except Exception as exc:
+                record("Zerodha", "error", str(exc))
+
+        if should_run("alice") or should_run("aliceblue") or should_run("alice blue"):
+            try:
+                from main.broker_instrument_cache import sync_aliceblue_contract_file_for_sdk
+
+                for exchange in ("NFO", "NSE", "BFO", "BSE", "MCX", "INDICES"):
+                    path = sync_aliceblue_contract_file_for_sdk(exchange)
+                    record("Alice Blue", "ok", f"{exchange} contract master ready at {path}")
+            except Exception as exc:
+                record("Alice Blue", "error", str(exc))
 
         failures = [name for name, status, _message in results if status == "error"]
         if failures:

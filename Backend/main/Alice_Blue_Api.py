@@ -24,6 +24,7 @@ from pya3.alicebluepy import encrypt_string
 from main.models import *
 from main.tasks import send_trade_email_async
 from main.broker_order_utils import extract_ltp_from_quote_payload, normalize_order_type, resolve_limit_price
+from main.broker_instrument_cache import sync_aliceblue_contract_file_for_sdk
 from main.services.option_ltp_fallback import cache_option_ltp, fetch_nse_option_chain_ltp, get_cached_option_ltp
 from main.trade_history_service import save_trade_order_history
 
@@ -173,11 +174,7 @@ class ProxyAwareAliceblue(Aliceblue):
             return self._error_response("Invalid Exchange parameter")
 
         print("NOTE: Today's contract master file will be updated after 08:00 AM. Before 08:00 AM previous day contract file be downloaded.")
-        url = A3_CONTRACT_BASE_URL + f"{exchange.upper()}.csv"
-        response = requests.get(url, proxies=self.proxy_config, timeout=20)
-        response.raise_for_status()
-        with open("%s.csv" % exchange.upper(), "w") as file_obj:
-            file_obj.write(response.text)
+        sync_aliceblue_contract_file_for_sdk(exchange.upper())
         return self._error_response("Today contract File Downloaded")
 
     def invalid_sess(self, session_ID):
@@ -632,7 +629,8 @@ def get_alice_session(user_id, api_key=None, proxy_config=None, api_secret=None,
 
 def fetch_instrument_data(alice, exchange="NFO"):
     try:
-        file_path = f"{exchange}.csv"
+        normalized_exchange = str(exchange or "NFO").strip().upper()
+        file_path = f"{normalized_exchange}.csv"
         now = datetime.now()
 
         if os.path.exists(file_path):
@@ -641,7 +639,7 @@ def fetch_instrument_data(alice, exchange="NFO"):
                 return
 
         if now.hour >= 8:
-            alice.get_contract_master(exchange)
+            sync_aliceblue_contract_file_for_sdk(normalized_exchange)
 
     except Exception as e:
         logger.error(f"Contract fetch error: {str(e)}")

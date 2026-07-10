@@ -141,6 +141,68 @@ def load_upstox_instruments(exchange: str):
         return json.load(file_obj)
 
 
+def ensure_aliceblue_contract_file(exchange: str) -> Path:
+    normalized_exchange = str(exchange or "NFO").strip().upper()
+    if not normalized_exchange or not (len(normalized_exchange) == 3 or normalized_exchange == "INDICES"):
+        raise ValueError("Invalid Alice Blue exchange")
+
+    path = _main_dir() / f"aliceblue_{normalized_exchange}.csv"
+    if _is_file_fresh(path) and _file_has_content(path):
+        return path
+
+    try:
+        payload = _download(
+            f"https://v2api.aliceblueonline.com/restpy/static/contract_master/{normalized_exchange}.csv",
+            timeout=60,
+        )
+        if not payload.strip():
+            raise ValueError(f"Alice Blue {normalized_exchange} contract source returned empty payload")
+        logger.info("Refreshing Alice Blue %s contract master at %s", normalized_exchange, path)
+        return _write_bytes_atomic(path, payload)
+    except Exception as exc:
+        fallback_path = _newest_valid_file(f"aliceblue_{normalized_exchange}.csv")
+        if fallback_path:
+            logger.warning("Using cached Alice Blue %s contract master at %s after refresh failed: %s", normalized_exchange, fallback_path, exc)
+            return fallback_path
+        return _stale_or_raise(path, exc, label=f"Alice Blue {normalized_exchange}")
+
+
+def sync_aliceblue_contract_file_for_sdk(exchange: str) -> Path:
+    """Keep pya3's expected EXCHANGE.csv file in the working directory."""
+    normalized_exchange = str(exchange or "NFO").strip().upper()
+    source_path = ensure_aliceblue_contract_file(normalized_exchange)
+    sdk_path = Path.cwd() / f"{normalized_exchange}.csv"
+    try:
+        if (
+            not sdk_path.exists()
+            or sdk_path.stat().st_mtime < source_path.stat().st_mtime
+            or sdk_path.stat().st_size != source_path.stat().st_size
+        ):
+            _write_bytes_atomic(sdk_path, source_path.read_bytes())
+    except OSError as exc:
+        logger.warning("Unable to sync Alice Blue contract master to %s: %s", sdk_path, exc)
+    return source_path
+
+
+def save_zerodha_instruments(exchange: str, instruments) -> Path:
+    normalized_exchange = str(exchange or "NFO").strip().upper()
+    path = _main_dir() / f"zerodha_{normalized_exchange}_instruments.json"
+    payload = json.dumps(list(instruments or []), default=str).encode("utf-8")
+    if not payload or payload == b"[]":
+        raise ValueError(f"Zerodha {normalized_exchange} instrument source returned no instruments")
+    logger.info("Refreshing Zerodha %s instrument cache at %s", normalized_exchange, path)
+    return _write_bytes_atomic(path, payload)
+
+
+def load_zerodha_instruments(exchange: str):
+    normalized_exchange = str(exchange or "NFO").strip().upper()
+    path = _main_dir() / f"zerodha_{normalized_exchange}_instruments.json"
+    if not _file_has_content(path):
+        return []
+    with path.open("r", encoding="utf-8") as file_obj:
+        return json.load(file_obj)
+
+
 def _resolve_fyers_source(exchange: str = None, segment: str = None):
     exchange_value = str(exchange or "").strip().upper()
     segment_value = str(segment or "").strip().upper()
