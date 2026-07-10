@@ -112,60 +112,80 @@ def process_manual_trade_batch_task(self, *, batch_id):
     soft_time_limit=240,
     time_limit=300,
 )
-def process_webhook_signal_task(self, *, trade_ids, context, history_mode="default"):
-    """Execute webhook-matched trades outside the request/response path."""
+def process_single_webhook_trade_task(self, *, trade_id, index, context, history_mode="default"):
+    """Execute one webhook-matched trade so slow clients cannot block the batch."""
     from django.utils import timezone
     from main.models import ClientTradeSetting
     from main.views import _process_webhook_trade
 
+    context = dict(context or {})
+    trade = (
+        ClientTradeSetting.objects.select_related(
+            "client",
+            "segment",
+            "sub_segment",
+        )
+        .filter(pk=trade_id)
+        .first()
+    )
+    if trade is None:
+        return {
+            "trade_setting_id": trade_id,
+            "status": "skipped",
+            "reason": "Trade setting was not found when the webhook task executed.",
+        }
+
+    history_id = None
+    if history_mode == "legacy":
+        history_id = f"{timezone.now().strftime('%Y%m%d%H%M%S%f')}_{trade.client_id}_{trade.id}"
+
+    try:
+        return _process_webhook_trade(trade, index, context, history_id=history_id)
+    except Exception as exc:
+        logger.exception(
+            "Webhook single trade task failed for trade_setting=%s task_id=%s",
+            trade_id,
+            getattr(self.request, "id", None),
+        )
+        return {
+            "trade_setting_id": trade_id,
+            "status": "failed",
+            "reason": str(exc),
+        }
+
+
+@shared_task(
+    bind=True,
+    autoretry_for=(),
+    max_retries=0,
+    acks_late=True,
+    reject_on_worker_lost=True,
+    soft_time_limit=60,
+    time_limit=90,
+)
+def process_webhook_signal_task(self, *, trade_ids, context, history_mode="default"):
+    """Queue webhook-matched trades outside the request/response path."""
     trade_ids = list(trade_ids or [])
     context = dict(context or {})
-    results = []
+    queued_tasks = []
 
     for index, trade_id in enumerate(trade_ids, start=1):
-        trade = (
-            ClientTradeSetting.objects.select_related(
-                "client",
-                "segment",
-                "sub_segment",
-            )
-            .filter(pk=trade_id)
-            .first()
+        task = process_single_webhook_trade_task.apply_async(
+            kwargs={
+                "trade_id": trade_id,
+                "index": index,
+                "context": context,
+                "history_mode": history_mode,
+            }
         )
-        if trade is None:
-            results.append({
-                "trade_setting_id": trade_id,
-                "status": "skipped",
-                "reason": "Trade setting was not found when the webhook task executed.",
-            })
-            continue
-
-        history_id = None
-        if history_mode == "legacy":
-            history_id = f"{timezone.now().strftime('%Y%m%d%H%M%S%f')}_{trade.client_id}_{trade.id}"
-
-        try:
-            results.append(_process_webhook_trade(trade, index, context, history_id=history_id))
-        except Exception as exc:
-            logger.exception(
-                "Webhook Celery task failed for trade_setting=%s task_id=%s",
-                trade_id,
-                getattr(self.request, "id", None),
-            )
-            results.append({
-                "trade_setting_id": trade_id,
-                "status": "failed",
-                "reason": str(exc),
-            })
+        queued_tasks.append({"trade_setting_id": trade_id, "task_id": task.id})
 
     summary = {
-        "total": len(results),
-        "successful": sum(1 for item in results if item.get("status") == "success"),
-        "skipped": sum(1 for item in results if item.get("status") == "skipped"),
-        "failed": sum(1 for item in results if item.get("status") == "failed"),
+        "total": len(trade_ids),
+        "queued": len(queued_tasks),
     }
-    logger.info("Webhook Celery task completed task_id=%s summary=%s", getattr(self.request, "id", None), summary)
-    return {"summary": summary, "results": results}
+    logger.info("Webhook dispatch task completed task_id=%s summary=%s", getattr(self.request, "id", None), summary)
+    return {"summary": summary, "queued_tasks": queued_tasks}
 
 company_profile=company_profile if company_profile else None
 
