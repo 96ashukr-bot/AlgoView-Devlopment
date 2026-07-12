@@ -228,13 +228,35 @@ const EditUser = () => {
 
               <Col md="6 mb-3" className="d-flex align-items-center">
                 <Label check className="d-flex align-items-center gap-2 mb-0">
-                  <Input
-                    type="checkbox"
-                    name="can_place_manual_trades"
-                    checked={Boolean(userDetails.can_place_manual_trades)}
-                    onChange={handleChange}
-                    style={{ border: '1px solid #111', accentColor: '#111' }}
-                  />
+                  <span style={{ position: 'relative', width: 18, height: 18, display: 'inline-flex' }}>
+                    <Input
+                      type="checkbox"
+                      name="can_place_manual_trades"
+                      checked={Boolean(userDetails.can_place_manual_trades)}
+                      onChange={handleChange}
+                      style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', margin: 0 }}
+                    />
+                    <span
+                      aria-hidden="true"
+                      style={{
+                        width: 18,
+                        height: 18,
+                        border: '1.5px solid #111',
+                        borderRadius: 3,
+                        background: '#fff',
+                        color: '#111',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 14,
+                        fontWeight: 800,
+                        lineHeight: 1,
+                        pointerEvents: 'none',
+                      }}
+                    >
+                      {Boolean(userDetails.can_place_manual_trades) ? '\u2713' : ''}
+                    </span>
+                  </span>
                   Allow Trade Execution
                 </Label>
               </Col>
