@@ -90,6 +90,7 @@ const SidebarMenuItems = ({ setMainMenu, sidebartoogle, setNavActive, activeClas
   const isSuperAdmin = userProfile.role && userProfile.role.name === "Super-Admin";
   const isAdmin = userProfile.role && userProfile.role.name === "Admin";
   const issubAdmin = userProfile.role && userProfile.role.name === "Sub-Admin";
+  const canPlaceManualTrades = isAdmin || isSuperAdmin || Boolean(userProfile.can_place_manual_trades);
 
   let menuItems;
 
@@ -113,6 +114,11 @@ const SidebarMenuItems = ({ setMainMenu, sidebartoogle, setNavActive, activeClas
       </label>
     )
     : null;
+  const canShowMenuItem = (item) => {
+    if (!isSuperAdmin && item.superadminOnly) return false;
+    if (item.path === "/tradedetails/manual-trade") return canPlaceManualTrades;
+    return true;
+  };
 
   const toggletNavActive = (item) => {
     if (window.innerWidth <= 991) {
@@ -162,7 +168,7 @@ const SidebarMenuItems = ({ setMainMenu, sidebartoogle, setNavActive, activeClas
               <h6 className="lan-1">{t(Item.menutitle)}</h6>
             </div>
           </li>
-          {Item.Items.filter((menuItem) => isSuperAdmin || !menuItem.superadminOnly).map((menuItem, i) => (
+          {Item.Items.filter(canShowMenuItem).map((menuItem, i) => (
             <li className="sidebar-list" key={i}>
               {menuItem.type === "sub" ? (
                 <a
@@ -197,7 +203,7 @@ const SidebarMenuItems = ({ setMainMenu, sidebartoogle, setNavActive, activeClas
 
               {menuItem.children ? (
                 <ul className="sidebar-submenu" style={layout1 !== "compact-sidebar compact-small" ? (menuItem?.active || CurrentPath.includes(menuItem?.title?.toLowerCase()) ? (sidebartoogle ? { opacity: 1, transition: "opacity 500ms ease-in" } : { display: "block" }) : { display: "none" }) : { display: "none" }}>
-                  {menuItem.children.filter((childrenItem) => isSuperAdmin || !childrenItem.superadminOnly).map((childrenItem, index) => {
+                  {menuItem.children.filter(canShowMenuItem).map((childrenItem, index) => {
                     return (
                       <li key={index}>
                         {childrenItem.type === "sub" ? (

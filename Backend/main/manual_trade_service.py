@@ -321,7 +321,7 @@ def _build_execution_request(result: ManualTradeResult) -> ExecutionRequest:
         transaction_type=transaction_type,
         symbol=batch.symbol,
         quantity=int(setting.quantity or 0),
-        strategy="Manual Trade",
+        strategy="Trade Execution",
         ordertype=setting.order_type or "LIMIT",
         product_type=setting.product_type or "INTRADAY",
         price=None,

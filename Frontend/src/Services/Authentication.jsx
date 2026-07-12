@@ -5024,7 +5024,7 @@ export const createManualTradePreview = async (payload) => {
     const response = await axios.post(`${baseUrl}/manual-trades/preview/`, payload);
     return response.data;
   } catch (error) {
-    throw new Error(error.response?.data?.detail || "Failed to create manual trade preview.");
+    throw new Error(error.response?.data?.detail || "Failed to create trade execution preview.");
   }
 };
 
@@ -5033,7 +5033,7 @@ export const executeManualTradeBatch = async (batchId, clientIds) => {
     const response = await axios.post(`${baseUrl}/manual-trades/${batchId}/execute/`, { client_ids: clientIds });
     return response.data;
   } catch (error) {
-    throw new Error(error.response?.data?.detail || "Failed to execute manual trade.");
+    throw new Error(error.response?.data?.detail || "Failed to execute trade.");
   }
 };
 
@@ -5042,7 +5042,7 @@ export const getManualTradeBatch = async (batchId) => {
     const response = await axios.get(`${baseUrl}/manual-trades/${batchId}/`);
     return response.data;
   } catch (error) {
-    throw new Error(error.response?.data?.detail || "Failed to fetch manual trade batch.");
+    throw new Error(error.response?.data?.detail || "Failed to fetch trade execution batch.");
   }
 };
 
@@ -5051,7 +5051,7 @@ export const getManualTradeBatches = async (page_number = 1, page_size = 10) => 
     const response = await axios.get(`${baseUrl}/manual-trades/`, { params: { page_number, page_size } });
     return response.data;
   } catch (error) {
-    throw new Error(error.response?.data?.detail || "Failed to fetch manual trade batches.");
+    throw new Error(error.response?.data?.detail || "Failed to fetch trade execution batches.");
   }
 };
 

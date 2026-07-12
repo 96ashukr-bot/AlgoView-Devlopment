@@ -1,1 +1,27 @@
 @import './assets/scss/app.scss';
+
+.trade-execution-client-checkbox.form-check-input {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #000;
+  background-color: #fff;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.trade-execution-client-checkbox.form-check-input:checked {
+  border-color: #000;
+  background-color: #fff;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='%23000' stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='m6 10 3 3 6-6'/%3e%3c/svg%3e");
+}
+
+.trade-execution-client-checkbox.form-check-input:focus {
+  border-color: #000;
+  box-shadow: 0 0 0 0.16rem rgba(0, 0, 0, 0.18);
+}
+
+.trade-execution-client-checkbox.form-check-input:disabled {
+  border-color: #555;
+  opacity: 0.7;
+  cursor: not-allowed;
+}

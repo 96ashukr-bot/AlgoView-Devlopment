@@ -15,6 +15,7 @@ from main.manual_trade_service import _build_execution_request
 class ManualTradeTests(APITestCase):
     def setUp(self):
         admin_role, _ = Role.objects.get_or_create(name="Admin")
+        self.subadmin_role, _ = Role.objects.get_or_create(name="Sub-Admin")
         client_role, _ = Role.objects.get_or_create(name="Client")
         self.admin = User.objects.create_user(
             email="manual-admin@example.com", firstName="Manual", lastName="Admin",
@@ -49,6 +50,91 @@ class ManualTradeTests(APITestCase):
         )
         self.setting = setting
         self.client.force_authenticate(self.admin)
+
+    def test_subadmin_without_trade_execution_access_cannot_preview(self):
+        subadmin = User.objects.create_user(
+            email="manual-subadmin-denied@example.com",
+            firstName="Manual",
+            lastName="Subadmin",
+            phoneNumber="9330000004",
+            password="Pass@123",
+            role=self.subadmin_role,
+            type_of_user="is_user",
+            can_place_manual_trades=False,
+        )
+        self.client_user.assigned_client = subadmin
+        self.client_user.save(update_fields=["assigned_client"])
+        self.client.force_authenticate(subadmin)
+
+        response = self.client.post(reverse("manual-trade-preview"), {
+            "group_service_id": self.group.id, "symbol": "NIFTY",
+            "action": "BUY_CE", "strike_price": "22900",
+        }, format="json")
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_enabled_subadmin_can_preview_assigned_clients(self):
+        subadmin = User.objects.create_user(
+            email="manual-subadmin-allowed@example.com",
+            firstName="Manual",
+            lastName="Subadmin",
+            phoneNumber="9330000005",
+            password="Pass@123",
+            role=self.subadmin_role,
+            type_of_user="is_user",
+            can_place_manual_trades=True,
+        )
+        self.client_user.assigned_client = subadmin
+        self.client_user.save(update_fields=["assigned_client"])
+        self.client.force_authenticate(subadmin)
+
+        response = self.client.post(reverse("manual-trade-preview"), {
+            "group_service_id": self.group.id, "symbol": "NIFTY",
+            "action": "BUY_CE", "strike_price": "22900",
+        }, format="json")
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data["preview_count"], 1)
+        self.assertEqual(response.data["results"][0]["client_id"], self.client_user.id)
+
+    def test_enabled_subadmin_cannot_open_unassigned_trade_execution_batch(self):
+        subadmin = User.objects.create_user(
+            email="manual-subadmin-scoped@example.com",
+            firstName="Scoped",
+            lastName="Subadmin",
+            phoneNumber="9330000006",
+            password="Pass@123",
+            role=self.subadmin_role,
+            type_of_user="is_user",
+            can_place_manual_trades=True,
+        )
+        other_client = User.objects.create_user(
+            email="manual-other-client@example.com",
+            firstName="Other",
+            lastName="Client",
+            phoneNumber="9330000007",
+            password="Pass@123",
+            role=self.client_user.role,
+            Group_service=self.group,
+            type_of_user="is_client",
+            is_client="True",
+        )
+        batch = ManualTradeBatch.objects.create(
+            requested_by=self.admin,
+            group_service=self.group,
+            symbol="NIFTY",
+            action=ManualTradeBatch.ACTION_BUY_CE,
+            strike_price="22900",
+            idempotency_key="manual-scope-test",
+            preview_count=1,
+            eligible_count=1,
+        )
+        ManualTradeResult.objects.create(batch=batch, client=other_client, status=ManualTradeResult.STATUS_PENDING)
+        self.client.force_authenticate(subadmin)
+
+        response = self.client.get(reverse("manual-trade-detail", args=[batch.id]))
+
+        self.assertEqual(response.status_code, 404)
 
     def test_preview_uses_saved_client_settings(self):
         response = self.client.post(reverse("manual-trade-preview"), {

@@ -137,6 +137,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     start_date_client = models.DateField(null=True, blank=True)
     end_date_client   = models.DateField(null=True, blank=True)
     givenservices_to_month  = models.CharField(max_length=50, null=True, blank=True)
+    can_place_manual_trades = models.BooleanField(default=False)
     # assigned_clients = models.ManyToManyField('self', symmetrical=False, related_name='assigned_users', blank=True)
     type_of_user=models.CharField(max_length=255, blank=True, null=True)
     created_at = models.DateTimeField(default=get_ist_time)

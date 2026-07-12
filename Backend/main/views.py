@@ -36,6 +36,7 @@ from main.fyersapi import place_fyers_orders
 from main.permissions import (
     IsAdminOrSuperadmin,
     IsAdminRole,
+    CanPlaceManualTrades,
     can_access_client_record,
     get_accessible_clients_queryset,
     is_admin_or_superadmin,
@@ -5770,15 +5771,20 @@ def _serialize_manual_trade_batch(batch, include_results=False):
 
 
 class ManualTradeAPIView(APIView):
-    permission_classes = [IsAuthenticated, IsAdminOrSuperadmin]
+    permission_classes = [IsAuthenticated, CanPlaceManualTrades]
 
-    def _queryset(self):
-        return ManualTradeBatch.objects.select_related("requested_by", "group_service").order_by("-created_at")
+    def _queryset(self, request):
+        queryset = ManualTradeBatch.objects.select_related("requested_by", "group_service").order_by("-created_at")
+        if is_admin_or_superadmin(request.user):
+            return queryset
+        if is_subadmin_user(request.user):
+            return queryset.filter(results__client__assigned_client=request.user).distinct()
+        return queryset.none()
 
     def get(self, request, pk=None, *args, **kwargs):
         if pk:
-            return Response(_serialize_manual_trade_batch(get_object_or_404(self._queryset(), pk=pk), include_results=True))
-        paginator = Paginator(self._queryset(), int(request.query_params.get("page_size") or 20))
+            return Response(_serialize_manual_trade_batch(get_object_or_404(self._queryset(request), pk=pk), include_results=True))
+        paginator = Paginator(self._queryset(request), int(request.query_params.get("page_size") or 20))
         page = paginator.get_page(request.query_params.get("page_number") or request.query_params.get("page") or 1)
         return Response({"count": paginator.count, "num_pages": paginator.num_pages, "results": [_serialize_manual_trade_batch(item) for item in page.object_list]})
 
@@ -5796,22 +5802,30 @@ class ManualTradeAPIView(APIView):
         except GroupService.DoesNotExist:
             return Response({"detail": "Group service not found."}, status=status.HTTP_404_NOT_FOUND)
         except IntegrityError:
-            return Response({"detail": "A matching manual trade preview already exists in the duplicate-protection window."}, status=status.HTTP_409_CONFLICT)
+            return Response({"detail": "A matching trade execution preview already exists in the duplicate-protection window."}, status=status.HTTP_409_CONFLICT)
         except ValueError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(_serialize_manual_trade_batch(batch, include_results=True), status=status.HTTP_201_CREATED)
 
 
 class ManualTradeExecuteAPIView(APIView):
-    permission_classes = [IsAuthenticated, IsAdminOrSuperadmin]
+    permission_classes = [IsAuthenticated, CanPlaceManualTrades]
+
+    def _queryset(self, request):
+        queryset = ManualTradeBatch.objects.select_related("requested_by", "group_service").order_by("-created_at")
+        if is_admin_or_superadmin(request.user):
+            return queryset
+        if is_subadmin_user(request.user):
+            return queryset.filter(results__client__assigned_client=request.user).distinct()
+        return queryset.none()
 
     def post(self, request, pk, *args, **kwargs):
         from main.tasks import process_manual_trade_batch_task
 
         with transaction.atomic():
-            batch = get_object_or_404(ManualTradeBatch.objects.select_for_update(), pk=pk)
+            batch = get_object_or_404(self._queryset(request).select_for_update(), pk=pk)
             if batch.status != ManualTradeBatch.STATUS_PREVIEW:
-                return Response({"detail": f"This manual trade batch is already {batch.status}."}, status=status.HTTP_409_CONFLICT)
+                return Response({"detail": f"This trade execution batch is already {batch.status}."}, status=status.HTTP_409_CONFLICT)
             pending_results = batch.results.filter(status=ManualTradeResult.STATUS_PENDING)
             selected_client_ids = request.data.get("client_ids")
             if selected_client_ids is not None:
@@ -5828,7 +5842,7 @@ class ManualTradeExecuteAPIView(APIView):
                     return Response({"detail": "One or more selected clients are not eligible for this preview."}, status=status.HTTP_400_BAD_REQUEST)
                 pending_results.exclude(client_id__in=selected_client_ids).update(
                     status=ManualTradeResult.STATUS_SKIPPED,
-                    reason="Not selected for this manual trade.",
+                    reason="Not selected for this trade execution.",
                     updated_at=timezone.now(),
                 )
                 batch.eligible_count = len(selected_client_ids)
@@ -5838,7 +5852,7 @@ class ManualTradeExecuteAPIView(APIView):
                     "selected_client_ids": sorted(selected_client_ids),
                 }
             if not batch.results.filter(status=ManualTradeResult.STATUS_PENDING).exists():
-                return Response({"detail": "No eligible clients are available to execute this manual trade."}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"detail": "No eligible clients are available to execute this trade."}, status=status.HTTP_400_BAD_REQUEST)
             batch.status = ManualTradeBatch.STATUS_QUEUED
             batch.confirmed_at = timezone.now()
             batch.save(update_fields=["status", "confirmed_at", "eligible_count", "skipped_count", "input_snapshot", "updated_at"])

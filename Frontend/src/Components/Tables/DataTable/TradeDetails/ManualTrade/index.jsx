@@ -67,6 +67,11 @@ const ManualTrade = () => {
     [groupServices, selectedGroupId]
   );
   const scriptOptions = useMemo(() => extractScripts(selectedGroup), [selectedGroup]);
+  const selectableResults = useMemo(
+    () => (preview?.results || []).filter((result) => result.status === "PENDING"),
+    [preview]
+  );
+  const allSelectableSelected = selectableResults.length > 0 && selectedClientIds.length === selectableResults.length;
 
   const loadInitialData = async () => {
     try {
@@ -139,7 +144,7 @@ const ManualTrade = () => {
       return;
     }
     const result = await Swal.fire({
-      title: "Execute manual trade?",
+      title: "Execute trade?",
       text: `This trade will go to ${selectedClientIds.length} selected client(s).`,
       icon: "warning",
       showCancelButton: true,
@@ -154,7 +159,7 @@ const ManualTrade = () => {
       const response = await executeManualTradeBatch(preview.id, selectedClientIds);
       setPreview(response);
       await loadInitialData();
-      Swal.fire("Queued", "Manual trade has been queued for execution.", "success");
+      Swal.fire("Queued", "Trade execution has been queued.", "success");
     } catch (error) {
       Swal.fire("Error", error.message, "error");
     } finally {
@@ -176,12 +181,20 @@ const ManualTrade = () => {
     }
   };
 
+  const toggleAllClients = () => {
+    setSelectedClientIds(
+      allSelectableSelected
+        ? []
+        : selectableResults.map((result) => result.client_id)
+    );
+  };
+
   return (
     <Fragment>
       <Col sm="12">
         <Card>
           <CardHeader>
-            <H3>Manual Trade</H3>
+            <H3>Trade Execution</H3>
           </CardHeader>
           <CardBody>
             <Row className="g-3 align-items-end">
@@ -259,28 +272,26 @@ const ManualTrade = () => {
                 <Col md="3"><strong>Success/Failed:</strong> {preview.success_count}/{preview.failed_count}</Col>
               </Row>
               {preview.status === "PREVIEW" && preview.eligible_count > 0 && (
-                <div className="d-flex align-items-center mb-3" style={{ gap: "8px" }}>
+                <div className="mb-3">
                   <strong>{selectedClientIds.length} client(s) selected</strong>
-                  <Button
-                    size="sm"
-                    color="primary"
-                    outline
-                    onClick={() => setSelectedClientIds(
-                      (preview.results || []).filter((result) => result.status === "PENDING").map((result) => result.client_id)
-                    )}
-                  >
-                    Select All
-                  </Button>
-                  <Button size="sm" color="secondary" outline onClick={() => setSelectedClientIds([])}>
-                    Clear
-                  </Button>
                 </div>
               )}
               <div className="table-responsive">
                 <Table bordered hover>
                   <thead>
                     <tr>
-                      {preview.status === "PREVIEW" && <th style={{ width: "48px" }}>Select</th>}
+                      {preview.status === "PREVIEW" && (
+                        <th style={{ width: "48px" }}>
+                          <Input
+                            type="checkbox"
+                            className="trade-execution-client-checkbox"
+                            aria-label="Select all clients"
+                            checked={allSelectableSelected}
+                            disabled={selectableResults.length === 0}
+                            onChange={toggleAllClients}
+                          />
+                        </th>
+                      )}
                       <th>Client</th>
                       <th>Broker</th>
                       <th>Expiry</th>
@@ -297,6 +308,7 @@ const ManualTrade = () => {
                           <td className="text-center">
                             <Input
                               type="checkbox"
+                              className="trade-execution-client-checkbox"
                               aria-label={`Select ${clientName(result)}`}
                               disabled={result.status !== "PENDING"}
                               checked={selectedClientIds.includes(result.client_id)}
@@ -328,7 +340,7 @@ const ManualTrade = () => {
       <Col sm="12">
         <Card>
           <CardHeader>
-            <H3>Recent Manual Trades</H3>
+            <H3>Recent Trade Executions</H3>
           </CardHeader>
           <CardBody>
             <div className="table-responsive">
@@ -360,7 +372,7 @@ const ManualTrade = () => {
                   ))}
                   {!batches.length && (
                     <tr>
-                      <td colSpan="8" className="text-center">No manual trades found</td>
+                      <td colSpan="8" className="text-center">No trade executions found</td>
                     </tr>
                   )}
                 </tbody>

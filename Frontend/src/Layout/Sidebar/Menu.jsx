@@ -60,7 +60,7 @@ export const MENUITEMS = [
           { path: `/tradedetails/trading-status`, title: "Trading Status", type: "link" },
           { path: `/tradedetails/webhook-diagnostics`, title: "Webhook Diagnostics", type: "link" },
           { path: `/tradedetails/sl-tp-watcher`, title: "SL/TP Watcher", type: "link" },
-          { path: `/tradedetails/manual-trade`, title: "Manual Trade", type: "link" },
+          { path: `/tradedetails/manual-trade`, title: "Trade Execution", type: "link" },
         ],
       },
 

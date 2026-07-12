@@ -14,7 +14,8 @@ const EditUser = () => {
     lastName: '',
     email: '',
     phoneNumber: '',
-    role: ''
+    role: '',
+    can_place_manual_trades: false
   });
   const [loading, setLoading] = useState(true);
   const [originalEmail, setOriginalEmail] = useState('');
@@ -31,7 +32,8 @@ const EditUser = () => {
           lastName: userData.lastName || '',
           email: userData.email || '',
           phoneNumber: userData.phoneNumber || '',
-          role: userData.role ? userData.role.id : '' 
+          role: userData.role ? userData.role.id : '',
+          can_place_manual_trades: Boolean(userData.can_place_manual_trades)
         });
         setOriginalEmail(userData.email || '');
       } catch (error) {
@@ -55,8 +57,8 @@ const EditUser = () => {
   }, [id]);
   
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setUserDetails({ ...userDetails, [name]: value });
+    const { name, value, type, checked } = e.target;
+    setUserDetails({ ...userDetails, [name]: type === 'checkbox' ? checked : value });
   };
 
   const validate = () => {
@@ -222,6 +224,19 @@ const EditUser = () => {
                   ))}
                 </Input>
                 {errors.role && <div className="invalid-feedback text-danger">{errors.role}</div>}
+              </Col>
+
+              <Col md="6 mb-3" className="d-flex align-items-center">
+                <Label check className="d-flex align-items-center gap-2 mb-0">
+                  <Input
+                    type="checkbox"
+                    name="can_place_manual_trades"
+                    checked={Boolean(userDetails.can_place_manual_trades)}
+                    onChange={handleChange}
+                    style={{ border: '1px solid #111', accentColor: '#111' }}
+                  />
+                  Allow Trade Execution
+                </Label>
               </Col>
             </Row>
 

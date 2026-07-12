@@ -61,6 +61,14 @@ def is_admin_or_superadmin(user) -> bool:
     return get_canonical_role(user) in {"superadmin", "admin"}
 
 
+def can_place_manual_trades(user) -> bool:
+    if not getattr(user, "is_authenticated", False):
+        return False
+    if is_admin_or_superadmin(user):
+        return True
+    return is_subadmin_user(user) and bool(getattr(user, "can_place_manual_trades", False))
+
+
 def is_end_user(user) -> bool:
     return get_canonical_role(user) == "user"
 
@@ -117,6 +125,13 @@ class IsSuperadminRole(permissions.BasePermission):
 class IsAdminOrSuperadmin(permissions.BasePermission):
     def has_permission(self, request, view):
         return bool(request.user and request.user.is_authenticated and is_admin_or_superadmin(request.user))
+
+
+class CanPlaceManualTrades(permissions.BasePermission):
+    message = "Trade Execution access is not enabled for this subadmin."
+
+    def has_permission(self, request, view):
+        return can_place_manual_trades(request.user)
 
 
 class IsBrokerOwnerOrAdmin(permissions.BasePermission):

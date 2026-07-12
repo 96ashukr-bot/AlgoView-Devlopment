@@ -599,7 +599,7 @@ class UserProfileRetrieveSerializer(serializers.ModelSerializer):
             # Current Address Fields
             'current_add_line_1', 'current_add_line_2', 'current_city', 
             'current_state', 'current_country', 'current_zip_code','role','start_date_client','end_date_client',
-            'created_at',
+            'created_at', 'can_place_manual_trades',
         ]
 
     def get_role(self, obj):
@@ -723,7 +723,7 @@ class UserSerializer(serializers.ModelSerializer):
             # Current Address Fields
             'current_add_line_1', 'current_add_line_2', 'current_city', 
             'current_state', 'current_country', 'current_zip_code','role','created_by','is_active',
-            'assigned_client','client_count','clients']
+            'assigned_client','client_count','clients','can_place_manual_trades']
     def get_clients(self, obj):
         # Get the clients assigned to the Sub-Admin
         # Here, 'assigned_users' is the related field in the User model representing clients
@@ -733,13 +733,14 @@ class NewUserCreateSerializer(serializers.ModelSerializer):
     role = serializers.PrimaryKeyRelatedField(queryset=Role.objects.all())  # Accepts role ID directly
     class Meta:
         model = User
-        fields = ['id', 'email', 'firstName', 'lastName', 'middleName','phoneNumber','role',]
+        fields = ['id', 'email', 'firstName', 'lastName', 'middleName','phoneNumber','role','can_place_manual_trades']
         extra_kwargs = {
             'email': {'required': False, 'allow_null': True, 'allow_blank': True},
             'firstName': {'required': False, 'allow_null': True, 'allow_blank': True},
             'lastName': {'required': False, 'allow_null': True, 'allow_blank': True},
             'middleName': {'required': False, 'allow_null': True, 'allow_blank': True},
             'phoneNumber': {'required': False, 'allow_null': True, 'allow_blank': True},
+            'can_place_manual_trades': {'required': False},
         }
 
     def validate_phoneNumber(self, value):
@@ -779,6 +780,10 @@ class NewUserCreateSerializer(serializers.ModelSerializer):
         instance.phoneNumber = validated_data.get('phoneNumber', instance.phoneNumber)
         instance.role = validated_data.get('role', instance.role)
         instance.middleName = validated_data.get('middleName', instance.middleName)
+        instance.can_place_manual_trades = validated_data.get(
+            'can_place_manual_trades',
+            instance.can_place_manual_trades,
+        )
         instance.save()
         return instance
 
