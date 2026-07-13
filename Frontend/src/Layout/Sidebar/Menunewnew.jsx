@@ -26,6 +26,7 @@ export const MENUITEMSNEWNEW = [
           { path: `/tradedetails/signals`, title: "Signals", type: "link" },
           { path: `/tradedetails/trade-history`, title: "Trade History", type: "link" },
           { path: `/tradedetails/complete-trade-history`, title: "Complete Trade", type: "link" },
+          { path: `/tradedetails/manual-trade`, title: "Trade Execution", type: "link" },
           { path: `/tradedetails/trading-status`, title: "Trading Status", type: "link" },
           { path: `/tradedetails/webhook-diagnostics`, title: "Webhook Diagnostics", type: "link" },
           { path: `/tradedetails/sl-tp-watcher`, title: "SL/TP Watcher", type: "link" },
