@@ -1742,7 +1742,29 @@ class ExecutionNodeManagerTests(TestCase):
 
         release_execution_node(self.client_user)
         self.node.refresh_from_db()
+        self.broker_details.refresh_from_db()
         self.assertIsNone(self.node.assigned_client_id)
+        self.assertIsNone(self.broker_details.execution_node_id)
+
+    def test_release_node_clears_stale_broker_level_assignments(self):
+        stale_node = ExecutionNode.objects.create(
+            name="Stale Broker Node",
+            ip_address="10.0.0.30",
+            provider="aws",
+            server_url="https://stale-node.example.com",
+            node_id="stale-node",
+        )
+        self.broker_details.execution_node = stale_node
+        self.broker_details.save(update_fields=["execution_node"])
+        assign_execution_node_to_client(self.client_user, self.node)
+
+        release_execution_node(self.client_user)
+
+        self.broker_details.refresh_from_db()
+        self.node.refresh_from_db()
+        stale_node.refresh_from_db()
+        self.assertIsNone(self.node.assigned_client_id)
+        self.assertIsNone(self.broker_details.execution_node_id)
 
     def test_one_node_one_client_rule(self):
         assign_execution_node_to_client(self.client_user, self.node)
@@ -1868,9 +1890,18 @@ class ExecutionNodeManagerTests(TestCase):
             lastName="Released",
             phoneNumber="9999999992",
             password="Pass@123",
-            is_client=True,
-            type_of_user="is_client",
         )
+        client_role, _ = Role.objects.get_or_create(name="Client", defaults={"status": Role.ACTIVE})
+        released_client.role = client_role
+        released_client.save(update_fields=["role"])
+        released_node = ExecutionNode.objects.create(
+            name="Released Node",
+            ip_address="10.0.0.21",
+            assigned_client=released_client,
+            status=ExecutionNode.STATUS_ASSIGNED,
+        )
+        ClientBrokerdetails.objects.create(client=released_client, broker_name=self.broker, execution_node=released_node)
+        release_execution_node(released_client)
         assigned_client = User.objects.create_user(
             email="assigned-ip-client@example.com",
             firstName="Assigned",

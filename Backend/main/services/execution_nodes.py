@@ -50,7 +50,7 @@ def release_execution_node(client: User) -> ExecutionNode | None:
     node.assigned_client = None
     node.status = ExecutionNode.STATUS_FREE if node.is_active else ExecutionNode.STATUS_DISABLED
     node.save(update_fields=["assigned_client", "status", "updated_at"])
-    ClientBrokerdetails.objects.filter(client=client, execution_node=node).update(execution_node=None)
+    ClientBrokerdetails.objects.filter(client=client).update(execution_node=None)
     node.mark_log("released", "Execution node released from client.", client=client)
     return node
 

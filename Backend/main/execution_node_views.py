@@ -284,7 +284,17 @@ class ExecutionNodeAssignableClientListAPIView(APIView):
     def get(self, request):
         _require_node_admin(request.user)
         search_query = (request.query_params.get("q") or "").strip()
-        clients = User.objects.filter(Q(is_client=True) | Q(type_of_user="is_client")).order_by("fullName", "email", "id")
+        clients = (
+            User.objects.filter(
+                Q(type_of_user="is_client")
+                | Q(is_client=True)
+                | Q(is_client__iexact="true")
+                | Q(role__name__iexact="Client")
+                | Q(clientbrokerdetails__isnull=False)
+            )
+            .distinct()
+            .order_by("fullName", "email", "id")
+        )
         if search_query:
             clients = clients.filter(
                 Q(fullName__icontains=search_query)
