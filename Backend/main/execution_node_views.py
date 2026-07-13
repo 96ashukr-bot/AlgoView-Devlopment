@@ -20,7 +20,7 @@ from rest_framework.views import APIView
 from main.brokers import get_broker_adapter
 from main.models import ClientBrokerdetails, ExecutionNode, ExecutionNodeLog, ExecutionOrderJob, User
 from main.permissions import can_access_client_record, is_superadmin_user
-from main.services.execution_nodes import assign_execution_node_to_client, release_execution_node
+from main.services.execution_nodes import assign_execution_node_to_client, mark_execution_node_broker_verified_from_valid_token, release_execution_node
 from main.services.execution_router import route_order_to_execution_node
 from main.services.node_security import verify_node_signature
 from main.services.proxy_utils import verify_proxy_public_ip
@@ -437,6 +437,9 @@ class ExecutionNodeVerifyProxyAPIView(APIView):
         node = ExecutionNode.objects.get(pk=node_id)
         result = verify_proxy_public_ip(node)
         node.refresh_from_db()
+        if result.get("status") == "success" and node.assigned_client_id:
+            mark_execution_node_broker_verified_from_valid_token(node.assigned_client, node)
+            node.refresh_from_db()
         return Response({"result": result, "node": ExecutionNodeSerializer(node).data})
 
 

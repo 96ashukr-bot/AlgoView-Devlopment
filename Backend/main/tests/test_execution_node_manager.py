@@ -17,7 +17,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from main.brokers.base import get_broker_adapter
 from main.models import Broker, ChatMessage, ChatThread, ClientBrokerdetails, ClientTradeSetting, ExecutionNode, ExecutionOrderJob, Role, Tradeorderhistory, TradingLog, User
-from main.services.execution_nodes import assign_execution_node_to_client, release_execution_node
+from main.services.execution_nodes import assign_execution_node_to_client, mark_execution_node_broker_verified_from_valid_token, release_execution_node
 from main.services.execution_router import route_order_to_execution_node
 from main.services.egress_guard import _is_broker_url, _is_public_instrument_master_url
 from main.services.node_security import generate_node_signature, verify_node_signature
@@ -1778,6 +1778,62 @@ class ExecutionNodeManagerTests(TestCase):
         self.broker_details.refresh_from_db()
         with self.assertRaises(ValidationError):
             route_order_to_execution_node(self.client_user, self.broker_details, {"symbol": "NIFTY", "quantity": 1})
+
+    def test_valid_token_marks_verified_proxy_node_from_stale_broker_flag(self):
+        proxy_node = ExecutionNode.objects.create(
+            name="Verified Proxy With Stale Broker Flag",
+            ip_address="10.0.0.41",
+            provider="proxy",
+            execution_type=ExecutionNode.EXECUTION_TYPE_PROXY,
+            proxy_host="proxy.example.com",
+            proxy_port=8080,
+            proxy_protocol=ExecutionNode.PROXY_PROTOCOL_HTTP,
+            proxy_public_ip_verified=True,
+            is_verified_with_broker=False,
+            status=ExecutionNode.STATUS_FREE,
+        )
+        assign_execution_node_to_client(self.client_user, proxy_node)
+        self.broker_details.refresh_from_db()
+        self.broker_details.set_session_tokens(
+            access_token="active-token",
+            expiry=timezone.now() + timedelta(hours=6),
+            mark_token_created=True,
+        )
+        self.broker_details.save()
+
+        marked = mark_execution_node_broker_verified_from_valid_token(self.client_user, proxy_node)
+
+        proxy_node.refresh_from_db()
+        self.assertTrue(marked)
+        self.assertTrue(proxy_node.is_verified_with_broker)
+
+    def test_expired_token_does_not_mark_verified_proxy_node(self):
+        proxy_node = ExecutionNode.objects.create(
+            name="Expired Token Proxy",
+            ip_address="10.0.0.42",
+            provider="proxy",
+            execution_type=ExecutionNode.EXECUTION_TYPE_PROXY,
+            proxy_host="proxy.example.com",
+            proxy_port=8080,
+            proxy_protocol=ExecutionNode.PROXY_PROTOCOL_HTTP,
+            proxy_public_ip_verified=True,
+            is_verified_with_broker=False,
+            status=ExecutionNode.STATUS_FREE,
+        )
+        assign_execution_node_to_client(self.client_user, proxy_node)
+        self.broker_details.refresh_from_db()
+        self.broker_details.set_session_tokens(
+            access_token="expired-token",
+            expiry=timezone.now() - timedelta(minutes=1),
+            mark_token_created=True,
+        )
+        self.broker_details.save()
+
+        marked = mark_execution_node_broker_verified_from_valid_token(self.client_user, proxy_node)
+
+        proxy_node.refresh_from_db()
+        self.assertFalse(marked)
+        self.assertFalse(proxy_node.is_verified_with_broker)
 
     def test_hmac_signature_generation_and_verification(self):
         payload = {"hello": "world"}

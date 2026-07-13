@@ -16,7 +16,7 @@ from django.utils import timezone
 
 from main.models import ClientBrokerdetails, ExecutionNode, ExecutionOrderJob, User
 from main.brokers import get_broker_adapter
-from main.services.execution_nodes import get_execution_node_for_client
+from main.services.execution_nodes import get_execution_node_for_client, mark_execution_node_broker_verified_from_valid_token
 from main.services.node_security import generate_node_signature
 from main.services.proxy_utils import build_requests_proxy_config, mask_proxy_url, verify_proxy_public_ip
 
@@ -110,9 +110,12 @@ def route_order_to_execution_node(client: User, broker_details: ClientBrokerdeta
         raise ValidationError("Execution node is not assigned to this client.")
     if not node.is_active or node.status in {ExecutionNode.STATUS_DISABLED, ExecutionNode.STATUS_MAINTENANCE, ExecutionNode.STATUS_OFFLINE}:
         raise ValidationError("Execution node is not available for trading.")
+    _ensure_proxy_public_ip_current(node)
+    if not node.is_verified_with_broker:
+        mark_execution_node_broker_verified_from_valid_token(client, node)
+        node.refresh_from_db(fields=["is_verified_with_broker"])
     if not node.is_verified_with_broker:
         raise ValidationError("Execution node is not verified with broker for this client.")
-    _ensure_proxy_public_ip_current(node)
 
     idempotency_key = str(order_payload.get("idempotency_key") or uuid.uuid4())
     request_payload = _safe_job_payload(order_payload, broker_details)

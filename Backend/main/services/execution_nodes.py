@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.utils import timezone
 
 from main.models import ClientBrokerdetails, ExecutionNode, User
 
@@ -73,3 +74,43 @@ def sync_client_broker_execution_nodes(client: User) -> ExecutionNode | None:
     if node:
         ClientBrokerdetails.objects.filter(client=client, execution_node__isnull=True).update(execution_node=node)
     return node
+
+
+def broker_details_has_valid_token(broker_details: ClientBrokerdetails) -> bool:
+    if not broker_details:
+        return False
+    access_token = getattr(broker_details, "access_token", None)
+    secure_getter = getattr(broker_details, "get_access_token_secure", None)
+    if callable(secure_getter):
+        access_token = secure_getter() or access_token
+    if not access_token or getattr(broker_details, "isTokenExpired", False):
+        return False
+    expiry = getattr(broker_details, "access_token_expiry", None)
+    if expiry:
+        if timezone.is_naive(expiry):
+            expiry = timezone.make_aware(expiry)
+        if expiry <= timezone.now():
+            return False
+    return True
+
+
+def mark_execution_node_broker_verified_from_valid_token(client: User, node: ExecutionNode) -> bool:
+    if not client or not node or not node.is_active:
+        return False
+    if node.execution_type == ExecutionNode.EXECUTION_TYPE_PROXY and not node.proxy_public_ip_verified:
+        return False
+    broker_details = (
+        ClientBrokerdetails.objects.filter(client=client, execution_node=node)
+        .order_by("-tokenCreatedAt", "-id")
+        .first()
+    )
+    if not broker_details or not broker_details_has_valid_token(broker_details):
+        return False
+    if not node.is_verified_with_broker:
+        node.is_verified_with_broker = True
+        node.save(update_fields=["is_verified_with_broker", "updated_at"])
+        try:
+            node.mark_log("broker_verified", "Execution node marked broker verified from an active broker token.", client=client)
+        except Exception:
+            pass
+    return True
