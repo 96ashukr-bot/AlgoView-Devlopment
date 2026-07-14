@@ -19,7 +19,7 @@ from main.models import (
     ManualTradeResult,
     User,
 )
-from main.permissions import get_accessible_clients_queryset
+from main.permissions import get_accessible_clients_queryset, is_admin_or_superadmin, is_subadmin_user
 
 
 ACTION_TO_ORDER = {
@@ -223,6 +223,10 @@ def create_manual_trade_preview(*, actor, group_service_id, symbol, action, stri
     strike = _decimal_strike(strike_price)
 
     group_queryset = GroupService.objects.all()
+    if is_subadmin_user(actor):
+        group_queryset = group_queryset.filter(group_Service__in=get_accessible_clients_queryset(actor)).distinct()
+    elif not is_admin_or_superadmin(actor):
+        group_queryset = group_queryset.none()
     group_service = group_queryset.get(pk=group_service_id)
 
     settings = _select_one_setting_per_client(_matching_trade_settings(group_service, symbol, actor))

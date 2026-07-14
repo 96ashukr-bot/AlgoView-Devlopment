@@ -2218,12 +2218,21 @@ class ServiceAPIView(APIView):
             return Response({"detail": "Services not found."}, status=status.HTTP_404_NOT_FOUND)
 
 #group services api
+def _group_services_for_user(user):
+    queryset = GroupService.objects.all().order_by('-id')
+    if is_subadmin_user(user):
+        return queryset.filter(group_Service__in=get_accessible_clients_queryset(user)).distinct()
+    if is_admin_or_superadmin(user):
+        return queryset
+    return queryset.none()
+
+
 class GroupServicelistView(APIView):
     permission_classes = [IsAuthenticated]
     def get(self, request, *args, **kwargs):
         try:
             logger.debug("GroupServiceView GET request received")  
-            group_ser = GroupService.objects.all().order_by('-id')
+            group_ser = _group_services_for_user(request.user)
             # Serialize the data
             serializer = GroupServiceSerializer(group_ser, many=True)
             serialized_data = serializer.data
@@ -2248,7 +2257,7 @@ class GroupServiceView(APIView):
         try:
             logger.debug("GroupServiceView GET request received")  # DEBUG message
             
-            group_ser = GroupService.objects.all().order_by('-id')
+            group_ser = _group_services_for_user(request.user)
             search_query = request.query_params.get('q', '').strip()
             group_ser = group_ser.filter(
                 Q(group_name__icontains=search_query) 

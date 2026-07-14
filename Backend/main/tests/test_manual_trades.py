@@ -97,6 +97,42 @@ class ManualTradeTests(APITestCase):
         self.assertEqual(response.data["preview_count"], 1)
         self.assertEqual(response.data["results"][0]["client_id"], self.client_user.id)
 
+    def test_enabled_subadmin_group_service_list_is_scoped_to_assigned_clients(self):
+        subadmin = User.objects.create_user(
+            email="manual-subadmin-groups@example.com",
+            firstName="Manual",
+            lastName="Subadmin",
+            phoneNumber="9330000010",
+            password="Pass@123",
+            role=self.subadmin_role,
+            type_of_user="is_user",
+            can_place_manual_trades=True,
+        )
+        other_group = GroupService.objects.create(
+            group_name="Other Manual Group",
+            segment=self.group.segment,
+            json_data=[{"ScriptName": "BANKNIFTY"}],
+        )
+        User.objects.create_user(
+            email="manual-other-group-client@example.com",
+            firstName="Other",
+            lastName="Group",
+            phoneNumber="9330000011",
+            password="Pass@123",
+            role=self.client_user.role,
+            Group_service=other_group,
+            type_of_user="is_client",
+            is_client="True",
+        )
+        self.client_user.assigned_client = subadmin
+        self.client_user.save(update_fields=["assigned_client"])
+        self.client.force_authenticate(subadmin)
+
+        response = self.client.get(reverse("group-view-list"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual([item["id"] for item in response.data], [self.group.id])
+
     def test_enabled_subadmin_cannot_open_unassigned_trade_execution_batch(self):
         subadmin = User.objects.create_user(
             email="manual-subadmin-scoped@example.com",

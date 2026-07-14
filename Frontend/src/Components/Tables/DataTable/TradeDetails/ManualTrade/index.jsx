@@ -1,4 +1,5 @@
 import React, { Fragment, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Badge,
   Button,
@@ -51,6 +52,7 @@ const extractScripts = (groupService) => {
 };
 
 const ManualTrade = () => {
+  const navigate = useNavigate();
   const [groupServices, setGroupServices] = useState([]);
   const [batches, setBatches] = useState([]);
   const [selectedGroupId, setSelectedGroupId] = useState("");
@@ -74,15 +76,24 @@ const ManualTrade = () => {
   const allSelectableSelected = selectableResults.length > 0 && selectedClientIds.length === selectableResults.length;
 
   const loadInitialData = async () => {
-    try {
-      const [groups, batchResponse] = await Promise.all([
-        getGroupServicesList(),
-        getManualTradeBatches(1, 10),
-      ]);
-      setGroupServices(Array.isArray(groups) ? groups : []);
-      setBatches(batchResponse?.results || []);
-    } catch (error) {
-      Swal.fire("Error", error.message, "error");
+    const [groupsResult, batchesResult] = await Promise.allSettled([
+      getGroupServicesList(),
+      getManualTradeBatches(1, 10),
+    ]);
+
+    if (groupsResult.status === "fulfilled") {
+      const groupPayload = groupsResult.value;
+      setGroupServices(Array.isArray(groupPayload) ? groupPayload : groupPayload?.results || []);
+    } else {
+      setGroupServices([]);
+      Swal.fire("Error", groupsResult.reason?.message || "Failed to fetch group services.", "error");
+    }
+
+    if (batchesResult.status === "fulfilled") {
+      setBatches(batchesResult.value?.results || []);
+    } else {
+      setBatches([]);
+      console.error("Failed to fetch trade execution batches:", batchesResult.reason);
     }
   };
 
@@ -143,23 +154,13 @@ const ManualTrade = () => {
       Swal.fire("Select clients", "Select at least one eligible client for this trade.", "warning");
       return;
     }
-    const result = await Swal.fire({
-      title: "Execute trade?",
-      text: `This trade will go to ${selectedClientIds.length} selected client(s).`,
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonText: "Execute Trade",
-      cancelButtonText: "Cancel",
-      confirmButtonColor: "#283F7B",
-    });
-    if (!result.isConfirmed) return;
 
     setExecuting(true);
     try {
       const response = await executeManualTradeBatch(preview.id, selectedClientIds);
       setPreview(response);
       await loadInitialData();
-      Swal.fire("Queued", "Trade execution has been queued.", "success");
+      navigate("/tradedetails/trade-history");
     } catch (error) {
       Swal.fire("Error", error.message, "error");
     } finally {
