@@ -5832,7 +5832,12 @@ class ManualTradeExecuteAPIView(APIView):
         from main.tasks import process_manual_trade_batch_task
 
         with transaction.atomic():
-            batch = get_object_or_404(self._queryset(request).select_for_update(), pk=pk)
+            if not self._queryset(request).filter(pk=pk).exists():
+                return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+            batch = get_object_or_404(
+                ManualTradeBatch.objects.select_for_update().select_related("group_service"),
+                pk=pk,
+            )
             if batch.status != ManualTradeBatch.STATUS_PREVIEW:
                 return Response({"detail": f"This trade execution batch is already {batch.status}."}, status=status.HTTP_409_CONFLICT)
             pending_results = batch.results.filter(status=ManualTradeResult.STATUS_PENDING)
