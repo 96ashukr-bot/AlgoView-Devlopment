@@ -4460,6 +4460,79 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertEqual(dhan.place_order.call_args.kwargs["price"], 10.25)
         self.assertEqual(mock_post.call_args.kwargs["proxies"], proxy_config)
 
+    @mock.patch("main.dhanapi.requests.post")
+    @mock.patch("main.dhanapi.get_trading_symbol_security_id")
+    @mock.patch("main.dhanapi.dhanhq")
+    def test_dhan_invalid_token_marks_token_expired_and_failed_history(self, mock_dhan_class, mock_security_lookup, mock_post):
+        from main.dhanapi import place_dhan_orders
+
+        dhan_broker = Broker.objects.create(broker_name="Dhan", is_active=True)
+        broker_details = ClientBrokerdetails.objects.create(
+            client=self.client_user,
+            broker_name=dhan_broker,
+            broker_API_UID="dhan-client",
+            access_token="bad-token",
+            isTokenExpired=False,
+        )
+        proxy_config = {"http": "http://proxy.example.com:8080", "https": "http://proxy.example.com:8080"}
+        dhan = mock_dhan_class.return_value
+        dhan.session.proxies = {}
+        dhan.NSE_FNO = "NSE_FNO"
+        dhan.NSE = "NSE"
+        dhan.NORMAL = "NORMAL"
+        dhan.INTRA = "INTRA"
+        dhan.CNC = "CNC"
+        dhan.BUY = "BUY"
+        dhan.SELL = "SELL"
+        dhan.MARKET = "MARKET"
+        dhan.LIMIT = "LIMIT"
+        dhan.SL = "SL"
+        dhan.get_ltp_data.return_value = {"data": {"NSE_FNO": {"12345": {"last_price": 10}}}}
+        dhan.place_order.return_value = {"status": "failure", "remarks": {"error_message": "Invalid Token"}}
+        mock_post.return_value = SimpleNamespace(status_code=200, content=b"{}", json=lambda: {"data": {"NSE_FNO": {"12345": {"last_price": 10}}}})
+        mock_security_lookup.return_value = {"status": "success", "SECURITY_ID": 12345}
+
+        response = place_dhan_orders(
+            "2026-05-12",
+            10,
+            "Lite",
+            "bad-token",
+            "dhan-client",
+            "NIFTY24400CE",
+            "BUY",
+            "NIFTY",
+            65,
+            "strategy",
+            "MARKET",
+            "MIS",
+            None,
+            self.client_user,
+            1,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            "NFO",
+            "FNO",
+            "NIFTY",
+            None,
+            "OPEN",
+            "dhan-invalid-token-history",
+            proxy_config=proxy_config,
+        )
+
+        self.assertEqual(response["data"]["status"], "Failed")
+        self.assertEqual(response["data"]["message"], "Invalid Token")
+        broker_details.refresh_from_db()
+        self.assertTrue(broker_details.isTokenExpired)
+        history = Tradeorderhistory.objects.get(history_id="dhan-invalid-token-history")
+        self.assertEqual(history.trade_order_status, "Failed")
+        self.assertEqual(history.order_status, "Failed")
+        self.assertEqual(history.failure_reason, "Invalid Token")
+
     @mock.patch("main.dhanapi.ensure_dhan_instruments_file")
     def test_dhan_security_lookup_ignores_invalid_placeholder_expiry_dates(self, mock_instrument_file):
         with tempfile.NamedTemporaryFile("w", suffix=".csv", delete=False) as file_obj:

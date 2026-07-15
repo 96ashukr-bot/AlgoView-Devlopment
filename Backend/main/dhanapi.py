@@ -148,6 +148,28 @@ def _fetch_dhan_order_details_with_poll(order_id, dhan, user=None, attempts=4, d
         if attempt < attempts - 1:
             sleep(delay_seconds)
     return latest_response, latest_record
+
+
+def _is_dhan_invalid_token_message(message):
+    return "invalid token" in str(message or "").lower()
+
+
+def _mark_dhan_token_expired_if_needed(user, message):
+    if not _is_dhan_invalid_token_message(message) or not user:
+        return
+    try:
+        from main.models import ClientBrokerdetails
+
+        broker_details = ClientBrokerdetails.objects.filter(
+            client=user,
+            broker_name__broker_name__iexact="Dhan",
+        ).first()
+        if broker_details and not broker_details.isTokenExpired:
+            broker_details.isTokenExpired = True
+            broker_details.save(update_fields=["isTokenExpired"])
+            logger.warning(f"{user} : Dhan token marked expired after broker returned Invalid Token.")
+    except Exception as exc:
+        logger.exception(f"{user} : Failed to mark Dhan token expired: {exc}")
         
 def get_trading_symbol_security_id(symbol, segment, Exch,expiry_date, user=None):
     logger.info(f"{user}: the get_trading_symbol_security_id is calling now !")
@@ -219,7 +241,8 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
             res_data = f"{str(e)}"
             response={"data": {"status": status,"message":message}}
             logger.info(f'{user} : This is exception error in Dhan api {response}')
-            save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message,  
+            _mark_dhan_token_expired_if_needed(user, message)
+            save_trade_order_history(LivePrice,group_service,transaction_type,"Failed", user, trade_symbol, order_id, status, res_data, message,  
                         strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
                         webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan", history_id=history_id)
             return response
@@ -230,7 +253,7 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
             message = "Instrument details not found"
             res_data = "Trading symbol not found."
             response={"data": {"status": status,"message":message}}
-            save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message,  
+            save_trade_order_history(LivePrice,group_service,transaction_type,"Failed", user, trade_symbol, order_id, status, res_data, message,  
                     strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
                     webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan", history_id=history_id)
             return response
@@ -292,7 +315,7 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
             if not price:
                 message = "Unable to calculate Dhan option limit price because option live price is unavailable. Please retry after quotes are available or provide an explicit option limit price."
                 response = {"data": {"status": "Failed", "message": message}}
-                save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, trade_symbol, order_id, "Failed", None, message,
+                save_trade_order_history(LivePrice,group_service,transaction_type,"Failed", user, trade_symbol, order_id, "Failed", None, message,
                             strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
                             webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan", history_id=history_id)
                 return response
@@ -345,7 +368,7 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
                             message = f"{user} : Invalid quantity {quantity}. Must be multiple of lot size {lot_size}"
                             logger.error(message)
                             response = {"data": {"status": "Failed", "message": message}}
-                            save_trade_order_history(LivePrice, group_service, transaction_type, trade_order_status, 
+                            save_trade_order_history(LivePrice, group_service, transaction_type, "Failed", 
                                                 user, trade_symbol, order_id, "Failed", None, message,
                                                 strategy, Entry_type, Exit_type, Entry_price, Exit_price, 
                                                 EntryQty, ExitQty, webhook_signal, Exchange, Segment, 
@@ -366,7 +389,8 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
                 status='Failed'
                 response={"data": {"status": status,"message":message}}
                 logger.info(f"{user} : order_response status is failure ??")
-                save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message,
+                _mark_dhan_token_expired_if_needed(user, message)
+                save_trade_order_history(LivePrice,group_service,transaction_type,"Failed", user, trade_symbol, order_id, status, res_data, message,
                             strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
                             webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan", history_id=history_id)
                 return response
@@ -377,7 +401,8 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
                 message = order_response.get('error_message',"")
                 res_data = order_response.get(order_response,"No order ID returned")
                 response={"data": {"status": status,"message":message}}
-                save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message,
+                _mark_dhan_token_expired_if_needed(user, message)
+                save_trade_order_history(LivePrice,group_service,transaction_type,"Failed", user, trade_symbol, order_id, status, res_data, message,
                             strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
                             webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan", history_id=history_id)
                 return response
@@ -390,7 +415,7 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
                 status = "Failed"
                 message = "Dhan order was placed, but broker order details could not be fetched. Please check Dhan order book before retrying."
                 response = {"data": {"status": status, "message": message, "order_id": order_id}}
-                save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, trade_symbol, order_id, status, order_history_response, message,
+                save_trade_order_history(LivePrice,group_service,transaction_type,"Failed", user, trade_symbol, order_id, status, order_history_response, message,
                                         strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
                                         webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan", history_id=history_id)
                 return response
@@ -406,7 +431,7 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
                 response = {"data": {"status": status,"message":message}}
                 logger.info(f"Order response if None for user {user}. Order ID: {order_id}")
 
-                save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message,
+                save_trade_order_history(LivePrice,group_service,transaction_type,"Failed", user, trade_symbol, order_id, status, res_data, message,
                                         strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
                                         webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan", history_id=history_id)
                 return response
@@ -458,7 +483,8 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
                 send_trade_email_async.delay(user.email, default_from_email, user.firstName, status, message)
                 response = {"data": {"status": status,"message":message}}
                 logger.info(f"Order is rejected for user {user}. Order ID: {order_id}")
-                save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message,
+                _mark_dhan_token_expired_if_needed(user, message)
+                save_trade_order_history(LivePrice,group_service,transaction_type,"Failed", user, trade_symbol, order_id, status, res_data, message,
                                         strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
                                         webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan", history_id=history_id)
                 return response
@@ -507,7 +533,8 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
                 response= {"data": {"status": "Failed","message": "Order placed but details could not be fetched."}}
                 logger.info(f"Order is TRANSIT for user {user}. Order ID: {order_id}")
 
-                save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, trade_symbol, order_id, status, res_data, message,
+                _mark_dhan_token_expired_if_needed(user, message)
+                save_trade_order_history(LivePrice,group_service,transaction_type,"Failed", user, trade_symbol, order_id, status, res_data, message,
                                         strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
                                         webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan", history_id=history_id)
                 return response     
@@ -519,7 +546,8 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
             print("error in dhan api :::::",{str(e)})
             Index_Symbol = symbol
             
-            save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, trading_symbol, order_id, "Failed", None, str(e),
+            _mark_dhan_token_expired_if_needed(user, str(e))
+            save_trade_order_history(LivePrice,group_service,transaction_type,"Failed", user, trade_symbol, order_id, "Failed", None, str(e),
                                 strategy,  Entry_type,Exit_type,Entry_price,Exit_price,EntryQty,ExitQty , webhook_signal, Exchange,
                                     Segment, Index_Symbol, order_params, broker="dhan", history_id=history_id)
             return response
@@ -530,7 +558,8 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
         logger.error(error_message)
         order_id = 0
         response={"data": {"status": "error","message": str(e)}}
-        save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, trading_symbol, order_id, "Failed", None, str(e),
+        _mark_dhan_token_expired_if_needed(user, str(e))
+        save_trade_order_history(LivePrice,group_service,transaction_type,"Failed", user, trade_symbol, order_id, "Failed", None, str(e),
                                     strategy, Entry_type,Exit_type,Entry_price,Exit_price,EntryQty,ExitQty , webhook_signal, Exchange,
                                     Segment, Index_Symbol, order_params, broker="dhan", history_id=history_id)
         return response
