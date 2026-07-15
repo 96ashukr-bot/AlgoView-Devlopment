@@ -39,55 +39,75 @@ export const navLinks = [
 export const services = [
   {
     title: "Python Software Development",
+    slug: "python-software-development",
+    price: "INR 25,000/- onwards",
     description:
       "Custom backend systems, automation platforms, enterprise software, workflow tools, and scalable applications.",
     icon: Code2,
   },
   {
     title: "API Development & Integration",
+    slug: "api-development-integration",
+    price: "INR 7,000/- onwards",
     description:
       "Secure API creation, integration, middleware solutions, and connectivity between platforms.",
     icon: Network,
   },
   {
     title: "API Bridging Solutions",
+    slug: "api-bridging-solutions",
+    price: "INR 7,000/- onwards",
     description: "Custom API bridge development to connect multiple applications and services.",
     icon: Workflow,
   },
   {
     title: "Custom Automation Script Development",
+    slug: "custom-automation-script-development",
+    price: "INR 15,000/- onwards",
     description:
       "Custom scripts, alerts, dashboards, and automation workflows.",
     icon: LineChart,
   },
   {
     title: "Third-Party API Integration",
+    slug: "third-party-api-integration",
+    price: "INR 18,000/- onwards",
     description: "Integration of third-party APIs for automation, reporting, and workflow management.",
     icon: Blocks,
   },
   {
     title: "Automation Software",
+    slug: "automation-software",
+    price: "INR 40,000/- onwards",
     description:
       "Client-defined automation systems, execution workflows, monitoring tools, and process automation.",
     icon: Bot,
   },
   {
     title: "Dashboard Development",
+    slug: "dashboard-development",
+    price: "INR 18,000/- onwards",
     description: "Interactive dashboards for reporting, analytics, monitoring, and operational management.",
     icon: Layers3,
   },
   {
     title: "Cloud Deployment",
+    slug: "cloud-deployment",
+    price: "INR 20,000/- onwards",
     description: "AWS infrastructure setup, cloud architecture, monitoring, optimization, and deployment.",
     icon: Cloud,
   },
   {
     title: "Database Development",
+    slug: "database-development",
+    price: "INR 21,000/- onwards",
     description: "PostgreSQL, MySQL, database architecture, optimization, and maintenance.",
     icon: Database,
   },
   {
     title: "Technical Support & Maintenance",
+    slug: "technical-support-maintenance",
+    price: "INR 5,000/- onwards",
     description: "Ongoing maintenance, upgrades, monitoring, troubleshooting, and technical support.",
     icon: Headphones,
   },
@@ -134,9 +154,19 @@ export const products = [
 ];
 
 export const productOptions = products.map((product) => product.title);
+export const serviceOptions = services.map((service) => service.title);
+export const checkoutOptions = [...productOptions, ...serviceOptions];
 
 export function getProductBySlug(slug) {
   return products.find((product) => product.slug === slug);
+}
+
+export function getServiceBySlug(slug) {
+  return services.find((service) => service.slug === slug);
+}
+
+export function getCheckoutItemBySlug(slug) {
+  return getProductBySlug(slug) || getServiceBySlug(slug);
 }
 
 export const reasons = [
@@ -148,17 +178,4 @@ export const reasons = [
   { title: "Dedicated Support", icon: Headphones },
   { title: "Enterprise Reliability", icon: ShieldCheck },
   { title: "Technology Partnership", icon: Rocket },
-];
-
-export const serviceOptions = [
-  "Python Software Development",
-  "API Development & Integration",
-  "API Bridging Solutions",
-  "Custom Automation Script Development",
-  "Third-Party API Integration",
-  "Automation Software",
-  "Dashboard Development",
-  "Cloud Deployment",
-  "Database Development",
-  "Technical Support & Maintenance",
 ];

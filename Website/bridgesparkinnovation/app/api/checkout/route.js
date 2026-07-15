@@ -1,7 +1,7 @@
 import fs from "fs/promises";
 import path from "path";
 import { NextResponse } from "next/server";
-import { productOptions } from "@/lib/site";
+import { checkoutOptions } from "@/lib/site";
 
 const storageFile = path.join(process.cwd(), "storage", "checkout-orders.json");
 
@@ -38,8 +38,8 @@ export async function POST(request) {
     return NextResponse.json({ error: "Please complete all required fields." }, { status: 400 });
   }
 
-  if (!productOptions.includes(checkout.product)) {
-    return NextResponse.json({ error: "Please select a valid product." }, { status: 400 });
+  if (!checkoutOptions.includes(checkout.product)) {
+    return NextResponse.json({ error: "Please select a valid product or service." }, { status: 400 });
   }
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(checkout.email)) {

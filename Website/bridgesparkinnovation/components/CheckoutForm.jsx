@@ -3,7 +3,7 @@
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { CheckCircle2, Send } from "lucide-react";
-import { getProductBySlug, productOptions } from "@/lib/site";
+import { checkoutOptions, getCheckoutItemBySlug } from "@/lib/site";
 
 const emptyForm = {
   name: "",
@@ -21,12 +21,12 @@ const emptyForm = {
 
 export function CheckoutForm() {
   const searchParams = useSearchParams();
-  const selectedProduct = useMemo(() => {
-    const product = getProductBySlug(searchParams.get("product"));
-    return product?.title || productOptions[0];
+  const selectedItem = useMemo(() => {
+    const item = getCheckoutItemBySlug(searchParams.get("product") || searchParams.get("service"));
+    return item?.title || checkoutOptions[0];
   }, [searchParams]);
 
-  const [product, setProduct] = useState(selectedProduct);
+  const [product, setProduct] = useState(selectedItem);
   const [form, setForm] = useState(emptyForm);
   const [status, setStatus] = useState({ type: "idle", message: "" });
   const [submitting, setSubmitting] = useState(false);
@@ -68,13 +68,13 @@ export function CheckoutForm() {
   return (
     <form onSubmit={submitCheckout} className="rounded border border-slate-200 bg-white p-5 shadow-soft sm:p-7">
       <label className="grid gap-2 text-sm font-bold text-navy">
-        Product
+        Product / Service
         <select
           value={product}
           onChange={(event) => setProduct(event.target.value)}
           className="focus-ring rounded border border-slate-300 px-4 py-3 font-normal text-ink"
         >
-          {productOptions.map((option) => (
+          {checkoutOptions.map((option) => (
             <option key={option}>{option}</option>
           ))}
         </select>
