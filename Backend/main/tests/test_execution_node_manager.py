@@ -1832,8 +1832,10 @@ class ExecutionNodeManagerTests(TestCase):
         marked = mark_execution_node_broker_verified_from_valid_token(self.client_user, proxy_node)
 
         proxy_node.refresh_from_db()
+        self.broker_details.refresh_from_db()
         self.assertFalse(marked)
         self.assertFalse(proxy_node.is_verified_with_broker)
+        self.assertTrue(self.broker_details.isTokenExpired)
 
     def test_hmac_signature_generation_and_verification(self):
         payload = {"hello": "world"}

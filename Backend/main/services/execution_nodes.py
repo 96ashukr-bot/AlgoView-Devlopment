@@ -90,6 +90,9 @@ def broker_details_has_valid_token(broker_details: ClientBrokerdetails) -> bool:
         if timezone.is_naive(expiry):
             expiry = timezone.make_aware(expiry)
         if expiry <= timezone.now():
+            if not getattr(broker_details, "isTokenExpired", False):
+                broker_details.isTokenExpired = True
+                broker_details.save(update_fields=["isTokenExpired"])
             return False
     return True
 

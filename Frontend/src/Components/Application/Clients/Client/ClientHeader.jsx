@@ -971,7 +971,7 @@ const ClientHeader = ({ clientId = "" }) => {
             </div>
             <div style={{ color: "#4b5563", fontSize: "14px" }}>
               {executionNode
-                ? `Broker verification: ${executionNode.is_verified_with_broker ? "Verified" : "Pending admin verification"}${executionNode.execution_type === "proxy" ? ` | Executional Client IP: ${executionNode.proxy_public_ip_verified ? "Verified" : "Not verified"}` : ""}`
+                ? `${executionNode.broker_verification_message || `Broker verification: ${executionNode.is_verified_with_broker ? "Verified" : "Pending admin verification"}`}${executionNode.execution_type === "proxy" ? ` | Executional Client IP: ${executionNode.proxy_public_ip_verified ? "Verified" : "Not verified"}` : ""}`
                 : "Add the VPS/static IP that should place broker orders for your account."}
             </div>
           </div>

@@ -20,7 +20,7 @@ from rest_framework.views import APIView
 from main.brokers import get_broker_adapter
 from main.models import ClientBrokerdetails, ExecutionNode, ExecutionNodeLog, ExecutionOrderJob, User
 from main.permissions import can_access_client_record, is_superadmin_user
-from main.services.execution_nodes import assign_execution_node_to_client, mark_execution_node_broker_verified_from_valid_token, release_execution_node
+from main.services.execution_nodes import assign_execution_node_to_client, broker_details_has_valid_token, mark_execution_node_broker_verified_from_valid_token, release_execution_node
 from main.services.execution_router import route_order_to_execution_node
 from main.services.node_security import verify_node_signature
 from main.services.proxy_utils import verify_proxy_public_ip
@@ -125,6 +125,8 @@ class ExecutionNodeSerializer(serializers.ModelSerializer):
 class ClientExecutionNodeSerializer(serializers.ModelSerializer):
     node_secret = serializers.CharField(write_only=True, required=False, allow_blank=True, allow_null=True)
     proxy_password = serializers.CharField(write_only=True, required=False, allow_blank=True, allow_null=True)
+    broker_verification_status = serializers.SerializerMethodField()
+    broker_verification_message = serializers.SerializerMethodField()
 
     class Meta:
         model = ExecutionNode
@@ -149,6 +151,8 @@ class ClientExecutionNodeSerializer(serializers.ModelSerializer):
             "status",
             "is_active",
             "is_verified_with_broker",
+            "broker_verification_status",
+            "broker_verification_message",
             "last_heartbeat",
             "last_seen_ip",
             "created_at",
@@ -158,6 +162,8 @@ class ClientExecutionNodeSerializer(serializers.ModelSerializer):
             "id",
             "status",
             "is_verified_with_broker",
+            "broker_verification_status",
+            "broker_verification_message",
             "proxy_public_ip_verified",
             "proxy_last_verified_at",
             "proxy_last_seen_ip",
@@ -167,6 +173,38 @@ class ClientExecutionNodeSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         )
+
+    def _broker_verification_state(self, obj):
+        if not obj:
+            return "missing", "No static execution IP is assigned."
+        if obj.is_verified_with_broker:
+            return "verified", "Broker verification: Verified"
+        if obj.execution_type == ExecutionNode.EXECUTION_TYPE_PROXY and not obj.proxy_public_ip_verified:
+            return "ip_not_verified", "Broker verification: Waiting for Executional Client IP verification"
+        broker_details = (
+            ClientBrokerdetails.objects.filter(client=obj.assigned_client, execution_node=obj)
+            .select_related("broker_name")
+            .order_by("-tokenCreatedAt", "-id")
+            .first()
+        )
+        if not broker_details:
+            return "broker_not_configured", "Broker verification: Broker details not configured"
+        access_token = None
+        access_token_getter = getattr(broker_details, "get_access_token_secure", None)
+        if callable(access_token_getter):
+            access_token = access_token_getter()
+        access_token = access_token or getattr(broker_details, "access_token", None)
+        if not access_token:
+            return "token_missing", "Broker verification: Broker token not generated"
+        if not broker_details_has_valid_token(broker_details):
+            return "token_expired", "Broker verification: Broker token expired. Please reconnect broker."
+        return "pending_admin_verification", "Broker verification: Pending admin verification"
+
+    def get_broker_verification_status(self, obj):
+        return self._broker_verification_state(obj)[0]
+
+    def get_broker_verification_message(self, obj):
+        return self._broker_verification_state(obj)[1]
 
     def validate(self, attrs):
         instance = getattr(self, "instance", None)
