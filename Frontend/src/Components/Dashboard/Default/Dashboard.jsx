@@ -13,7 +13,7 @@ const Dashboard = () => {
       <Breadcrumbs mainTitle="Default" parent="Dashboard" title="Default" />
       <Container fluid={true}>
         <Row className="widget-grid">
-          <SubadminAnnouncement />
+          <SubadminAnnouncement mode="dashboard" />
           {/* <SuperDashboard /> */}
           <WidgetsWrapper1/>
           <MarketDashboard />

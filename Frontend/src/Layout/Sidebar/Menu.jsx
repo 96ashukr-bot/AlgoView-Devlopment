@@ -127,6 +127,7 @@ export const MENUITEMS = [
         bookmark: true,
         active: false,
         children: [
+          { path: `/settings/subadmin-message`, title: "Subadmin Message", type: "link", superadminOnly: true },
           { path: `/settings/category`, title: "Category", type: "link" },
           { path: `/settings/segment`, title: "Segment", type: "link" },
           { path: `/settings/services`, title: "Services", type: "link" },

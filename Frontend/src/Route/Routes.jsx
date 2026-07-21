@@ -185,10 +185,12 @@ import IPPool from "../Components/Application/IPPool/IPPool";
 import SupportChat from "../Components/Application/SupportChat/SupportChat";
 import AgreementAcceptanceManagement from "../Components/Legal/AgreementAcceptanceManagement";
 import ManualTrade from "../Components/Tables/DataTable/TradeDetails/ManualTrade";
+import SubadminMessageSettings from "../Components/Dashboard/Default/SubadminMessageSettings";
 
 export const routes = [
   { path: `/dashboard/algoviewtech/user`, Component: <Default /> },
   { path: `/dashboard/algoviewtech/admin`, Component: <Dashboard /> },
+  { path: `/settings/subadmin-message`, Component: <SubadminMessageSettings /> },
   { path: `/dashboard/segments/update-segment/:clientId/:segmentId/:subSegmentId`, Component: <EditPage /> },
   { path: `/dashboard/strategies/update-multi-leg/:strategyId`, Component: <MultiLegEditPage /> },
   { path: `/dashboard/strategies/multileg-execution`, Component: <MultiLegExecutionPage /> },

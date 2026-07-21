@@ -8,7 +8,7 @@ import {
 
 const normalizeRole = (profile) => String(profile?.role?.name || "").trim().toLowerCase();
 
-const SubadminAnnouncement = () => {
+const SubadminAnnouncement = ({ mode = "dashboard" }) => {
   const [role, setRole] = useState("");
   const [subadminName, setSubadminName] = useState("");
   const [message, setMessage] = useState("");
@@ -67,7 +67,7 @@ const SubadminAnnouncement = () => {
   if (loading) {
     return <Col xs="12" className="mb-3"><Spinner size="sm" /> Loading dashboard message…</Col>;
   }
-  if (isSubadmin && activeMessage) {
+  if (mode === "dashboard" && isSubadmin && activeMessage) {
     return (
       <Col xs="12">
         <Alert
@@ -81,7 +81,7 @@ const SubadminAnnouncement = () => {
       </Col>
     );
   }
-  if (!isSuperadmin) return null;
+  if (mode !== "settings" || !isSuperadmin) return null;
 
   return (
     <Col xs="12">
