@@ -70,8 +70,11 @@ const SubadminAnnouncement = () => {
   if (isSubadmin && activeMessage) {
     return (
       <Col xs="12">
-        <Alert color="primary" className="mb-3 shadow-sm">
-          <strong className="d-block mb-1">Message from Superadmin</strong>
+        <Alert
+          color="light"
+          className="mb-3 text-center border-0"
+          style={{ backgroundColor: "transparent" }}
+        >
           <strong className="d-block mb-1">Dear {subadminName || "Subadmin"},</strong>
           <span style={{ whiteSpace: "pre-wrap" }}>{activeMessage}</span>
         </Alert>
