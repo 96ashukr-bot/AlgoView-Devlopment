@@ -95,6 +95,7 @@ urlpatterns = [
     path('update-user/<int:pk>/', UserManagementView.as_view(), name='user-management'),
     path('delete-user/<int:pk>/', UserManagementView.as_view(), name='user-detail-management'),
     path('user-profile/', UserProfileView.as_view(), name='user-profile'),
+    path('subadmin-dashboard-announcement/', SubadminDashboardAnnouncementView.as_view(), name='subadmin-dashboard-announcement'),
     path('kyc/', GetKYCView.as_view(), name='get-kyc'),
     path('get-kyc-by-id/<int:pk>/', GetKYCByIdView.as_view(), name='get-kyc-by-id'),
     path('kyc/update/', CreateOrUpdateKYCView.as_view(), name='create-update-kyc'),

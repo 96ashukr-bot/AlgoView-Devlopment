@@ -4,6 +4,7 @@ import { Breadcrumbs } from "../../../AbstractElements";
 // import SuperDashboard from "./SuperDashboard";
 import WidgetsWrapper1 from "./WidgetsWraper1";
 import MarketDashboard from "./MarketDashboard";
+import SubadminAnnouncement from "./SubadminAnnouncement";
 
 const Dashboard = () => {
  
@@ -12,6 +13,7 @@ const Dashboard = () => {
       <Breadcrumbs mainTitle="Default" parent="Dashboard" title="Default" />
       <Container fluid={true}>
         <Row className="widget-grid">
+          <SubadminAnnouncement />
           {/* <SuperDashboard /> */}
           <WidgetsWrapper1/>
           <MarketDashboard />

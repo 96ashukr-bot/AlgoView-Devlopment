@@ -647,6 +647,16 @@ export const fetchUserProfile = async () => {
   }
 };
 
+export const getSubadminDashboardAnnouncement = async () => {
+  const response = await axios.get(`${baseUrl}/subadmin-dashboard-announcement/`);
+  return response.data;
+};
+
+export const updateSubadminDashboardAnnouncement = async (message) => {
+  const response = await axios.put(`${baseUrl}/subadmin-dashboard-announcement/`, { message });
+  return response.data;
+};
+
 export const updateUserProfile = async (formValues) => {
   const token = getAccessToken();
   if (!token) {

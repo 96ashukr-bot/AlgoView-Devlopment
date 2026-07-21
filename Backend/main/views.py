@@ -1578,6 +1578,51 @@ class UserManagementView(APIView):
 #         except Exception as e:
 #             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+class SubadminDashboardAnnouncementView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @staticmethod
+    def _payload(announcement):
+        if announcement is None:
+            return {"message": "", "is_active": False, "updated_at": None}
+        return {
+            "message": announcement.message if announcement.is_active else "",
+            "is_active": announcement.is_active,
+            "updated_at": announcement.updated_at,
+        }
+
+    def get(self, request, *args, **kwargs):
+        if not (is_superadmin_user(request.user) or is_subadmin_user(request.user)):
+            return Response(
+                {"detail": "This announcement is available only to superadmins and subadmins."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        announcement = SubadminDashboardAnnouncement.objects.filter(pk=1).first()
+        return Response(self._payload(announcement), status=status.HTTP_200_OK)
+
+    def put(self, request, *args, **kwargs):
+        if not is_superadmin_user(request.user):
+            return Response(
+                {"detail": "Only superadmin can update the subadmin announcement."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        message = str(request.data.get("message") or "").strip()
+        if len(message) > 2000:
+            return Response(
+                {"message": "Message cannot exceed 2000 characters."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        announcement, _ = SubadminDashboardAnnouncement.objects.update_or_create(
+            pk=1,
+            defaults={
+                "message": message,
+                "is_active": bool(message),
+                "updated_by": request.user,
+            },
+        )
+        return Response(self._payload(announcement), status=status.HTTP_200_OK)
+
+
 class UserProfileView(APIView):
     pagination_class = None
     permission_classes = [IsAuthenticated]

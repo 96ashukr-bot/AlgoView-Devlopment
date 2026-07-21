@@ -1484,6 +1484,23 @@ PAYMENT_METHOD_CHOICES = [
     ('QR', 'QR Code'),
 ]
 
+class SubadminDashboardAnnouncement(models.Model):
+    message = models.TextField(blank=True, default="")
+    is_active = models.BooleanField(default=False, db_index=True)
+    updated_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="updated_subadmin_dashboard_announcements",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return "Active subadmin announcement" if self.is_active else "Inactive subadmin announcement"
+
+
 class AdminLicense(models.Model):
     sub_admin = models.ForeignKey(User, on_delete=models.CASCADE, related_name="admin_license", null=True, blank=True)
     license_qty = models.IntegerField(null=True, blank=True)  

@@ -2,7 +2,7 @@ from django.test import TestCase
 from rest_framework.test import APIClient
 from unittest import mock
 
-from main.models import ClientTradeSetting, Role, Segment, SubSegment, User
+from main.models import ClientTradeSetting, Role, Segment, SubSegment, SubadminDashboardAnnouncement, User
 
 
 class SubadminClientAccessTests(TestCase):
@@ -10,6 +10,7 @@ class SubadminClientAccessTests(TestCase):
         subadmin_role, _ = Role.objects.get_or_create(name="Sub-Admin", defaults={"status": "active"})
         client_role, _ = Role.objects.get_or_create(name="Client", defaults={"status": "active"})
         admin_role, _ = Role.objects.get_or_create(name="Admin", defaults={"status": "active"})
+        superadmin_role, _ = Role.objects.get_or_create(name="Super-Admin", defaults={"status": "active"})
         self.subadmin = User.objects.create_user(
             email="subadmin-client-list@example.com",
             firstName="Sub",
@@ -33,6 +34,14 @@ class SubadminClientAccessTests(TestCase):
             phoneNumber="9000000005",
             password="Pass@123",
             role=admin_role,
+        )
+        self.superadmin = User.objects.create_user(
+            email="dashboard-message-superadmin@example.com",
+            firstName="Super",
+            lastName="Admin",
+            phoneNumber="9000000007",
+            password="Pass@123",
+            role=superadmin_role,
         )
         self.assigned_client = User.objects.create_user(
             email="assigned-client@example.com",
@@ -82,6 +91,45 @@ class SubadminClientAccessTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual([item["id"] for item in response.data], [self.subadmin.id])
+
+    def test_superadmin_can_publish_and_clear_subadmin_dashboard_message(self):
+        self.api_client.force_authenticate(self.superadmin)
+        publish_response = self.api_client.put(
+            "/api/subadmin-dashboard-announcement/",
+            {"message": "Market maintenance starts at 4 PM."},
+            format="json",
+        )
+
+        self.assertEqual(publish_response.status_code, 200, publish_response.data)
+        self.assertTrue(publish_response.data["is_active"])
+        self.assertEqual(publish_response.data["message"], "Market maintenance starts at 4 PM.")
+        announcement = SubadminDashboardAnnouncement.objects.get(pk=1)
+        self.assertEqual(announcement.updated_by_id, self.superadmin.id)
+
+        self.api_client.force_authenticate(self.subadmin)
+        subadmin_response = self.api_client.get("/api/subadmin-dashboard-announcement/")
+        self.assertEqual(subadmin_response.status_code, 200)
+        self.assertEqual(subadmin_response.data["message"], "Market maintenance starts at 4 PM.")
+
+        self.api_client.force_authenticate(self.superadmin)
+        clear_response = self.api_client.put(
+            "/api/subadmin-dashboard-announcement/",
+            {"message": ""},
+            format="json",
+        )
+        self.assertEqual(clear_response.status_code, 200)
+        self.assertFalse(clear_response.data["is_active"])
+        self.assertEqual(clear_response.data["message"], "")
+
+    def test_subadmin_cannot_update_dashboard_message(self):
+        response = self.api_client.put(
+            "/api/subadmin-dashboard-announcement/",
+            {"message": "Unauthorized message"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(SubadminDashboardAnnouncement.objects.exists())
 
     @mock.patch("main.views.EmailService.send_password_email")
     def test_subadmin_created_client_is_forced_to_creator_and_visible_to_admin(self, _send_email):
