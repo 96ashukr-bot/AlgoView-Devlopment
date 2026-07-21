@@ -3148,6 +3148,22 @@ class ExecutionNodeManagerTests(TestCase):
 
         self.assertEqual(symbol, "NIFTY26JUN23600CE")
 
+    def test_zerodha_trade_symbol_normalizes_midcap_nifty_alias(self):
+        symbol = build_trade_symbol(
+            {
+                "symbol": "MIDCAP NIFTY",
+                "day": "28",
+                "month": "JUL",
+                "year": "26",
+                "fullyear": "2026",
+                "strike": 14800,
+                "option_type": "PE",
+            },
+            "zerodha",
+        )
+
+        self.assertEqual(symbol, "MIDCPNIFTY26JUL14800PE")
+
     @mock.patch("main.brokers.groww.place_groww_orders")
     def test_groww_adapter_supports_proxy_and_passes_config(self, mock_place_order):
         broker = Broker.objects.create(broker_name="Groww", is_active=True)

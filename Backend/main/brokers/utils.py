@@ -119,6 +119,14 @@ ZERODHA_WEEKLY_MONTH_CODES = {
     "DEC": "D",
 }
 
+ZERODHA_UNDERLYING_ALIASES = {
+    "MIDCAP NIFTY": "MIDCPNIFTY",
+    "MID CAP NIFTY": "MIDCPNIFTY",
+    "MIDCAPNIFTY": "MIDCPNIFTY",
+    "NIFTY MID SELECT": "MIDCPNIFTY",
+    "MIDCP NIFTY": "MIDCPNIFTY",
+}
+
 
 def _is_last_tuesday_expiry(day: str, month: str, fullyear: str) -> bool:
     try:
@@ -137,6 +145,7 @@ def _is_last_tuesday_expiry(day: str, month: str, fullyear: str) -> bool:
 
 def _zerodha_trade_symbol(order: dict[str, Any]) -> str:
     symbol = upper_value(order_value(order, "symbol", "underlying", "Index_Symbol"))
+    symbol = ZERODHA_UNDERLYING_ALIASES.get(symbol, symbol)
     option_type = upper_value(order_value(order, "option_type", "Type"))
     day, month, year, fullyear = expiry_parts(order)
     strike = _strike_component(order)
