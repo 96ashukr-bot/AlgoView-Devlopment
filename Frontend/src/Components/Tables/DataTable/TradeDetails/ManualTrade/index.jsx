@@ -28,6 +28,12 @@ const ACTIONS = [
   { value: "BUY_PE", label: "BUY PE" },
 ];
 
+const RESULT_FILTERS = [
+  { value: "ALL", label: "All" },
+  { value: "SUCCESS", label: "Success" },
+  { value: "FAILED", label: "Failed" },
+];
+
 const statusColor = (status) => {
   const value = String(status || "").toUpperCase();
   if (["SUCCESS", "COMPLETED"].includes(value)) return "success";
@@ -63,6 +69,7 @@ const ManualTrade = () => {
   const [loading, setLoading] = useState(false);
   const [executing, setExecuting] = useState(false);
   const [selectedClientIds, setSelectedClientIds] = useState([]);
+  const [resultStatusFilter, setResultStatusFilter] = useState("ALL");
 
   const selectedGroup = useMemo(
     () => groupServices.find((item) => String(item.id) === String(selectedGroupId)),
@@ -74,6 +81,11 @@ const ManualTrade = () => {
     [preview]
   );
   const allSelectableSelected = selectableResults.length > 0 && selectedClientIds.length === selectableResults.length;
+  const filteredResults = useMemo(() => {
+    const results = preview?.results || [];
+    if (resultStatusFilter === "ALL") return results;
+    return results.filter((result) => String(result.status || "").toUpperCase() === resultStatusFilter);
+  }, [preview, resultStatusFilter]);
 
   const loadInitialData = async () => {
     const [groupsResult, batchesResult] = await Promise.allSettled([
@@ -138,6 +150,7 @@ const ManualTrade = () => {
         strike_price: strikePrice,
       });
       setPreview(response);
+      setResultStatusFilter("ALL");
       setSelectedClientIds(
         (response.results || []).filter((result) => result.status === "PENDING").map((result) => result.client_id)
       );
@@ -172,6 +185,7 @@ const ManualTrade = () => {
     try {
       const response = await getManualTradeBatch(batchId);
       setPreview(response);
+      setResultStatusFilter("ALL");
       setSelectedClientIds(
         response.status === "PREVIEW"
           ? (response.results || []).filter((result) => result.status === "PENDING").map((result) => result.client_id)
@@ -277,6 +291,29 @@ const ManualTrade = () => {
                   <strong>{selectedClientIds.length} client(s) selected</strong>
                 </div>
               )}
+              {preview.status !== "PREVIEW" && (
+                <Row className="mb-3 align-items-end">
+                  <Col md="4" lg="3">
+                    <FormGroup className="mb-0">
+                      <Label for="tradeResultStatus">Filter Client Results</Label>
+                      <Input
+                        type="select"
+                        id="tradeResultStatus"
+                        value={resultStatusFilter}
+                        onChange={(event) => setResultStatusFilter(event.target.value)}
+                      >
+                        {RESULT_FILTERS.map((filter) => (
+                          <option key={filter.value} value={filter.value}>
+                            {filter.label}
+                            {filter.value === "SUCCESS" ? ` (${preview.success_count || 0})` : ""}
+                            {filter.value === "FAILED" ? ` (${preview.failed_count || 0})` : ""}
+                          </option>
+                        ))}
+                      </Input>
+                    </FormGroup>
+                  </Col>
+                </Row>
+              )}
               <div className="table-responsive">
                 <Table bordered hover>
                   <thead>
@@ -303,7 +340,7 @@ const ManualTrade = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {(preview.results || []).map((result) => (
+                    {filteredResults.map((result) => (
                       <tr key={result.id}>
                         {preview.status === "PREVIEW" && (
                           <td className="text-center">
@@ -330,6 +367,13 @@ const ManualTrade = () => {
                         <td>{result.reason || "-"}</td>
                       </tr>
                     ))}
+                    {!filteredResults.length && (
+                      <tr>
+                        <td colSpan={preview.status === "PREVIEW" ? 9 : 8} className="text-center">
+                          No {resultStatusFilter === "ALL" ? "client" : resultStatusFilter.toLowerCase()} results found
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </Table>
               </div>
