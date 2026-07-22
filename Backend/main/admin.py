@@ -132,13 +132,11 @@ def disable_nodes(modeladmin, request, queryset):
 
 @admin.action(description="Release selected nodes from clients")
 def release_nodes_from_client(modeladmin, request, queryset):
-    for node in queryset.select_related("assigned_client"):
-        client = node.assigned_client
-        node.assigned_client = None
-        node.status = ExecutionNode.STATUS_FREE if node.is_active else ExecutionNode.STATUS_DISABLED
-        node.save(update_fields=["assigned_client", "status", "updated_at"])
-        ClientBrokerdetails.objects.filter(execution_node=node).update(execution_node=None)
-        node.mark_log("released", "Node released from client via admin.", client=client)
+    from main.services.execution_nodes import release_all_execution_node_clients
+
+    for node in queryset:
+        release_all_execution_node_clients(node)
+        node.mark_log("released", "Node released from all clients via admin.")
 
 
 @admin.action(description="Verify selected proxy IPs")

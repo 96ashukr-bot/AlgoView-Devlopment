@@ -33,6 +33,7 @@ from main.fivepaisa import MARKET_FEED_URL
 from main.services.broker_transport import ProxyRoutingRequiredError
 from main.services.option_ltp_fallback import cache_option_ltp, fetch_nse_option_chain_ltp
 from main.services.proxy_utils import build_requests_proxy_config
+from main.services.execution_nodes import execution_node_assigned_to_client, get_execution_node_for_client
 from main.dhanapi import DHAN_LTP_URL
 from main.zerodha import KITE_LTP_URL
 
@@ -2075,13 +2076,13 @@ class MultiLegExecutionEngine:
 
     @staticmethod
     def _assert_execution_route_ready(*, client: User, broker_details: ClientBrokerdetails) -> None:
-        node = getattr(broker_details, "execution_node", None) or getattr(client, "execution_node", None)
+        node = getattr(broker_details, "execution_node", None) or get_execution_node_for_client(client)
         if not node:
             raise MultiLegExecutionError(
                 "No verified execution node/proxy is assigned. Direct broker execution is blocked.",
                 error_code="EXECUTION_ROUTE_REQUIRED",
             )
-        if node.assigned_client_id and node.assigned_client_id != client.id:
+        if not execution_node_assigned_to_client(node, client):
             raise MultiLegExecutionError(
                 "Assigned execution node does not belong to this client.",
                 error_code="EXECUTION_ROUTE_CLIENT_MISMATCH",

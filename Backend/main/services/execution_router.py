@@ -16,7 +16,7 @@ from django.utils import timezone
 
 from main.models import ClientBrokerdetails, ExecutionNode, ExecutionOrderJob, User
 from main.brokers import get_broker_adapter
-from main.services.execution_nodes import get_execution_node_for_client, mark_execution_node_broker_verified_from_valid_token
+from main.services.execution_nodes import execution_node_assigned_to_client, get_execution_node_for_client, mark_execution_node_broker_verified_from_valid_token
 from main.services.node_security import generate_node_signature
 from main.services.proxy_utils import build_requests_proxy_config, mask_proxy_url, verify_proxy_public_ip
 
@@ -106,7 +106,7 @@ def route_order_to_execution_node(client: User, broker_details: ClientBrokerdeta
     node = broker_details.execution_node or get_execution_node_for_client(client)
     if not node:
         raise ValidationError("No execution node assigned to this client.")
-    if node.assigned_client_id and node.assigned_client_id != client.id:
+    if not execution_node_assigned_to_client(node, client):
         raise ValidationError("Execution node is not assigned to this client.")
     if not node.is_active or node.status in {ExecutionNode.STATUS_DISABLED, ExecutionNode.STATUS_MAINTENANCE, ExecutionNode.STATUS_OFFLINE}:
         raise ValidationError("Execution node is not available for trading.")

@@ -16,7 +16,7 @@ from django.utils import timezone
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from main.brokers.base import get_broker_adapter
-from main.models import Broker, ChatMessage, ChatThread, ClientBrokerdetails, ClientTradeSetting, ExecutionNode, ExecutionOrderJob, Role, Tradeorderhistory, TradingLog, User
+from main.models import Broker, ChatMessage, ChatThread, ClientBrokerdetails, ClientTradeSetting, ExecutionNode, ExecutionNodeAssignment, ExecutionOrderJob, Role, Tradeorderhistory, TradingLog, User
 from main.services.execution_nodes import assign_execution_node_to_client, mark_execution_node_broker_verified_from_valid_token, release_execution_node
 from main.services.execution_router import route_order_to_execution_node
 from main.services.egress_guard import _is_broker_url, _is_public_instrument_master_url
@@ -1766,10 +1766,25 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertIsNone(self.node.assigned_client_id)
         self.assertIsNone(self.broker_details.execution_node_id)
 
-    def test_one_node_one_client_rule(self):
+    def test_one_node_can_be_assigned_to_multiple_clients(self):
         assign_execution_node_to_client(self.client_user, self.node)
-        with self.assertRaises(ValidationError):
-            assign_execution_node_to_client(self.other_client, self.node)
+        other_broker_details = ClientBrokerdetails.objects.create(
+            client=self.other_client,
+            broker_name=self.broker,
+            broker_API_KEY="key-2",
+            broker_Demate_User_Name="A2",
+        )
+
+        assign_execution_node_to_client(self.other_client, self.node)
+
+        self.assertEqual(
+            set(ExecutionNodeAssignment.objects.filter(execution_node=self.node).values_list("client_id", flat=True)),
+            {self.client_user.id, self.other_client.id},
+        )
+        self.broker_details.refresh_from_db()
+        other_broker_details.refresh_from_db()
+        self.assertEqual(self.broker_details.execution_node_id, self.node.id)
+        self.assertEqual(other_broker_details.execution_node_id, self.node.id)
 
     def test_block_order_without_verified_node(self):
         assign_execution_node_to_client(self.client_user, self.node)

@@ -41,6 +41,10 @@ const IPPool = ({ mode = 'unassigned' }) => {
   const [deletingId, setDeletingId] = useState(null);
   const [editingNode, setEditingNode] = useState(null);
   const [editForm, setEditForm] = useState(blankForm);
+  const [assignMoreNode, setAssignMoreNode] = useState(null);
+  const [assignMoreClientId, setAssignMoreClientId] = useState('');
+  const [releaseNode, setReleaseNode] = useState(null);
+  const [releaseClientId, setReleaseClientId] = useState('');
 
   const pageTitle = mode === 'create' ? 'Create IP' : mode === 'assigned' ? 'Assigned IP' : 'Unassigned IP';
   const isCreateMode = mode === 'create';
@@ -79,16 +83,16 @@ const IPPool = ({ mode = 'unassigned' }) => {
 
   const filteredNodes = useMemo(() => {
     if (mode === 'assigned') {
-      return nodes.filter((node) => node.assigned_client);
+      return nodes.filter((node) => Number(node.assigned_client_count || 0) > 0 || node.assigned_client);
     }
     if (mode === 'unassigned') {
-      return nodes.filter((node) => !node.assigned_client);
+      return nodes.filter((node) => Number(node.assigned_client_count || 0) === 0 && !node.assigned_client);
     }
     return nodes;
   }, [mode, nodes]);
 
   const stats = useMemo(() => {
-    const assigned = nodes.filter((node) => node.assigned_client).length;
+    const assigned = nodes.filter((node) => Number(node.assigned_client_count || 0) > 0 || node.assigned_client).length;
     return {
       total: nodes.length,
       assigned,
@@ -243,16 +247,43 @@ const IPPool = ({ mode = 'unassigned' }) => {
     }
   };
 
-  const handleRelease = async (node) => {
-    if (!node.assigned_client) {
+  const assignedClientsFor = (node) => Array.isArray(node?.assigned_clients) ? node.assigned_clients : [];
+
+  const openReleaseModal = (node) => {
+    const assignedClients = assignedClientsFor(node);
+    setReleaseNode(node);
+    setReleaseClientId(String(assignedClients[0]?.id || node.assigned_client || ''));
+  };
+
+  const handleRelease = async () => {
+    if (!releaseClientId) {
       return;
     }
     try {
-      await releaseExecutionNodeFromClient(node.assigned_client);
-      toast.success('IP released to unassigned pool.');
+      await releaseExecutionNodeFromClient(releaseClientId);
+      toast.success('IP released from selected client.');
+      setReleaseNode(null);
+      setReleaseClientId('');
       fetchNodes();
     } catch (error) {
       toast.error(error.message || 'Failed to release IP.');
+    }
+  };
+
+  const handleAssignMore = async () => {
+    if (!assignMoreNode || !assignMoreClientId) {
+      toast.error('Please select a client first.');
+      return;
+    }
+    try {
+      await assignExecutionNodeToClient(assignMoreClientId, assignMoreNode.id);
+      toast.success('IP assigned to additional client.');
+      setAssignMoreNode(null);
+      setAssignMoreClientId('');
+      fetchNodes();
+      fetchClients(clientSearch);
+    } catch (error) {
+      toast.error(error.message || 'Failed to assign IP.');
     }
   };
 
@@ -267,8 +298,8 @@ const IPPool = ({ mode = 'unassigned' }) => {
   };
 
   const handleDelete = async (node) => {
-    if (!node || node.assigned_client) {
-      toast.error('Release this IP from the assigned client before deleting it.');
+    if (!node || node.assigned_client || Number(node.assigned_client_count || 0) > 0) {
+      toast.error('Release this IP from all assigned clients before deleting it.');
       return;
     }
 
@@ -455,7 +486,11 @@ const IPPool = ({ mode = 'unassigned' }) => {
                         </>
                       ) : 'Not applicable'}
                     </td>
-                    <td>{node.assigned_client_email || (node.assigned_client ? `Client #${node.assigned_client}` : 'Unassigned')}</td>
+                    <td>
+                      {assignedClientsFor(node).length
+                        ? assignedClientsFor(node).map((client) => client.fullName || client.email || `Client #${client.id}`).join(', ')
+                        : node.assigned_client_email || (node.assigned_client ? `Client #${node.assigned_client}` : 'Unassigned')}
+                    </td>
                     <td>
                       <div className="d-flex" style={{ gap: '8px', flexWrap: 'wrap', minWidth: '260px' }}>
                         {node.execution_type === 'proxy' && (
@@ -466,10 +501,15 @@ const IPPool = ({ mode = 'unassigned' }) => {
                         <Button size="sm" color="primary" outline onClick={() => openEditModal(node)}>
                           Edit
                         </Button>
-                        {node.assigned_client ? (
-                          <Button size="sm" color="danger" outline onClick={() => handleRelease(node)}>
-                            Release
-                          </Button>
+                        {Number(node.assigned_client_count || 0) > 0 || node.assigned_client ? (
+                          <>
+                            <Button size="sm" className="search-btn-clr" onClick={() => setAssignMoreNode(node)}>
+                              Assign More
+                            </Button>
+                            <Button size="sm" color="danger" outline onClick={() => openReleaseModal(node)}>
+                              Release Client
+                            </Button>
+                          </>
                         ) : (
                           <>
                             <Button
@@ -652,6 +692,42 @@ const IPPool = ({ mode = 'unassigned' }) => {
           <Button className="search-btn-clr" onClick={handleUpdate} disabled={saving}>
             {saving ? 'Saving...' : 'Save Changes'}
           </Button>
+        </ModalFooter>
+      </Modal>
+      <Modal isOpen={Boolean(assignMoreNode)} toggle={() => setAssignMoreNode(null)}>
+        <ModalHeader toggle={() => setAssignMoreNode(null)}>Assign IP to Additional Client</ModalHeader>
+        <ModalBody>
+          <Label>Client</Label>
+          <Input type="select" value={assignMoreClientId} onChange={(event) => setAssignMoreClientId(event.target.value)}>
+            <option value="">Select client</option>
+            {assignableClients.map((client) => (
+              <option key={client.id} value={client.id}>
+                {client.fullName || `Client #${client.id}`}{client.email ? ` - ${client.email}` : ''}
+              </option>
+            ))}
+          </Input>
+        </ModalBody>
+        <ModalFooter>
+          <Button color="secondary" outline onClick={() => setAssignMoreNode(null)}>Cancel</Button>
+          <Button className="search-btn-clr" onClick={handleAssignMore}>Assign</Button>
+        </ModalFooter>
+      </Modal>
+      <Modal isOpen={Boolean(releaseNode)} toggle={() => setReleaseNode(null)}>
+        <ModalHeader toggle={() => setReleaseNode(null)}>Release Assigned Client</ModalHeader>
+        <ModalBody>
+          <Label>Client</Label>
+          <Input type="select" value={releaseClientId} onChange={(event) => setReleaseClientId(event.target.value)}>
+            <option value="">Select client</option>
+            {assignedClientsFor(releaseNode).map((client) => (
+              <option key={client.id} value={client.id}>
+                {client.fullName || client.email || `Client #${client.id}`}
+              </option>
+            ))}
+          </Input>
+        </ModalBody>
+        <ModalFooter>
+          <Button color="secondary" outline onClick={() => setReleaseNode(null)}>Cancel</Button>
+          <Button color="danger" onClick={handleRelease}>Release</Button>
         </ModalFooter>
       </Modal>
     </Container>

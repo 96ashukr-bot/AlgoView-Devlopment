@@ -1197,6 +1197,37 @@ class ExecutionNode(models.Model):
         )
 
 
+class ExecutionNodeAssignment(models.Model):
+    execution_node = models.ForeignKey(
+        ExecutionNode,
+        on_delete=models.CASCADE,
+        related_name="client_assignments",
+    )
+    client = models.OneToOneField(
+        'User',
+        on_delete=models.CASCADE,
+        related_name="execution_node_assignment",
+    )
+    assigned_by = models.ForeignKey(
+        'User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_execution_node_assignments",
+    )
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["execution_node", "created_at"]),
+            models.Index(fields=["client"]),
+        ]
+
+    def __str__(self):
+        return f"{self.execution_node_id} -> {self.client_id}"
+
+
 class ExecutionOrderJob(models.Model):
     STATUS_PENDING = "pending"
     STATUS_SENT_TO_NODE = "sent_to_node"

@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
-from main.models import ClientBrokerdetails, ExecutionNode, User
+from main.models import ClientBrokerdetails, ExecutionNode, ExecutionNodeAssignment, User
 
 
 def verify_node_available(node: ExecutionNode) -> None:
@@ -14,49 +14,101 @@ def verify_node_available(node: ExecutionNode) -> None:
         raise ValidationError("Execution node is not active.")
     if node.status == ExecutionNode.STATUS_MAINTENANCE:
         raise ValidationError("Execution node is in maintenance mode.")
-    if node.assigned_client_id:
-        raise ValidationError("Execution node is already assigned to another client.")
     if node.execution_type == ExecutionNode.EXECUTION_TYPE_PROXY:
         if not (node.proxy_host and node.proxy_port and node.proxy_protocol):
             raise ValidationError("Proxy execution node is missing proxy host, port, or protocol.")
 
 
+def execution_node_assigned_to_client(node: ExecutionNode, client: User) -> bool:
+    if not node or not client:
+        return False
+    return bool(
+        node.assigned_client_id == client.id
+        or ExecutionNodeAssignment.objects.filter(execution_node=node, client=client).exists()
+    )
+
+
+def _sync_legacy_primary_client(node: ExecutionNode) -> None:
+    assignment = (
+        ExecutionNodeAssignment.objects.filter(execution_node=node)
+        .select_related("client")
+        .order_by("created_at", "id")
+        .first()
+    )
+    primary_client = assignment.client if assignment else None
+    status = ExecutionNode.STATUS_ASSIGNED if primary_client else (
+        ExecutionNode.STATUS_FREE if node.is_active else ExecutionNode.STATUS_DISABLED
+    )
+    update_fields = []
+    if node.assigned_client_id != getattr(primary_client, "id", None):
+        node.assigned_client = primary_client
+        update_fields.append("assigned_client")
+    if node.status != status:
+        node.status = status
+        update_fields.append("status")
+    if update_fields:
+        node.save(update_fields=[*update_fields, "updated_at"])
+
+
 @transaction.atomic
-def assign_execution_node_to_client(client: User, node: ExecutionNode) -> ExecutionNode:
+def assign_execution_node_to_client(client: User, node: ExecutionNode, assigned_by: User | None = None) -> ExecutionNode:
     client = User.objects.select_for_update().get(pk=client.pk)
     node = ExecutionNode.objects.select_for_update().get(pk=node.pk)
+    existing = ExecutionNodeAssignment.objects.select_for_update().filter(client=client).first()
+    if existing and existing.execution_node_id != node.id:
+        raise ValidationError("Client already has an execution node.")
     if ExecutionNode.objects.filter(assigned_client=client).exclude(pk=node.pk).exists():
         raise ValidationError("Client already has an execution node.")
-    if node.assigned_client_id and node.assigned_client_id != client.id:
-        raise ValidationError("Execution node is already assigned to another client.")
     if not node.is_active:
         raise ValidationError("Inactive execution node cannot be assigned.")
     if node.execution_type == ExecutionNode.EXECUTION_TYPE_PROXY and not (node.proxy_host and node.proxy_port and node.proxy_protocol):
         raise ValidationError("Proxy execution node is missing proxy host, port, or protocol.")
 
-    node.assigned_client = client
-    node.status = ExecutionNode.STATUS_ASSIGNED
-    node.save(update_fields=["assigned_client", "status", "updated_at"])
+    ExecutionNodeAssignment.objects.get_or_create(
+        client=client,
+        defaults={"execution_node": node, "assigned_by": assigned_by},
+    )
     ClientBrokerdetails.objects.filter(client=client).update(execution_node=node)
-    node.mark_log("assigned", "Execution node assigned to client.", client=client)
+    _sync_legacy_primary_client(node)
+    node.refresh_from_db()
+    node.mark_log("assigned", "Execution node assigned to client.", client=client, metadata={"multi_client": True})
     return node
 
 
 @transaction.atomic
 def release_execution_node(client: User) -> ExecutionNode | None:
-    node = ExecutionNode.objects.select_for_update().filter(assigned_client=client).first()
+    assignment = ExecutionNodeAssignment.objects.select_for_update().select_related("execution_node").filter(client=client).first()
+    node = assignment.execution_node if assignment else ExecutionNode.objects.select_for_update().filter(assigned_client=client).first()
     if not node:
         ClientBrokerdetails.objects.filter(client=client).update(execution_node=None)
         return None
-    node.assigned_client = None
-    node.status = ExecutionNode.STATUS_FREE if node.is_active else ExecutionNode.STATUS_DISABLED
-    node.save(update_fields=["assigned_client", "status", "updated_at"])
+    if assignment:
+        assignment.delete()
     ClientBrokerdetails.objects.filter(client=client).update(execution_node=None)
-    node.mark_log("released", "Execution node released from client.", client=client)
+    _sync_legacy_primary_client(node)
+    node.refresh_from_db()
+    node.mark_log("released", "Execution node released from client.", client=client, metadata={"multi_client": True})
     return node
 
 
+@transaction.atomic
+def release_all_execution_node_clients(node: ExecutionNode) -> int:
+    node = ExecutionNode.objects.select_for_update().get(pk=node.pk)
+    client_ids = list(node.client_assignments.values_list("client_id", flat=True))
+    if node.assigned_client_id and node.assigned_client_id not in client_ids:
+        client_ids.append(node.assigned_client_id)
+    ExecutionNodeAssignment.objects.filter(execution_node=node).delete()
+    ClientBrokerdetails.objects.filter(client_id__in=client_ids, execution_node=node).update(execution_node=None)
+    node.assigned_client = None
+    node.status = ExecutionNode.STATUS_FREE if node.is_active else ExecutionNode.STATUS_DISABLED
+    node.save(update_fields=["assigned_client", "status", "updated_at"])
+    return len(client_ids)
+
+
 def get_execution_node_for_client(client: User) -> ExecutionNode | None:
+    assignment = ExecutionNodeAssignment.objects.filter(client=client).select_related("execution_node").first()
+    if assignment:
+        return assignment.execution_node
     direct_node = ExecutionNode.objects.filter(assigned_client=client).first()
     if direct_node:
         return direct_node

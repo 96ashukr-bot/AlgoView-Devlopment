@@ -18,9 +18,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from main.brokers import get_broker_adapter
-from main.models import ClientBrokerdetails, ExecutionNode, ExecutionNodeLog, ExecutionOrderJob, User
+from main.models import ClientBrokerdetails, ExecutionNode, ExecutionNodeAssignment, ExecutionNodeLog, ExecutionOrderJob, User
 from main.permissions import can_access_client_record, is_superadmin_user
-from main.services.execution_nodes import assign_execution_node_to_client, broker_details_has_valid_token, mark_execution_node_broker_verified_from_valid_token, release_execution_node
+from main.services.execution_nodes import assign_execution_node_to_client, broker_details_has_valid_token, get_execution_node_for_client, mark_execution_node_broker_verified_from_valid_token, release_all_execution_node_clients, release_execution_node
 from main.services.execution_router import route_order_to_execution_node
 from main.services.node_security import verify_node_signature
 from main.services.proxy_utils import verify_proxy_public_ip
@@ -30,6 +30,8 @@ logger = logging.getLogger("main.execution_node")
 
 class ExecutionNodeSerializer(serializers.ModelSerializer):
     assigned_client_email = serializers.EmailField(source="assigned_client.email", read_only=True)
+    assigned_clients = serializers.SerializerMethodField()
+    assigned_client_count = serializers.SerializerMethodField()
     node_secret = serializers.CharField(write_only=True, required=False, allow_blank=True, allow_null=True)
     proxy_password = serializers.CharField(write_only=True, required=False, allow_blank=True, allow_null=True)
 
@@ -55,6 +57,8 @@ class ExecutionNodeSerializer(serializers.ModelSerializer):
             "proxy_last_error",
             "assigned_client",
             "assigned_client_email",
+            "assigned_clients",
+            "assigned_client_count",
             "status",
             "is_active",
             "is_verified_with_broker",
@@ -64,6 +68,29 @@ class ExecutionNodeSerializer(serializers.ModelSerializer):
             "updated_at",
         )
         read_only_fields = ("last_heartbeat", "last_seen_ip", "created_at", "updated_at")
+
+    def get_assigned_clients(self, obj):
+        clients = []
+        seen = set()
+        for assignment in obj.client_assignments.all():
+            client = assignment.client
+            seen.add(client.id)
+            clients.append({
+                "id": client.id,
+                "email": client.email,
+                "fullName": client.fullName or client.email or f"Client #{client.id}",
+            })
+        if obj.assigned_client_id and obj.assigned_client_id not in seen:
+            client = obj.assigned_client
+            clients.append({
+                "id": client.id,
+                "email": client.email,
+                "fullName": client.fullName or client.email or f"Client #{client.id}",
+            })
+        return clients
+
+    def get_assigned_client_count(self, obj):
+        return len(self.get_assigned_clients(obj))
 
     def validate(self, attrs):
         instance = getattr(self, "instance", None)
@@ -181,8 +208,9 @@ class ClientExecutionNodeSerializer(serializers.ModelSerializer):
             return "verified", "Broker verification: Verified"
         if obj.execution_type == ExecutionNode.EXECUTION_TYPE_PROXY and not obj.proxy_public_ip_verified:
             return "ip_not_verified", "Broker verification: Waiting for Executional Client IP verification"
+        client = self.context.get("client") or obj.assigned_client
         broker_details = (
-            ClientBrokerdetails.objects.filter(client=obj.assigned_client, execution_node=obj)
+            ClientBrokerdetails.objects.filter(client=client, execution_node=obj)
             .select_related("broker_name")
             .order_by("-tokenCreatedAt", "-id")
             .first()
@@ -297,7 +325,7 @@ class ExecutionNodeListAPIView(APIView):
 
     def get(self, request):
         _require_node_admin(request.user)
-        queryset = ExecutionNode.objects.select_related("assigned_client").order_by("-id")
+        queryset = ExecutionNode.objects.select_related("assigned_client").prefetch_related("client_assignments__client").order_by("-id")
         return Response({"results": ExecutionNodeSerializer(queryset, many=True).data})
 
     def post(self, request):
@@ -343,13 +371,11 @@ class ExecutionNodeAssignableClientListAPIView(APIView):
             )
 
         assigned_node_by_client = {
-            node.assigned_client_id: node
-            for node in ExecutionNode.objects.filter(assigned_client__isnull=False).only(
-                "id",
-                "ip_address",
-                "assigned_client_id",
-            )
+            assignment.client_id: assignment.execution_node
+            for assignment in ExecutionNodeAssignment.objects.select_related("execution_node")
         }
+        for node in ExecutionNode.objects.filter(assigned_client__isnull=False).only("id", "ip_address", "assigned_client_id"):
+            assigned_node_by_client.setdefault(node.assigned_client_id, node)
         results = []
         for client in clients[:500]:
             assigned_node = assigned_node_by_client.get(client.id)
@@ -375,7 +401,7 @@ class ExecutionNodeAssignAPIView(APIView):
         client = User.objects.get(pk=request.data.get("client_id"))
         _require_client_node_access(request.user, client)
         node = ExecutionNode.objects.get(pk=request.data.get("node_id"))
-        assigned = assign_execution_node_to_client(client, node)
+        assigned = assign_execution_node_to_client(client, node, assigned_by=request.user)
         return Response(ExecutionNodeSerializer(assigned).data)
 
 
@@ -387,7 +413,7 @@ class ExecutionNodeAssignByIdAPIView(APIView):
         client = User.objects.get(pk=request.data.get("client_id"))
         _require_client_node_access(request.user, client)
         node = ExecutionNode.objects.get(pk=node_id)
-        assigned = assign_execution_node_to_client(client, node)
+        assigned = assign_execution_node_to_client(client, node, assigned_by=request.user)
         return Response(ExecutionNodeSerializer(assigned).data)
 
 
@@ -396,7 +422,7 @@ class ExecutionNodeDetailAPIView(APIView):
 
     def get(self, request, node_id):
         _require_node_admin(request.user)
-        node = ExecutionNode.objects.select_related("assigned_client").get(pk=node_id)
+        node = ExecutionNode.objects.select_related("assigned_client").prefetch_related("client_assignments__client").get(pk=node_id)
         return Response(ExecutionNodeSerializer(node).data)
 
     def patch(self, request, node_id):
@@ -414,7 +440,7 @@ class ExecutionNodeDetailAPIView(APIView):
     def delete(self, request, node_id):
         _require_node_admin(request.user)
         node = ExecutionNode.objects.get(pk=node_id)
-        if node.assigned_client_id:
+        if node.assigned_client_id or node.client_assignments.exists():
             return Response(
                 {"message": "Release this IP from the assigned client before deleting it."},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -446,11 +472,8 @@ class ExecutionNodeReleaseByIdAPIView(APIView):
     def post(self, request, node_id):
         _require_node_admin(request.user)
         node = ExecutionNode.objects.select_related("assigned_client").get(pk=node_id)
-        client = node.assigned_client
-        if client:
-            _require_client_node_access(request.user, client)
-            release_execution_node(client)
-        return Response({"status": "released", "node_id": node.id})
+        released_count = release_all_execution_node_clients(node)
+        return Response({"status": "released", "node_id": node.id, "released_count": released_count})
 
 
 class ExecutionNodeHealthAPIView(APIView):
@@ -532,36 +555,32 @@ class ClientExecutionNodeAPIView(APIView):
 
     def get(self, request):
         client = self._target_client(request)
-        node = ExecutionNode.objects.filter(assigned_client=client).first()
-        return Response({"node": ClientExecutionNodeSerializer(node).data if node else None})
+        node = get_execution_node_for_client(client)
+        return Response({"node": ClientExecutionNodeSerializer(node, context={"client": client}).data if node else None})
 
     @transaction.atomic
     def post(self, request):
         client = self._target_client(request)
-        if ExecutionNode.objects.filter(assigned_client=client).exists():
+        if get_execution_node_for_client(client):
             return Response(
                 {"detail": "This client already has an execution IP. Update the existing IP instead."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         serializer = ClientExecutionNodeSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        node = serializer.save(
-            assigned_client=client,
-            status=ExecutionNode.STATUS_ASSIGNED,
-            is_verified_with_broker=False,
-        )
+        node = serializer.save(status=ExecutionNode.STATUS_FREE, is_verified_with_broker=False)
         raw_secret = request.data.get("node_secret")
         if raw_secret:
             node.set_node_secret(raw_secret)
             node.save(update_fields=["node_secret", "updated_at"])
-        ClientBrokerdetails.objects.filter(client=client).update(execution_node=node)
+        node = assign_execution_node_to_client(client, node, assigned_by=request.user)
         node.mark_log("client_created", "Execution node created by assigned client.", client=client)
-        return Response(ClientExecutionNodeSerializer(node).data, status=status.HTTP_201_CREATED)
+        return Response(ClientExecutionNodeSerializer(node, context={"client": client}).data, status=status.HTTP_201_CREATED)
 
     @transaction.atomic
     def patch(self, request):
         client = self._target_client(request)
-        node = ExecutionNode.objects.select_for_update().filter(assigned_client=client).first()
+        node = get_execution_node_for_client(client)
         if not node:
             return Response({"detail": "No execution IP is assigned to this client."}, status=status.HTTP_404_NOT_FOUND)
         serializer = ClientExecutionNodeSerializer(node, data=request.data, partial=True)
@@ -573,7 +592,7 @@ class ClientExecutionNodeAPIView(APIView):
             node.save(update_fields=["node_secret", "updated_at"])
         ClientBrokerdetails.objects.filter(client=client).update(execution_node=node)
         node.mark_log("client_updated", "Execution node updated by assigned client.", client=client)
-        return Response(ClientExecutionNodeSerializer(node).data)
+        return Response(ClientExecutionNodeSerializer(node, context={"client": client}).data)
 
     def delete(self, request):
         client = self._target_client(request)
@@ -591,12 +610,12 @@ class ClientExecutionNodeVerifyProxyAPIView(APIView):
             if not can_access_client_record(request.user, client_id):
                 raise PermissionDenied("You do not have access to this client.")
             client = User.objects.get(pk=client_id)
-        node = ExecutionNode.objects.filter(assigned_client=client).first()
+        node = get_execution_node_for_client(client)
         if not node:
             return Response({"detail": "No execution IP is assigned to this client."}, status=status.HTTP_404_NOT_FOUND)
         result = verify_proxy_public_ip(node)
         node.refresh_from_db()
-        return Response({"result": result, "node": ClientExecutionNodeSerializer(node).data})
+        return Response({"result": result, "node": ClientExecutionNodeSerializer(node, context={"client": client}).data})
 
 
 class ExecutionOrderJobListAPIView(APIView):
@@ -658,7 +677,8 @@ class NodeHeartbeatAPIView(APIView):
         if node:
             node.last_heartbeat = timezone.now()
             node.last_seen_ip = request.META.get("HTTP_X_FORWARDED_FOR", request.META.get("REMOTE_ADDR", "")).split(",")[0]
-            node.status = ExecutionNode.STATUS_ONLINE if node.assigned_client_id else ExecutionNode.STATUS_FREE
+            has_clients = node.assigned_client_id or node.client_assignments.exists()
+            node.status = ExecutionNode.STATUS_ONLINE if has_clients else ExecutionNode.STATUS_FREE
             node.save(update_fields=["last_heartbeat", "last_seen_ip", "status", "updated_at"])
             node.mark_log("heartbeat", "Execution node heartbeat received.", metadata={"ip": node.last_seen_ip})
         return Response({"status": "ok", "node_id": node_id})
