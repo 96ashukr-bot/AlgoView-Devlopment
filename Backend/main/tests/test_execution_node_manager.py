@@ -3578,6 +3578,34 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertEqual(parsed["option_type"], "CE")
         self.assertFalse(parsed["month_only"])
 
+    @mock.patch("main.services.upstox_market_data.load_upstox_instruments")
+    def test_upstox_resolver_maps_ambiguous_zerodha_monthly_symbol(self, mock_load):
+        mock_load.side_effect = lambda exchange: [
+            {
+                "instrument_key": "NSE_FO|63943",
+                "trading_symbol": "NIFTY 24100 CE 28 JUL 26",
+                "instrument_type": "CE",
+                "underlying_symbol": "NIFTY",
+                "expiry": int(
+                    timezone.datetime(
+                        2026, 7, 28, tzinfo=timezone.get_current_timezone()
+                    ).timestamp()
+                    * 1000
+                ),
+                "strike_price": 24100,
+                "exchange": "NSE",
+            }
+        ] if exchange == "NSE" else []
+
+        instrument = UpstoxInstrumentResolver().resolve(
+            "NIFTY26JUL24100CE",
+            underlying="NIFTY",
+        )
+
+        self.assertIsNotNone(instrument)
+        self.assertEqual(instrument.instrument_key, "NSE_FO|63943")
+        self.assertEqual(instrument.expiry_date.strftime("%Y-%m-%d"), "2026-07-28")
+
     @mock.patch("main.zerodha.fetch_central_upstox_option_ltp", return_value=121.5)
     @mock.patch("main.zerodha.get_live_price", return_value=None)
     @mock.patch("main.zerodha._central_ltp_resolver")

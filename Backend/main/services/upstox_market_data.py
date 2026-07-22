@@ -166,6 +166,38 @@ class UpstoxInstrumentResolver:
         if normalized in self._by_symbol:
             return self._by_symbol[normalized]
 
+        # Zerodha monthly index options use YYMMM (for example,
+        # NIFTY26JUL24100CE). That shape is ambiguous with DDMMMYY and the
+        # generic parser can otherwise read it as 26-Jul-2024, strike 100.
+        # Prefer the monthly interpretation only when it resolves to a real
+        # contract in the current Upstox master.
+        under_hint = normalize_symbol_key(underlying)
+        underlying_choices = [under_hint] if under_hint else sorted(SUPPORTED_INDEX_UNDERLYINGS, key=len, reverse=True)
+        for under in underlying_choices:
+            if not under or not normalized.startswith(under):
+                continue
+            monthly_match = re.match(r"^(\d{2})([A-Z]{3})(\d+)(CE|PE)$", normalized[len(under):])
+            if not monthly_match:
+                continue
+            year, month_text, strike_text, option_type = monthly_match.groups()
+            try:
+                month_expiry = datetime.strptime(f"{year}{month_text}", "%y%b")
+                strike = float(strike_text)
+            except ValueError:
+                continue
+            month_key = month_expiry.strftime("%Y%m")
+            monthly_contracts = [
+                instrument
+                for key, instrument in self._by_contract.items()
+                if key[0] == under
+                and key[1].startswith(month_key)
+                and key[2] == strike
+                and key[3] == option_type
+            ]
+            if monthly_contracts:
+                # The monthly expiry is the last listed expiry for the month.
+                return max(monthly_contracts, key=lambda item: item.expiry_date)
+
         parsed = _parse_option_symbol(raw, underlying=underlying)
         if not parsed:
             return None
