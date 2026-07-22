@@ -7,6 +7,7 @@ import hmac
 import re
 from numbers import Number
 from amqp import NotFound
+from PIL import Image, UnidentifiedImageError
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 import requests
@@ -1580,13 +1581,21 @@ class UserManagementView(APIView):
 
 class SubadminDashboardAnnouncementView(APIView):
     permission_classes = [IsAuthenticated]
+    allowed_media_types = {"image/gif", "image/png", "image/webp", "image/jpeg"}
+    max_media_size = 5 * 1024 * 1024
 
     @staticmethod
-    def _payload(announcement):
+    def _payload(announcement, request=None):
         if announcement is None:
-            return {"message": "", "is_active": False, "updated_at": None}
+            return {"message": "", "media_url": None, "is_active": False, "updated_at": None}
+        media_url = None
+        if announcement.is_active and announcement.media:
+            media_url = announcement.media.url
+            if request is not None:
+                media_url = request.build_absolute_uri(media_url)
         return {
             "message": announcement.message if announcement.is_active else "",
+            "media_url": media_url,
             "is_active": announcement.is_active,
             "updated_at": announcement.updated_at,
         }
@@ -1598,7 +1607,7 @@ class SubadminDashboardAnnouncementView(APIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
         announcement = SubadminDashboardAnnouncement.objects.filter(pk=1).first()
-        return Response(self._payload(announcement), status=status.HTTP_200_OK)
+        return Response(self._payload(announcement, request), status=status.HTTP_200_OK)
 
     def put(self, request, *args, **kwargs):
         if not is_superadmin_user(request.user):
@@ -1612,15 +1621,42 @@ class SubadminDashboardAnnouncementView(APIView):
                 {"message": "Message cannot exceed 2000 characters."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        announcement, _ = SubadminDashboardAnnouncement.objects.update_or_create(
-            pk=1,
-            defaults={
-                "message": message,
-                "is_active": bool(message),
-                "updated_by": request.user,
-            },
-        )
-        return Response(self._payload(announcement), status=status.HTTP_200_OK)
+        media = request.FILES.get("media")
+        if media:
+            if media.content_type not in self.allowed_media_types:
+                return Response(
+                    {"message": "Only GIF, PNG, WebP and JPEG images are allowed."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if media.size > self.max_media_size:
+                return Response(
+                    {"message": "GIF or sticker cannot exceed 5 MB."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            try:
+                uploaded_image = Image.open(media)
+                uploaded_image.verify()
+                media.seek(0)
+            except (UnidentifiedImageError, OSError, ValueError):
+                return Response(
+                    {"message": "The uploaded GIF or sticker is not a valid image."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        announcement, _ = SubadminDashboardAnnouncement.objects.get_or_create(pk=1)
+        old_media = announcement.media if announcement.media else None
+        remove_media = str(request.data.get("remove_media") or "").lower() in {"1", "true", "yes"}
+        announcement.message = message
+        if media:
+            announcement.media = media
+        elif remove_media:
+            announcement.media = None
+        announcement.is_active = bool(message or announcement.media)
+        announcement.updated_by = request.user
+        announcement.save()
+        if old_media and (media or remove_media) and old_media.name != getattr(announcement.media, "name", None):
+            old_media.delete(save=False)
+        return Response(self._payload(announcement, request), status=status.HTTP_200_OK)
 
 
 class UserProfileView(APIView):

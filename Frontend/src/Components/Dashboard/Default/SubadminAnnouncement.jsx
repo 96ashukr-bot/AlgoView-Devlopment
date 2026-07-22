@@ -13,6 +13,8 @@ const SubadminAnnouncement = ({ mode = "dashboard" }) => {
   const [subadminName, setSubadminName] = useState("");
   const [message, setMessage] = useState("");
   const [activeMessage, setActiveMessage] = useState("");
+  const [mediaUrl, setMediaUrl] = useState("");
+  const [mediaFile, setMediaFile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState("");
@@ -36,6 +38,7 @@ const SubadminAnnouncement = ({ mode = "dashboard" }) => {
       const nextMessage = announcement?.is_active ? String(announcement.message || "") : "";
       setMessage(nextMessage);
       setActiveMessage(nextMessage);
+      setMediaUrl(announcement?.is_active ? String(announcement.media_url || "") : "");
     } finally {
       setLoading(false);
     }
@@ -48,15 +51,21 @@ const SubadminAnnouncement = ({ mode = "dashboard" }) => {
   const isSuperadmin = ["super-admin", "superadmin"].includes(role);
   const isSubadmin = ["sub-admin", "subadmin"].includes(role);
 
-  const saveMessage = async (nextMessage) => {
+  const saveMessage = async (nextMessage, options = {}) => {
     setSaving(true);
     setFeedback("");
     try {
-      const announcement = await updateSubadminDashboardAnnouncement(nextMessage);
+      const announcement = await updateSubadminDashboardAnnouncement(
+        nextMessage,
+        options.media || null,
+        Boolean(options.removeMedia)
+      );
       const savedMessage = announcement?.is_active ? String(announcement.message || "") : "";
       setMessage(savedMessage);
       setActiveMessage(savedMessage);
-      setFeedback(savedMessage ? "Message published to all Subadmin dashboards." : "Message removed from Subadmin dashboards.");
+      setMediaUrl(announcement?.is_active ? String(announcement.media_url || "") : "");
+      setMediaFile(null);
+      setFeedback(announcement?.is_active ? "Announcement published to all Subadmin dashboards." : "Announcement removed from Subadmin dashboards.");
     } catch (error) {
       setFeedback(error?.response?.data?.message || error?.response?.data?.detail || "Unable to save the message.");
     } finally {
@@ -67,7 +76,7 @@ const SubadminAnnouncement = ({ mode = "dashboard" }) => {
   if (loading) {
     return <Col xs="12" className="mb-3"><Spinner size="sm" /> Loading dashboard message…</Col>;
   }
-  if (mode === "dashboard" && isSubadmin && activeMessage) {
+  if (mode === "dashboard" && isSubadmin && (activeMessage || mediaUrl)) {
     return (
       <Col xs="12">
         <Alert
@@ -76,7 +85,8 @@ const SubadminAnnouncement = ({ mode = "dashboard" }) => {
           style={{ backgroundColor: "transparent" }}
         >
           <strong className="d-block mb-1">Dear {subadminName || "Subadmin"},</strong>
-          <span style={{ whiteSpace: "pre-wrap" }}>{activeMessage}</span>
+          {activeMessage ? <span className="d-block" style={{ whiteSpace: "pre-wrap" }}>{activeMessage}</span> : null}
+          {mediaUrl ? <img className="mt-2" src={mediaUrl} alt="Announcement" style={{ maxWidth: "100%", maxHeight: "320px", objectFit: "contain" }} /> : null}
         </Alert>
       </Col>
     );
@@ -102,11 +112,28 @@ const SubadminAnnouncement = ({ mode = "dashboard" }) => {
             />
             <small className="text-muted">{message.length}/2000 characters</small>
           </FormGroup>
-          <Button color="primary" disabled={saving || !message.trim()} onClick={() => saveMessage(message.trim())}>
-            {saving ? "Publishing…" : "Publish Message"}
+          <FormGroup>
+            <Label for="subadmin-dashboard-media">GIF or Sticker (optional)</Label>
+            <input
+              id="subadmin-dashboard-media"
+              className="form-control"
+              type="file"
+              accept="image/gif,image/png,image/webp,image/jpeg"
+              onChange={(event) => setMediaFile(event.target.files?.[0] || null)}
+            />
+            <small className="text-muted">GIF, PNG, WebP or JPEG, maximum 5 MB.</small>
+            {mediaUrl ? (
+              <div className="mt-2">
+                <img src={mediaUrl} alt="Current announcement" style={{ maxWidth: "240px", maxHeight: "180px", objectFit: "contain" }} />
+                <div><Button className="mt-2" size="sm" color="outline-danger" disabled={saving} onClick={() => saveMessage(message.trim(), { removeMedia: true })}>Remove GIF/Sticker</Button></div>
+              </div>
+            ) : null}
+          </FormGroup>
+          <Button color="primary" disabled={saving || (!message.trim() && !mediaFile && !mediaUrl)} onClick={() => saveMessage(message.trim(), { media: mediaFile })}>
+            {saving ? "Publishing…" : "Publish Announcement"}
           </Button>{" "}
-          <Button color="outline-danger" disabled={saving || !activeMessage} onClick={() => saveMessage("")}>
-            Clear Message
+          <Button color="outline-danger" disabled={saving || (!activeMessage && !mediaUrl)} onClick={() => saveMessage("", { removeMedia: true })}>
+            Clear Announcement
           </Button>
           {feedback ? <div className="mt-2">{feedback}</div> : null}
         </CardBody>

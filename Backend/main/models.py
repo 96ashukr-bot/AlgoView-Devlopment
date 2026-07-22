@@ -1517,6 +1517,7 @@ PAYMENT_METHOD_CHOICES = [
 
 class SubadminDashboardAnnouncement(models.Model):
     message = models.TextField(blank=True, default="")
+    media = models.FileField(upload_to="subadmin_announcements/", null=True, blank=True)
     is_active = models.BooleanField(default=False, db_index=True)
     updated_by = models.ForeignKey(
         User,

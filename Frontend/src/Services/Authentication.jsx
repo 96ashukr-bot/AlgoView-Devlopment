@@ -652,8 +652,12 @@ export const getSubadminDashboardAnnouncement = async () => {
   return response.data;
 };
 
-export const updateSubadminDashboardAnnouncement = async (message) => {
-  const response = await axios.put(`${baseUrl}/subadmin-dashboard-announcement/`, { message });
+export const updateSubadminDashboardAnnouncement = async (message, media = null, removeMedia = false) => {
+  const formData = new FormData();
+  formData.append("message", message || "");
+  if (media) formData.append("media", media);
+  if (removeMedia) formData.append("remove_media", "true");
+  const response = await axios.put(`${baseUrl}/subadmin-dashboard-announcement/`, formData);
   return response.data;
 };
 

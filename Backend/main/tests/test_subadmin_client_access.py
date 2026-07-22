@@ -1,4 +1,6 @@
+import tempfile
 from django.test import TestCase
+from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework.test import APIClient
 from unittest import mock
 
@@ -129,6 +131,43 @@ class SubadminClientAccessTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 403)
+        self.assertFalse(SubadminDashboardAnnouncement.objects.exists())
+
+    def test_superadmin_can_publish_and_remove_gif(self):
+        self.api_client.force_authenticate(self.superadmin)
+        gif = SimpleUploadedFile(
+            "celebration.gif",
+            b"GIF89a\x01\x00\x01\x00\x80\x00\x00\x00\x00\x00\xff\xff\xff!\xf9\x04\x01\x00\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;",
+            content_type="image/gif",
+        )
+        with tempfile.TemporaryDirectory() as media_root, self.settings(MEDIA_ROOT=media_root):
+            response = self.api_client.put(
+                "/api/subadmin-dashboard-announcement/",
+                {"message": "Well done!", "media": gif},
+                format="multipart",
+            )
+            self.assertEqual(response.status_code, 200, response.data)
+            self.assertTrue(response.data["is_active"])
+            self.assertIn("/media/subadmin_announcements/", response.data["media_url"])
+
+            clear_response = self.api_client.put(
+                "/api/subadmin-dashboard-announcement/",
+                {"message": "", "remove_media": "true"},
+                format="multipart",
+            )
+            self.assertEqual(clear_response.status_code, 200, clear_response.data)
+            self.assertFalse(clear_response.data["is_active"])
+            self.assertIsNone(clear_response.data["media_url"])
+
+    def test_superadmin_cannot_upload_non_image_as_sticker(self):
+        self.api_client.force_authenticate(self.superadmin)
+        fake_image = SimpleUploadedFile("fake.png", b"not an image", content_type="image/png")
+        response = self.api_client.put(
+            "/api/subadmin-dashboard-announcement/",
+            {"message": "Unsafe", "media": fake_image},
+            format="multipart",
+        )
+        self.assertEqual(response.status_code, 400)
         self.assertFalse(SubadminDashboardAnnouncement.objects.exists())
 
     @mock.patch("main.views.EmailService.send_password_email")
