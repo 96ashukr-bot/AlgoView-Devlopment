@@ -56,7 +56,7 @@ export function CheckoutForm() {
       setForm(emptyForm);
       setStatus({
         type: "success",
-        message: "Thank you. Your checkout enquiry has been submitted. Our team will connect with you shortly.",
+        message: "There is no payment gateway associated as of now. We have your details, and our team will contact you shortly.",
       });
     } catch (error) {
       setStatus({ type: "error", message: error.message });
@@ -133,7 +133,7 @@ export function CheckoutForm() {
         className="focus-ring mt-6 inline-flex w-full items-center justify-center gap-2 rounded bg-royal px-6 py-4 font-bold text-white shadow-soft transition hover:bg-navy disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
       >
         <Send size={18} />
-        {submitting ? "Submitting..." : "Submit Checkout Enquiry"}
+        {submitting ? "Processing..." : "Proceed for Payment"}
       </button>
       {status.message && (
         <p className={`mt-5 flex items-start gap-2 rounded border px-4 py-3 text-sm font-semibold ${status.type === "success" ? "border-teal/30 bg-teal/10 text-teal" : "border-red-200 bg-red-50 text-red-700"}`}>
