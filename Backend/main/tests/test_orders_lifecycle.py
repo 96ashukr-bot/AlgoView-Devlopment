@@ -223,6 +223,105 @@ class OrdersLifecycleTests(TestCase):
             {item["id"] for item in response.data["clients"]},
         )
 
+    def test_trade_history_returns_one_consolidated_entry_exit_row(self):
+        admin_role, _ = Role.objects.get_or_create(
+            name="Admin",
+            defaults={"status": "active"},
+        )
+        admin = User.objects.create_user(
+            email="one-row-history-admin@example.com",
+            firstName="History",
+            lastName="Admin",
+            phoneNumber="9000000004",
+            password="Pass@123",
+            role=admin_role,
+        )
+        parent = Tradeorderhistory.objects.create(
+            client=self.client_user,
+            history_id="one-row-buy",
+            trading_symbol="NIFTY28JUL2624000CE",
+            transaction_type="BUY",
+            trade_order_status="CLOSE",
+            order_status="COMPLETED",
+            order_id="one-row-buy-order",
+            Entry_type="LE",
+            Entry_Price=Decimal("100"),
+            EntryQty=65,
+            Exit_type="LX",
+            Exit_Price=Decimal("110"),
+            ExitQty=65,
+            Total=Decimal("650"),
+        )
+        child_exit = Tradeorderhistory.objects.create(
+            client=self.client_user,
+            history_id="one-row-sell",
+            trading_symbol="NIFTY28JUL2624000CE",
+            transaction_type="SELL",
+            trade_order_status="CLOSE",
+            order_status="COMPLETED",
+            order_id="one-row-sell-order",
+            Exit_type="LX",
+            Exit_Price=Decimal("110"),
+            ExitQty=65,
+            order_params={"original_history_id": parent.history_id},
+        )
+        api_client = APIClient()
+        api_client.force_authenticate(admin)
+
+        response = api_client.get("/api/get-trade-history/")
+
+        self.assertEqual(response.status_code, 200, response.data)
+        result_ids = {item["id"] for item in response.data["results"]}
+        self.assertIn(parent.id, result_ids)
+        self.assertNotIn(child_exit.id, result_ids)
+        parent_payload = next(
+            item for item in response.data["results"] if item["id"] == parent.id
+        )
+        self.assertEqual(Decimal(parent_payload["Entry_Price"]), Decimal("100"))
+        self.assertEqual(Decimal(parent_payload["Exit_Price"]), Decimal("110"))
+        self.assertEqual(parent_payload["EntryQty"], 65)
+        self.assertEqual(parent_payload["ExitQty"], 65)
+        self.assertEqual(Decimal(parent_payload["Total"]), Decimal("650"))
+
+    def test_client_trade_history_hides_residual_exit_child_row(self):
+        parent = Tradeorderhistory.objects.create(
+            client=self.client_user,
+            history_id="client-one-row-buy",
+            trading_symbol="NIFTY28JUL2624100CE",
+            transaction_type="BUY",
+            trade_order_status="CLOSE",
+            order_status="COMPLETED",
+            order_id="client-one-row-buy-order",
+            Entry_type="LE",
+            Entry_Price=Decimal("90"),
+            EntryQty=65,
+            Exit_type="LX",
+            Exit_Price=Decimal("95"),
+            ExitQty=65,
+        )
+        child_exit = Tradeorderhistory.objects.create(
+            client=self.client_user,
+            history_id="client-one-row-sell",
+            trading_symbol="NIFTY28JUL2624100CE",
+            transaction_type="SELL",
+            trade_order_status="CLOSE",
+            order_status="COMPLETED",
+            order_id="client-one-row-sell-order",
+            Exit_type="LX",
+            Exit_Price=Decimal("95"),
+            ExitQty=65,
+            order_params={"original_history_id": parent.history_id},
+        )
+        api_client = APIClient()
+        api_client.force_authenticate(self.client_user)
+
+        response = api_client.get("/api/get-client-trade-history/")
+
+        self.assertEqual(response.status_code, 200, response.data)
+        result_ids = {item["id"] for item in response.data["results"]}
+        self.assertIn(parent.id, result_ids)
+        self.assertNotIn(child_exit.id, result_ids)
+
     def test_eod_scan_uses_algoview_client_schema(self):
         result = close_expired_mis_trades(company_id=999, dry_run=True)
 

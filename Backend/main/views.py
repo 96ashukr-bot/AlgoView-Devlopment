@@ -5400,7 +5400,11 @@ class ClientTradeListView_old(APIView):
         try:
             user = request.user
             clients = get_accessible_clients_queryset(user)
-            trade_history = Tradeorderhistory.objects.filter(client__in=clients).order_by('-id')
+            trade_history = Tradeorderhistory.objects.filter(
+                client__in=clients,
+            ).exclude(
+                order_params__original_history_id__isnull=False,
+            ).order_by('-id')
 
             paginator = CustomPageNumberPagination()
             result_page = paginator.paginate_queryset(trade_history, request)
@@ -5614,7 +5618,11 @@ class TradeorderhistoryListView(APIView):
             
             # Determine which clients to include based on user role
             clients = get_accessible_clients_queryset(user)
-            trade_history = Tradeorderhistory.objects.filter(client__in=clients).order_by('-id')
+            trade_history = Tradeorderhistory.objects.filter(
+                client__in=clients,
+            ).exclude(
+                order_params__original_history_id__isnull=False,
+            ).order_by('-id')
 
             # Dynamically apply filters based on the provided parameters
             filters = Q()
@@ -6080,7 +6088,11 @@ class ClientTradeListView(APIView):
             
             # Determine which clients to include based on user role
             clients = get_accessible_clients_queryset(user)
-            trade_history = Tradeorderhistory.objects.filter(client__in=clients).order_by('-id')
+            trade_history = Tradeorderhistory.objects.filter(
+                client__in=clients,
+            ).exclude(
+                order_params__original_history_id__isnull=False,
+            ).order_by('-id')
 
             # Dynamically apply filters based on the provided parameters
             filters = Q()
