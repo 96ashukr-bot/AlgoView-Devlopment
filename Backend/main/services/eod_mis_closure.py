@@ -14,7 +14,7 @@ from main.models import Tradeorderhistory
 
 
 MIS_PRODUCT_VALUES = {"MIS", "INTRADAY", "I"}
-SUCCESS_ENTRY_STATUSES = {"complete", "completed", "success", "traded", "filled", "executed"}
+SUCCESS_ENTRY_STATUSES = {"complete", "completed", "success", "traded", "filled", "executed", "open"}
 FAILED_STATUSES = {"failed", "failure", "rejected", "reject", "error", "errors", "unauthorized", "cancelled", "canceled", "skipped"}
 MARKET_CLOSE_TIME = time(15, 30)
 ATTENTION_STATUS = "EOD_MIS_CLOSE_PRICE_MISSING"
@@ -161,7 +161,6 @@ def _is_due_for_eod_close(history: Tradeorderhistory, now=None) -> bool:
 
 def _base_queryset() -> QuerySet:
     return Tradeorderhistory.objects.select_related("client").filter(
-        transaction_type__iexact="BUY",
         Exit_Price__isnull=True,
         Exit_type__isnull=True,
     ).exclude(
@@ -170,6 +169,8 @@ def _base_queryset() -> QuerySet:
 
 
 def _eligible_for_eod_close(history: Tradeorderhistory, now=None) -> bool:
+    if not str(history.transaction_type or "").strip().upper().startswith("BUY"):
+        return False
     order_status = _normalize_status(history.order_status)
     trade_status = _normalize_status(history.trade_order_status)
     if order_status in FAILED_STATUSES or trade_status in FAILED_STATUSES:

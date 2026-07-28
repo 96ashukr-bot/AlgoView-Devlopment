@@ -425,3 +425,46 @@ class OrdersLifecycleTests(TestCase):
         self.assertEqual(trade.trade_order_status, "Failed")
         self.assertEqual(trade.order_status, "Failed")
         self.assertIn("never confirmed", trade.failure_reason)
+
+    def test_eod_reconciliation_fails_stale_non_buy_placeholder(self):
+        trade = Tradeorderhistory.objects.create(
+            client=self.client_user,
+            date=datetime(2026, 7, 27).date(),
+            trading_symbol="FINNIFTY",
+            transaction_type="SELL-C_O",
+            trade_order_status="PROCESSING",
+            order_status="Pending",
+            LivePrice=Decimal("25000"),
+            order_params={"product_type": "MIS"},
+        )
+        now = timezone.make_aware(datetime(2026, 7, 28, 16, 0))
+
+        result = close_expired_mis_trades(trade_id=trade.id, now=now)
+        trade.refresh_from_db()
+
+        self.assertEqual(result["failed_unconfirmed"], 1)
+        self.assertEqual(trade.trade_order_status, "Failed")
+
+    def test_eod_reconciliation_closes_legacy_open_mis_fill(self):
+        trade = Tradeorderhistory.objects.create(
+            client=self.client_user,
+            date=datetime(2026, 7, 10).date(),
+            trading_symbol="NIFTY14JUL2624000CE",
+            transaction_type="BUY",
+            trade_order_status="open",
+            order_status="open",
+            order_id="legacy-open-filled",
+            Entry_type="LE",
+            Entry_Price=Decimal("100"),
+            EntryQty=65,
+            LivePrice=Decimal("105"),
+            order_params={"product_type": "MIS", "expiry": "2026-07-14"},
+        )
+        now = timezone.make_aware(datetime(2026, 7, 28, 16, 0))
+
+        result = close_expired_mis_trades(trade_id=trade.id, now=now)
+        trade.refresh_from_db()
+
+        self.assertEqual(result["closed"], 1)
+        self.assertEqual(trade.trade_order_status, "CLOSE")
+        self.assertEqual(trade.Exit_Price, Decimal("105"))
