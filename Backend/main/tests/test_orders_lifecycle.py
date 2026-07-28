@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 
 from django.test import TestCase
@@ -247,6 +247,105 @@ class OrdersLifecycleTests(TestCase):
         self.assertIn(
             self.client_user.id,
             {item["id"] for item in response.data["clients"]},
+        )
+
+    def test_orders_default_to_today_and_staff_date_filter_can_load_history(self):
+        admin_role, _ = Role.objects.get_or_create(
+            name="Admin",
+            defaults={"status": "active"},
+        )
+        admin = User.objects.create_user(
+            email="orders-date-admin@example.com",
+            firstName="Orders",
+            lastName="Date Admin",
+            phoneNumber="9000000005",
+            password="Pass@123",
+            role=admin_role,
+        )
+        today = timezone.localdate()
+        previous_day = today - timedelta(days=1)
+        current_trade = Tradeorderhistory.objects.create(
+            client=self.client_user,
+            date=today,
+            trading_symbol="NIFTY28JUL2624000PE",
+            transaction_type="BUY",
+            trade_order_status="Failed",
+            order_status="REJECTED",
+            failure_reason="Current-day rejected order",
+            order_id="today-failed-order",
+        )
+        previous_trade = Tradeorderhistory.objects.create(
+            client=self.client_user,
+            date=previous_day,
+            trading_symbol="NIFTY28JUL2623900PE",
+            transaction_type="BUY",
+            trade_order_status="Failed",
+            order_status="REJECTED",
+            failure_reason="Previous-day rejected order",
+            order_id="previous-failed-order",
+        )
+        Tradeorderhistory.objects.filter(pk=previous_trade.pk).update(
+            date=previous_day,
+        )
+        previous_trade.refresh_from_db()
+        api_client = APIClient()
+        api_client.force_authenticate(admin)
+
+        default_response = api_client.get(
+            "/api/orders/",
+            {"order_bucket": "FAILED"},
+        )
+        filtered_response = api_client.get(
+            "/api/orders/",
+            {
+                "order_bucket": "FAILED",
+                "from_date": previous_day.isoformat(),
+                "to_date": previous_day.isoformat(),
+            },
+        )
+
+        self.assertEqual(default_response.status_code, 200, default_response.data)
+        default_ids = {item["id"] for item in default_response.data["results"]}
+        self.assertIn(current_trade.id, default_ids)
+        self.assertNotIn(previous_trade.id, default_ids)
+        self.assertEqual(filtered_response.status_code, 200, filtered_response.data)
+        filtered_ids = {item["id"] for item in filtered_response.data["results"]}
+        self.assertIn(previous_trade.id, filtered_ids)
+        self.assertNotIn(current_trade.id, filtered_ids)
+
+        subadmin_role, _ = Role.objects.get_or_create(
+            name="Sub-Admin",
+            defaults={"status": "active"},
+        )
+        subadmin = User.objects.create_user(
+            email="orders-date-subadmin@example.com",
+            firstName="Orders",
+            lastName="Subadmin",
+            phoneNumber="9000000006",
+            password="Pass@123",
+            role=subadmin_role,
+        )
+        self.client_user.assigned_client = subadmin
+        self.client_user.save(update_fields=["assigned_client"])
+        api_client.force_authenticate(subadmin)
+
+        subadmin_filtered_response = api_client.get(
+            "/api/orders/",
+            {
+                "order_bucket": "FAILED",
+                "from_date": previous_day.isoformat(),
+                "to_date": previous_day.isoformat(),
+            },
+        )
+
+        self.assertEqual(
+            subadmin_filtered_response.status_code,
+            200,
+            subadmin_filtered_response.data,
+        )
+        self.assertIn(
+            previous_trade.id,
+            {item["id"] for item in subadmin_filtered_response.data["results"]},
         )
 
     def test_trade_history_returns_one_consolidated_entry_exit_row(self):

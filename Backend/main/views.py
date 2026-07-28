@@ -5956,14 +5956,18 @@ class OrdersListView(APIView):
             ).order_by("-id")
 
             filters = Q()
-            if from_date:
+            if is_end_user(user):
+                filters &= Q(date=timezone.localdate())
+            elif not from_date and not to_date:
+                filters &= Q(date=timezone.localdate())
+            if from_date and not is_end_user(user):
                 try:
-                    filters &= Q(date__gte=datetime.strptime(from_date, "%Y-%m-%d"))
+                    filters &= Q(date__gte=datetime.strptime(from_date, "%Y-%m-%d").date())
                 except ValueError:
                     return Response({"error": "Invalid from_date format, expected YYYY-MM-DD."}, status=status.HTTP_400_BAD_REQUEST)
-            if to_date:
+            if to_date and not is_end_user(user):
                 try:
-                    filters &= Q(date__lte=datetime.strptime(to_date, "%Y-%m-%d"))
+                    filters &= Q(date__lte=datetime.strptime(to_date, "%Y-%m-%d").date())
                 except ValueError:
                     return Response({"error": "Invalid to_date format, expected YYYY-MM-DD."}, status=status.HTTP_400_BAD_REQUEST)
             if broker and broker.lower() != "all":
