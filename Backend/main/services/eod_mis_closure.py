@@ -160,12 +160,22 @@ def _is_due_for_eod_close(history: Tradeorderhistory, now=None) -> bool:
 
 
 def _base_queryset() -> QuerySet:
+    active_status_filter = (
+        Q(trade_order_status__iregex=r"^(open|entry|buy|active|pending|placed|transit|partial|partially_filled|processing)$")
+        | Q(order_status__iregex=r"^(open|complete|completed|executed|filled|traded|success|placed|transit|pending|partial|partially_filled)$")
+    )
+    failure_filter = (
+        Q(order_status__iregex=r"(failed|failure|reject|error|unauthorized|cancel|skipped)")
+        | Q(trade_order_status__iregex=r"(failed|failure|reject|error|unauthorized|cancel|skipped)")
+        | (Q(failure_reason__isnull=False) & ~Q(failure_reason=""))
+    )
     return Tradeorderhistory.objects.select_related("client").filter(
+        active_status_filter,
         Exit_Price__isnull=True,
         Exit_type__isnull=True,
     ).exclude(
         trade_order_status__iregex=r"^(close|closed|exit|exited|squareoff|squared_off)$",
-    )
+    ).exclude(failure_filter)
 
 
 def _eligible_for_eod_close(history: Tradeorderhistory, now=None) -> bool:
