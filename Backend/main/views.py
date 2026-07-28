@@ -3972,7 +3972,32 @@ def place_order_broker(LivePrice,group_service,
         return response
 
 
-OPEN_TRADE_ORDER_STATUSES = {"OPEN", "ENTRY", "BUY", "ACTIVE", "PENDING", ""}
+OPEN_TRADE_ORDER_STATUSES = {
+    "OPEN",
+    "ENTRY",
+    "BUY",
+    "ACTIVE",
+    "PENDING",
+    "PLACED",
+    "TRANSIT",
+    "PARTIAL",
+    "PARTIALLY_FILLED",
+    "",
+}
+SUCCESSFUL_ACTIVE_ORDER_STATUSES = {
+    "OPEN",
+    "COMPLETE",
+    "COMPLETED",
+    "EXECUTED",
+    "FILLED",
+    "TRADED",
+    "SUCCESS",
+    "PLACED",
+    "TRANSIT",
+    "PENDING",
+    "PARTIAL",
+    "PARTIALLY_FILLED",
+}
 CLOSED_TRADE_ORDER_STATUSES = {"CLOSE", "CLOSED", "EXIT", "EXITED", "SQUAREOFF", "SQUARED_OFF"}
 FAILED_ORDER_STATUSES = {"FAILED", "REJECTED", "ERRORS", "ERROR", "UNAUTHORIZED", "CANCELLED", "CANCELED"}
 MONTH_ALIASES = {
@@ -4109,7 +4134,10 @@ def _is_regular_trade_open(trade_history):
         return False
     if trade_history.Exit_type or trade_history.Exit_Price or trade_history.ExitQty:
         return False
-    return trade_status in OPEN_TRADE_ORDER_STATUSES or order_status in {"OPEN", "COMPLETE", "COMPLETED", "TRANSIT", "PENDING"}
+    return (
+        trade_status in OPEN_TRADE_ORDER_STATUSES
+        or order_status in SUCCESSFUL_ACTIVE_ORDER_STATUSES
+    )
 
 
 def _first_non_empty_value(*values):
@@ -5772,6 +5800,13 @@ def _orders_failed_filter():
     return failed_filter
 
 
+def _case_insensitive_status_filter(field_name, statuses):
+    status_filter = Q()
+    for status_value in statuses:
+        status_filter |= Q(**{f"{field_name}__iexact": status_value})
+    return status_filter
+
+
 def _orders_status_filter(bucket):
     normalized_bucket = str(bucket or "ACTIVE").strip().upper()
     failed_filter = _orders_failed_filter()
@@ -5779,15 +5814,22 @@ def _orders_status_filter(bucket):
         return failed_filter
     if normalized_bucket == "CLOSED":
         return (
-            Q(trade_order_status__in=CLOSED_TRADE_ORDER_STATUSES)
-            | Q(trade_order_status__in=[status.lower() for status in CLOSED_TRADE_ORDER_STATUSES])
+            _case_insensitive_status_filter(
+                "trade_order_status",
+                CLOSED_TRADE_ORDER_STATUSES,
+            )
             | Q(Exit_type__isnull=False)
             | Q(Exit_Price__isnull=False)
         ) & ~failed_filter
     return (
-        Q(trade_order_status__in=OPEN_TRADE_ORDER_STATUSES)
-        | Q(trade_order_status__in=[status.lower() for status in OPEN_TRADE_ORDER_STATUSES])
-        | Q(order_status__in=["OPEN", "COMPLETE", "COMPLETED", "TRANSIT", "PENDING", "open", "complete", "completed", "transit", "pending"])
+        _case_insensitive_status_filter(
+            "trade_order_status",
+            OPEN_TRADE_ORDER_STATUSES,
+        )
+        | _case_insensitive_status_filter(
+            "order_status",
+            SUCCESSFUL_ACTIVE_ORDER_STATUSES,
+        )
     ) & Q(Exit_type__isnull=True, Exit_Price__isnull=True) & ~failed_filter
 
 

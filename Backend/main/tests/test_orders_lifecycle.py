@@ -5,7 +5,10 @@ from rest_framework.test import APIClient
 
 from main.models import Role, Tradeorderhistory, User
 from main.services.eod_mis_closure import close_expired_mis_trades
-from main.trade_history_service import consolidate_completed_exit_history
+from main.trade_history_service import (
+    consolidate_completed_exit_history,
+    resolve_trade_failure_reason,
+)
 from main.views import _orders_status_filter
 
 
@@ -42,6 +45,53 @@ class OrdersLifecycleTests(TestCase):
         ).values_list("id", flat=True)
 
         self.assertIn(trade.id, active_ids)
+
+    def test_broker_success_aliases_are_active_until_exit(self):
+        for index, broker_status in enumerate(
+            (
+                "OPEN",
+                "COMPLETE",
+                "COMPLETED",
+                "EXECUTED",
+                "FILLED",
+                "TRADED",
+                "SUCCESS",
+                "PLACED",
+                "TRANSIT",
+                "PENDING",
+                "PARTIAL",
+                "PARTIALLY_FILLED",
+            ),
+            start=1,
+        ):
+            with self.subTest(broker_status=broker_status):
+                trade = Tradeorderhistory.objects.create(
+                    client=self.client_user,
+                    trading_symbol=f"NIFTY28JUL2624{index:03d}CE",
+                    transaction_type="BUY",
+                    trade_order_status="OPEN",
+                    order_status=broker_status,
+                    order_id=f"active-alias-{index}",
+                    Entry_type="LE",
+                    Entry_Price=Decimal("100"),
+                    EntryQty=65,
+                )
+
+                self.assertTrue(
+                    Tradeorderhistory.objects.filter(pk=trade.pk)
+                    .filter(_orders_status_filter("ACTIVE"))
+                    .exists()
+                )
+                self.assertFalse(
+                    Tradeorderhistory.objects.filter(pk=trade.pk)
+                    .filter(_orders_status_filter("FAILED"))
+                    .exists()
+                )
+                self.assertFalse(
+                    Tradeorderhistory.objects.filter(pk=trade.pk)
+                    .filter(_orders_status_filter("CLOSED"))
+                    .exists()
+                )
 
     def test_completed_exit_moves_original_buy_to_closed(self):
         buy = Tradeorderhistory.objects.create(
@@ -106,6 +156,14 @@ class OrdersLifecycleTests(TestCase):
             Tradeorderhistory.objects.filter(
                 pk=trade.pk,
             ).filter(_orders_status_filter("ACTIVE")).exists()
+        )
+
+    def test_failed_status_overrides_open_lifecycle_and_keeps_reason(self):
+        reason = "Broker rejected the order."
+
+        self.assertEqual(
+            resolve_trade_failure_reason("FAILED", "OPEN", reason),
+            reason,
         )
 
     def test_failed_orders_api_includes_rejected_open_history(self):

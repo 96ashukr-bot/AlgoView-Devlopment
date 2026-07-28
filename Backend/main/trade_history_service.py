@@ -25,6 +25,18 @@ NON_FAILURE_ORDER_STATUSES = {
     "validation pending",
 }
 
+FAILURE_ORDER_STATUSES = {
+    "failed",
+    "failure",
+    "error",
+    "errors",
+    "rejected",
+    "cancelled",
+    "canceled",
+    "unauthorized",
+    "skipped",
+}
+
 TRANSIENT_ORDER_MESSAGES = {
     "order is placing by place order broker !!",
     "order routed to execution node.",
@@ -70,6 +82,10 @@ def resolve_trade_failure_reason(order_status, trade_order_status, reason):
 
     if _is_transient_order_message(reason):
         return None
+    if _normalize_status_value(order_status) in FAILURE_ORDER_STATUSES:
+        return str(reason)
+    if _normalize_status_value(trade_order_status) in FAILURE_ORDER_STATUSES:
+        return str(reason)
     if _is_non_failure_status(order_status, trade_order_status):
         return None
     return str(reason)
