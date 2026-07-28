@@ -445,6 +445,25 @@ class OrdersLifecycleTests(TestCase):
         self.assertEqual(result["failed_unconfirmed"], 1)
         self.assertEqual(trade.trade_order_status, "Failed")
 
+    def test_eod_reconciliation_fails_open_row_without_execution_identity(self):
+        trade = Tradeorderhistory.objects.create(
+            client=self.client_user,
+            date=datetime(2026, 7, 10).date(),
+            trading_symbol="FINNIFTY",
+            transaction_type="BUY-C_O",
+            trade_order_status="open",
+            order_status="open",
+            LivePrice=Decimal("25000"),
+            order_params={"product_type": "MIS"},
+        )
+        now = timezone.make_aware(datetime(2026, 7, 28, 16, 0))
+
+        result = close_expired_mis_trades(trade_id=trade.id, now=now)
+        trade.refresh_from_db()
+
+        self.assertEqual(result["failed_unconfirmed"], 1)
+        self.assertEqual(trade.trade_order_status, "Failed")
+
     def test_eod_reconciliation_closes_legacy_open_mis_fill(self):
         trade = Tradeorderhistory.objects.create(
             client=self.client_user,

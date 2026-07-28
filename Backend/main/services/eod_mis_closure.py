@@ -193,11 +193,15 @@ def _eligible_for_eod_close(history: Tradeorderhistory, now=None) -> bool:
 def _is_stale_unconfirmed(history: Tradeorderhistory, now=None) -> bool:
     order_status = _normalize_status(history.order_status)
     trade_status = _normalize_status(history.trade_order_status)
-    if order_status not in {"pending", "processing", "transit"} and trade_status not in {
-        "pending",
-        "processing",
-        "transit",
-    }:
+    is_pending = order_status in {"pending", "processing", "transit"} or trade_status in {
+        "pending", "processing", "transit",
+    }
+    has_execution_identity = (
+        str(history.order_id or "").strip() not in {"", "0"}
+        and _decimal_or_none(history.Entry_Price) is not None
+        and int(history.EntryQty or 0) > 0
+    )
+    if not is_pending and has_execution_identity:
         return False
     if _normalize_product(_extract_product_type(history)) in MIS_PRODUCT_VALUES:
         return _is_due_for_eod_close(history, now=now)
