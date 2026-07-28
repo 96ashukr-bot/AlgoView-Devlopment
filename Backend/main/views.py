@@ -5818,14 +5818,15 @@ def _case_insensitive_status_filter(field_name, statuses):
 def _orders_status_filter(bucket):
     normalized_bucket = str(bucket or "ACTIVE").strip().upper()
     failed_filter = _orders_failed_filter()
+    closed_trade_status_filter = _case_insensitive_status_filter(
+        "trade_order_status",
+        CLOSED_TRADE_ORDER_STATUSES,
+    )
     if normalized_bucket == "FAILED":
         return failed_filter
     if normalized_bucket == "CLOSED":
         return (
-            _case_insensitive_status_filter(
-                "trade_order_status",
-                CLOSED_TRADE_ORDER_STATUSES,
-            )
+            closed_trade_status_filter
             | Q(Exit_type__isnull=False)
             | Q(Exit_Price__isnull=False)
         ) & ~failed_filter
@@ -5838,7 +5839,7 @@ def _orders_status_filter(bucket):
             "order_status",
             SUCCESSFUL_ACTIVE_ORDER_STATUSES,
         )
-    ) & Q(Exit_type__isnull=True, Exit_Price__isnull=True) & ~failed_filter
+    ) & Q(Exit_type__isnull=True, Exit_Price__isnull=True) & ~failed_filter & ~closed_trade_status_filter
 
 
 def _closed_orders_cumulative_profit(queryset):

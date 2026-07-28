@@ -1,6 +1,8 @@
+from datetime import datetime
 from decimal import Decimal
 
 from django.test import TestCase
+from django.utils import timezone
 from rest_framework.test import APIClient
 
 from main.models import Role, Tradeorderhistory, User
@@ -134,6 +136,30 @@ class OrdersLifecycleTests(TestCase):
             Tradeorderhistory.objects.filter(
                 pk=buy.pk,
             ).filter(_orders_status_filter("CLOSED")).exists()
+        )
+
+    def test_closed_trade_status_never_appears_active(self):
+        trade = Tradeorderhistory.objects.create(
+            client=self.client_user,
+            trading_symbol="NIFTY28JUL2624000CE",
+            transaction_type="BUY",
+            trade_order_status="CLOSE",
+            order_status="COMPLETED",
+            order_id="already-closed-1",
+            Entry_type="LE",
+            Entry_Price=Decimal("100"),
+            EntryQty=65,
+        )
+
+        self.assertFalse(
+            Tradeorderhistory.objects.filter(pk=trade.pk)
+            .filter(_orders_status_filter("ACTIVE"))
+            .exists()
+        )
+        self.assertTrue(
+            Tradeorderhistory.objects.filter(pk=trade.pk)
+            .filter(_orders_status_filter("CLOSED"))
+            .exists()
         )
 
     def test_failed_order_is_only_in_failed_bucket(self):
@@ -326,3 +352,76 @@ class OrdersLifecycleTests(TestCase):
         result = close_expired_mis_trades(company_id=999, dry_run=True)
 
         self.assertEqual(result["scanned"], 0)
+
+    def test_eod_reconciliation_closes_successful_mis_alias(self):
+        trade = Tradeorderhistory.objects.create(
+            client=self.client_user,
+            date=datetime(2026, 7, 27).date(),
+            trading_symbol="NIFTY28JUL2624000CE",
+            transaction_type="BUY",
+            trade_order_status="complete",
+            order_status="complete",
+            order_id="stale-mis-success",
+            Entry_type="LE",
+            Entry_Price=Decimal("100"),
+            EntryQty=65,
+            LivePrice=Decimal("110"),
+            order_params={"product_type": "MIS", "expiry": "2026-07-28"},
+        )
+        now = timezone.make_aware(datetime(2026, 7, 28, 16, 0))
+
+        result = close_expired_mis_trades(trade_id=trade.id, now=now)
+        trade.refresh_from_db()
+
+        self.assertEqual(result["closed"], 1)
+        self.assertEqual(trade.trade_order_status, "CLOSE")
+        self.assertEqual(trade.Exit_Price, Decimal("110"))
+        self.assertEqual(trade.ExitQty, 65)
+        self.assertEqual(trade.Total, Decimal("650"))
+
+    def test_eod_reconciliation_closes_expired_nrml_option(self):
+        trade = Tradeorderhistory.objects.create(
+            client=self.client_user,
+            date=datetime(2026, 7, 24).date(),
+            trading_symbol="NIFTY28JUL2624000CE",
+            transaction_type="BUY",
+            trade_order_status="OPEN",
+            order_status="EXECUTED",
+            order_id="expired-nrml-success",
+            Entry_type="LE",
+            Entry_Price=Decimal("100"),
+            EntryQty=65,
+            LivePrice=Decimal("90"),
+            order_params={"product_type": "NRML", "expiry": "2026-07-28"},
+        )
+        now = timezone.make_aware(datetime(2026, 7, 28, 16, 0))
+
+        result = close_expired_mis_trades(trade_id=trade.id, now=now)
+        trade.refresh_from_db()
+
+        self.assertEqual(result["closed"], 1)
+        self.assertEqual(trade.trade_order_status, "CLOSE")
+        self.assertEqual(trade.Exit_Price, Decimal("90"))
+        self.assertEqual(trade.Total, Decimal("-650"))
+
+    def test_eod_reconciliation_moves_stale_unconfirmed_order_to_failed(self):
+        trade = Tradeorderhistory.objects.create(
+            client=self.client_user,
+            date=datetime(2026, 7, 27).date(),
+            trading_symbol="NIFTY28JUL2624000CE",
+            transaction_type="BUY",
+            trade_order_status="PROCESSING",
+            order_status="Pending",
+            Entry_type="LE",
+            EntryQty=65,
+            order_params={"product_type": "MIS", "expiry": "2026-07-28"},
+        )
+        now = timezone.make_aware(datetime(2026, 7, 28, 16, 0))
+
+        result = close_expired_mis_trades(trade_id=trade.id, now=now)
+        trade.refresh_from_db()
+
+        self.assertEqual(result["failed_unconfirmed"], 1)
+        self.assertEqual(trade.trade_order_status, "Failed")
+        self.assertEqual(trade.order_status, "Failed")
+        self.assertIn("never confirmed", trade.failure_reason)
