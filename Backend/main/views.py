@@ -42,6 +42,7 @@ from main.permissions import (
     get_accessible_clients_queryset,
     is_admin_or_superadmin,
     is_admin_user,
+    is_end_user,
     is_platform_admin,
     is_subadmin_user,
     is_superadmin_user,
@@ -5841,6 +5842,37 @@ def _active_orders_running_profit(queryset, watcher_service):
     return total_profit.quantize(Decimal("0.01"))
 
 
+def _scope_trade_history_by_role(queryset, user):
+    """Keep an end user's Orders history limited to their own current trading day."""
+    if is_end_user(user):
+        return queryset.filter(client=user, date=timezone.localdate())
+    return queryset
+
+
+def _apply_trade_history_client_and_script_filters(queryset, request, filters):
+    client_id = request.GET.get("client_id") or request.GET.get("client")
+    if client_id:
+        if not can_access_client_record(request.user, client_id):
+            raise PermissionDenied("You do not have permission to access this client.")
+        filters &= Q(client_id=client_id)
+
+    index_symbol = (
+        request.GET.get("Index_symbol")
+        or request.GET.get("Index_Symbol")
+        or ""
+    ).strip()
+    if index_symbol and index_symbol.lower() != "all":
+        normalized_symbol = index_symbol.upper()
+        filters &= (
+            Q(Index_Symbol__iexact=normalized_symbol)
+            | Q(order_params__symbol__iexact=normalized_symbol)
+            | Q(order_params__underlying__iexact=normalized_symbol)
+            | Q(sltp_metadata__symbol__iexact=normalized_symbol)
+            | Q(sltp_metadata__underlying__iexact=normalized_symbol)
+        )
+    return queryset, filters
+
+
 class OrdersListView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -5963,7 +5995,7 @@ class OrdersFilterOptionsView(APIView):
 
     def get(self, request, *args, **kwargs):
         user = request.user
-        clients = get_order_visible_clients_queryset(user)
+        clients = get_accessible_clients_queryset(user)
         client_options = list(
             clients.order_by("fullName", "email", "id").values(
                 "id", "fullName", "email"

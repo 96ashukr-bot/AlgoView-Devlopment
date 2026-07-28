@@ -1,8 +1,9 @@
 from decimal import Decimal
 
 from django.test import TestCase
+from rest_framework.test import APIClient
 
-from main.models import Tradeorderhistory, User
+from main.models import Role, Tradeorderhistory, User
 from main.services.eod_mis_closure import close_expired_mis_trades
 from main.trade_history_service import consolidate_completed_exit_history
 from main.views import _orders_status_filter
@@ -17,6 +18,8 @@ class OrdersLifecycleTests(TestCase):
             phoneNumber="9000000001",
             password="Pass@123",
             is_enable=True,
+            type_of_user="is_client",
+            is_client=True,
         )
 
     def test_successful_buy_with_populated_exit_quantity_is_active(self):
@@ -103,6 +106,63 @@ class OrdersLifecycleTests(TestCase):
             Tradeorderhistory.objects.filter(
                 pk=trade.pk,
             ).filter(_orders_status_filter("ACTIVE")).exists()
+        )
+
+    def test_failed_orders_api_includes_rejected_open_history(self):
+        admin_role, _ = Role.objects.get_or_create(
+            name="Admin",
+            defaults={"status": "active"},
+        )
+        admin = User.objects.create_user(
+            email="orders-api-admin@example.com",
+            firstName="Orders",
+            lastName="Admin",
+            phoneNumber="9000000002",
+            password="Pass@123",
+            role=admin_role,
+        )
+        trade = Tradeorderhistory.objects.create(
+            client=self.client_user,
+            history_id="manual-market-closed-1",
+            trading_symbol="NIFTY21JUL2624000CE",
+            Index_Symbol="NIFTY",
+            transaction_type="BUY",
+            trade_order_status="OPEN",
+            order_status="Failed",
+            failure_reason="Order rejected because the market is outside configured trading hours.",
+            broker="Angel One",
+            order_id="failed-market-closed-1",
+        )
+        api_client = APIClient()
+        api_client.force_authenticate(admin)
+
+        response = api_client.get("/api/orders/", {"order_bucket": "FAILED"})
+
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertIn(trade.id, {item["id"] for item in response.data["results"]})
+
+    def test_orders_filter_options_api_does_not_crash(self):
+        admin_role, _ = Role.objects.get_or_create(
+            name="Admin",
+            defaults={"status": "active"},
+        )
+        admin = User.objects.create_user(
+            email="orders-options-admin@example.com",
+            firstName="Orders",
+            lastName="Options",
+            phoneNumber="9000000003",
+            password="Pass@123",
+            role=admin_role,
+        )
+        api_client = APIClient()
+        api_client.force_authenticate(admin)
+
+        response = api_client.get("/api/orders/filter-options/")
+
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertIn(
+            self.client_user.id,
+            {item["id"] for item in response.data["clients"]},
         )
 
     def test_eod_scan_uses_algoview_client_schema(self):
