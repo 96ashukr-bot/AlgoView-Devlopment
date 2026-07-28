@@ -103,7 +103,11 @@ def _file_has_content(path: Path, *, required_headers: Optional[Iterable[str]] =
         return False
     required = [str(header).strip() for header in (required_headers or []) if str(header).strip()]
     if not required:
-        return True
+        try:
+            with path.open("rb") as file_obj:
+                return bool(file_obj.read(1))
+        except OSError:
+            return False
     try:
         with path.open("r", encoding="utf-8", errors="ignore") as file_obj:
             first_line = file_obj.readline()
@@ -114,6 +118,7 @@ def _file_has_content(path: Path, *, required_headers: Optional[Iterable[str]] =
 
 def _stale_or_raise(path: Path, exc: Exception, *, label: str, required_headers: Optional[Iterable[str]] = None) -> Path:
     if _file_has_content(path, required_headers=required_headers):
+        _chmod_cache_file(path)
         logger.warning("Using stale %s instrument master at %s after refresh failed: %s", label, path, exc)
         return path
     raise exc
@@ -159,6 +164,13 @@ def _write_bytes_atomic(path: Path, payload: bytes) -> Path:
                 pass
 
 
+def _chmod_cache_file(path: Path) -> None:
+    try:
+        path.chmod(0o664)
+    except OSError as exc:
+        logger.warning("Unable to set broker instrument cache permissions for %s: %s", path, exc)
+
+
 def _download(url: str, timeout: int = 20) -> bytes:
     response = requests.get(url, timeout=timeout)
     response.raise_for_status()
@@ -168,6 +180,7 @@ def _download(url: str, timeout: int = 20) -> bytes:
 def ensure_dhan_instruments_file() -> Path:
     path = _main_dir() / "dhantoken.csv"
     if _is_file_fresh(path) and _file_has_content(path, required_headers=("SEM_SMST_SECURITY_ID", "SEM_TRADING_SYMBOL")):
+        _chmod_cache_file(path)
         return path
 
     try:
@@ -189,6 +202,7 @@ def ensure_upstox_instruments_file(exchange: str) -> Path:
     normalized_exchange = str(exchange or "NSE").strip().upper()
     path = _main_dir() / f"upstox_{normalized_exchange.lower()}_instruments.json"
     if _is_file_fresh(path) and _file_has_content(path):
+        _chmod_cache_file(path)
         return path
 
     try:
@@ -217,6 +231,7 @@ def ensure_aliceblue_contract_file(exchange: str) -> Path:
 
     path = _main_dir() / f"aliceblue_{normalized_exchange}.csv"
     if _is_file_fresh(path) and _file_has_content(path):
+        _chmod_cache_file(path)
         return path
 
     try:
@@ -231,6 +246,7 @@ def ensure_aliceblue_contract_file(exchange: str) -> Path:
     except Exception as exc:
         fallback_path = _newest_valid_file(f"aliceblue_{normalized_exchange}.csv")
         if fallback_path:
+            _chmod_cache_file(fallback_path)
             logger.warning("Using cached Alice Blue %s contract master at %s after refresh failed: %s", normalized_exchange, fallback_path, exc)
             return fallback_path
         return _stale_or_raise(path, exc, label=f"Alice Blue {normalized_exchange}")
@@ -268,6 +284,7 @@ def load_zerodha_instruments(exchange: str):
     path = _main_dir() / f"zerodha_{normalized_exchange}_instruments.json"
     if not _file_has_content(path):
         return []
+    _chmod_cache_file(path)
     with path.open("r", encoding="utf-8") as file_obj:
         return json.load(file_obj)
 
@@ -448,6 +465,13 @@ def prewarm_broker_instrument_indexes() -> None:
             load_zerodha_instrument_index(exchange)
         except Exception as exc:
             logger.warning("Zerodha %s instrument prewarm skipped: %s", exchange, exc)
+    def _prewarm_upstox():
+        from main.services.upstox_market_data import get_upstox_instrument_resolver
+
+        get_upstox_instrument_resolver().resolve("__PREWARM__")
+
+    # Parsing the larger Upstox snapshot must never delay HTTP/worker startup.
+    _run_refresh("upstox-prewarm", _prewarm_upstox)
     logger.info("Broker instrument prewarm completed in %.3fs", (timezone.now() - started).total_seconds())
 
 
@@ -472,6 +496,7 @@ def ensure_fyers_instruments_file(exchange: str = None, segment: str = None) -> 
     _source_name, url, filename = _resolve_fyers_source(exchange=exchange, segment=segment)
     path = _main_dir() / filename
     if _is_file_fresh(path) and _file_has_content(path, required_headers=("FyToken", "Symbol Details")):
+        _chmod_cache_file(path)
         return path
 
     try:
@@ -489,12 +514,15 @@ def ensure_fyers_instruments_file(exchange: str = None, segment: str = None) -> 
         with tmp_path.open("w", newline="", encoding="utf-8") as file_obj:
             writer = csv.writer(file_obj)
             writer.writerows(normalized_rows)
+        _chmod_cache_file(tmp_path)
         tmp_path.replace(path)
+        _chmod_cache_file(path)
         logger.info("Refreshing FYERS instrument master at %s from %s", path, url)
         return path
     except Exception as exc:
         legacy_path = _main_dir() / "fyers_instrument_symbol.csv"
         if _file_has_content(legacy_path, required_headers=("FyToken", "Symbol Details")):
+            _chmod_cache_file(legacy_path)
             logger.warning("Using legacy FYERS instrument master at %s after refresh failed: %s", legacy_path, exc)
             return legacy_path
         return _stale_or_raise(
@@ -510,6 +538,7 @@ def ensure_fivepaisa_scrip_master_file(segment: str) -> Path:
     today = timezone.localdate()
     path = _main_dir() / f"scrip_master_{normalized_segment}_{today.strftime('%Y_%m')}.csv"
     if _is_file_fresh(path) and _file_has_content(path, required_headers=("Exch", "ScripCode")):
+        _chmod_cache_file(path)
         return path
 
     url = f"https://Openapi.5paisa.com/VendorsAPI/Service1.svc/ScripMaster/segment/{normalized_segment}"
@@ -525,6 +554,7 @@ def ensure_fivepaisa_scrip_master_file(segment: str) -> Path:
             required_headers=("Exch", "ScripCode"),
         )
         if fallback_path:
+            _chmod_cache_file(fallback_path)
             logger.warning("Using cached 5Paisa %s scrip master at %s after refresh failed: %s", normalized_segment, fallback_path, exc)
             return fallback_path
         return _stale_or_raise(

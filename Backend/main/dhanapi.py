@@ -1,5 +1,6 @@
 from datetime import datetime
 import os
+import re
 from time import sleep
 from dhanhq import dhanhq 
 import logging
@@ -15,13 +16,66 @@ from main.broker_instrument_cache import (
 from main.brokers.exchange_mapping import normalize_broker_exchange
 from main.models import CompanySmtpDetails
 from main.tasks import send_trade_email_async
-from main.broker_order_utils import extract_ltp_from_quote_payload, normalize_order_type, resolve_limit_price, resolve_limit_reference_price
+from main.broker_order_utils import extract_ltp_from_quote_payload, normalize_order_type, resolve_limit_price, resolve_limit_reference_price, to_float
+from main.services.live_price_cache import get_live_price
 from main.services.option_ltp_fallback import fetch_nse_option_chain_ltp
 from main.trade_history_service import save_trade_order_history
 logger = logging.getLogger('main')
 DHAN_LTP_URL = "https://api.dhan.co/v2/marketfeed/ltp"
 DHAN_NON_FINAL_STATUSES = {"", "unknown", "transit", "pending", "open", "validation pending"}
 DHAN_TERMINAL_FAILURE_STATUSES = {"rejected", "cancelled", "canceled", "expired"}
+
+
+def _dhan_option_contract_parts(trading_symbol, expiry_date=None, underlying=None):
+    raw_symbol = re.sub(r"[^A-Z0-9]", "", str(trading_symbol or "").upper())
+    under = re.sub(r"[^A-Z0-9]", "", str(underlying or "").upper())
+    if not raw_symbol:
+        return None
+    if not under:
+        match = re.match(r"^(?P<under>[A-Z]+)", raw_symbol)
+        under = match.group("under") if match else ""
+    if not under or not raw_symbol.startswith(under):
+        return None
+    match = re.match(
+        r"^(?P<mon>JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)"
+        r"(?P<year>20\d{2})(?P<strike>\d+(?:\.\d+)?)(?P<opt>CE|PE)$",
+        raw_symbol[len(under):],
+    )
+    if not match:
+        return None
+    expiry = str(expiry_date or "").strip()
+    if not expiry:
+        month = datetime.strptime(match.group("mon").title(), "%b").month
+        expiry = f"{match.group('year')}-{month:02d}-01"
+    return {
+        "underlying": under,
+        "expiry_date": expiry,
+        "strike": float(match.group("strike")),
+        "option_type": match.group("opt"),
+    }
+
+
+def _fetch_central_dhan_option_ltp(trading_symbol, *, expiry_date=None, underlying=None, user=None):
+    payload = get_live_price(
+        trading_symbol=trading_symbol,
+        max_age_seconds=3,
+    )
+    if payload and payload.get("is_fresh"):
+        ltp = to_float(payload.get("ltp"))
+        if ltp and ltp > 0:
+            logger.info("%s : Using central websocket option premium for Dhan %s.", user, trading_symbol)
+            return float(ltp)
+
+    contract = _dhan_option_contract_parts(trading_symbol, expiry_date=expiry_date, underlying=underlying)
+    if not contract:
+        return None
+    payload = get_live_price(max_age_seconds=3, **contract)
+    if payload and payload.get("is_fresh"):
+        ltp = to_float(payload.get("ltp"))
+        if ltp and ltp > 0:
+            logger.info("%s : Using central websocket option premium for Dhan %s.", user, trading_symbol)
+            return float(ltp)
+    return None
 
 
 def fetch_dhan_option_ltp(
@@ -38,6 +92,14 @@ def fetch_dhan_option_ltp(
 ):
     security_id_int = int(security_id)
     security_id_key = str(security_id_int)
+    central_ltp = _fetch_central_dhan_option_ltp(
+        trading_symbol,
+        expiry_date=expiry_date,
+        underlying=underlying,
+        user=user,
+    )
+    if central_ltp is not None:
+        return central_ltp
     try:
         response = requests.post(
             DHAN_LTP_URL,

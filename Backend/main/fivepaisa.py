@@ -1,6 +1,7 @@
 import os
 import requests
 import pandas as pd
+from functools import lru_cache
 from main.models import *
 from main.tasks import send_trade_email_async
 from main.broker_order_utils import extract_ltp_from_quote_payload, normalize_order_type, resolve_limit_price
@@ -118,6 +119,17 @@ def download_scrip_master(segment, save_path):
     except requests.RequestException as e:
         return {"status": "error", "message": f"Request failed: {str(e)}"}
 
+@lru_cache(maxsize=8)
+def _load_fivepaisa_scrip_index(csv_file_path, modified_ns):
+    del modified_ns
+    df = pd.read_csv(csv_file_path)
+    df['Name'] = df['Name'].astype(str).str.replace(" ", "").str.replace("-", "").str.upper()
+    return {
+        (str(row.Name), str(row.Exch)): row.ScripCode
+        for row in df[["Name", "Exch", "ScripCode"]].itertuples(index=False)
+    }
+
+
 def get_symbol_scriptcode(symbol, segment, Exch, csv_dir, user=None):
     """
     Get the ScripCode for a symbol and exchange. Download or update the CSV if necessary.
@@ -134,13 +146,13 @@ def get_symbol_scriptcode(symbol, segment, Exch, csv_dir, user=None):
         except Exception as exc:
             return {"status": "error", "message": f"5Paisa scrip master unavailable: {str(exc)}"}
 
-        df = pd.read_csv(csv_file_path)
-        df['Name'] = df['Name'].astype(str).str.replace(" ", "").str.replace("-", "").str.upper()
-        filtered_df = df[(df['Name'] == normalized_symbol) & (df['Exch'] == Exch)]
-
-        if not filtered_df.empty:
-            # Return the first matching record's ScripCode
-            scrip_code = filtered_df.iloc[0]['ScripCode']
+        csv_file_path = str(csv_file_path)
+        scrip_index = _load_fivepaisa_scrip_index(
+            csv_file_path,
+            os.stat(csv_file_path).st_mtime_ns,
+        )
+        scrip_code = scrip_index.get((normalized_symbol, str(Exch)))
+        if scrip_code is not None:
             logger.info(f"{user}: filtered_df.empty is not empty in 5 paisa !!")
             return {"status": "success", "ScripCode": scrip_code}
         else:
@@ -357,9 +369,12 @@ def place_5paisa_order(LivePrice,group_service,api_key,access_token,trade_symbol
                             "status": status,
                             "order_id": order_id,
                             "order_type": requested_order_type,
-                            "price": Entry_price or Exit_price or order_params["body"].get("price"),
+                            "AveragePrice": res_data.get("AveragePrice"),
+                            "executed_price": res_data.get("AveragePrice"),
+                            "price": Entry_price or Exit_price or ltp,
                             "ltp": ltp,
                             "reference_price": ltp,
+                            "broker_order": res_data,
                         }
                     }
                     logger.info(f"{user} : Order placed successfully for user {user}. Order ID: : {order_id}")

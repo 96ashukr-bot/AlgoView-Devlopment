@@ -9,6 +9,7 @@ import time
 from contextlib import nullcontext
 from dataclasses import dataclass
 from datetime import datetime
+from functools import lru_cache
 from typing import Any, Optional
 
 import requests
@@ -239,6 +240,12 @@ class UpstoxInstrumentResolver:
         if not (under and opt in {"CE", "PE"} and expiry and strike_value is not None):
             return None
         return self._by_contract.get((under, expiry.strftime("%Y%m%d"), float(strike_value), opt))
+
+
+@lru_cache(maxsize=1)
+def get_upstox_instrument_resolver() -> UpstoxInstrumentResolver:
+    """Reuse the parsed Upstox contract index within each process."""
+    return UpstoxInstrumentResolver()
 
 
 def _parse_option_symbol(symbol: Any, *, underlying: Any = None) -> Optional[dict[str, Any]]:

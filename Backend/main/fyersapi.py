@@ -1,6 +1,7 @@
 from django.http import JsonResponse
 import requests
 import os
+from functools import lru_cache
 from main.broker_instrument_cache import ensure_fyers_instruments_file
 from main.models import ClientBrokerdetails, CompanySmtpDetails
 from main.broker_order_utils import extract_ltp_from_quote_payload, normalize_order_type, resolve_limit_price
@@ -105,11 +106,12 @@ def place_fyers_orders(LivePrice,group_service,access_token, Api_key, trade_symb
             "side": 1 if transaction_type.upper() == "BUY" else -1,
             "productType": product_type.upper(),  # e.g., "INTRADAY"
             "validity": "DAY",
-            "orderTag": "tag1"
+            "limitPrice": float(price) if requested_order_type == "LIMIT" else 0,
+            "stopPrice": float(triggerPrice or 0),
+            "disclosedQty": 0,
+            "offlineOrder": False,
+            "orderTag": "tag1",
         }
-        print("ordertype>>>",ordertype)
-        if requested_order_type == "LIMIT":
-            order_params["limitPrice"] = float(price)
         logger.info(f"{user} : paylod of order{order_params}")
         try:
             response = requests.post(order_url, headers=headers, json=order_params, timeout=10, proxies=proxy_config)
@@ -127,22 +129,35 @@ def place_fyers_orders(LivePrice,group_service,access_token, Api_key, trade_symb
                             webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="fyers", history_id=history_id)
                 
                 return response
-            if response.status_code == 400 :#or order_response.get("s") == "error":
-                logger.error(f"{user} : error  400 status code get ")
+            if not (200 <= response.status_code < 300 and order_response.get("s") == "ok"):
+                logger.error(
+                    f"{user} : FYERS order rejected http_status={response.status_code} "
+                    f"broker_code={order_response.get('code')} message={order_response.get('message')}"
+                )
                 status = "Failed"
-                message = order_response.get("message", "Unknown error")
-                res_data = f"message"
-                response={"data": {"status": status,"message":message}}
+                message = (
+                    order_response.get("message")
+                    or order_response.get("error")
+                    or f"FYERS order request failed with HTTP {response.status_code}."
+                )
+                res_data = order_response
+                response = {
+                    "data": {
+                        "status": status,
+                        "message": message,
+                        "broker_code": order_response.get("code"),
+                    }
+                }
                 save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status, user, symbol, order_id, status, res_data, message,  
                             strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
                             webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="fyers", history_id=history_id)
                 
                 return response   
 
-            if response.status_code == 200 and order_response.get("s") == "ok":
+            if 200 <= response.status_code < 300 and order_response.get("s") == "ok":
                 print(" Order submitted successfully.")
                 print(" Order ID:", order_response.get("id"))
-                order_id=order_response.get("id")
+                order_id = order_response.get("id") or order_response.get("orderId")
             else:
                 print(" Order failed:", order_response.get("message", "Unknown error"))
                 print("Details:", order_response)
@@ -160,7 +175,13 @@ def place_fyers_orders(LivePrice,group_service,access_token, Api_key, trade_symb
                 return response
 
             # Ensure that get_order_details is defined or handled properly
-            order_history_response = get_order_details(order_id,Api_key, access_token, user)
+            order_history_response = get_order_details(
+                order_id,
+                Api_key,
+                access_token,
+                user,
+                proxy_config=proxy_config,
+            )
             
             logger.info(f"{user} : get_order_details ????????????: {order_history_response}")
 
@@ -207,9 +228,12 @@ def place_fyers_orders(LivePrice,group_service,access_token, Api_key, trade_symb
                             "message": message,
                             "order_id": order_id,
                             "order_type": requested_order_type,
-                            "price": res_data.get("tradedPrice") or order_params.get("limitPrice"),
+                            "tradedPrice": res_data.get("tradedPrice"),
+                            "executed_price": res_data.get("tradedPrice"),
+                            "price": res_data.get("tradedPrice") or ltp,
                             "ltp": ltp,
                             "reference_price": ltp,
+                            "broker_order": res_data,
                         }
                     }
                     
@@ -302,6 +326,19 @@ def place_fyers_orders(LivePrice,group_service,access_token, Api_key, trade_symb
 
     
 
+@lru_cache(maxsize=16)
+def _load_fyers_symbol_index(csv_path, modified_ns):
+    del modified_ns
+    with open(csv_path, mode='r', encoding='utf-8') as file_obj:
+        reader = csv.DictReader(file_obj)
+        return {
+            str(row.get("Symbol Details") or "").replace(" ", "").replace("-", "").upper():
+            row.get("Symbol Ticker")
+            for row in reader
+            if row.get("Symbol Details") and row.get("Symbol Ticker")
+        }
+
+
 def get_instruments_symbol_from_csv(compact_symbol_details, exchange=None, segment=None, user=None):
     try:
         logger.info(f"{user} : get_instruments_symbol_from_csv.")
@@ -311,31 +348,11 @@ def get_instruments_symbol_from_csv(compact_symbol_details, exchange=None, segme
             print(f" CSV file not found at: {csv_path}")
             return None
 
-        with open(csv_path, mode='r', encoding='utf-8') as f:
-            reader = csv.reader(f)
-            rows = list(reader)
-
-        if not rows:
-            print(" CSV file is empty")
-            return None
-
-        headers = rows[0]
-        data_rows = rows[1:]
-
-        # Get column indexes
-        try:
-            symbol_details_index = headers.index("Symbol Details")
-            symbol_ticker_index = headers.index("Symbol Ticker")
-        except ValueError:
-            logger.info(f"{user} : Required columns not found in CSV.")
-            return None
-
-        # Match the compacted "Symbol Details"
-        for row in data_rows:
-            raw_symbol_details = row[symbol_details_index]
-            normalized_symbol_details = raw_symbol_details.replace(" ", "").replace("-", "").upper()
-            if normalized_symbol_details == normalized_requested_symbol:
-                return row[symbol_ticker_index]
+        csv_path = str(csv_path)
+        symbol_index = _load_fyers_symbol_index(csv_path, os.stat(csv_path).st_mtime_ns)
+        match = symbol_index.get(normalized_requested_symbol)
+        if match:
+            return match
 
         print(f" Symbol Details '{compact_symbol_details}' not found in CSV")
         return None
@@ -344,11 +361,23 @@ def get_instruments_symbol_from_csv(compact_symbol_details, exchange=None, segme
         logger.info(f"{user} : Error reading CSV:{e}.")
         return None
 
-def get_order_details(order_id, client_id,access_token, user=None):
+def get_order_details(order_id, client_id, access_token, user=None, proxy_config=None):
     try:
         logger.info(f"{user} : get_order_details function is callig now !")
-        fyers = fyersModel.FyersModel(client_id=client_id, token=access_token,is_async=False, log_path="")
-        order_history = fyers.orderbook()
+        if proxy_config:
+            response = requests.get(
+                "https://api-t1.fyers.in/api/v3/orders",
+                headers={
+                    "Authorization": f"{client_id}:{access_token}",
+                    "Content-Type": "application/json",
+                },
+                timeout=10,
+                proxies=proxy_config,
+            )
+            order_history = response.json() if response.content else {}
+        else:
+            fyers = fyersModel.FyersModel(client_id=client_id, token=access_token,is_async=False, log_path="")
+            order_history = fyers.orderbook()
 
         if order_history and "orderBook" in order_history:
             # Try to find the specific order by ID

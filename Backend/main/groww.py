@@ -5,14 +5,17 @@ import hashlib
 import logging
 import os
 import re
+import threading
 import time
 from datetime import datetime
+from functools import lru_cache
 from typing import Any, Optional
 
 import requests
 from django.conf import settings
 
 from main.broker_order_utils import normalize_order_type, resolve_limit_price, resolve_limit_reference_price, to_float
+from main.services.live_price_cache import get_live_price
 from main.services.option_ltp_fallback import cache_option_ltp, get_cached_option_ltp
 from main.trade_history_service import save_trade_order_history
 
@@ -22,6 +25,7 @@ GROWW_API_BASE_URL = "https://api.groww.in/v1"
 GROWW_INSTRUMENT_URL = "https://growwapi-assets.groww.in/instruments/instrument.csv"
 GROWW_INSTRUMENT_CACHE = os.path.join(os.path.dirname(__file__), "groww_instruments.csv")
 GROWW_INSTRUMENT_CACHE_TTL_SECONDS = 12 * 60 * 60
+_groww_refresh_lock = threading.Lock()
 
 GROWW_SUCCESS_STATUSES = {"SUCCESS"}
 GROWW_OPEN_STATUSES = {"NEW", "ACKED", "TRIGGER_PENDING", "APPROVED", "OPEN", "PENDING", "PLACED"}
@@ -167,8 +171,11 @@ def _refresh_instrument_cache(proxy_config=None):
         proxies=proxy_config,
     )
     response.raise_for_status()
-    with open(GROWW_INSTRUMENT_CACHE, "wb") as instrument_file:
+    tmp_cache = f"{GROWW_INSTRUMENT_CACHE}.tmp"
+    with open(tmp_cache, "wb") as instrument_file:
         instrument_file.write(response.content)
+    os.chmod(tmp_cache, 0o664)
+    os.replace(tmp_cache, GROWW_INSTRUMENT_CACHE)
 
 
 def _instrument_cache_is_fresh():
@@ -178,19 +185,37 @@ def _instrument_cache_is_fresh():
         return False
 
 
-def _iter_groww_instruments(proxy_config=None):
-    if not _instrument_cache_is_fresh():
+def _refresh_instrument_cache_background(proxy_config=None):
+    if not _groww_refresh_lock.acquire(blocking=False):
+        return
+
+    def refresh():
         try:
             _refresh_instrument_cache(proxy_config=proxy_config)
         except Exception as exc:
-            if not os.path.exists(GROWW_INSTRUMENT_CACHE):
-                raise
-            logger.warning("Using stale Groww instrument cache after refresh failed: %s", exc)
+            logger.warning("Background Groww instrument refresh failed: %s", exc)
+        finally:
+            _groww_refresh_lock.release()
 
-    with open(GROWW_INSTRUMENT_CACHE, newline="", encoding="utf-8") as instrument_file:
-        reader = csv.DictReader(instrument_file)
-        for row in reader:
-            yield row
+    threading.Thread(target=refresh, name="groww-instrument-refresh", daemon=True).start()
+
+
+@lru_cache(maxsize=4)
+def _load_groww_instrument_rows(cache_path, modified_ns):
+    del modified_ns
+    with open(cache_path, newline="", encoding="utf-8") as instrument_file:
+        return tuple(csv.DictReader(instrument_file))
+
+
+def _iter_groww_instruments(proxy_config=None):
+    if not _instrument_cache_is_fresh():
+        if os.path.exists(GROWW_INSTRUMENT_CACHE):
+            _refresh_instrument_cache_background(proxy_config=proxy_config)
+        else:
+            _refresh_instrument_cache(proxy_config=proxy_config)
+
+    signature = os.stat(GROWW_INSTRUMENT_CACHE).st_mtime_ns
+    yield from _load_groww_instrument_rows(GROWW_INSTRUMENT_CACHE, signature)
 
 
 def resolve_groww_trading_symbol(
@@ -259,6 +284,49 @@ def fetch_groww_option_ltp(access_token, exchange, segment, trading_symbol, prox
     return None
 
 
+def fetch_groww_option_ltp_with_cache(
+    access_token,
+    exchange,
+    segment,
+    trading_symbol,
+    *,
+    proxy_config=None,
+    user=None,
+    expiry_date=None,
+    underlying=None,
+    strike=None,
+    option_type=None,
+):
+    central_price = get_live_price(
+        trading_symbol=trading_symbol,
+        underlying=underlying,
+        expiry_date=expiry_date,
+        strike=strike,
+        option_type=option_type,
+        max_age_seconds=15,
+    )
+    if central_price and central_price.get("is_fresh"):
+        ltp = to_float(central_price.get("ltp"))
+        if ltp and ltp > 0:
+            logger.info("[%s] Using central websocket option premium for Groww %s.", user, trading_symbol)
+            return float(ltp)
+    ltp = fetch_groww_option_ltp(
+        access_token,
+        exchange,
+        segment,
+        trading_symbol,
+        proxy_config=proxy_config,
+        user=user,
+    )
+    if ltp:
+        return ltp
+    return get_cached_option_ltp(
+        trading_symbol,
+        expiry_date=expiry_date,
+        underlying=underlying,
+    )
+
+
 def _extract_payload(response_payload):
     if not isinstance(response_payload, dict):
         return {}
@@ -295,6 +363,24 @@ def get_groww_order_status(access_token, order_id, segment, proxy_config=None):
     return response.json() if response.content else {}
 
 
+def _schedule_groww_reconciliation(history):
+    if not history or not getattr(history, "id", None):
+        return
+    try:
+        from main.tasks import reconcile_broker_order_task
+
+        reconcile_broker_order_task.apply_async(
+            kwargs={"trade_history_id": history.id},
+            countdown=5,
+        )
+    except Exception as exc:
+        logger.warning(
+            "Unable to schedule Groww reconciliation for history %s: %s",
+            getattr(history, "id", None),
+            exc,
+        )
+
+
 def place_groww_orders(
     LivePrice, group_service, access_token, trade_symbol, transaction_type, symbol, quantity,
     strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type, Entry_price,
@@ -328,7 +414,18 @@ def place_groww_orders(
         return _failed_response(message)
 
     requested_order_type = _order_type_for_groww(ordertype)
-    ltp = fetch_groww_option_ltp(access_token, groww_exchange, groww_segment, resolved_symbol, proxy_config=proxy_config, user=user)
+    ltp = fetch_groww_option_ltp_with_cache(
+        access_token,
+        groww_exchange,
+        groww_segment,
+        resolved_symbol,
+        proxy_config=proxy_config,
+        user=user,
+        expiry_date=expiry_date,
+        underlying=Index_Symbol or symbol,
+        strike=strike,
+        option_type=option_type,
+    )
     if ltp:
         cache_option_ltp(
             _cache_symbol(Index_Symbol or symbol, strike, option_type, day, month, fullyear, fallback=resolved_symbol),
@@ -429,9 +526,11 @@ def place_groww_orders(
         Exit_price = average_price or Exit_price
         ExitQty = filled_quantity or ExitQty
 
-    save_trade_order_history(LivePrice, group_service, transaction_type, history_trade_status, user, resolved_symbol, order_id, final_status, broker_response, message,
-                             strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
-                             webhook_signal, groww_exchange, groww_segment, Index_Symbol, payload, broker="Groww", history_id=history_id)
+    history = save_trade_order_history(LivePrice, group_service, transaction_type, history_trade_status, user, resolved_symbol, order_id, final_status, broker_response, message,
+                                       strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
+                                       webhook_signal, groww_exchange, groww_segment, Index_Symbol, payload, broker="Groww", history_id=history_id)
+    if order_id and (final_status == "open" or not average_price):
+        _schedule_groww_reconciliation(history)
     return {
         "data": {
             "status": final_status,
@@ -439,6 +538,8 @@ def place_groww_orders(
             "order_id": order_id,
             "order_type": requested_order_type,
             "price": average_price or price,
+            "average_fill_price": average_price,
+            "executed_price": average_price,
             "ltp": ltp,
             "reference_price": reference_price,
         }

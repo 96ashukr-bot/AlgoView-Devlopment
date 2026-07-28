@@ -2,6 +2,7 @@
 import requests
 import json
 import re
+import threading
 import time
 from django.shortcuts import redirect
 from django.http import JsonResponse
@@ -16,6 +17,8 @@ logger = logging.getLogger('main')
 from datetime import datetime
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+_upstox_index_lock = threading.Lock()
+_upstox_instrument_indexes = {}
 
 PLACE__ORDER_URL="https://api.upstox.com/v2/order/place"
 MARKET_QUOTE_LTP_URL = "https://api.upstox.com/v2/market-quote/ltp"
@@ -476,19 +479,31 @@ def _normalize_upstox_symbol(value):
     return re.sub(r"(\d+)\.0(?=(CE|PE|FUT|CALL|PUT|[A-Z]))", r"\1", normalized)
 
 
+def _get_upstox_instrument_index(exchange):
+    normalized_exchange = str(exchange or "NSE").upper()
+    cached = _upstox_instrument_indexes.get(normalized_exchange)
+    if cached is not None:
+        return cached
+    rows = load_upstox_instruments(normalized_exchange)
+    index = {
+        _normalize_upstox_symbol(row.get("trading_symbol")): row
+        for row in rows
+        if row.get("trading_symbol")
+    }
+    with _upstox_index_lock:
+        return _upstox_instrument_indexes.setdefault(normalized_exchange, index)
+
+
 def fetch_instrument_details(symbol_name, exchange="NSE", user = None):
     try:
         logger.info(f"{user} : instrument details fetching for the upstox api calling !!")
         normalized_symbol_name = _normalize_upstox_symbol(symbol_name)
-        instruments_data = load_upstox_instruments(exchange)
-        for instrument in instruments_data:
-            instrument_symbol = _normalize_upstox_symbol(instrument.get("trading_symbol", ""))
-            if instrument_symbol == normalized_symbol_name:
-                logger.info(f"{user} : instrument_key is get it ?????????????========>>>>>>>")
-                return {
-                    "instrument_key": instrument.get("instrument_key"),
-                    "trading_symbol": instrument.get("trading_symbol"),
-                }
+        row = _get_upstox_instrument_index(exchange).get(normalized_symbol_name)
+        if row:
+            return {
+                "instrument_key": row.get("instrument_key"),
+                "trading_symbol": row.get("trading_symbol"),
+            }
 
         logger.info(f"{user} : No instruments found for symbol {symbol_name} on exchange {exchange}.")
         return {"error": f"No instruments found for symbol {symbol_name} on exchange {exchange}."}
