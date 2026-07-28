@@ -137,7 +137,7 @@ def _is_due_for_eod_close(history: Tradeorderhistory, now=None) -> bool:
 
 
 def _base_queryset() -> QuerySet:
-    return Tradeorderhistory.objects.select_related("client", "client__white_label_company").filter(
+    return Tradeorderhistory.objects.select_related("client").filter(
         transaction_type__iexact="BUY",
         trade_order_status__iexact="OPEN",
         Exit_Price__isnull=True,
@@ -160,8 +160,9 @@ def _eligible_for_eod_close(history: Tradeorderhistory, now=None) -> bool:
 
 def close_expired_mis_trades(*, company_id=None, client_ids=None, trade_id=None, now=None, dry_run=False) -> Dict[str, int]:
     queryset = _base_queryset()
-    if company_id:
-        queryset = queryset.filter(client__white_label_company_id=company_id)
+    # AlgoView is a single-company application. ``company_id`` is accepted for
+    # call compatibility with the SaaS watcher but must not reference SaaS-only
+    # tenant fields on the AlgoView user model.
     if client_ids is not None:
         queryset = queryset.filter(client_id__in=client_ids)
     if trade_id:

@@ -3,6 +3,7 @@ from decimal import Decimal
 from django.test import TestCase
 
 from main.models import Tradeorderhistory, User
+from main.services.eod_mis_closure import close_expired_mis_trades
 from main.trade_history_service import consolidate_completed_exit_history
 from main.views import _orders_status_filter
 
@@ -103,3 +104,8 @@ class OrdersLifecycleTests(TestCase):
                 pk=trade.pk,
             ).filter(_orders_status_filter("ACTIVE")).exists()
         )
+
+    def test_eod_scan_uses_algoview_client_schema(self):
+        result = close_expired_mis_trades(company_id=999, dry_run=True)
+
+        self.assertEqual(result["scanned"], 0)

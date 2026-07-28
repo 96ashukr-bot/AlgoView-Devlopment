@@ -165,7 +165,6 @@ class LTPService:
         central_price = get_live_price(
             trading_symbol=symbol,
             max_age_seconds=CENTRAL_WEBSOCKET_MAX_AGE_SECONDS,
-            scope_id=None,
         )
         if central_price and central_price.get("is_fresh"):
             try:
