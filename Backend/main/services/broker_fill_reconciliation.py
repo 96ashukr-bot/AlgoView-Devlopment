@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from typing import Any, Iterable, Optional
 
 from django.core.serializers.json import DjangoJSONEncoder
@@ -14,9 +14,9 @@ from main.models import ClientBrokerdetails, ClientTradeSetting, Tradeorderhisto
 from main.services.proxy_utils import build_requests_proxy_config
 
 
-SUCCESS_STATUSES = {"complete", "completed", "success", "traded", "filled"}
+SUCCESS_STATUSES = {"complete", "completed", "success", "traded", "filled", "executed"}
 TERMINAL_FAILURE_STATUSES = {"rejected", "cancelled", "canceled"}
-BROKER_STATUS_KEYS = ("status", "order_status", "orderStatus", "orderstatus", "Status")
+BROKER_STATUS_KEYS = ("status", "order_status", "orderStatus", "orderstatus", "Status", "trade_status", "tradeStatus")
 ORDER_ID_KEYS = (
     "order_id",
     "orderid",
@@ -24,6 +24,8 @@ ORDER_ID_KEYS = (
     "OrderID",
     "brokerOrderId",
     "broker_order_id",
+    "groww_order_id",
+    "growwOrderId",
     "RemoteOrderID",
     "ExchOrderID",
     "nestOrderNumber",
@@ -40,11 +42,16 @@ PRICE_KEYS = (
     "avgTradePrice",
     "averageTradePrice",
     "average_trade_price",
+    "averageTradedPrice",
     "average_traded_price",
     "average_fill_price",
+    "averageFillPrice",
     "traded_price",
     "tradedPrice",
     "TradedPrice",
+    "tradePrice",
+    "TradePrice",
+    "AverageTradePrice",
     "fill_price",
     "filled_price",
     "executed_price",
@@ -181,17 +188,39 @@ def find_broker_fill(orderbook_response: Any, order_id: Any) -> Optional[dict[st
     if not expected_order_id:
         return None
 
+    weighted_total = Decimal("0")
+    total_quantity = 0
+    execution_time = None
+    fill_statuses = set()
     for record in _walk_dicts(orderbook_response):
         if expected_order_id not in _record_order_ids(record):
             continue
         price = _record_price(record)
         status = _record_status(record)
+        if status:
+            fill_statuses.add(status)
         quantity = _record_quantity(record)
+        record_execution_time = _record_execution_time(record)
+        if record_execution_time and (execution_time is None or record_execution_time > execution_time):
+            execution_time = record_execution_time
+        if price is not None and quantity is not None:
+            weighted_total += price * Decimal(quantity)
+            total_quantity += quantity
+            continue
         return {
             "record": record,
             "price": price,
             "quantity": quantity,
             "status": status,
+            "execution_time": execution_time,
+        }
+    if total_quantity > 0:
+        return {
+            "record": {"aggregated_fills": total_quantity},
+            "price": (weighted_total / Decimal(total_quantity)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
+            "quantity": total_quantity,
+            "status": next(iter(fill_statuses)) if len(fill_statuses) == 1 else "executed",
+            "execution_time": execution_time,
         }
     return None
 
@@ -276,8 +305,17 @@ def refresh_trade_fill_from_broker(trade_order: Tradeorderhistory, broker_detail
 
     try:
         adapter = get_broker_adapter(broker_details)
-        orderbook = adapter.get_orderbook(proxy_config=_build_proxy_config(broker_details))
-    except Exception:
+        proxy_config = _build_proxy_config(broker_details)
+        get_order_details = getattr(adapter, "get_order_details", None)
+        if callable(get_order_details):
+            orderbook = get_order_details(trade_order.order_id, trade_order=trade_order, proxy_config=proxy_config)
+        else:
+            orderbook = adapter.get_orderbook(proxy_config=proxy_config)
+    except Exception as exc:
+        message = f"Broker fill reconciliation failed: {exc}"
+        if trade_order.failure_reason != message:
+            trade_order.failure_reason = message
+            trade_order.save(update_fields=["failure_reason"])
         return False
 
     match = find_broker_fill(orderbook, trade_order.order_id)
@@ -287,6 +325,7 @@ def refresh_trade_fill_from_broker(trade_order: Tradeorderhistory, broker_detail
     price = match["price"]
     quantity = match.get("quantity")
     status = match.get("status")
+    execution_time = match.get("execution_time")
     changed = False
     update_fields = []
 
@@ -298,6 +337,10 @@ def refresh_trade_fill_from_broker(trade_order: Tradeorderhistory, broker_detail
         if quantity and trade_order.ExitQty != quantity:
             trade_order.ExitQty = quantity
             update_fields.append("ExitQty")
+            changed = True
+        if status in SUCCESS_STATUSES and execution_time and trade_order.SignalExit_time != execution_time:
+            trade_order.SignalExit_time = execution_time
+            update_fields.append("SignalExit_time")
             changed = True
     elif price is not None:
         if trade_order.Entry_Price != price:
@@ -362,4 +405,8 @@ def refresh_trade_fill_from_broker(trade_order: Tradeorderhistory, broker_detail
 
         order_params = trade_order.order_params if isinstance(trade_order.order_params, dict) else {}
         release_successful_buy_slot(order_params.get("trade_limit_reservation_key"))
+    if str(trade_order.transaction_type or "").upper() == "SELL" and status in SUCCESS_STATUSES:
+        from main.trade_history_service import consolidate_completed_exit_history
+
+        consolidate_completed_exit_history(trade_order)
     return changed

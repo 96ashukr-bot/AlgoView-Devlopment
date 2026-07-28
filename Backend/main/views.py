@@ -5782,13 +5782,12 @@ def _orders_status_filter(bucket):
             | Q(trade_order_status__in=[status.lower() for status in CLOSED_TRADE_ORDER_STATUSES])
             | Q(Exit_type__isnull=False)
             | Q(Exit_Price__isnull=False)
-            | Q(ExitQty__isnull=False)
         ) & ~failed_filter
     return (
         Q(trade_order_status__in=OPEN_TRADE_ORDER_STATUSES)
         | Q(trade_order_status__in=[status.lower() for status in OPEN_TRADE_ORDER_STATUSES])
         | Q(order_status__in=["OPEN", "COMPLETE", "COMPLETED", "TRANSIT", "PENDING", "open", "complete", "completed", "transit", "pending"])
-    ) & Q(Exit_type__isnull=True, Exit_Price__isnull=True, ExitQty__isnull=True) & ~failed_filter
+    ) & Q(Exit_type__isnull=True, Exit_Price__isnull=True) & ~failed_filter
 
 
 def _closed_orders_cumulative_profit(queryset):
@@ -5869,7 +5868,9 @@ class OrdersListView(APIView):
                     "trade_setting__sub_segment",
                 ).filter(client__in=clients),
                 user,
-            ).filter(_orders_status_filter(order_bucket)).order_by("-id")
+            ).filter(_orders_status_filter(order_bucket)).exclude(
+                order_params__original_history_id__isnull=False,
+            ).order_by("-id")
 
             filters = Q()
             if from_date:

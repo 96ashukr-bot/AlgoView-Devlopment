@@ -1,4 +1,4 @@
-import React, { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import React, { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Badge,
   Button,
@@ -27,6 +27,7 @@ import { getAccessToken } from "../../../../Services/authStorage";
 import { H3 } from "../../../../AbstractElements";
 import { getTradeSymbolDisplay } from "../../../../Utils/tradeSymbolDisplay";
 import Swal from "sweetalert2";
+import { useLocation } from "react-router-dom";
 import "./TradeDetails.css";
 
 const ORDER_BUCKETS = [
@@ -109,6 +110,7 @@ const isKillSwitchEligible = (order) => {
 };
 
 const Orders = () => {
+  const location = useLocation();
   const [orders, setOrders] = useState([]);
   const [brokers, setBrokers] = useState([]);
   const [groupServices, setGroupServices] = useState([]);
@@ -158,10 +160,12 @@ const Orders = () => {
   const visibleTradeIdsSignature = visibleTradeIds.join(",");
   const allEligibleSelected = eligibleTradeIds.length > 0 && eligibleTradeIds.every((id) => selectedTradeIds.includes(id));
 
-  const fetchOrders = async () => {
-    setLoading(true);
-    setCumulativeProfit(null);
-    setOverallRunningPnl(null);
+  const fetchOrders = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) {
+      setLoading(true);
+      setCumulativeProfit(null);
+      setOverallRunningPnl(null);
+    }
     try {
       const response = await getOrders(
         currentPage,
@@ -179,19 +183,28 @@ const Orders = () => {
       setOrders(nextOrders);
       setCumulativeProfit(orderBucket === "CLOSED" ? decimalOrNull(response?.cumulative_profit) : null);
       setOverallRunningPnl(orderBucket === "ACTIVE" ? decimalOrNull(response?.overall_running_pnl) : null);
-      setSelectedTradeIds([]);
+      if (silent) {
+        const nextEligibleIds = new Set(
+          nextOrders.filter(isKillSwitchEligible).map((order) => order.id).filter(Boolean)
+        );
+        setSelectedTradeIds((current) => current.filter((id) => nextEligibleIds.has(id)));
+      } else {
+        setSelectedTradeIds([]);
+      }
       setTotalPages(Math.max(1, Math.ceil((response?.count || 0) / itemsPerPage)));
     } catch (error) {
-      setOrders([]);
-      setCumulativeProfit(null);
-      setOverallRunningPnl(null);
-      setSelectedTradeIds([]);
-      setTotalPages(1);
+      if (!silent) {
+        setOrders([]);
+        setCumulativeProfit(null);
+        setOverallRunningPnl(null);
+        setSelectedTradeIds([]);
+        setTotalPages(1);
+      }
       console.error("Failed to fetch orders:", error);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
-  };
+  }, [currentPage, itemsPerPage, orderBucket, formData.fromDate, formData.toDate, formData.broker, formData.indexSymbol, formData.groupService, formData.clientId, searchQuery]);
 
   const fetchFilterData = async () => {
     try {
@@ -215,7 +228,20 @@ const Orders = () => {
 
   useEffect(() => {
     fetchOrders();
-  }, [currentPage, itemsPerPage, orderBucket, formData, searchQuery]);
+  }, [fetchOrders]);
+
+  useEffect(() => {
+    if (!location.state?.refreshAfterTradeExecution) return undefined;
+    let refreshCount = 0;
+    const intervalId = window.setInterval(() => {
+      refreshCount += 1;
+      fetchOrders({ silent: true });
+      if (refreshCount >= 10) {
+        window.clearInterval(intervalId);
+      }
+    }, 2000);
+    return () => window.clearInterval(intervalId);
+  }, [fetchOrders, location.state]);
 
   useEffect(() => {
     let disposed = false;

@@ -173,7 +173,12 @@ const ManualTrade = () => {
       const response = await executeManualTradeBatch(preview.id, selectedClientIds);
       setPreview(response);
       await loadInitialData();
-      navigate("/tradedetails/trade-history");
+      navigate("/tradedetails/orders", {
+        state: {
+          refreshAfterTradeExecution: true,
+          tradeExecutionBatchId: preview.id,
+        },
+      });
     } catch (error) {
       Swal.fire("Error", error.message, "error");
     } finally {
