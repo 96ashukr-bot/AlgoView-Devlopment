@@ -3,11 +3,15 @@ import os
 from time import sleep
 from dhanhq import dhanhq 
 import logging
+import time
 from django.conf import settings
-import pandas as pd
 import requests
 
-from main.broker_instrument_cache import ensure_dhan_instruments_file
+from main.broker_instrument_cache import (
+    ensure_dhan_instruments_file,
+    get_dhan_instrument,
+    get_dhan_lot_size,
+)
 from main.brokers.exchange_mapping import normalize_broker_exchange
 from main.models import CompanySmtpDetails
 from main.tasks import send_trade_email_async
@@ -16,7 +20,8 @@ from main.services.option_ltp_fallback import fetch_nse_option_chain_ltp
 from main.trade_history_service import save_trade_order_history
 logger = logging.getLogger('main')
 DHAN_LTP_URL = "https://api.dhan.co/v2/marketfeed/ltp"
-DHAN_NON_FINAL_STATUSES = {"transit", "pending"}
+DHAN_NON_FINAL_STATUSES = {"", "unknown", "transit", "pending", "open", "validation pending"}
+DHAN_TERMINAL_FAILURE_STATUSES = {"rejected", "cancelled", "canceled", "expired"}
 
 
 def fetch_dhan_option_ltp(
@@ -170,25 +175,33 @@ def _mark_dhan_token_expired_if_needed(user, message):
             logger.warning(f"{user} : Dhan token marked expired after broker returned Invalid Token.")
     except Exception as exc:
         logger.exception(f"{user} : Failed to mark Dhan token expired: {exc}")
-        
+
+
+def _schedule_dhan_order_reconciliation(history, order_id, user=None):
+    if not history or not getattr(history, "id", None):
+        return
+    try:
+        from main.tasks import reconcile_broker_order_task
+
+        reconcile_broker_order_task.apply_async(
+            kwargs={"trade_history_id": history.id},
+            countdown=5,
+        )
+    except Exception as exc:
+        logger.warning(
+            "%s : Could not queue Dhan broker reconciliation for order %s: %s",
+            user,
+            order_id,
+            exc,
+        )
+
+
 def get_trading_symbol_security_id(symbol, segment, Exch,expiry_date, user=None):
     logger.info(f"{user}: the get_trading_symbol_security_id is calling now !")
     try:
-        csv_file_path = ensure_dhan_instruments_file()
-        df = pd.read_csv(csv_file_path, low_memory=False)
-        normalized_symbol = str(symbol or "").strip().replace(" ", "").replace("-", "").upper()
-        
-        df['SEM_TRADING_SYMBOL'] = df['SEM_TRADING_SYMBOL'].astype(str).str.strip().str.replace(r"[^\w]", "", regex=True).str.upper()
-        df['SEM_EXPIRY_DATE'] = pd.to_datetime(df['SEM_EXPIRY_DATE'], errors="coerce").dt.strftime('%Y-%m-%d')
-        df = df[df['SEM_EXPIRY_DATE'].notna()]
-
-        filtered_df = df[
-            (df['SEM_TRADING_SYMBOL'] == normalized_symbol) & 
-            (df['SEM_EXPIRY_DATE'] == expiry_date)
-        ]
-        
-        if not filtered_df.empty:
-            SECURITY_ID = filtered_df.iloc[0]['SEM_SMST_SECURITY_ID']
+        instrument = get_dhan_instrument(symbol, expiry_date)
+        if instrument:
+            SECURITY_ID = instrument["security_id"]
             logger.info(f"{user}: SECURITY_ID is not empty : {SECURITY_ID}")
             return {"status": "success", "SECURITY_ID": SECURITY_ID}
         else:
@@ -205,6 +218,21 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
     strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type, Entry_price, Exit_price, 
     EntryQty, ExitQty, webhook_signal, Exchange, Segment,Index_Symbol, triggerPrice, trade_order_status, history_id,
     proxy_config=None):
+    timing_started = time.perf_counter()
+    timing_checkpoint = timing_started
+
+    def log_timing(stage):
+        nonlocal timing_checkpoint
+        now_value = time.perf_counter()
+        logger.info(
+            "%s : Dhan execution timing stage=%s stage_ms=%.1f total_ms=%.1f",
+            user,
+            stage,
+            (now_value - timing_checkpoint) * 1000,
+            (now_value - timing_started) * 1000,
+        )
+        timing_checkpoint = now_value
+
     logger.info(f'{user} : dhan api  Exchange is:: {Exchange} product typweeee {product_type}')
     if not proxy_config:
         return {"data": {"status": "Failed", "message": "Proxy/static-IP execution route is required for Dhan orders."}}
@@ -234,6 +262,7 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
             if proxy_config and hasattr(dhan, "session"):
                 dhan.session.proxies.update(proxy_config)
             logger.info(f"{user}: API key and access token are valid.")
+            log_timing("authentication")
         except Exception as e:
             logger.error(f"{user}: Error validating API key or access token: {str(e)}")
             status = "Failed"
@@ -248,6 +277,7 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
             return response
 
         trading_symbol = get_trading_symbol_security_id(trade_symbol, dhan,Exchange,expiry_date, user)
+        log_timing("instrument_lookup")
         if not trading_symbol:
             logger.error(f"{user} : trading_symbol details not found for {trade_symbol}")
             message = "Instrument details not found"
@@ -304,6 +334,7 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
             )
         except Exception as e:
             logger.warning(f"{user} : Dhan LTP fetch failed for security_id {security_id}: {str(e)}")
+        log_timing("ltp_resolution")
 
         if requested_order_type == "LIMIT":
             reference_price = resolve_limit_reference_price(trade_symbol, ltp, LivePrice, Entry_price, Exit_price)
@@ -348,39 +379,26 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
         }
         logger.info(f"{user} : Final order_params dhan order:{order_params}")
         try:    
-            # Validate quantity against lot size using security_id
+            # Validate quantity against the prebuilt security-id index.
             try:
-                # Load lot size data from CSV
-                logger.info(f"{user} : Load lot size data from CSV")
-                csv_path = ensure_dhan_instruments_file()
-                lot_data = pd.read_csv(csv_path, dtype={'SEM_SMST_SECURITY_ID': str})
-                
-                # Convert security_id to string for comparison
-                security_id_str = str(int(security_id)) if security_id else None
-                
-                if security_id_str:
-                    # Find the instrument in the CSV by security_id
-                    instrument_data = lot_data[lot_data['SEM_SMST_SECURITY_ID'].astype(str) == security_id_str]
-                    logger.info(f"{user} : instrument_data")
-                    if not instrument_data.empty:
-                        lot_size = float(instrument_data.iloc[0]['SEM_LOT_UNITS'])
-                        if quantity % lot_size != 0:
-                            message = f"{user} : Invalid quantity {quantity}. Must be multiple of lot size {lot_size}"
-                            logger.error(message)
-                            response = {"data": {"status": "Failed", "message": message}}
-                            save_trade_order_history(LivePrice, group_service, transaction_type, "Failed", 
-                                                user, trade_symbol, order_id, "Failed", None, message,
-                                                strategy, Entry_type, Exit_type, Entry_price, Exit_price, 
-                                                EntryQty, ExitQty, webhook_signal, Exchange, Segment, 
-                                                Index_Symbol, order_params, broker="dhan", history_id=history_id)
-                            return response
-                    else:
-                        logger.warning(f"{user} : No lot size data found for security_id {security_id_str} in CSV")
-                else:
-                    logger.warning(f"{user} : No security_id available for lot size validation")
+                lot_size = get_dhan_lot_size(security_id, symbol=trade_symbol, expiry_date=expiry_date)
+                if lot_size and quantity % lot_size != 0:
+                    message = f"{user} : Invalid quantity {quantity}. Must be multiple of lot size {lot_size}"
+                    logger.error(message)
+                    response = {"data": {"status": "Failed", "message": message}}
+                    save_trade_order_history(LivePrice, group_service, transaction_type, trade_order_status,
+                                        user, trade_symbol, order_id, "Failed", None, message,
+                                        strategy, Entry_type, Exit_type, Entry_price, Exit_price,
+                                        EntryQty, ExitQty, webhook_signal, Exchange, Segment,
+                                        Index_Symbol, order_params, broker="dhan", history_id=history_id)
+                    return response
+                if lot_size is None:
+                    logger.warning(f"{user} : No lot size data found for security_id {security_id}")
             except Exception as e:
                 logger.warning(f"{user} : Could not validate lot size: {str(e)}")
+            log_timing("lot_validation")
             order_response = dhan.place_order(**order_params)
+            log_timing("broker_submission")
             logger.info(f"{user} : order_response {order_response}")
             # Fetch order ID and validate response
             if order_response.get('status') == 'failure':
@@ -408,7 +426,32 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
                 return response
 
             logger.info(f"{user} : order id {order_id}")
+            if str(transaction_type).upper() == "BUY":
+                status = "open"
+                message = "Dhan accepted the order. Confirmation is continuing in the background."
+                history = save_trade_order_history(
+                    LivePrice, group_service, transaction_type, trade_order_status,
+                    user, trade_symbol, order_id, status, order_response, message,
+                    strategy, Entry_type, Exit_type, Entry_price, Exit_price,
+                    EntryQty, ExitQty, webhook_signal, Exchange, Segment,
+                    Index_Symbol, order_params, broker="dhan", history_id=history_id,
+                )
+                _schedule_dhan_order_reconciliation(history, order_id, user)
+                return {
+                    "data": {
+                        "status": "open",
+                        "broker_status": "accepted",
+                        "reconciliation_scheduled": True,
+                        "message": message,
+                        "order_id": order_id,
+                        "order_type": requested_order_type,
+                        "price": price if requested_order_type == "LIMIT" else None,
+                        "ltp": ltp,
+                        "reference_price": ltp,
+                    }
+                }
             order_history_response, res_data = _fetch_dhan_order_details_with_poll(order_id, dhan, user)
+            log_timing("broker_confirmation")
             logger.info(f"{user} : Order history response: {order_history_response}")
 
             if not res_data:

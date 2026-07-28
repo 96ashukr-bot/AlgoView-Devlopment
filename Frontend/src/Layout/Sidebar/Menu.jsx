@@ -55,6 +55,7 @@ export const MENUITEMS = [
         active: false,
         children: [
           { path: `/tradedetails/signals`, title: "Signals", type: "link" },
+          { path: `/tradedetails/orders`, title: "Orders", type: "link" },
           { path: `/tradedetails/trade-history`, title: "Trade History", type: "link" },
           { path: `/tradedetails/complete-trade-history`, title: "Complete Trade", type: "link" },
           { path: `/tradedetails/trading-status`, title: "Trading Status", type: "link" },

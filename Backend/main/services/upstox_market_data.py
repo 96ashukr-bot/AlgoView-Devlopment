@@ -35,9 +35,12 @@ logger = logging.getLogger("main.market_data")
 OPEN_ORDER_STATUSES = {
     "complete",
     "completed",
+    "executed",
+    "filled",
     "open",
     "pending",
     "put order req received",
+    "success",
     "traded",
     "transit",
 }

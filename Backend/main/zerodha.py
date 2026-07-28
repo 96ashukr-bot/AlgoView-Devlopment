@@ -5,11 +5,13 @@ from main.broker_order_utils import extract_ltp_from_quote_payload, is_option_sy
 from main.services.option_ltp_fallback import cache_option_ltp, fetch_nse_option_chain_ltp, get_cached_option_ltp
 from main.services.live_price_cache import get_live_price
 from main.services.upstox_market_data import UpstoxInstrumentResolver, fetch_central_upstox_option_ltp
-from main.broker_instrument_cache import load_zerodha_instruments, save_zerodha_instruments
+from main.broker_instrument_cache import get_zerodha_instrument
 from main.trade_history_service import save_trade_order_history
 import logging
+import re
 import requests
 import time
+import threading
 from django.db import transaction
 logger = logging.getLogger('main')
 
@@ -19,6 +21,9 @@ ZERODHA_MAX_LIMIT_BUFFER_PERCENTAGE = 0.5
 ZERODHA_ORDER_HISTORY_ATTEMPTS = 3
 ZERODHA_ORDER_HISTORY_RETRY_SECONDS = 1
 ZERODHA_TERMINAL_ORDER_STATUSES = {"COMPLETE", "REJECTED", "CANCELLED", "CANCELED"}
+ZERODHA_SESSION_VALIDATION_TTL_SECONDS = 60
+_zerodha_session_lock = threading.Lock()
+_zerodha_session_validated_at = {}
 
 
 def _zerodha_buffer_percentage(buffer_percentage=None):
@@ -53,32 +58,50 @@ def _safe_zerodha_limit_input(explicit_price, reference_price, trading_symbol, t
 
 def get_trading_symbol(exchange, symbol, kite, user=None):
     try:
-        logger.info(f"[{user}] Fetching instruments from exchange: {exchange}")
-        instruments = kite.instruments(exchange)
-        try:
-            save_zerodha_instruments(exchange, instruments)
-        except Exception as cache_exc:
-            logger.warning(f"[{user}] Unable to cache Zerodha instruments for {exchange}: {cache_exc}")
-        logger.info(f"[{user}] Instruments fetched. Searching for {symbol}")
-    except Exception as e:
-        logger.warning(f"[{user}] Zerodha live instrument fetch failed for '{exchange}', trying cached instruments: {e}")
-        instruments = load_zerodha_instruments(exchange)
-        if not instruments:
-            logger.exception(f"[{user}] Exception occurred while fetching trading symbol '{symbol}' from exchange '{exchange}'")
-            return None
-
-    try:
-        for instrument in instruments:
-            if instrument['tradingsymbol'] == symbol:
-                logger.info(f"[{user}] Trading Symbol Found: {instrument['tradingsymbol']}")
-                return instrument['tradingsymbol']
-
-        logger.warning(f"[{user}] Trading symbol '{symbol}' not found in exchange '{exchange}'")
+        instrument = get_zerodha_instrument(exchange, symbol, kite=kite)
+        if instrument:
+            logger.info(f"[{user}] Trading Symbol Found: {instrument['tradingsymbol']}")
+            return instrument["tradingsymbol"]
+        normalized_symbol = str(symbol or "").strip().upper()
+        if normalized_symbol and re.fullmatch(r"[A-Z0-9&_-]+", normalized_symbol):
+            logger.warning(
+                "[%s] Trading symbol %s is not in the current Zerodha snapshot; "
+                "submitting it while the index refreshes in the background.",
+                user,
+                normalized_symbol,
+            )
+            return normalized_symbol
+        logger.warning(f"[{user}] Trading symbol '{symbol}' is invalid for exchange '{exchange}'")
         return None
-
-    except Exception as e:
+    except Exception:
         logger.exception(f"[{user}] Exception occurred while reading trading symbol '{symbol}' from exchange '{exchange}'")
         return None
+
+
+def _validate_zerodha_session(kite, api_key, access_token):
+    """Avoid a profile round trip on every order while periodically revalidating."""
+    session_key = (str(api_key), str(access_token))
+    now_value = time.monotonic()
+    with _zerodha_session_lock:
+        validated_at = _zerodha_session_validated_at.get(session_key)
+        if validated_at is not None and now_value - validated_at < ZERODHA_SESSION_VALIDATION_TTL_SECONDS:
+            return
+    kite.profile()
+    with _zerodha_session_lock:
+        _zerodha_session_validated_at[session_key] = now_value
+
+
+def _invalidate_zerodha_session(api_key, access_token):
+    with _zerodha_session_lock:
+        _zerodha_session_validated_at.pop((str(api_key), str(access_token)), None)
+
+
+def _is_zerodha_auth_error(exc):
+    status_code = getattr(exc, "status_code", None) or getattr(exc, "code", None)
+    if status_code in (401, 403):
+        return True
+    message = str(exc or "").lower()
+    return any(marker in message for marker in ("invalid token", "token is invalid", "token expired", "api key", "permission denied"))
     
 def get_order_details(order_id, kite, user=None):
     last_error = None
@@ -241,6 +264,21 @@ def place_zerodha_orders(
     Exit_type, Entry_price, Exit_price, EntryQty, ExitQty, webhook_signal, Exchange,
     Segment, Index_Symbol, triggerPrice, trade_order_status, history_id, proxy_config=None,
     buffer_percentage=None):
+    timing_started = time.perf_counter()
+    timing_checkpoint = timing_started
+
+    def log_timing(stage):
+        nonlocal timing_checkpoint
+        now_value = time.perf_counter()
+        logger.info(
+            "[%s] Zerodha execution timing stage=%s stage_ms=%.1f total_ms=%.1f",
+            user,
+            stage,
+            (now_value - timing_checkpoint) * 1000,
+            (now_value - timing_started) * 1000,
+        )
+        timing_checkpoint = now_value
+
     logger.info(f"[{user}] Starting Zerodha order for symbol: {symbol}, Index: {Index_Symbol}")
     if not proxy_config:
         return {"data": {"status": "Failed", "message": "Proxy/static-IP execution route is required for Zerodha orders."}}
@@ -268,8 +306,9 @@ def place_zerodha_orders(
         try:
             kite = KiteConnect(api_key=Api_key, proxies=proxy_config)
             kite.set_access_token(access_token)
-            profile = kite.profile()
+            _validate_zerodha_session(kite, Api_key, access_token)
             logger.info(f"[{user}] API key and access token validated successfully.")
+            log_timing("authentication")
         except Exception as e:
             logger.exception(f"[{user}] Error validating API key or access token.")
             status = "Unauthorized"
@@ -283,6 +322,7 @@ def place_zerodha_orders(
 
         logger.info(f"[{user}] Looking up trading symbol: {trade_symbol}")
         trading_symbol = get_trading_symbol(Exchange, trade_symbol, kite, user)
+        log_timing("instrument_lookup")
 
         if not trading_symbol:
             logger.error(f"[{user}] Trading symbol not found for {trade_symbol}")
@@ -309,6 +349,7 @@ def place_zerodha_orders(
             )
         except Exception as e:
             logger.warning(f"[{user}] Zerodha LTP fetch failed for {trading_symbol}: {str(e)}")
+        log_timing("ltp_resolution")
 
         if requested_order_type == "LIMIT":
             reference_price = resolve_limit_reference_price(trading_symbol, ltp, LivePrice, Entry_price, Exit_price)
@@ -339,6 +380,7 @@ def place_zerodha_orders(
                 else order_params
             )
             order_response = kite.place_order(variety=kite.VARIETY_REGULAR, **order_params)
+            log_timing("broker_submission")
             order_id = order_response  # Assuming it returns an order_id
             logger.info(f"[{user}] Order placed. Order ID: {order_id}")
 
@@ -351,6 +393,7 @@ def place_zerodha_orders(
                 return response
 
             order_history_response = get_order_details(order_id, kite, user)
+            log_timing("broker_confirmation")
             logger.info(f"[{user}] Fetched order history: {order_history_response}")
 
             if isinstance(order_history_response, dict) and str(order_history_response.get("status", "")).lower() == "failed":
@@ -465,8 +508,15 @@ def place_zerodha_orders(
 
         except Exception as e:
             logger.exception(f"[{user}] Exception during order placement")
-            response = {"data": {"status": "Failed", "message": str(e)}}
-            save_trade_order_history(LivePrice, group_service, transaction_type, trade_order_status, user, trade_symbol, order_id, "Failed", None, str(e),
+            placement_status = "Unauthorized" if _is_zerodha_auth_error(e) else "Failed"
+            if placement_status == "Unauthorized":
+                _invalidate_zerodha_session(Api_key, access_token)
+                ClientBrokerdetails.objects.filter(
+                    client=user,
+                    broker_name__broker_name__iexact="Zerodha",
+                ).update(isTokenExpired=True)
+            response = {"data": {"status": placement_status, "message": str(e)}}
+            save_trade_order_history(LivePrice, group_service, transaction_type, trade_order_status, user, trade_symbol, order_id, placement_status, None, str(e),
                                      strategy, Entry_type, Exit_type, Entry_price, Exit_price, EntryQty, ExitQty,
                                      webhook_signal, Exchange, Segment, Index_Symbol, history_order_params if "history_order_params" in locals() else order_params, broker="zerodha", history_id=history_id)
             return response

@@ -150,6 +150,22 @@ class OrderService:
         """
         request_id = request_id or str(uuid.uuid4())[:8]
         set_request_context(request_id=request_id, client_id=client_id)
+        timing_started = time.perf_counter()
+        timing_checkpoint = timing_started
+
+        def log_timing(stage: str) -> None:
+            nonlocal timing_checkpoint
+            now_value = time.perf_counter()
+            logger.info(
+                "Angel execution timing",
+                user_id=client_id,
+                symbol=symbol,
+                request_id=request_id,
+                stage=stage,
+                stage_ms=round((now_value - timing_checkpoint) * 1000, 1),
+                total_ms=round((now_value - timing_started) * 1000, 1),
+            )
+            timing_checkpoint = now_value
 
         logger.info(
             "Place order request",
@@ -164,6 +180,8 @@ class OrderService:
         existing = None
 
         try:
+            self._contract_manager.initialize(blocking=True)
+            log_timing("contract_index_ready")
             if not symbol:
                 return self._error_response("Symbol is required.", request_id, error_code="INVALID_INPUT")
             if side.upper() not in {TransactionType.BUY.value, TransactionType.SELL.value}:
@@ -175,10 +193,15 @@ class OrderService:
                 client_id=client_id,
                 api_key=api_key,
                 broker_details=broker_details,
+                # The periodic session warmer performs remote validation.
+                # The latency-sensitive order path uses the locally cached,
+                # unexpired session and only rebuilds it when unavailable.
+                verify_remote=False,
                 proxy_config=proxy_config,
             )
             if session_result.get("status") != "success":
                 return self._error_response(session_result.get("message", "Invalid or expired session"), request_id)
+            log_timing("authentication")
 
             session = session_result.get("session")
             smart_connect = session.smart_connect
@@ -258,6 +281,7 @@ class OrderService:
                     error_code="INVALID_CONTRACT",
                     contract_match=contract_resolution,
                 )
+            log_timing("contract_lookup")
             if not contract.token:
                 return self._error_response("Symbol token is missing for the resolved contract.", request_id, error_code="INVALID_CONTRACT")
             if ENFORCE_LOT_SIZE and contract.lot_size and int(quantity) % int(contract.lot_size) != 0:
@@ -362,6 +386,7 @@ class OrderService:
                         request_id,
                         error_code="INVALID_LTP",
                     )
+            log_timing("ltp_resolution")
 
             if requested_order_type == OrderType.MARKET.value and ltp is None:
                 if existing:
@@ -496,6 +521,8 @@ class OrderService:
                         error=last_error,
                     )
 
+            log_timing("broker_submission")
+
             if not result and self._is_transient_error(last_error or ""):
                 reconciled_broker_order = self._find_matching_broker_order(smart_connect, order_params)
                 if reconciled_broker_order:
@@ -512,7 +539,30 @@ class OrderService:
 
             if result:
                 order_id = self._extract_order_id(result)
+                if side.upper() == TransactionType.BUY.value:
+                    if check_duplicate and existing:
+                        self._idempotency_manager.record_execution(existing.idempotency_key, order_id, "open")
+                    return {
+                        "status": "open",
+                        "order_id": order_id,
+                        "message": "Angel One accepted the order. Confirmation is continuing in the background.",
+                        "symbol": contract.symbol,
+                        "strike": strike_value,
+                        "option_type": option_type_value,
+                        "price": price,
+                        "quantity": quantity,
+                        "side": side,
+                        "request_id": request_id,
+                        "order_type": resolved_order_type,
+                        "requested_order_type": requested_order_type,
+                        "product_type": normalized_product_type,
+                        "buffer_percentage_used": normalized_buffer if resolved_order_type == OrderType.LIMIT.value else None,
+                        "ltp": ltp,
+                        "contract_match": contract_resolution,
+                        "broker_status": "accepted",
+                    }
                 broker_order = reconciled_broker_order or self._wait_for_broker_order_status(smart_connect, order_id)
+                log_timing("broker_confirmation")
                 broker_status = self._broker_order_status(broker_order)
                 broker_message = self._broker_order_message(broker_order)
                 if broker_status in {"rejected", "cancelled", "failed"}:

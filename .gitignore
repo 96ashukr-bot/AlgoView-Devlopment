@@ -23,6 +23,7 @@ media/
 # Broker instrument caches generated on servers
 Backend/main/upstox_*_instruments.json
 Backend/main/groww_instruments.csv
+Backend/main/zerodha_*_instruments.json
 
 # ========================
 # Node / React

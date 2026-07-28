@@ -140,6 +140,8 @@ class SessionManager:
     _instance_lock = threading.Lock()
     _fallback_store: Dict[str, Dict[str, Any]] = {}
     _fallback_store_lock = threading.RLock()
+    _local_session_locks: Dict[str, threading.RLock] = {}
+    _local_session_locks_guard = threading.Lock()
 
     def __init__(self):
         redis_url = (getattr(settings, "REDIS_URL", "") or "").strip()
@@ -325,13 +327,21 @@ class SessionManager:
 
     def _get_lock(self, session_key: str):
         try:
+            self._redis.ping()
             return self._redis.lock(
                 self._lock_key(session_key),
                 timeout=self._lock_timeout,
                 blocking_timeout=self._lock_wait,
             )
         except Exception:
-            return _LocalSessionLock()
+            # Preserve single-flight authentication even when Redis is
+            # temporarily unavailable. This protects concurrent orders inside
+            # the current web/worker process from duplicating broker logins.
+            with self._local_session_locks_guard:
+                return self._local_session_locks.setdefault(
+                    session_key,
+                    threading.RLock(),
+                )
 
     def _build_session(
         self,
@@ -556,6 +566,15 @@ class SessionManager:
                         validated=False,
                         proxy_config=proxy_config,
                     )
+                    if not verify_remote and candidate.is_valid():
+                        candidate.remote_validation_due_at = timezone.now()
+                        self._persist_session(candidate)
+                        breaker.record_success()
+                        return {
+                            "status": "success",
+                            "session": candidate,
+                            "source": "persisted_tokens_fast_path",
+                        }
                     if self._remote_validate(candidate):
                         self._persist_session(candidate)
                         breaker.record_success()

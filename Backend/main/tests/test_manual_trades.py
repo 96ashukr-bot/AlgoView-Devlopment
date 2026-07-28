@@ -9,7 +9,11 @@ from main.models import (
     Broker, ClientBrokerdetails, ClientTradeSetting, ExecutionNode, GroupService,
     ManualTradeBatch, ManualTradeResult, Role, Segment, SubSegment, User,
 )
-from main.manual_trade_service import _build_execution_request
+from main.manual_trade_service import (
+    _build_execution_request,
+    _execute_manual_trade_result,
+    dispatch_manual_trade_batch,
+)
 
 
 class ManualTradeTests(APITestCase):
@@ -185,6 +189,7 @@ class ManualTradeTests(APITestCase):
         self.assertEqual(result["client_id"], self.client_user.id)
         self.assertEqual(result["request_snapshot"]["quantity"], 50)
         self.assertEqual(result["request_snapshot"]["order_type"], "LIMIT")
+        self.assertEqual(result["request_snapshot"]["product_type"], "INTRADAY")
 
     def test_midnight_ist_expiry_does_not_shift_to_previous_utc_date(self):
         self.setting.expiry_date = datetime(2026, 7, 13, 18, 30, tzinfo=datetime_timezone.utc)
@@ -203,9 +208,8 @@ class ManualTradeTests(APITestCase):
         self.assertEqual(request.order_params["expiry"], "2026-07-14")
         self.assertEqual((request.day, request.month, request.year), ("14", "Jul", "26"))
 
-    @mock.patch("main.tasks.process_manual_trade_batch_task.delay")
-    def test_execute_can_only_be_confirmed_once(self, mock_delay):
-        mock_delay.return_value.id = "task-1"
+    @mock.patch("main.manual_trade_service.dispatch_manual_trade_batch")
+    def test_execute_can_only_be_confirmed_once(self, mock_dispatch):
         preview = self.client.post(reverse("manual-trade-preview"), {
             "group_service_id": self.group.id, "symbol": "NIFTY",
             "action": "BUY_PE", "strike_price": "22800",
@@ -217,13 +221,12 @@ class ManualTradeTests(APITestCase):
 
         self.assertEqual(first.status_code, 202)
         self.assertEqual(second.status_code, 409)
-        self.assertEqual(mock_delay.call_count, 1)
-        self.assertEqual(ManualTradeBatch.objects.get(pk=batch_id).status, ManualTradeBatch.STATUS_QUEUED)
+        self.assertEqual(mock_dispatch.call_count, 1)
+        self.assertEqual(ManualTradeBatch.objects.get(pk=batch_id).status, ManualTradeBatch.STATUS_PROCESSING)
         self.assertEqual(ManualTradeResult.objects.filter(batch_id=batch_id, status=ManualTradeResult.STATUS_PENDING).count(), 1)
 
-    @mock.patch("main.tasks.process_manual_trade_batch_task.delay")
-    def test_execute_only_queues_selected_clients(self, mock_delay):
-        mock_delay.return_value.id = "task-selected"
+    @mock.patch("main.manual_trade_service.dispatch_manual_trade_batch")
+    def test_execute_only_queues_selected_clients(self, mock_dispatch):
         second_client = User.objects.create_user(
             email="manual-client-two@example.com", firstName="Second", lastName="Client",
             phoneNumber="9330000003", password="Pass@123", role=self.client_user.role,

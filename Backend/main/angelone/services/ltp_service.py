@@ -25,8 +25,10 @@ from ..constants import (
     LTP_RETRY_DELAY_SECONDS,
     DEFAULT_TICK_SIZE,
 )
+from main.services.live_price_cache import get_live_price
 
 logger = TradingLogger("ltp_service")
+CENTRAL_WEBSOCKET_MAX_AGE_SECONDS = 3
 
 
 @dataclass
@@ -158,7 +160,27 @@ class LTPService:
         Returns:
             LTP value or None
         """
-        # Check cache first
+        # Prefer the shared Upstox WebSocket price. This is a local cache read
+        # and avoids a slower broker quote API request when the tick is fresh.
+        central_price = get_live_price(
+            trading_symbol=symbol,
+            max_age_seconds=CENTRAL_WEBSOCKET_MAX_AGE_SECONDS,
+            scope_id=None,
+        )
+        if central_price and central_price.get("is_fresh"):
+            try:
+                central_ltp = float(central_price.get("ltp") or 0)
+            except (TypeError, ValueError):
+                central_ltp = 0
+            if central_ltp > 0:
+                self._cache.put(
+                    token,
+                    LTPData(token=token, symbol=symbol, ltp=central_ltp, timestamp=time.time()),
+                )
+                logger.debug("Central websocket LTP cache hit", token=token, symbol=symbol, ltp=central_ltp)
+                return central_ltp
+
+        # Check the short process-local broker-price cache next.
         cached = self._cache.get(token)
         if cached:
             logger.debug(

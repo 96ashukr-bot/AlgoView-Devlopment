@@ -13,6 +13,7 @@ export const MENUITEMSNEW = [
         active: false,
         children: [
           { path: `/tradedetails/signals`, title: "Signals", type: "link" },
+          { path: `/tradedetails/orders`, title: "Orders", type: "link" },
           { path: `/tradedetails/client-trade-history`, title: "Trade History", type: "link" },
           { path: `/tradedetails/complete-trade-history`, title: "Complete Trade", type: "link" },
         ],

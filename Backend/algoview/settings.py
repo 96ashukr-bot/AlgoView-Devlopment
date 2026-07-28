@@ -394,6 +394,11 @@ CELERY_TASK_TIME_LIMIT = config('CELERY_TASK_TIME_LIMIT', default=300, cast=int)
 CELERY_TASK_SOFT_TIME_LIMIT = config('CELERY_TASK_SOFT_TIME_LIMIT', default=240, cast=int)
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 
+# Manual trade fan-out intentionally has no Celery dependency. Keep this below
+# the database and execution-node connection limits; each worker handles one
+# client broker request at a time.
+MANUAL_TRADE_DISPATCH_WORKERS = config('MANUAL_TRADE_DISPATCH_WORKERS', default=32, cast=int)
+
 CONTACT_NUM="+919988746583"
 REDIRECT_URL=config('BROKER_REDIRECT_URL', default="https://app.sparkstechnologies.co.in/api/broker/callback/")
 LOGIN_LINK="https://www.admin.algoview.in/login"

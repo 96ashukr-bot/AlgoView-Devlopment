@@ -2,12 +2,14 @@
 import requests
 import json
 import re
+import time
 from django.shortcuts import redirect
 from django.http import JsonResponse
 from main.models import CompanySmtpDetails
 from main.broker_instrument_cache import load_upstox_instruments
 from main.broker_order_utils import extract_ltp_from_quote_payload, normalize_order_type, resolve_limit_price, resolve_limit_reference_price
 from main.services.option_ltp_fallback import cache_option_ltp
+from main.services.live_price_cache import get_live_price
 from main.trade_history_service import save_trade_order_history
 import logging
 logger = logging.getLogger('main')
@@ -42,6 +44,21 @@ def place_upstox_orders(LivePrice,group_service,
     access_token, trade_symbol, transaction_type, symbol, quantity, strategy, ordertype,
     product_type, price, user, Lots, Entry_type, Exit_type,Entry_price,Exit_price, EntryQty,ExitQty,webhook_signal, Exchange,
     Segment, Index_Symbol, triggerPrice,trade_order_status, history_id, proxy_config=None):
+    timing_started = time.perf_counter()
+    timing_checkpoint = timing_started
+
+    def log_timing(stage):
+        nonlocal timing_checkpoint
+        now_value = time.perf_counter()
+        logger.info(
+            "%s : Upstox execution timing stage=%s stage_ms=%.1f total_ms=%.1f",
+            user,
+            stage,
+            (now_value - timing_checkpoint) * 1000,
+            (now_value - timing_started) * 1000,
+        )
+        timing_checkpoint = now_value
+
     if not proxy_config:
         return {"data": {"status": "Failed", "message": "Proxy/static-IP execution route is required for Upstox orders."}}
     try:
@@ -62,6 +79,7 @@ def place_upstox_orders(LivePrice,group_service,
             "MCX_FO": "MCX",
         }.get(str(Exchange or "").upper(), "NSE")
         result = fetch_instrument_details(trade_symbol, upstox_exchange, user)
+        log_timing("instrument_lookup")
         
         logger.info(f"{user} : The exchange result is : {result}")
         if result.get("trading_symbol"):
@@ -94,25 +112,33 @@ def place_upstox_orders(LivePrice,group_service,
         logger.info(f"{user} : Fetched Instrument Key: {instrument_key}")
         requested_order_type = normalize_order_type(ordertype)
         ltp = None
-        try:
-            quote_response = requests.get(
-                MARKET_QUOTE_LTP_URL,
-                headers={"Authorization": f"Bearer {access_token}"},
-                params={"instrument_key": instrument_key},
-                timeout=5,
-                proxies=proxy_config,
-            )
-            quote_data = quote_response.json() if quote_response.content else {}
-            if quote_response.status_code == 200:
-                ltp = extract_ltp_from_quote_payload(quote_data, preferred_keys=(instrument_key,))
-                if ltp is None:
-                    logger.warning(f"{user} : Upstox LTP response did not contain a usable option premium for {instrument_key}: {quote_data}")
-                else:
-                    cache_option_ltp(trade_symbol, ltp, underlying=Index_Symbol or symbol, source="upstox")
-                    if result.get("trading_symbol") and result.get("trading_symbol") != trade_symbol:
-                        cache_option_ltp(result.get("trading_symbol"), ltp, underlying=Index_Symbol or symbol, source="upstox")
-        except Exception as e:
-            logger.warning(f"{user} : Upstox LTP fetch failed for {instrument_key}: {str(e)}")
+        central_price = get_live_price(
+            trading_symbol=trade_symbol,
+            max_age_seconds=3,
+        )
+        if central_price and central_price.get("is_fresh"):
+            ltp = _positive_number_or_none(central_price.get("ltp"))
+        if ltp is None:
+            try:
+                quote_response = requests.get(
+                    MARKET_QUOTE_LTP_URL,
+                    headers={"Authorization": f"Bearer {access_token}"},
+                    params={"instrument_key": instrument_key},
+                    timeout=5,
+                    proxies=proxy_config,
+                )
+                quote_data = quote_response.json() if quote_response.content else {}
+                if quote_response.status_code == 200:
+                    ltp = extract_ltp_from_quote_payload(quote_data, preferred_keys=(instrument_key,))
+                    if ltp is None:
+                        logger.warning(f"{user} : Upstox LTP response did not contain a usable option premium for {instrument_key}: {quote_data}")
+                    else:
+                        cache_option_ltp(trade_symbol, ltp, underlying=Index_Symbol or symbol, source="upstox")
+                        if result.get("trading_symbol") and result.get("trading_symbol") != trade_symbol:
+                            cache_option_ltp(result.get("trading_symbol"), ltp, underlying=Index_Symbol or symbol, source="upstox")
+            except Exception as e:
+                logger.warning(f"{user} : Upstox LTP fetch failed for {instrument_key}: {str(e)}")
+        log_timing("ltp_resolution")
 
         if requested_order_type == "LIMIT":
             reference_price = resolve_limit_reference_price(trade_symbol, ltp, LivePrice, Entry_price, Exit_price)
@@ -158,6 +184,7 @@ def place_upstox_orders(LivePrice,group_service,
                 timeout=UPSTOX_PLACE_ORDER_TIMEOUT,
                 proxies=proxy_config,
             )
+            log_timing("broker_submission")
         except requests.Timeout as e:
             message = "Upstox order placement timed out before broker confirmation. Please check Upstox orderbook before retrying."
             logger.exception(f"{user} : {message}: {str(e)}")
@@ -186,10 +213,37 @@ def place_upstox_orders(LivePrice,group_service,
         if response.status_code == 200 and response_data.get("status") == "success":
             order_id = response_data["data"]["order_id"]
             logger.info(f"{user} : Order placed successfully get the Order details for Order ID: {order_id}")
+            if transaction_type.upper() == "BUY":
+                message = "Upstox accepted the order. Confirmation is continuing in the background."
+                history = save_trade_order_history(
+                    LivePrice, group_service, transaction_type, trade_order_status,
+                    user, trade_symbol, order_id, "open", response_data, message,
+                    strategy, Entry_type, Exit_type, Entry_price, Exit_price,
+                    EntryQty, ExitQty, webhook_signal, Exchange, Segment,
+                    Index_Symbol, history_order_params, broker="upstox",
+                    history_id=history_id,
+                )
+                _schedule_upstox_reconciliation(history)
+                return {
+                    "data": {
+                        "status": "open",
+                        "broker_status": "accepted",
+                        "reconciliation_scheduled": True,
+                        "message": message,
+                        "order_id": order_id,
+                        "order_type": requested_order_type,
+                        "price": price if requested_order_type == "LIMIT" else None,
+                        "ltp": ltp,
+                        "reference_price": reference_price if requested_order_type == "LIMIT" else ltp,
+                        "trading_symbol": trade_symbol,
+                        "instrument_key": instrument_key,
+                    }
+                }
             handled_response = handle_successful_order(LivePrice,group_service,transaction_type,
                 order_id, user, trade_symbol, strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty , webhook_signal,
                 Exchange, Segment, Index_Symbol, history_order_params, access_token,trade_order_status, history_id, proxy_config=proxy_config
             )
+            log_timing("broker_confirmation")
             handled_response.setdefault("data", {})
             handled_response["data"].update({
                 "order_id": order_id,
@@ -478,6 +532,23 @@ def get_order_details(order_id, access_token, proxy_config=None):
     except Exception as e:
         print(f"Unexpected error: {e}")
         return {"error": "Unexpected error occurred", "details": str(e)}
+
+def _schedule_upstox_reconciliation(history):
+    if not history or not getattr(history, "id", None):
+        return
+    try:
+        from main.tasks import reconcile_broker_order_task
+
+        reconcile_broker_order_task.apply_async(
+            kwargs={"trade_history_id": history.id},
+            countdown=5,
+        )
+    except Exception:
+        logger.warning(
+            "Unable to schedule Upstox order reconciliation for history %s",
+            getattr(history, "id", None),
+        )
+
 
 def get_order_details2222(order_id, access_token):
     return {"error": "Direct Upstox order details lookup is disabled. Use proxy-bound get_order_details()."}

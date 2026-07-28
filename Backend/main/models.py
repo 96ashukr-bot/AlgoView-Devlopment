@@ -819,6 +819,60 @@ class TradingLog(models.Model):
     date = models.DateField(auto_now_add=True,null=True, blank=True)
     symbol = models.CharField(max_length=50,null=True, blank=True)
     strategy = models.CharField(max_length=50,null=True, blank=True)
+
+
+class DailyTradeLimitCounter(models.Model):
+    client = models.ForeignKey(User, on_delete=models.CASCADE, related_name="daily_trade_limit_counters")
+    trade_date = models.DateField(db_index=True)
+    symbol = models.CharField(max_length=50)
+    successful_buy_count = models.PositiveIntegerField(default=0)
+    initialized_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["client", "trade_date", "symbol"],
+                name="unique_daily_trade_limit_counter",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["client", "trade_date", "symbol"], name="trade_limit_counter_lookup"),
+        ]
+
+
+class DailyTradeLimitReservation(models.Model):
+    STATUS_RESERVED = "RESERVED"
+    STATUS_SUCCESS = "SUCCESS"
+    STATUS_RELEASED = "RELEASED"
+    STATUS_CHOICES = (
+        (STATUS_RESERVED, "Reserved"),
+        (STATUS_SUCCESS, "Successful BUY"),
+        (STATUS_RELEASED, "Released"),
+    )
+
+    counter = models.ForeignKey(
+        DailyTradeLimitCounter,
+        on_delete=models.CASCADE,
+        related_name="reservations",
+    )
+    request_id = models.CharField(max_length=128)
+    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default=STATUS_RESERVED)
+    expires_at = models.DateTimeField(db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["counter", "request_id"],
+                name="unique_daily_trade_limit_reservation",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["counter", "status", "expires_at"], name="trade_limit_reservation_lookup"),
+        ]
+
 class ClientTradeSetting(models.Model):
     ORDER_TYPE_CHOICES = (
         ("MARKET", "MARKET"),

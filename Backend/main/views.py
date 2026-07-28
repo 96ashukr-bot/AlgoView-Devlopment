@@ -48,7 +48,16 @@ from main.permissions import (
 )
 from main.services.login_activity_service import LoginActivityService
 from main.broker_registry import broker_field_is_configured, get_broker_setup_spec, get_default_broker_catalog, normalize_broker_name
-from main.tasks import resend_otp_email_async, send_kyc_email_async, send_trade_email_async,send_password_reset_email
+from main.tasks import (
+    acquire_force_kill_dispatch,
+    force_kill_switch_trade_task,
+    process_manual_trade_batch_task,
+    resend_otp_email_async,
+    send_kyc_email_async,
+    send_trade_email_async,
+    send_password_reset_email,
+    release_force_kill_dispatch,
+)
 from rest_framework import status
 # from django.utils.timezone import make_aware
 # from django.utils.timezone import localtime
@@ -72,7 +81,8 @@ from main.email import EmailService
 from django.contrib.auth.signals import user_logged_in, user_logged_out
 from django.dispatch import receiver
 from django.db.models import Q
-from django.db.models import Count, Prefetch
+from django.db.models import Case, Count, DecimalField, ExpressionWrapper, F, Prefetch, Sum, Value, When
+from django.db.models.functions import Coalesce
 from django.db.models.deletion import ProtectedError
 from django.db import IntegrityError, transaction
 import pandas as pd
@@ -378,15 +388,13 @@ def _collect_trade_skip_reasons(trade, *, webhook_symbol=None, strategy_identifi
 
 
 def _get_trade_limit_skip_reason(trade, symbol):
-    configured_limit = int((getattr(trade, "trade_limit", 0) or 0) * 2)
+    from main.services.trade_limit import successful_buy_count
+
+    configured_limit = int(getattr(trade, "trade_limit", 0) or 0)
     if configured_limit <= 0:
         return "Trade limit is not configured"
 
-    daily_trade_count = TradingLog.objects.filter(
-        client=getattr(trade, "client", None),
-        date=timezone.localdate(),
-        symbol=symbol,
-    ).count()
+    daily_trade_count = successful_buy_count(getattr(trade, "client", None), symbol)
     if daily_trade_count >= configured_limit:
         return f"Daily trade limit reached ({daily_trade_count}/{configured_limit})"
     return None
@@ -4259,8 +4267,11 @@ class ClientGlobalKillSwitchAPIView(APIView):
             try:
                 exit_request = _build_regular_trade_exit_request(trade_history)
                 response = get_execution_engine().execute_order(exit_request)
+                from main.services.external_position_reconciliation import reconcile_failed_exit_response
+                response = reconcile_failed_exit_response(trade_history, response)
                 response_status = str(response.get("status") or response.get("data", {}).get("status") or "").lower()
-                if response_status in {"success", "complete", "completed"}:
+                if response_status in {"success", "complete", "completed", "open", "placed", "reconciled_closed"}:
+                    _mark_trade_closed_after_force_exit(trade_history, response)
                     exited_regular_ids.append(trade_history.id)
                 else:
                     failed_regular.append({
@@ -4312,6 +4323,7 @@ class SuperadminForceKillSwitchAPIView(APIView):
             return Response({"detail": "You can force square off a maximum of 100 trades at once."}, status=status.HTTP_400_BAD_REQUEST)
 
         reason = request.data.get("reason") or "Authorized user force kill switch"
+        async_mode = request.data.get("async") is True or str(request.data.get("mode") or "").strip().lower() == "async"
         accessible_clients = get_accessible_clients_queryset(request.user)
         trades = {
             trade.id: trade
@@ -4342,6 +4354,40 @@ class SuperadminForceKillSwitchAPIView(APIView):
                         "message": row_error,
                     })
                     continue
+                if async_mode:
+                    dispatch_token = acquire_force_kill_dispatch(trade_history.id)
+                    if not dispatch_token:
+                        results.append({
+                            "trade_history_id": trade_history.id,
+                            "client_id": trade_history.client_id,
+                            "client_name": getattr(trade_history.client, "fullName", None) or getattr(trade_history.client, "full_name", None),
+                            "status": "queued",
+                            "message": "A Kill Switch exit is already queued or in progress for this trade.",
+                            "duplicate_blocked": True,
+                        })
+                        continue
+                    try:
+                        task = force_kill_switch_trade_task.apply_async(
+                            kwargs={
+                                "trade_history_id": trade_history.id,
+                                "reason": reason,
+                                "initiated_by_id": request.user.id,
+                                "dispatch_token": dispatch_token,
+                            },
+                            priority=9,
+                        )
+                    except Exception:
+                        release_force_kill_dispatch(trade_history.id, dispatch_token)
+                        raise
+                    results.append({
+                        "trade_history_id": trade_history.id,
+                        "client_id": trade_history.client_id,
+                        "client_name": getattr(trade_history.client, "fullName", None) or getattr(trade_history.client, "full_name", None),
+                        "status": "queued",
+                        "message": "Force exit queued.",
+                        "task_id": task.id,
+                    })
+                    continue
                 exit_request = _build_regular_trade_exit_request(
                     trade_history,
                     force_broker_squareoff=True,
@@ -4350,9 +4396,11 @@ class SuperadminForceKillSwitchAPIView(APIView):
                     initiated_by=request.user,
                 )
                 response = get_execution_engine().execute_order(exit_request)
+                from main.services.external_position_reconciliation import reconcile_failed_exit_response
+                response = reconcile_failed_exit_response(trade_history, response)
                 response_data = response.get("data", {}) if isinstance(response, dict) else {}
                 response_status = str(response_data.get("status") or response.get("status") or "").lower()
-                success = response_status in {"success", "complete", "completed", "open", "placed"}
+                success = response_status in {"success", "complete", "completed", "open", "placed", "reconciled_closed"}
                 message = _extract_force_exit_message(response)
                 if not success and message.strip().lower() == "success":
                     message = f"Broker rejected force exit. Broker status: {response_status or 'unknown'}."
@@ -4374,14 +4422,19 @@ class SuperadminForceKillSwitchAPIView(APIView):
                 })
 
         failed_count = sum(1 for item in results if item["status"] in {"failed", "broker_rejected"})
+        queued_count = sum(1 for item in results if item["status"] == "queued")
+        response_status = status.HTTP_202_ACCEPTED if async_mode and failed_count == 0 else (
+            status.HTTP_200_OK if failed_count == 0 else status.HTTP_207_MULTI_STATUS
+        )
         return Response(
             {
                 "requested_count": len(trade_ids),
                 "sent_count": len(trade_ids) - failed_count,
+                "queued_count": queued_count,
                 "failed_count": failed_count,
                 "results": results,
             },
-            status=status.HTTP_200_OK if failed_count == 0 else status.HTTP_207_MULTI_STATUS,
+            status=response_status,
         )
 
 
@@ -5702,6 +5755,238 @@ class TradeCompleteListView(APIView):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
+ORDER_FAILED_KEYWORDS = ("FAILED", "FAIL", "REJECTED", "REJECT", "ERROR", "UNAUTHORIZED", "CANCELLED", "CANCELED", "SKIPPED")
+
+
+def _orders_failed_filter():
+    failed_filter = Q()
+    for keyword in ORDER_FAILED_KEYWORDS:
+        failed_filter |= (
+            Q(order_status__icontains=keyword)
+            | Q(trade_order_status__icontains=keyword)
+            | Q(failure_reason__icontains=keyword)
+        )
+    failed_filter |= Q(failure_reason__isnull=False) & ~Q(failure_reason="")
+    return failed_filter
+
+
+def _orders_status_filter(bucket):
+    normalized_bucket = str(bucket or "ACTIVE").strip().upper()
+    failed_filter = _orders_failed_filter()
+    if normalized_bucket == "FAILED":
+        return failed_filter
+    if normalized_bucket == "CLOSED":
+        return (
+            Q(trade_order_status__in=CLOSED_TRADE_ORDER_STATUSES)
+            | Q(trade_order_status__in=[status.lower() for status in CLOSED_TRADE_ORDER_STATUSES])
+            | Q(Exit_type__isnull=False)
+            | Q(Exit_Price__isnull=False)
+            | Q(ExitQty__isnull=False)
+        ) & ~failed_filter
+    return (
+        Q(trade_order_status__in=OPEN_TRADE_ORDER_STATUSES)
+        | Q(trade_order_status__in=[status.lower() for status in OPEN_TRADE_ORDER_STATUSES])
+        | Q(order_status__in=["OPEN", "COMPLETE", "COMPLETED", "TRANSIT", "PENDING", "open", "complete", "completed", "transit", "pending"])
+    ) & Q(Exit_type__isnull=True, Exit_Price__isnull=True, ExitQty__isnull=True) & ~failed_filter
+
+
+def _closed_orders_cumulative_profit(queryset):
+    money_field = DecimalField(max_digits=30, decimal_places=2)
+    quantity = Coalesce(F("ExitQty"), F("EntryQty"))
+    long_profit = ExpressionWrapper(
+        (F("Exit_Price") - F("Entry_Price")) * quantity,
+        output_field=money_field,
+    )
+    short_profit = ExpressionWrapper(
+        (F("Entry_Price") - F("Exit_Price")) * quantity,
+        output_field=money_field,
+    )
+    calculated_profit = Case(
+        When(Entry_type__iexact="SELL", then=short_profit),
+        When(Entry_type__iexact="SHORT", then=short_profit),
+        default=long_profit,
+        output_field=money_field,
+    )
+    row_profit = Coalesce(
+        F("Total"),
+        calculated_profit,
+        Value(Decimal("0")),
+        output_field=money_field,
+    )
+    total_profit = queryset.aggregate(total=Sum(row_profit, output_field=money_field))["total"]
+    return Decimal(total_profit or 0).quantize(Decimal("0.01"))
+
+
+def _active_orders_running_profit(queryset, watcher_service):
+    total_profit = Decimal("0")
+    for trade in queryset.iterator():
+        entry_price = trade.Entry_Price
+        quantity = trade.EntryQty
+        if entry_price is None or quantity is None:
+            continue
+        current_ltp, price_status, _cache_age, _subscription_status = (
+            watcher_service._get_cached_payload_status(trade)
+        )
+        if price_status is not None or current_ltp is None:
+            current_ltp = trade.LivePrice
+        if current_ltp is None:
+            continue
+        entry_price = Decimal(str(entry_price))
+        current_ltp = Decimal(str(current_ltp))
+        quantity = Decimal(str(quantity))
+        if str(trade.Entry_type or "").strip().upper() in {"SELL", "SHORT"}:
+            total_profit += (entry_price - current_ltp) * quantity
+        else:
+            total_profit += (current_ltp - entry_price) * quantity
+    return total_profit.quantize(Decimal("0.01"))
+
+
+class OrdersListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        try:
+            user = request.user
+            order_bucket = str(request.GET.get("order_bucket") or request.GET.get("status") or "ACTIVE").strip().upper()
+            if order_bucket not in {"ACTIVE", "CLOSED", "FAILED"}:
+                return Response({"error": "order_bucket must be ACTIVE, CLOSED, or FAILED."}, status=status.HTTP_400_BAD_REQUEST)
+
+            from_date = request.GET.get("from_date")
+            to_date = request.GET.get("to_date")
+            broker = request.GET.get("broker")
+            index_symbol = request.GET.get("Index_symbol") or request.GET.get("Index_Symbol")
+            strategy = request.GET.get("strategy")
+            group_service = request.GET.get("group_service")
+            search_query = request.query_params.get("q", "").strip()
+
+            clients = get_accessible_clients_queryset(user)
+            orders = _scope_trade_history_by_role(
+                Tradeorderhistory.objects.select_related(
+                    "client",
+                    "trade_setting",
+                    "trade_setting__segment",
+                    "trade_setting__sub_segment",
+                ).filter(client__in=clients),
+                user,
+            ).filter(_orders_status_filter(order_bucket)).order_by("-id")
+
+            filters = Q()
+            if from_date:
+                try:
+                    filters &= Q(date__gte=datetime.strptime(from_date, "%Y-%m-%d"))
+                except ValueError:
+                    return Response({"error": "Invalid from_date format, expected YYYY-MM-DD."}, status=status.HTTP_400_BAD_REQUEST)
+            if to_date:
+                try:
+                    filters &= Q(date__lte=datetime.strptime(to_date, "%Y-%m-%d"))
+                except ValueError:
+                    return Response({"error": "Invalid to_date format, expected YYYY-MM-DD."}, status=status.HTTP_400_BAD_REQUEST)
+            if broker and broker.lower() != "all":
+                filters &= Q(broker__iexact=broker)
+            if strategy and strategy.lower() != "all":
+                filters &= Q(strategy__iexact=strategy)
+            if group_service and group_service.lower() != "all":
+                filters &= Q(GroupService__iexact=group_service)
+
+            orders, filters = _apply_trade_history_client_and_script_filters(orders, request, filters)
+
+            if index_symbol and index_symbol.lower() != "all":
+                filters &= Q(Index_Symbol__icontains=index_symbol) | Q(trading_symbol__icontains=index_symbol)
+            if search_query:
+                search_terms = search_query.split()
+                full_name_filters = Q()
+                for term in search_terms:
+                    full_name_filters |= Q(client__fullName__icontains=term)
+                filters &= (
+                    full_name_filters
+                    | Q(client__email__icontains=search_query)
+                    | Q(broker__icontains=search_query)
+                    | Q(Index_Symbol__icontains=search_query)
+                    | Q(trading_symbol__icontains=search_query)
+                    | Q(GroupService__icontains=search_query)
+                    | Q(order_id__icontains=search_query)
+                )
+
+            orders = orders.filter(filters)
+            cumulative_profit = (
+                _closed_orders_cumulative_profit(orders)
+                if order_bucket == "CLOSED"
+                else None
+            )
+            watcher_service = get_sl_tp_watcher_service() if order_bucket == "ACTIVE" else None
+            overall_running_pnl = (
+                _active_orders_running_profit(orders, watcher_service)
+                if watcher_service
+                else None
+            )
+            paginator = CustomPageNumberPagination()
+            result_page = paginator.paginate_queryset(orders, request)
+            serialized_data = TradeorderhistorySerializer(result_page, many=True).data
+            result_by_id = {trade.id: trade for trade in result_page}
+            for item in serialized_data:
+                item["order_bucket"] = order_bucket
+                if watcher_service:
+                    trade = result_by_id.get(item.get("id"))
+                    if trade:
+                        trade_setting = watcher_service._find_trade_setting(trade)
+                        if trade_setting:
+                            thresholds = watcher_service._resolve_thresholds(trade, trade_setting)
+                            item["stop_loss_price"] = thresholds.get("stop_loss_price")
+                            item["target_price"] = thresholds.get("target_price")
+                        else:
+                            thresholds = watcher_service._resolve_saved_thresholds(trade)
+                            item["stop_loss_price"] = thresholds.get("stop_loss_price")
+                            item["target_price"] = thresholds.get("target_price")
+                        current_ltp, price_status, cache_age, subscription_status = watcher_service._get_cached_payload_status(trade)
+                        item["current_ltp"] = current_ltp if price_status is None else None
+                        item["price_status"] = price_status
+                        item["price_cache_age_seconds"] = cache_age
+                        item["price_subscription_status"] = subscription_status
+            response = paginator.get_paginated_response(serialized_data)
+            response.data["cumulative_profit"] = (
+                str(cumulative_profit) if cumulative_profit is not None else None
+            )
+            response.data["overall_running_pnl"] = (
+                str(overall_running_pnl) if overall_running_pnl is not None else None
+            )
+            return response
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class OrdersFilterOptionsView(APIView):
+    """Compact, permission-scoped options used only by the Orders filters."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        user = request.user
+        clients = get_order_visible_clients_queryset(user)
+        client_options = list(
+            clients.order_by("fullName", "email", "id").values(
+                "id", "fullName", "email"
+            )
+        )
+        group_options = list(
+            _group_services_for_user(user)
+            .order_by("group_name", "id")
+            .values("id", "group_name")
+        )
+        broker_options = list(
+            Broker.objects.filter(is_active=True)
+            .order_by("broker_name", "id")
+            .values("id", "broker_name")
+        )
+        return Response(
+            {
+                "clients": client_options,
+                "group_services": group_options,
+                "brokers": broker_options,
+            }
+        )
+
+
 class ClientTradeListView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -5940,20 +6225,66 @@ class ManualTradeExecuteAPIView(APIView):
                     reason="Not selected for this trade execution.",
                     updated_at=timezone.now(),
                 )
-                batch.eligible_count = len(selected_client_ids)
-                batch.skipped_count = batch.results.filter(status=ManualTradeResult.STATUS_SKIPPED).count()
-                batch.input_snapshot = {
-                    **(batch.input_snapshot or {}),
-                    "selected_client_ids": sorted(selected_client_ids),
-                }
-            if not batch.results.filter(status=ManualTradeResult.STATUS_PENDING).exists():
-                return Response({"detail": "No eligible clients are available to execute this trade."}, status=status.HTTP_400_BAD_REQUEST)
-            batch.status = ManualTradeBatch.STATUS_QUEUED
-            batch.confirmed_at = timezone.now()
-            batch.save(update_fields=["status", "confirmed_at", "eligible_count", "skipped_count", "input_snapshot", "updated_at"])
+            eligible_count = batch.results.filter(status=ManualTradeResult.STATUS_PENDING).count()
+            if eligible_count <= 0:
+                return Response({"detail": "No eligible clients are selected to execute this manual trade."}, status=status.HTTP_400_BAD_REQUEST)
 
-        task = process_manual_trade_batch_task.delay(batch_id=batch.id)
-        ManualTradeBatch.objects.filter(pk=batch.id).update(task_id=getattr(task, "id", None), updated_at=timezone.now())
+            batch.eligible_count = eligible_count
+            batch.skipped_count = batch.results.filter(status=ManualTradeResult.STATUS_SKIPPED).count()
+            batch.summary = {
+                **(batch.summary or {}),
+                "eligible_count": batch.eligible_count,
+                "skipped_count": batch.skipped_count,
+                "selected_client_ids": sorted(selected_client_ids) if selected_client_ids is not None else None,
+            }
+            batch.input_snapshot = {
+                **(batch.input_snapshot or {}),
+                "selected_client_ids": sorted(selected_client_ids) if selected_client_ids is not None else None,
+            }
+            batch.status = ManualTradeBatch.STATUS_PROCESSING
+            batch.confirmed_at = timezone.now()
+            batch.save(update_fields=[
+                "status", "confirmed_at", "eligible_count", "skipped_count",
+                "summary", "input_snapshot", "updated_at",
+            ])
+
+        try:
+            from main.manual_trade_service import dispatch_manual_trade_batch
+
+            dispatch_manual_trade_batch(batch.id)
+        except Exception as exc:
+            logger.exception("Failed to dispatch manual trade batch batch_id=%s", batch.id)
+            failure_reason = f"Trade execution could not start: {str(exc)}"
+            ManualTradeBatch.objects.filter(pk=batch.id).update(
+                status=ManualTradeBatch.STATUS_FAILED,
+                summary={
+                    **(batch.summary or {}),
+                    "dispatch_error": failure_reason,
+                },
+                updated_at=timezone.now(),
+            )
+            failed_result_ids = list(
+                ManualTradeResult.objects.filter(batch_id=batch.id, status=ManualTradeResult.STATUS_PENDING)
+                .values_list("history_id", flat=True)
+            )
+            ManualTradeResult.objects.filter(batch_id=batch.id, status=ManualTradeResult.STATUS_PENDING).update(
+                status=ManualTradeResult.STATUS_FAILED,
+                reason=failure_reason,
+                updated_at=timezone.now(),
+            )
+            Tradeorderhistory.objects.filter(history_id__in=[history_id for history_id in failed_result_ids if history_id]).update(
+                order_status="Failed",
+                trade_order_status="Failed",
+                failure_reason=failure_reason,
+            )
+            batch.refresh_from_db()
+            return Response(
+                {
+                    "detail": "Trade execution could not start. Please try again.",
+                    "batch": _serialize_manual_trade_batch(batch, include_results=True),
+                },
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
         batch.refresh_from_db()
         return Response(_serialize_manual_trade_batch(batch, include_results=True), status=status.HTTP_202_ACCEPTED)
         

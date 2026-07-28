@@ -11,7 +11,12 @@ from typing import Optional, Dict, Any
 from django.core.cache import cache
 from django.utils import timezone
 
-from main.models import TradingLog
+from main.services.trade_limit import (
+    complete_successful_buy_slot,
+    release_successful_buy_slot,
+    reserve_successful_buy_slot,
+    successful_buy_count,
+)
 from main.angelone.constants import (
     DEFAULT_MAX_DAILY_TRADES_PER_CLIENT,
     DEFAULT_MAX_QUANTITY_PER_TRADE,
@@ -29,6 +34,7 @@ class RiskCheckResult:
     message: str = ""
     error_code: Optional[str] = None
     reservation_key: Optional[str] = None
+    trade_limit_reservation_key: Optional[str] = None
 
 
 class RiskManager:
@@ -76,20 +82,29 @@ class RiskManager:
             )
 
         if transaction_type == "BUY":
-            daily_limit = int(
-                (getattr(getattr(request, "trade", None), "trade_limit", 0) or DEFAULT_MAX_DAILY_TRADES_PER_CLIENT) * 2
-            )
-            daily_trade_count = TradingLog.objects.filter(
-                client=request.user,
-                date=timezone.localdate(),
-                symbol=symbol,
-            ).count()
+            configured_limit = getattr(getattr(request, "trade", None), "trade_limit", None)
+            daily_limit = int(configured_limit or DEFAULT_MAX_DAILY_TRADES_PER_CLIENT)
+            daily_trade_count = successful_buy_count(request.user, symbol)
             if daily_trade_count >= daily_limit:
                 return RiskCheckResult(
                     False,
-                    "Daily trade limit reached for this client and symbol.",
+                    f"Daily successful BUY trade limit reached ({daily_trade_count}/{daily_limit}) for this client and symbol.",
                     "DAILY_TRADE_LIMIT_REACHED",
                 )
+            trade_limit_reservation_key = reserve_successful_buy_slot(
+                request.user,
+                symbol,
+                daily_limit,
+                request_id=getattr(request, "request_id", None),
+            )
+            if not trade_limit_reservation_key:
+                return RiskCheckResult(
+                    False,
+                    f"Daily successful BUY trade limit reached ({daily_trade_count}/{daily_limit}) for this client and symbol.",
+                    "DAILY_TRADE_LIMIT_REACHED",
+                )
+        else:
+            trade_limit_reservation_key = None
 
         minute_key = f"risk:minute:{client_id}:{timezone.now().strftime('%Y%m%d%H%M')}"
         cache.add(minute_key, 0, timeout=60)
@@ -100,6 +115,7 @@ class RiskManager:
             cache.set(minute_key, minute_count, timeout=60)
 
         if minute_count > MAX_ORDERS_PER_MINUTE_PER_CLIENT:
+            release_successful_buy_slot(trade_limit_reservation_key)
             return RiskCheckResult(
                 False,
                 "Per-minute order rate limit exceeded for this client.",
@@ -113,6 +129,7 @@ class RiskManager:
             timeout=DUPLICATE_ORDER_WINDOW_SECONDS,
         )
         if not reserved:
+            release_successful_buy_slot(trade_limit_reservation_key)
             return RiskCheckResult(
                 False,
                 "Duplicate trade signal blocked within the protection window.",
@@ -127,7 +144,11 @@ class RiskManager:
             transaction_type=transaction_type,
             request_id=getattr(request, "request_id", None),
         )
-        return RiskCheckResult(True, reservation_key=duplicate_key)
+        return RiskCheckResult(
+            True,
+            reservation_key=duplicate_key,
+            trade_limit_reservation_key=trade_limit_reservation_key,
+        )
 
     @staticmethod
     def _is_forced_squareoff_exit(request, transaction_type: str) -> bool:
@@ -153,6 +174,12 @@ class RiskManager:
     def release_reservation(self, reservation_key: Optional[str]) -> None:
         if reservation_key:
             cache.delete(reservation_key)
+
+    def release_trade_limit_reservation(self, reservation_key: Optional[str]) -> None:
+        release_successful_buy_slot(reservation_key)
+
+    def complete_trade_limit_reservation(self, reservation_key: Optional[str]) -> None:
+        complete_successful_buy_slot(reservation_key)
 
     @staticmethod
     def _duplicate_key(

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from dhanhq import dhanhq
+
 from main.brokers.base import BaseBroker
 from main.brokers.position_guard import mark_open_position_closed, prepare_close_order_from_open_position
 from main.brokers.utils import broker_order_exchange, build_dhan_expiry_date, build_trade_symbol, common_order_kwargs, get_access_token, get_order_payload
@@ -59,3 +61,39 @@ class DhanBroker(BaseBroker):
         )
         mark_open_position_closed(open_position, response)
         return response
+
+    def get_order_details(self, order_id, trade_order=None, proxy_config=None):
+        client_id = self.broker_details.broker_API_UID or self.broker_details.broker_Demate_User_Name
+        token = get_access_token(self.broker_details)
+        if not client_id or not token:
+            return {"status": "failure", "remarks": "Missing Dhan client id or access token.", "data": ""}
+        dhan = dhanhq(client_id, token)
+        if proxy_config:
+            dhan.session.proxies.update(proxy_config)
+        return dhan.get_order_by_id(str(order_id))
+
+    def _client(self, proxy_config=None):
+        client_id = self.broker_details.broker_API_UID or self.broker_details.broker_Demate_User_Name
+        token = get_access_token(self.broker_details)
+        if not client_id or not token:
+            return None
+        dhan = dhanhq(client_id, token)
+        if proxy_config:
+            dhan.session.proxies.update(self.require_proxy_config(proxy_config))
+        return dhan
+
+    def get_positions(self, proxy_config=None):
+        dhan = self._client(proxy_config=proxy_config)
+        return dhan.get_positions() if dhan else {
+            "status": "failure",
+            "remarks": "Missing Dhan client id or access token.",
+            "data": "",
+        }
+
+    def get_orderbook(self, proxy_config=None):
+        dhan = self._client(proxy_config=proxy_config)
+        return dhan.get_order_list() if dhan else {
+            "status": "failure",
+            "remarks": "Missing Dhan client id or access token.",
+            "data": "",
+        }

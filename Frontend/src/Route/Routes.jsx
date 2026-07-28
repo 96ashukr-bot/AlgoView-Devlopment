@@ -128,6 +128,7 @@ import UserList from "../Components/Application/Users/UsersProfile/SubAdmin/User
 import RolePermission from "../Components/Application/RoleAndPermission/RolePermission/RolePermission";
 import RolePermissionUpdate from "../Components/Application/RoleAndPermission/RolePermission/RolePermissionUpdate";
 import Signals from "../Components/Tables/DataTable/TradeDetails/Signals";
+import Orders from "../Components/Tables/DataTable/TradeDetails/Orders";
 import KycList from "../Components/Application/Users/UsersProfile/Kyc/KycList";
 import UserEdit from "../Components/Application/Users/UsersProfile/SubAdmin/UserEdit";
 import AddUser from "../Components/Application/Users/UsersProfile/SubAdmin/AddUser";
@@ -212,6 +213,7 @@ export const routes = [
   { path: `/client/all-clients-list/client-details/:id`, Component: <ViewClient />},
   { path: `/dashboard/rolepermmisionupdate`, Component: <RolePermissionUpdate />},
   { path: `/tradedetails/signals`, Component: <Signals />},
+  { path: `/tradedetails/orders`, Component: <Orders />},
   { path: `/tradedetails/trade-history`, Component: <TradeHistory />},
   { path: `/tradedetails/complete-trade-history`, Component: <CompleteTradeHistory />},
   { path: `/tradedetails/client-trade-history`, Component: <TradeHistoryClient />},

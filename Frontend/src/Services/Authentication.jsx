@@ -3708,6 +3708,65 @@ export const getTradeHistory = async (page_number, page_size, fromDate, toDate, 
   }
 };
 
+export const getOrders = async (page_number, page_size, orderBucket = "ACTIVE", fromDate, toDate, broker, indexSymbol, groupService, q, clientId = "") => {
+  const token = getAuthToken();
+  if (!token) {
+    handleNoTokenError();
+    throw new Error("No authentication token found.");
+  }
+
+  try {
+    const response = await axios.get(`${baseUrl}/orders/`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      params: {
+        page_number,
+        page_size,
+        order_bucket: orderBucket,
+        from_date: fromDate,
+        to_date: toDate,
+        broker,
+        Index_symbol: indexSymbol,
+        group_service: groupService,
+        q,
+        client_id: clientId || undefined,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    if (error.response?.data?.code === 'token_not_valid') {
+      const messages = error.response?.data?.messages || [];
+      const isAccessTokenInvalid = messages.some(
+        (msg) => msg.token_class === 'AccessToken' && msg.message === 'Token is invalid or expired'
+      );
+
+      if (isAccessTokenInvalid) {
+        handleAuthError();
+        throw new Error('Session expired. Please log in again.');
+      }
+    }
+
+    throw new Error(error.response?.data?.detail || error.response?.data?.error || 'Failed to fetch orders');
+  }
+};
+
+export const getOrderFilterOptions = async () => {
+  const token = getAuthToken();
+  if (!token) {
+    handleNoTokenError();
+    throw new Error("No authentication token found.");
+  }
+  const response = await axios.get(`${baseUrl}/orders/filter-options/`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+  return response.data;
+};
+
 export const getCompleteTrade = async (page_number, page_size, fromDate, toDate, broker, orderStatus, indexSymbol, strategy, q) => {
   const token = getAuthToken();
   if (!token) {

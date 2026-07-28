@@ -332,12 +332,16 @@ class ExecutionEngine:
             self._log_audit_event("failure", request, response["data"], elapsed_seconds=time.perf_counter() - start)
             return response
 
+        if risk_result.trade_limit_reservation_key and isinstance(request.order_params, dict):
+            request.order_params["trade_limit_reservation_key"] = risk_result.trade_limit_reservation_key
+
         idempotency_key = None
         existing_order = None
         try:
             validation_context = self._run_pre_dispatch_validations(request)
             if validation_context.get("status") == "error":
                 self._risk_manager.release_reservation(risk_result.reservation_key)
+                self._risk_manager.release_trade_limit_reservation(risk_result.trade_limit_reservation_key)
                 response = self._failed_response(
                     validation_context.get("message", "Order validation failed."),
                     error_code=validation_context.get("error_code"),
@@ -399,11 +403,13 @@ class ExecutionEngine:
                 validation_context=validation_context,
                 idempotency_key=idempotency_key,
                 reservation_key=risk_result.reservation_key,
+                trade_limit_reservation_key=risk_result.trade_limit_reservation_key,
                 started_at=start,
             )
             return normalized
         except Exception as exc:
             self._risk_manager.release_reservation(risk_result.reservation_key)
+            self._risk_manager.release_trade_limit_reservation(risk_result.trade_limit_reservation_key)
             if idempotency_key and existing_order:
                 self._idempotency_manager.remove_record(idempotency_key)
             self._record_broker_failure(request)
@@ -493,9 +499,8 @@ class ExecutionEngine:
     def _align_exit_request_with_open_position(self, request: ExecutionRequest) -> Optional[Dict[str, Any]]:
         if request.transaction_type.upper() != "SELL" or request.is_multi_leg_order:
             return None
-        if not isinstance(request.order_params, dict) or is_force_broker_squareoff(request.order_params):
+        if not isinstance(request.order_params, dict):
             return None
-
         order = {
             **request.order_params,
             "symbol": request.underlying_symbol,
@@ -850,7 +855,7 @@ class ExecutionEngine:
             self._contract_manager.initialize(blocking=True)
             expiries = self._contract_manager.get_expiries_for_underlying(request.underlying_symbol)
             expiry = expiries[0] if expiries else None
-        if not expiry:
+        if not expiry and not (saved_symbol_token and saved_trading_symbol):
             return {"status": "error", "message": "Unable to resolve contract expiry.", "error_code": "INVALID_EXPIRY"}
 
         if saved_symbol_token and saved_trading_symbol:
@@ -897,7 +902,7 @@ class ExecutionEngine:
 
         current_time = datetime.now(ZoneInfo(TIMEZONE if USE_IST else "UTC"))
         contract_expiry = self._normalize_contract_expiry_cutoff(contract.expiry)
-        if contract_expiry is not None:
+        if contract_expiry is not None and not (saved_symbol_token and saved_trading_symbol):
             if contract_expiry < current_time:
                 return {
                     "status": "error",
@@ -1673,6 +1678,7 @@ class ExecutionEngine:
         idempotency_key: Optional[str],
         reservation_key: Optional[str],
         started_at: float,
+        trade_limit_reservation_key: Optional[str] = None,
     ) -> None:
         status_value = normalized.get("data", {}).get("status")
         order_id = normalized.get("data", {}).get("order_id")
@@ -1735,7 +1741,7 @@ class ExecutionEngine:
                 }
             )
 
-        save_trade_order_history(
+        history = save_trade_order_history(
             request.LivePrice,
             request.group_service,
             request.transaction_type,
@@ -1765,6 +1771,21 @@ class ExecutionEngine:
             logger=logger,
         )
 
+        if (
+            history
+            and str(status_value or "").strip().lower() in {"open", "pending", "transit"}
+            and not normalized.get("data", {}).get("reconciliation_scheduled")
+        ):
+            try:
+                from main.tasks import reconcile_broker_order_task
+
+                reconcile_broker_order_task.apply_async(kwargs={"trade_history_id": history.id}, countdown=5)
+            except Exception:
+                logger.warning(
+                    "Unable to schedule broker order reconciliation",
+                    extra={"trade_history_id": history.id, "request_id": request.request_id},
+                )
+
         logger.info(
             "Execution finished",
             user_id=getattr(request.user, "id", None),
@@ -1786,7 +1807,8 @@ class ExecutionEngine:
                 response_time=round(elapsed_seconds, 4),
             )
 
-        if status_value in {"complete", "completed", "open"}:
+        if status_value in {"complete", "completed", "executed", "traded", "success"}:
+            self._risk_manager.complete_trade_limit_reservation(trade_limit_reservation_key)
             self._reset_broker_failures(request)
             if idempotency_key:
                 self._idempotency_manager.record_execution(
@@ -1797,8 +1819,20 @@ class ExecutionEngine:
             self._log_audit_event("success", request, normalized.get("data", {}), elapsed_seconds=elapsed_seconds)
             return
 
+        if status_value in {"open", "placed", "pending", "transit"}:
+            self._reset_broker_failures(request)
+            if idempotency_key:
+                self._idempotency_manager.record_execution(
+                    idempotency_key=idempotency_key,
+                    order_id=str(order_id or request.request_id),
+                    status=str(status_value).lower(),
+                )
+            self._log_audit_event("accepted", request, normalized.get("data", {}), elapsed_seconds=elapsed_seconds)
+            return
+
         self._record_broker_failure(request)
         self._risk_manager.release_reservation(reservation_key)
+        self._risk_manager.release_trade_limit_reservation(trade_limit_reservation_key)
         if idempotency_key and validation_context.get("idempotency_record"):
             self._idempotency_manager.remove_record(idempotency_key)
         self._log_audit_event("failure", request, normalized.get("data", {}), elapsed_seconds=elapsed_seconds)

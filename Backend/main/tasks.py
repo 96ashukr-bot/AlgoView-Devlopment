@@ -13,7 +13,10 @@
 from celery import shared_task
 from django.core.mail import send_mail
 from django.conf import settings
+from django.core.cache import cache
+from django.utils import timezone
 import logging
+import uuid
 logger = logging.getLogger('main')
 OTP_EMAIL_SUBJECT = "Your Login Otp (Don't Share with anyone)"
 OTP_SUPPORT_EMAIL = "support@bridgesparkinnovation.com"
@@ -32,8 +35,92 @@ from django.templatetags.static import static
     # Get company profile for support email and website
 # company_profile = CompanyProfileDetails.objects.first()
 from main.companysmtpsetails import get_company_profile,get_smtp_details
+
+
+FORCE_KILL_DISPATCH_TTL_SECONDS = 120
+
+
+def _force_kill_dispatch_key(trade_history_id):
+    return f"force-kill-switch:dispatch:{int(trade_history_id)}"
+
+
+def acquire_force_kill_dispatch(trade_history_id, token=None):
+    token = token or uuid.uuid4().hex
+    return token if cache.add(
+        _force_kill_dispatch_key(trade_history_id),
+        token,
+        timeout=FORCE_KILL_DISPATCH_TTL_SECONDS,
+    ) else None
+
+
+def release_force_kill_dispatch(trade_history_id, token):
+    key = _force_kill_dispatch_key(trade_history_id)
+    if token and cache.get(key) == token:
+        cache.delete(key)
 company_profile = get_company_profile()
 smtp_details = get_smtp_details()
+
+
+@shared_task(bind=True, autoretry_for=(), max_retries=0)
+def warm_single_angel_session_task(self, *, broker_details_id):
+    """Validate one Angel session outside the latency-sensitive order path."""
+    from main.angelone.services.auth_service import AuthService
+    from main.models import ClientBrokerdetails
+    from main.services.proxy_utils import build_requests_proxy_config
+
+    broker_details = ClientBrokerdetails.objects.select_related(
+        "client", "broker_name", "execution_node",
+    ).filter(pk=broker_details_id, client__is_enable=True).first()
+    if broker_details is None:
+        return {"status": "missing", "broker_details_id": broker_details_id}
+
+    client_code = (
+        getattr(broker_details, "broker_Demate_User_Name", None)
+        or getattr(broker_details, "broker_API_UID", None)
+    )
+    api_key = getattr(broker_details, "broker_API_KEY", None)
+    if not client_code or not api_key:
+        return {"status": "skipped", "reason": "missing_credentials", "broker_details_id": broker_details_id}
+    if broker_details.execution_node is None:
+        return {"status": "skipped", "reason": "missing_execution_node", "broker_details_id": broker_details_id}
+    try:
+        proxy_config = build_requests_proxy_config(broker_details.execution_node)
+    except ValueError as exc:
+        return {"status": "skipped", "reason": str(exc), "broker_details_id": broker_details_id}
+
+    result = AuthService().ensure_valid_session(
+        client_id=client_code,
+        api_key=api_key,
+        broker_details=broker_details,
+        verify_remote=True,
+        proxy_config=proxy_config,
+    )
+    return {
+        "status": result.get("status"),
+        "source": result.get("source"),
+        "broker_details_id": broker_details_id,
+    }
+
+
+@shared_task(bind=True, autoretry_for=(), max_retries=0)
+def warm_active_angel_sessions_task(self):
+    """Spread active Angel session validation across a five-minute window."""
+    from main.broker_registry import normalize_broker_name
+    from main.models import ClientBrokerdetails
+
+    broker_detail_ids = [
+        details.id
+        for details in ClientBrokerdetails.objects.select_related("broker_name").filter(client__is_enable=True)
+        if normalize_broker_name(getattr(details.broker_name, "broker_name", "")) == "angel one"
+    ]
+    count = len(broker_detail_ids)
+    spacing_seconds = (300.0 / count) if count else 0
+    for index, broker_details_id in enumerate(broker_detail_ids):
+        warm_single_angel_session_task.apply_async(
+            kwargs={"broker_details_id": broker_details_id},
+            countdown=round(index * spacing_seconds, 2),
+        )
+    return {"status": "scheduled", "count": count, "spacing_seconds": round(spacing_seconds, 3)}
 
 
 @shared_task(bind=True, autoretry_for=(), max_retries=0)
@@ -52,6 +139,119 @@ def route_execution_order_task(self, *, client_id, broker_details_id, order_payl
         payload.setdefault("correlation_id", correlation_id)
         payload.setdefault("idempotency_key", correlation_id)
     return route_order_to_execution_node(client, broker_details, payload)
+
+
+@shared_task(bind=True, autoretry_for=(), max_retries=0)
+def force_kill_switch_trade_task(self, *, trade_history_id, reason="", initiated_by_id=None, dispatch_token=None):
+    """Run a force kill-switch exit outside the request/response cycle."""
+    from django.contrib.auth import get_user_model
+    from main.execution_engine import get_execution_engine
+    from main.models import Tradeorderhistory
+    from main.views import (
+        _build_regular_trade_exit_request,
+        _extract_force_exit_message,
+        _mark_trade_closed_after_force_exit,
+    )
+
+    owns_dispatch = bool(dispatch_token)
+    if not dispatch_token:
+        dispatch_token = acquire_force_kill_dispatch(trade_history_id)
+        owns_dispatch = bool(dispatch_token)
+        if not dispatch_token:
+            return {
+                "trade_history_id": trade_history_id,
+                "status": "duplicate_blocked",
+                "message": "A Kill Switch exit is already in progress for this trade.",
+            }
+
+    try:
+        trade_history = Tradeorderhistory.objects.select_related("client").filter(pk=trade_history_id).first()
+        if trade_history is None:
+            return {"trade_history_id": trade_history_id, "status": "missing", "message": "Trade history row not found."}
+
+        initiated_by = None
+        if initiated_by_id:
+            initiated_by = get_user_model().objects.filter(pk=initiated_by_id).first()
+
+        exit_request = _build_regular_trade_exit_request(
+            trade_history,
+            force_broker_squareoff=True,
+            source="authorized_force_kill_switch",
+            reason=reason,
+            initiated_by=initiated_by,
+        )
+        response = get_execution_engine().execute_order(exit_request)
+        from main.services.external_position_reconciliation import reconcile_failed_exit_response
+
+        response = reconcile_failed_exit_response(trade_history, response)
+        response_data = response.get("data", {}) if isinstance(response, dict) else {}
+        response_status = str(response_data.get("status") or response.get("status") or "").lower()
+        success = response_status in {"success", "complete", "completed", "open", "placed", "reconciled_closed"}
+        message = _extract_force_exit_message(response)
+        if not success and message.strip().lower() == "success":
+            message = f"Broker rejected force exit. Broker status: {response_status or 'unknown'}."
+        if success:
+            _mark_trade_closed_after_force_exit(trade_history, response)
+        return {
+            "trade_history_id": trade_history.id,
+            "client_id": trade_history.client_id,
+            "client_name": getattr(trade_history.client, "fullName", None) or getattr(trade_history.client, "full_name", None),
+            "status": "sent" if success else "broker_rejected",
+            "broker_status": response_data.get("status") or response.get("status"),
+            "message": message,
+            "order_id": response_data.get("order_id"),
+            "response": response,
+        }
+    finally:
+        if owns_dispatch:
+            release_force_kill_dispatch(trade_history_id, dispatch_token)
+
+
+def _history_has_reconciled_price(history):
+    transaction_type = str(getattr(history, "transaction_type", "") or "").strip().upper()
+    price = history.Exit_Price if transaction_type == "SELL" else history.Entry_Price
+    return price not in (None, "")
+
+
+def _reconciliation_is_terminal(history):
+    status = str(getattr(history, "order_status", "") or "").strip().lower()
+    if status in {"rejected", "cancelled", "canceled", "failed"}:
+        return True
+    if status in {"complete", "completed", "success", "traded", "filled", "executed"}:
+        return _history_has_reconciled_price(history)
+    return False
+
+
+def _sync_manual_result_from_reconciled_history(history):
+    from main.models import ManualTradeResult
+
+    manual_result = ManualTradeResult.objects.filter(history_id=history.history_id).first()
+    if manual_result is None:
+        return
+    broker_status = str(history.order_status or "").strip().lower()
+    if broker_status in {"complete", "completed", "success", "traded", "filled", "executed"}:
+        result_status = ManualTradeResult.STATUS_SUCCESS
+        reason = "Broker execution confirmed."
+    elif broker_status in {"rejected", "cancelled", "canceled", "failed"}:
+        result_status = ManualTradeResult.STATUS_FAILED
+        reason = history.failure_reason or f"Broker order was {broker_status}."
+    else:
+        return
+    ManualTradeResult.objects.filter(pk=manual_result.pk).update(
+        status=result_status,
+        broker_status=broker_status,
+        reason=reason,
+        updated_at=timezone.now(),
+    )
+    try:
+        from main.manual_trade_service import _finalize_manual_trade_batch
+
+        _finalize_manual_trade_batch(manual_result.batch_id)
+    except Exception:
+        logger.exception(
+            "Could not finalize reconciled manual trade batch",
+            extra={"batch_id": manual_result.batch_id, "history_id": history.history_id},
+        )
 
 
 @shared_task(bind=True, autoretry_for=(), max_retries=20, acks_late=True)
@@ -90,6 +290,43 @@ def reconcile_zerodha_order_task(self, *, trade_history_id):
         return {"status": current_status, "trade_history_id": trade_history_id}
 
     countdown = min(15 + (self.request.retries * 5), 60)
+    raise self.retry(countdown=countdown)
+
+
+@shared_task(bind=True, autoretry_for=(), max_retries=60, acks_late=True)
+def reconcile_broker_order_task(self, *, trade_history_id):
+    """Poll any broker order until terminal and persist the broker fill."""
+    from main.broker_registry import normalize_broker_name
+    from main.models import ClientBrokerdetails, Tradeorderhistory
+    from main.services.broker_fill_reconciliation import refresh_trade_fill_from_broker
+
+    history = Tradeorderhistory.objects.select_related("client").filter(pk=trade_history_id).first()
+    if history is None:
+        return {"status": "missing", "trade_history_id": trade_history_id}
+    if _reconciliation_is_terminal(history):
+        _sync_manual_result_from_reconciled_history(history)
+        return {"status": str(history.order_status or "").strip().lower(), "trade_history_id": trade_history_id}
+
+    target_broker = normalize_broker_name(history.broker)
+    broker_details = next(
+        (
+            details
+            for details in ClientBrokerdetails.objects.select_related("broker_name", "execution_node").filter(
+                client=history.client
+            )
+            if normalize_broker_name(getattr(details.broker_name, "broker_name", "")) == target_broker
+        ),
+        None,
+    )
+    if broker_details is None:
+        return {"status": "broker_details_missing", "trade_history_id": trade_history_id}
+
+    refresh_trade_fill_from_broker(history, broker_details)
+    history.refresh_from_db()
+    if _reconciliation_is_terminal(history):
+        _sync_manual_result_from_reconciled_history(history)
+        return {"status": str(history.order_status or "").strip().lower(), "trade_history_id": trade_history_id}
+    countdown = min(15 + (self.request.retries * 5), 120)
     raise self.retry(countdown=countdown)
 
 

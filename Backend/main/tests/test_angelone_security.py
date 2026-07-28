@@ -810,10 +810,20 @@ class AngelOneExecutionValidationTests(TestCase):
     def test_daily_trade_limit_blocks_buy_but_not_sell_exit(self):
         from main.risk_manager import RiskManager
 
+        caches["default"].clear()
         request = self._request(history_id="daily-limit-buy")
         request.trade.trade_limit = 1
-        for _ in range(2):
-            TradingLog.objects.create(client=self.user, symbol="NIFTY", strategy="test-strategy")
+        Tradeorderhistory.objects.create(
+            client=self.user,
+            trading_symbol="NIFTY21JUL2624200CE",
+            Index_Symbol="NIFTY",
+            transaction_type="BUY",
+            trade_order_status="OPEN",
+            order_status="executed",
+            order_id="successful-buy-at-limit",
+            EntryQty=65,
+            order_params={"symbol": "NIFTY", "underlying": "NIFTY"},
+        )
         sell_request = ExecutionRequest(
             **{
                 **request.__dict__,
@@ -831,6 +841,64 @@ class AngelOneExecutionValidationTests(TestCase):
         self.assertFalse(buy_result.allowed)
         self.assertEqual(buy_result.error_code, "DAILY_TRADE_LIMIT_REACHED")
         self.assertTrue(sell_result.allowed)
+
+    def test_failed_buy_does_not_consume_daily_trade_limit(self):
+        from main.risk_manager import RiskManager
+
+        caches["default"].clear()
+        request = self._request(history_id="failed-buy-not-counted")
+        request.trade.trade_limit = 1
+        Tradeorderhistory.objects.create(
+            client=self.user,
+            trading_symbol="NIFTY21JUL2624200CE",
+            Index_Symbol="NIFTY",
+            transaction_type="BUY",
+            trade_order_status="OPEN",
+            order_status="Failed",
+            order_id="failed-buy-order",
+            EntryQty=65,
+            order_params={"symbol": "NIFTY", "underlying": "NIFTY"},
+        )
+
+        result = RiskManager().validate_and_reserve(request)
+
+        self.assertTrue(result.allowed)
+        self.assertIsNotNone(result.trade_limit_reservation_key)
+
+    def test_daily_trade_limit_reservations_block_simultaneous_extra_buy(self):
+        from main.risk_manager import RiskManager
+
+        caches["default"].clear()
+        manager = RiskManager()
+        first = self._request(history_id="limit-reservation-first")
+        first.trade.trade_limit = 2
+        second = ExecutionRequest(
+            **{
+                **first.__dict__,
+                "history_id": "limit-reservation-second",
+                "strike": 24300,
+                "order_params": {**first.order_params, "strike": 24300},
+                "contract_info": ContractInfo(symbol="NIFTY", strike=24300, option_type="PE", exchange="NFO"),
+            }
+        )
+        third = ExecutionRequest(
+            **{
+                **first.__dict__,
+                "history_id": "limit-reservation-third",
+                "strike": 24400,
+                "order_params": {**first.order_params, "strike": 24400},
+                "contract_info": ContractInfo(symbol="NIFTY", strike=24400, option_type="PE", exchange="NFO"),
+            }
+        )
+
+        first_result = manager.validate_and_reserve(first)
+        second_result = manager.validate_and_reserve(second)
+        third_result = manager.validate_and_reserve(third)
+
+        self.assertTrue(first_result.allowed)
+        self.assertTrue(second_result.allowed)
+        self.assertFalse(third_result.allowed)
+        self.assertEqual(third_result.error_code, "DAILY_TRADE_LIMIT_REACHED")
 
     def test_angel_one_access_rate_errors_are_retryable(self):
         engine = ExecutionEngine.__new__(ExecutionEngine)

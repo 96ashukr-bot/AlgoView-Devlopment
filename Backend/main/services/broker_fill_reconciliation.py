@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime
 from decimal import Decimal
 from typing import Any, Iterable, Optional
 
 from django.core.serializers.json import DjangoJSONEncoder
+from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 
 from main.brokers.registry import get_broker_adapter
 from main.models import ClientBrokerdetails, ClientTradeSetting, Tradeorderhistory
@@ -36,6 +39,9 @@ PRICE_KEYS = (
     "avgPrice",
     "avgTradePrice",
     "averageTradePrice",
+    "average_trade_price",
+    "average_traded_price",
+    "average_fill_price",
     "traded_price",
     "tradedPrice",
     "TradedPrice",
@@ -49,10 +55,27 @@ QUANTITY_KEYS = (
     "filledQuantity",
     "filledQty",
     "Fillshares",
+    "filledshares",
     "Qty",
     "qty",
     "quantity",
     "Quantity",
+)
+EXECUTION_TIME_KEYS = (
+    "exchange_timestamp",
+    "exchangeTimestamp",
+    "exchange_time",
+    "exchangeTime",
+    "exchtime",
+    "trade_timestamp",
+    "tradeTimestamp",
+    "trade_time",
+    "tradeTime",
+    "order_timestamp",
+    "orderTimestamp",
+    "update_timestamp",
+    "updateTime",
+    "updatetime",
 )
 
 
@@ -125,6 +148,31 @@ def _record_quantity(record: dict[str, Any]) -> Optional[int]:
         quantity = _to_int(record.get(key))
         if quantity is not None:
             return quantity
+    return None
+
+
+def _record_execution_time(record: dict[str, Any]) -> Optional[datetime]:
+    for key in EXECUTION_TIME_KEYS:
+        value = record.get(key)
+        if value in (None, "", "None"):
+            continue
+        parsed = value if isinstance(value, datetime) else parse_datetime(str(value))
+        if parsed is None:
+            for pattern in (
+                "%Y-%m-%d %H:%M:%S",
+                "%Y-%m-%dT%H:%M:%S",
+                "%d-%b-%Y %H:%M:%S",
+            ):
+                try:
+                    parsed = datetime.strptime(str(value), pattern)
+                    break
+                except ValueError:
+                    continue
+        if parsed is None:
+            continue
+        if timezone.is_naive(parsed):
+            parsed = timezone.make_aware(parsed, timezone.get_default_timezone())
+        return parsed
     return None
 
 
@@ -304,4 +352,14 @@ def refresh_trade_fill_from_broker(trade_order: Tradeorderhistory, broker_detail
 
     if changed:
         trade_order.save(update_fields=list(dict.fromkeys(update_fields)))
+    if status in SUCCESS_STATUSES:
+        from main.services.trade_limit import complete_successful_buy_slot
+
+        order_params = trade_order.order_params if isinstance(trade_order.order_params, dict) else {}
+        complete_successful_buy_slot(order_params.get("trade_limit_reservation_key"))
+    elif status in TERMINAL_FAILURE_STATUSES:
+        from main.services.trade_limit import release_successful_buy_slot
+
+        order_params = trade_order.order_params if isinstance(trade_order.order_params, dict) else {}
+        release_successful_buy_slot(order_params.get("trade_limit_reservation_key"))
     return changed

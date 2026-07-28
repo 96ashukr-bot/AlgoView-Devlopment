@@ -392,28 +392,16 @@ const TradeHistory = () => {
             return;
         }
 
-        const result = await Swal.fire({
-            title: 'Force Kill Switch',
-            text: `This will send direct square-off/exit orders for ${selectedTradeIds.length} selected trade(s). The system will not check whether these trades are already closed in our panel.`,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'Send Force Exit',
-            cancelButtonText: 'Cancel',
-        });
-
-        if (!result.isConfirmed) {
-            return;
-        }
-
         setKillSwitchLoading(true);
         try {
             const response = await forceKillSwitchSelectedTrades({
                 trade_history_ids: selectedTradeIds,
                 reason: 'Authorized user selected force kill switch',
+                async: true,
             });
             await fetchTradeHistory();
             const failedCount = response?.failed_count || 0;
-            const sentCount = response?.sent_count || 0;
+            const sentCount = response?.queued_count || response?.sent_count || 0;
             const failedMessages = Array.isArray(response?.results)
                 ? response.results
                     .filter((item) => ['failed', 'broker_rejected'].includes(item?.status))

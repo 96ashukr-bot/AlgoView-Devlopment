@@ -18,6 +18,7 @@ from main.execution_engine import ExecutionRequest, get_execution_engine
 from main.models import ClientBrokerdetails, ClientTradeSetting, Tradeorderhistory
 from main.services.broker_fill_reconciliation import refresh_trade_fill_from_broker
 from main.services.contract_display import build_option_display_symbol
+from main.services.eod_mis_closure import close_expired_mis_trades
 from main.services.live_price_cache import get_live_price
 from main.services.upstox_market_data import UpstoxInstrumentResolver
 
@@ -27,9 +28,12 @@ logger = TradingLogger("sl_tp_watcher")
 OPEN_ORDER_STATUSES = {
     "complete",
     "completed",
+    "executed",
+    "filled",
     "open",
     "pending",
     "put order req received",
+    "success",
     "traded",
     "transit",
 }
@@ -225,6 +229,58 @@ class SLTPWatcherService:
             return "POINTS"
         return None
 
+    def _resolve_saved_thresholds(self, trade_order: Tradeorderhistory) -> Dict[str, Optional[float]]:
+        order_params = trade_order.order_params if isinstance(trade_order.order_params, dict) else {}
+        metadata = trade_order.sltp_metadata if isinstance(getattr(trade_order, "sltp_metadata", None), dict) else {}
+        stop_loss_price = self._to_float(
+            order_params.get("effective_stop_loss_price")
+            or order_params.get("calculated_stoploss_price")
+            or metadata.get("effective_stop_loss_price")
+            or metadata.get("calculated_stoploss_price")
+        )
+        target_price = self._to_float(
+            order_params.get("effective_target_price")
+            or order_params.get("calculated_target_price")
+            or metadata.get("effective_target_price")
+            or metadata.get("calculated_target_price")
+        )
+        entry_reference_price = self._to_float(
+            order_params.get("entry_reference_price")
+            or metadata.get("entry_option_price")
+            or order_params.get("entry_option_price")
+            or trade_order.Entry_Price
+            or trade_order.LivePrice
+        )
+        return {
+            "stop_loss_price": stop_loss_price,
+            "target_price": target_price,
+            "entry_reference_price": entry_reference_price,
+        }
+
+    def _get_broker_details_for_trade(self, trade_order: Tradeorderhistory, trade_setting: Optional[ClientTradeSetting] = None) -> Optional[ClientBrokerdetails]:
+        if trade_setting:
+            broker_details = self._get_broker_details(trade_setting)
+            if broker_details:
+                return broker_details
+        broker_name = str(getattr(trade_order, "broker", "") or "").strip()
+        if not broker_name:
+            order_params = trade_order.order_params if isinstance(trade_order.order_params, dict) else {}
+            broker_name = str(order_params.get("broker") or "").strip()
+        if not broker_name:
+            return None
+        return ClientBrokerdetails.objects.filter(
+            client=trade_order.client,
+            broker_name__broker_name__iexact=broker_name,
+        ).select_related("broker_name").first()
+
+    @staticmethod
+    def _is_demo_trade(trade_order: Tradeorderhistory, trade_setting: Optional[ClientTradeSetting] = None) -> bool:
+        names = {
+            str(getattr(trade_order, "broker", "") or "").strip().lower(),
+            str(getattr(trade_setting, "broker", "") or "").strip().lower(),
+        }
+        return bool(names & {"demo", "demo broker"})
+
     def _get_open_trades(self):
         queryset = Tradeorderhistory.objects.select_related("client").filter(
             transaction_type__iexact="BUY",
@@ -349,17 +405,21 @@ class SLTPWatcherService:
         return ltp, None
 
     def _get_cached_payload_status(self, trade_order: Tradeorderhistory) -> tuple[Optional[float], Optional[str], Optional[float], str]:
-        instrument = self._resolve_market_instrument(trade_order)
         metadata = trade_order.sltp_metadata if isinstance(getattr(trade_order, "sltp_metadata", None), dict) else {}
         order_params = trade_order.order_params if isinstance(trade_order.order_params, dict) else {}
-        instrument_key = str(metadata.get("instrument_key") or order_params.get("instrument_key") or getattr(instrument, "instrument_key", "") or "").strip()
+        instrument_key = str(metadata.get("instrument_key") or order_params.get("instrument_key") or "").strip()
         payload = get_live_price(instrument_key=instrument_key, max_age_seconds=self.max_price_age_seconds) if instrument_key else None
-        if not payload and instrument:
+        if not payload:
             payload = get_live_price(
-                underlying=instrument.underlying,
-                expiry_date=instrument.expiry_date,
-                strike=instrument.strike,
-                option_type=instrument.option_type,
+                underlying=metadata.get("underlying") or metadata.get("symbol") or order_params.get("symbol") or order_params.get("underlying"),
+                expiry_date=metadata.get("expiry") or order_params.get("expiry") or order_params.get("expiry_date"),
+                strike=metadata.get("strike") or order_params.get("strike") or order_params.get("strike_price"),
+                option_type=metadata.get("option_type") or order_params.get("option_type") or order_params.get("Type"),
+                max_age_seconds=self.max_price_age_seconds,
+            )
+        if not payload:
+            payload = get_live_price(
+                trading_symbol=trade_order.trading_symbol or trade_order.Index_Symbol,
                 max_age_seconds=self.max_price_age_seconds,
             )
         if not payload:
@@ -380,7 +440,6 @@ class SLTPWatcherService:
         broker = str(trade_order.broker or "").strip().lower()
         if broker not in {"angel one", "angle one"}:
             return None, cache_error
-
         order_params = trade_order.order_params if isinstance(trade_order.order_params, dict) else {}
         metadata = trade_order.sltp_metadata if isinstance(getattr(trade_order, "sltp_metadata", None), dict) else {}
         trading_symbol = str(trade_order.trading_symbol or "").strip().upper()
@@ -661,6 +720,10 @@ class SLTPWatcherService:
 
     @staticmethod
     def _broker_token_invalid(broker_details: ClientBrokerdetails) -> bool:
+        broker = getattr(broker_details, "broker_name", None)
+        broker_name = str(getattr(broker, "broker_name", broker) or "").strip().lower()
+        if broker_name in {"demo", "demo broker"}:
+            return False
         token_getter = getattr(broker_details, "get_access_token_secure", None)
         token = token_getter() if callable(token_getter) else getattr(broker_details, "access_token", None)
         expiry = getattr(broker_details, "access_token_expiry", None)
@@ -710,6 +773,75 @@ class SLTPWatcherService:
             return "ORDER_REJECTED"
         return "EXIT_FAILED"
 
+    def inspect_trade(self, trade_order: Tradeorderhistory) -> WatchResult:
+        """Build the watcher display from local configuration and Redis only."""
+        trade_setting = self._find_trade_setting(trade_order)
+        saved_thresholds = self._resolve_saved_thresholds(trade_order)
+        if not trade_setting and saved_thresholds.get("stop_loss_price") is None and saved_thresholds.get("target_price") is None:
+            return self._build_watch_result(
+                trade_order,
+                status="skipped",
+                message="Matching client trade setting not found.",
+            )
+
+        thresholds = self._resolve_thresholds(trade_order, trade_setting) if trade_setting else saved_thresholds
+        stop_loss_price = thresholds.get("stop_loss_price")
+        target_price = thresholds.get("target_price")
+        if stop_loss_price is None and target_price is None:
+            return self._build_watch_result(
+                trade_order,
+                status="skipped",
+                message="No active stop-loss or target is configured.",
+                stop_loss_price=stop_loss_price,
+                target_price=target_price,
+            )
+
+        broker_details = self._get_broker_details_for_trade(trade_order, trade_setting)
+        is_demo_trade = self._is_demo_trade(trade_order, trade_setting)
+        if not broker_details and not is_demo_trade:
+            return self._build_watch_result(
+                trade_order,
+                status="skipped",
+                message="Broker details are missing for the client.",
+                stop_loss_price=stop_loss_price,
+                target_price=target_price,
+            )
+
+        cached_ltp, price_status, cache_age, subscription_status = self._get_cached_payload_status(trade_order)
+        current_ltp, ltp_error = self._get_current_ltp(trade_order, broker_details)
+        if current_ltp is not None and current_ltp > 0 and price_status:
+            subscription_status = "broker_fallback"
+        if current_ltp is None or current_ltp <= 0:
+            message_map = {
+                "PRICE_MISSING": "Tenant live option price is unavailable.",
+                "PRICE_STALE": f"Live price is stale. Age: {cache_age}s.",
+                "WRONG_CONTRACT": "Cached live price does not match the option contract.",
+            }
+            message = ltp_error or message_map.get(price_status, price_status or "Live price could not be fetched.")
+            return self._build_watch_result(
+                trade_order,
+                status="skipped",
+                message=message,
+                current_ltp=cached_ltp,
+                stop_loss_price=stop_loss_price,
+                target_price=target_price,
+                cache_age_seconds=cache_age,
+                subscription_status=subscription_status,
+            )
+
+        trigger_reason = self._determine_trigger_reason(current_ltp, stop_loss_price, target_price)
+        return self._build_watch_result(
+            trade_order,
+            status="triggered" if trigger_reason else "monitoring",
+            message=f"{trigger_reason} level reached; background watcher will process the exit." if trigger_reason else "Trade is within SL/TP bounds.",
+            current_ltp=current_ltp,
+            stop_loss_price=stop_loss_price,
+            target_price=target_price,
+            trigger_reason=trigger_reason,
+            cache_age_seconds=cache_age,
+            subscription_status=subscription_status,
+        )
+
     def process_trade(self, trade_order: Tradeorderhistory, execute_exit: bool = True) -> WatchResult:
         if getattr(trade_order, "sltp_manual_attention", False):
             return self._build_watch_result(
@@ -719,7 +851,8 @@ class SLTPWatcherService:
             )
 
         trade_setting = self._find_trade_setting(trade_order)
-        if not trade_setting:
+        saved_thresholds = self._resolve_saved_thresholds(trade_order)
+        if not trade_setting and saved_thresholds.get("stop_loss_price") is None and saved_thresholds.get("target_price") is None:
             self._mark_sltp_state(trade_order, status="TRADE_SETTING_MISSING", action="SKIPPED", failure_reason="Matching client trade setting not found.")
             return self._build_watch_result(
                 trade_order,
@@ -727,8 +860,9 @@ class SLTPWatcherService:
                 message="Matching client trade setting not found.",
             )
 
-        broker_details = self._get_broker_details(trade_setting)
-        if not broker_details:
+        broker_details = self._get_broker_details_for_trade(trade_order, trade_setting)
+        is_demo_trade = self._is_demo_trade(trade_order, trade_setting)
+        if not broker_details and not is_demo_trade:
             self._mark_sltp_state(trade_order, status="BROKER_MISSING", action="SKIPPED", failure_reason="Broker details are missing for the client.")
             return self._build_watch_result(
                 trade_order,
@@ -736,10 +870,10 @@ class SLTPWatcherService:
                 message="Broker details are missing for the client.",
             )
 
-        if refresh_trade_fill_from_broker(trade_order, broker_details):
+        if broker_details and refresh_trade_fill_from_broker(trade_order, broker_details):
             trade_order.refresh_from_db()
 
-        thresholds = self._resolve_thresholds(trade_order, trade_setting)
+        thresholds = self._resolve_thresholds(trade_order, trade_setting) if trade_setting else saved_thresholds
         stop_loss_price = thresholds.get("stop_loss_price")
         target_price = thresholds.get("target_price")
         if stop_loss_price is None and target_price is None:
@@ -836,7 +970,7 @@ class SLTPWatcherService:
                 subscription_status=subscription_status,
             )
 
-        if self._broker_token_invalid(broker_details):
+        if not is_demo_trade and self._broker_token_invalid(broker_details):
             self._mark_sltp_state(trade_order, status="BROKER_TOKEN_INVALID", action="SKIPPED", failure_reason="Broker token/session is invalid or expired.")
             self._set_exit_cooldown(trade_order, {"data": {"message": "Broker token/session is invalid or expired."}})
             return self._build_watch_result(
@@ -982,6 +1116,13 @@ class SLTPWatcherService:
             "market_closed": sum(1 for item in results if "market is closed" in item.message.lower()),
             "manual_attention_required": sum(1 for item in results if item.status == "manual_attention_required"),
         }
+        if execute_exit and not history_id:
+            eod_kwargs = {}
+            if client_id:
+                eod_kwargs["client_ids"] = [client_id]
+            elif client_ids is not None:
+                eod_kwargs["client_ids"] = client_ids
+            summary["eod_mis_closure"] = close_expired_mis_trades(**eod_kwargs)
 
         return {
             "summary": summary,

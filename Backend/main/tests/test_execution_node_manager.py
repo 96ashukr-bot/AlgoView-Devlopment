@@ -5274,6 +5274,130 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertEqual(trade_order.trade_order_status, "CLOSE")
         service._execution_engine.execute_order.assert_called_once()
 
+    def test_sl_tp_watcher_demo_broker_exit_does_not_require_token(self):
+        demo_broker = Broker.objects.create(broker_name="Demo Broker", is_active=True)
+        ClientBrokerdetails.objects.create(
+            client=self.client_user,
+            broker_name=demo_broker,
+            isTokenExpired=True,
+        )
+        trade_setting = ClientTradeSetting.objects.create(
+            client=self.client_user,
+            symbol="BANKNIFTY",
+            strategy="test",
+            broker="Demo Broker",
+            product_type="MIS",
+            order_type="LIMIT",
+            quantity=30,
+            group_service="DEMO",
+            expiry_date=timezone.datetime(2026, 7, 28),
+            sl_type="POINTS",
+            stop_loss=20,
+            target=20,
+        )
+        trade_order = Tradeorderhistory.objects.create(
+            client=self.client_user,
+            trade_setting=trade_setting,
+            GroupService="DEMO",
+            trading_symbol="BANKNIFTY28JUL2658200CE",
+            Index_Symbol="BANKNIFTY",
+            order_id="DEMO-entry",
+            order_status="complete",
+            broker="Demo Broker",
+            transaction_type="BUY",
+            Entry_Price=Decimal("502.10"),
+            EntryQty=30,
+            Exchange="NFO",
+            Segment="FNO",
+            Lot=1,
+            trade_order_status="OPEN",
+            history_id="demo-sltp-entry",
+            sltp_metadata={
+                "underlying": "BANKNIFTY",
+                "expiry": "2026-07-28",
+                "strike": 58200,
+                "option_type": "CE",
+                "calculated_stoploss_price": 482.10,
+                "calculated_target_price": 522.10,
+            },
+        )
+        service = SLTPWatcherService()
+        service._get_cached_payload_status = mock.Mock(return_value=(478.95, None, 0.0, "live"))
+        service._get_current_ltp = mock.Mock(return_value=(478.95, None))
+        service._market_is_open_now = mock.Mock(return_value=True)
+        service._build_exit_request = mock.Mock(return_value=SimpleNamespace(history_id="demo-sltp-exit"))
+        service._execution_engine = SimpleNamespace(
+            execute_order=mock.Mock(return_value={"data": {"status": "complete", "message": "Demo exit complete"}})
+        )
+
+        result = service.process_trade(trade_order)
+        trade_order.refresh_from_db()
+
+        self.assertEqual(result.status, "triggered")
+        self.assertEqual(result.trigger_reason, "STOP_LOSS")
+        self.assertEqual(trade_order.trade_order_status, "CLOSE")
+        self.assertEqual(trade_order.sltp_status, "CLOSED")
+        service._execution_engine.execute_order.assert_called_once()
+
+    def test_sl_tp_watcher_demo_broker_exit_does_not_require_broker_details(self):
+        trade_setting = ClientTradeSetting.objects.create(
+            client=self.other_client,
+            symbol="BANKNIFTY",
+            strategy="test",
+            broker="Demo Broker",
+            product_type="MIS",
+            order_type="LIMIT",
+            quantity=300,
+            group_service="DEMO",
+            expiry_date=timezone.datetime(2026, 7, 28),
+            sl_type="POINTS",
+            stop_loss=65,
+            target=78,
+        )
+        trade_order = Tradeorderhistory.objects.create(
+            client=self.other_client,
+            trade_setting=trade_setting,
+            GroupService="DEMO",
+            trading_symbol="BANKNIFTY28JUL2656700PE",
+            Index_Symbol="BANKNIFTY",
+            order_id="DEMO-entry-no-broker-details",
+            order_status="complete",
+            broker="Demo Broker",
+            transaction_type="BUY",
+            Entry_Price=Decimal("509.65"),
+            EntryQty=300,
+            Exchange="NFO",
+            Segment="FNO",
+            Lot=1,
+            trade_order_status="OPEN",
+            history_id="demo-sltp-no-broker-details",
+            sltp_metadata={
+                "underlying": "BANKNIFTY",
+                "expiry": "2026-07-28",
+                "strike": 56700,
+                "option_type": "PE",
+                "calculated_stoploss_price": 444.65,
+                "calculated_target_price": 587.65,
+            },
+        )
+        service = SLTPWatcherService()
+        service._get_cached_payload_status = mock.Mock(return_value=(403.15, None, 0.2, "live"))
+        service._get_current_ltp = mock.Mock(return_value=(403.15, None))
+        service._market_is_open_now = mock.Mock(return_value=True)
+        service._build_exit_request = mock.Mock(return_value=SimpleNamespace(history_id="demo-sltp-no-broker-details-exit"))
+        service._execution_engine = SimpleNamespace(
+            execute_order=mock.Mock(return_value={"data": {"status": "complete", "message": "Demo exit complete"}})
+        )
+
+        result = service.process_trade(trade_order)
+
+        trade_order.refresh_from_db()
+        self.assertEqual(result.status, "triggered")
+        self.assertEqual(result.trigger_reason, "STOP_LOSS")
+        self.assertEqual(trade_order.trade_order_status, "CLOSE")
+        self.assertEqual(trade_order.sltp_status, "CLOSED")
+        service._execution_engine.execute_order.assert_called_once()
+
     def test_sl_tp_exit_cooldown_uses_long_pause_for_rate_limit_response(self):
         service = SLTPWatcherService()
         trade_order = SimpleNamespace(history_id="rate-limited-history", id=1)

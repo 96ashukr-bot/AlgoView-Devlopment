@@ -553,7 +553,15 @@ class ContractMasterManager:
         now = datetime.now().date()
         eligible = [c for c in contracts if c.expiry.date() >= now]
         if expiry:
-            eligible = [c for c in eligible if c.expiry.date() == expiry.date()]
+            # Historical rows and force-exit reconstruction must still be able
+            # to resolve the exact saved contract. New order validation rejects
+            # expired contracts after resolution.
+            exact_expiry_contracts = [
+                c for c in contracts if c.expiry.date() == expiry.date()
+            ]
+            eligible = exact_expiry_contracts or [
+                c for c in eligible if c.expiry.date() == expiry.date()
+            ]
 
         if not eligible and expiry:
             eligible = [c for c in contracts if c.expiry.date() >= now]
