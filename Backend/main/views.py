@@ -4276,6 +4276,71 @@ def _build_regular_trade_exit_request(trade_history, *, force_broker_squareoff=F
     )
 
 
+def _mark_trade_closed_after_force_exit(trade_history, response):
+    response_data = response.get("data", {}) if isinstance(response, dict) else {}
+    exit_price = (
+        response_data.get("executed_price")
+        or response_data.get("average_fill_price")
+        or response_data.get("price")
+        or response_data.get("reference_price")
+        or response_data.get("ltp")
+    )
+    order_params = dict(trade_history.order_params or {})
+    sltp_metadata = (
+        trade_history.sltp_metadata
+        if isinstance(getattr(trade_history, "sltp_metadata", None), dict)
+        else {}
+    )
+    option_type = str(
+        order_params.get("option_type")
+        or order_params.get("Type")
+        or sltp_metadata.get("option_type")
+        or ""
+    ).strip().upper()
+    strike = (
+        order_params.get("strike")
+        if order_params.get("strike") not in (None, "")
+        else order_params.get("strike_price")
+    )
+    if strike in (None, ""):
+        strike = sltp_metadata.get("strike")
+    is_option_trade = (
+        option_type in {"CE", "PE", "CALL", "PUT"} and strike not in (None, "")
+    ) or bool(
+        re.search(
+            r"\d+(?:\.\d+)?(CE|PE)$",
+            str(trade_history.trading_symbol or "").replace(" ", "").upper(),
+        )
+    )
+    if exit_price in (None, "", 0, "0"):
+        exit_price = trade_history.Exit_Price
+        if exit_price in (None, "", 0, "0") and not is_option_trade:
+            exit_price = trade_history.LivePrice or trade_history.Entry_Price
+    exit_qty = response_data.get("filled_quantity") or trade_history.ExitQty or trade_history.EntryQty
+    order_params["force_kill_exit"] = {
+        "order_id": response_data.get("order_id"),
+        "status": response_data.get("status") or response.get("status"),
+        "response": response,
+        "closed_at": timezone.now().isoformat(),
+    }
+    trade_history.trade_order_status = "CLOSE"
+    trade_history.Exit_type = trade_history.Exit_type or "KILL_SWITCH"
+    trade_history.Exit_status = response_data.get("status") or response.get("status")
+    trade_history.Exit_Price = exit_price
+    trade_history.ExitQty = exit_qty
+    trade_history.SignalExit_time = trade_history.SignalExit_time or timezone.now()
+    trade_history.order_params = order_params
+    trade_history.save(update_fields=[
+        "trade_order_status",
+        "Exit_type",
+        "Exit_status",
+        "Exit_Price",
+        "ExitQty",
+        "SignalExit_time",
+        "order_params",
+    ])
+
+
 class ClientGlobalKillSwitchAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
