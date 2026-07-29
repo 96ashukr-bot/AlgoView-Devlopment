@@ -19,7 +19,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_date
 from main.models import ClientBrokerdetails
 from main.models import User
-from main.permissions import get_order_visible_clients_queryset
+from main.permissions import get_accessible_clients_queryset
 from main.services.proxy_utils import build_requests_proxy_config
 from main.sl_tp_watcher_service import get_sl_tp_watcher_service
 from rest_framework_simplejwt.tokens import AccessToken
@@ -92,7 +92,7 @@ class SLTPWatcherLiveConsumer(AsyncWebsocketConsumer):
     @sync_to_async
     def _load_trades(self):
         service = get_sl_tp_watcher_service()
-        client_ids = get_order_visible_clients_queryset(self.user).values_list("id", flat=True)
+        client_ids = get_accessible_clients_queryset(self.user).values_list("id", flat=True)
         queryset = service._get_open_trades().filter(client_id__in=client_ids)
         trade_ids = self.filters.get("trade_ids")
         if trade_ids is not None:
