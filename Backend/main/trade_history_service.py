@@ -752,10 +752,36 @@ def save_trade_order_history(*args, **kwargs):
                     "cancelled",
                     "canceled",
                 }
+                accepted_order_statuses = terminal_fill_statuses | {
+                    "open",
+                    "placed",
+                    "pending",
+                    "transit",
+                    "partial",
+                    "partially_filled",
+                }
+                existing_trade_status = _normalize_status_value(history.trade_order_status)
+                existing_has_broker_order = str(history.order_id or "").strip() not in {"", "0", "None"}
+                incoming_has_broker_order = str(resolved_order_id or "").strip() not in {"", "0", "None"}
+                existing_is_closed_fill = (
+                    existing_trade_status
+                    in {"close", "closed", "exit", "exited", "squareoff", "squared_off"}
+                    and existing_has_broker_order
+                    and history.Entry_Price is not None
+                )
+                accepted_order_without_broker_rejection = (
+                    existing_status in accepted_order_statuses
+                    and existing_has_broker_order
+                    and not incoming_has_broker_order
+                )
                 if (
                     not created
-                    and existing_status in terminal_fill_statuses
                     and incoming_status in failure_statuses
+                    and (
+                        existing_status in terminal_fill_statuses
+                        or existing_is_closed_fill
+                        or accepted_order_without_broker_rejection
+                    )
                 ):
                     if logger:
                         logger.warning(
