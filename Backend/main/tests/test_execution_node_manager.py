@@ -398,6 +398,55 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertIsNone(history.failure_reason)
         self.assertEqual(history.order_status, "open")
 
+    def test_trade_history_failure_cannot_overwrite_broker_confirmed_fill(self):
+        history = Tradeorderhistory.objects.create(
+            client=self.client_user,
+            history_id="confirmed-fill-history",
+            trading_symbol="BANKNIFTY",
+            order_id="broker-order-1",
+            order_status="complete",
+            trade_order_status="OPEN",
+            Entry_status="complete",
+            Entry_Price=Decimal("1006.15"),
+            EntryQty=30,
+            response_data={"data": {"status": "complete", "order_id": "broker-order-1"}},
+        )
+
+        save_trade_order_history(
+            1004.55,
+            "test",
+            "BUY",
+            "Failed",
+            self.client_user,
+            "BANKNIFTY",
+            0,
+            "Failed",
+            {"data": {"status": "Failed", "message": "Daily trade limit reached."}},
+            "Daily trade limit reached.",
+            "test-strategy",
+            "BUY",
+            None,
+            None,
+            None,
+            30,
+            None,
+            {},
+            "NFO",
+            "OPT",
+            "BANKNIFTY26AUG57000CE",
+            {"quantity": 30},
+            broker="Zerodha",
+            history_id=history.history_id,
+        )
+
+        history.refresh_from_db()
+        self.assertEqual(history.order_status, "complete")
+        self.assertEqual(history.trade_order_status, "OPEN")
+        self.assertEqual(history.order_id, "broker-order-1")
+        self.assertEqual(history.Entry_Price, Decimal("1006.15"))
+        self.assertIsNone(history.failure_reason)
+        self.assertEqual(history.response_data["data"]["status"], "complete")
+
     @mock.patch("main.views.get_execution_engine")
     def test_place_order_broker_overwrites_placeholder_with_engine_failure(self, mock_get_engine):
         mock_get_engine.return_value.execute_order.return_value = {

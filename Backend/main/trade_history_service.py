@@ -730,10 +730,39 @@ def save_trade_order_history(*args, **kwargs):
                 )
 
             if history_id:
-                history, _ = Tradeorderhistory.objects.get_or_create(
+                history, created = Tradeorderhistory.objects.get_or_create(
                     history_id=str(history_id),
                     defaults=defaults,
                 )
+                existing_status = _normalize_status_value(history.order_status)
+                incoming_status = _normalize_status_value(resolved_status)
+                terminal_fill_statuses = {
+                    "complete",
+                    "completed",
+                    "executed",
+                    "filled",
+                    "traded",
+                    "success",
+                }
+                failure_statuses = {
+                    "failed",
+                    "failure",
+                    "error",
+                    "rejected",
+                    "cancelled",
+                    "canceled",
+                }
+                if (
+                    not created
+                    and existing_status in terminal_fill_statuses
+                    and incoming_status in failure_statuses
+                ):
+                    if logger:
+                        logger.warning(
+                            "Ignoring failure update for broker-confirmed filled trade history %s",
+                            history.history_id,
+                        )
+                    return history
                 for field_name, field_value in defaults.items():
                     if field_name in {"SignalEntry_time", "SignalExit_time"}:
                         setattr(history, field_name, field_value)
