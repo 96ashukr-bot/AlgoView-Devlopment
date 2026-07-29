@@ -494,6 +494,36 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertEqual(history.order_id, "broker-order-2")
         self.assertIsNone(history.failure_reason)
 
+    def test_force_kill_open_submission_does_not_mark_trade_closed(self):
+        from main.views import _mark_trade_closed_after_force_exit
+
+        history = Tradeorderhistory.objects.create(
+            client=self.client_user,
+            trading_symbol="BANKNIFTY25AUG2657000CE",
+            order_id="entry-order-1",
+            order_status="complete",
+            trade_order_status="OPEN",
+            Entry_Price=Decimal("1008.20"),
+            EntryQty=30,
+        )
+
+        marked = _mark_trade_closed_after_force_exit(
+            history,
+            {
+                "data": {
+                    "status": "open",
+                    "order_id": "provisional-exit-order",
+                    "price": 984.65,
+                }
+            },
+        )
+
+        history.refresh_from_db()
+        self.assertFalse(marked)
+        self.assertEqual(history.trade_order_status, "OPEN")
+        self.assertIsNone(history.Exit_Price)
+        self.assertIsNone(history.ExitQty)
+
     @mock.patch("main.views.get_execution_engine")
     def test_place_order_broker_overwrites_placeholder_with_engine_failure(self, mock_get_engine):
         mock_get_engine.return_value.execute_order.return_value = {

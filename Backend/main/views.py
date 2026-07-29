@@ -4278,6 +4278,19 @@ def _build_regular_trade_exit_request(trade_history, *, force_broker_squareoff=F
 
 def _mark_trade_closed_after_force_exit(trade_history, response):
     response_data = response.get("data", {}) if isinstance(response, dict) else {}
+    response_status = str(
+        response_data.get("status") or (response.get("status") if isinstance(response, dict) else "")
+    ).strip().lower()
+    if response_status not in {
+        "complete",
+        "completed",
+        "executed",
+        "filled",
+        "traded",
+        "success",
+        "reconciled_closed",
+    }:
+        return False
     exit_price = (
         response_data.get("executed_price")
         or response_data.get("average_fill_price")
@@ -4339,6 +4352,7 @@ def _mark_trade_closed_after_force_exit(trade_history, response):
         "SignalExit_time",
         "order_params",
     ])
+    return True
 
 
 class ClientGlobalKillSwitchAPIView(APIView):
