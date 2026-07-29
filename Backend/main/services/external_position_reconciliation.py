@@ -31,6 +31,18 @@ SYMBOL_KEYS = ("tradingsymbol", "tradingSymbol", "trading_symbol", "symbol", "sy
 PRODUCT_KEYS = ("producttype", "productType", "product", "product_type")
 TRANSACTION_KEYS = ("transactiontype", "transactionType", "transaction_type", "side")
 NET_QUANTITY_KEYS = ("netqty", "netQty", "net_quantity", "netQuantity", "quantity")
+PRODUCT_ALIASES = {
+    "MIS": "INTRADAY",
+    "I": "INTRADAY",
+    "INTRADAY": "INTRADAY",
+    "CNC": "DELIVERY",
+    "C": "DELIVERY",
+    "DELIVERY": "DELIVERY",
+    "LONGTERM": "DELIVERY",
+    "NRML": "CARRYFORWARD",
+    "NORMAL": "CARRYFORWARD",
+    "CARRYFORWARD": "CARRYFORWARD",
+}
 
 
 def _compact_symbol(value: Any) -> str:
@@ -91,6 +103,13 @@ def _history_contract_symbols(trade_history: Tradeorderhistory) -> set[str]:
             # Upstox:    NIFTY 23950 PE 28 JUL 26
             values.add(f"{underlying}{expiry_text}{strike_text}{option_type}")
             values.add(f"{underlying}{strike_text}{option_type}{expiry_text}")
+            # Upstox weekly options use YY + non-zero-padded month + DD:
+            # NIFTY2680424100CE => NIFTY, 2026, August, 04, 24100 CE.
+            values.add(
+                f"{underlying}{expiry_date.strftime('%y')}"
+                f"{expiry_date.month}{expiry_date.strftime('%d')}"
+                f"{strike_text}{option_type}"
+            )
             # Upstox: NIFTY26JUL23950PE
             values.add(f"{underlying}{expiry_date.strftime('%y%b').upper()}{strike_text}{option_type}")
             # Dhan: NIFTY-Jul2026-23800-CE
@@ -110,7 +129,9 @@ def _record_matches_contract(record: dict[str, Any], symbols: set[str], product:
     if not record_symbol or record_symbol not in symbols:
         return False
     record_product = str(_first(record, PRODUCT_KEYS) or "").strip().upper()
-    return not product or not record_product or record_product == product
+    expected_product = PRODUCT_ALIASES.get(product, product)
+    actual_product = PRODUCT_ALIASES.get(record_product, record_product)
+    return not expected_product or not actual_product or actual_product == expected_product
 
 
 def _known_broker_order_ids(client_id: int) -> set[str]:

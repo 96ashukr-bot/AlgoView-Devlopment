@@ -4125,6 +4125,71 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertNotEqual(response["data"]["status"], "Failed")
         self.assertEqual(kite.place_order.call_args.kwargs["price"], 10.05)
 
+    @mock.patch(
+        "main.services.external_position_reconciliation.build_requests_proxy_config",
+        return_value={"https": "http://proxy.example:8080"},
+    )
+    @mock.patch("main.services.external_position_reconciliation.get_broker_adapter")
+    def test_failed_exit_reconciles_mis_as_angel_intraday(
+        self,
+        mock_get_adapter,
+        _mock_proxy,
+    ):
+        from main.services.external_position_reconciliation import reconcile_failed_exit_response
+
+        self.broker_details.execution_node = self.node
+        self.broker_details.save(update_fields=["execution_node"])
+        history = Tradeorderhistory.objects.create(
+            client=self.client_user,
+            broker="Angel One",
+            transaction_type="BUY",
+            trade_order_status="OPEN",
+            order_status="complete",
+            order_id="angel-entry-external-close",
+            trading_symbol="NIFTY04AUG2624300CE",
+            Index_Symbol="NIFTY",
+            Entry_type="BUY",
+            Entry_Price=Decimal("102.70"),
+            EntryQty=65,
+            order_params={"product_type": "MIS"},
+        )
+        Tradeorderhistory.objects.filter(pk=history.pk).update(
+            SignalEntry_time=timezone.now() - timedelta(minutes=5),
+        )
+        history.refresh_from_db()
+        mock_get_adapter.return_value = SimpleNamespace(
+            get_positions=mock.Mock(return_value={
+                "positions": [{
+                    "tradingsymbol": "NIFTY04AUG2624300CE",
+                    "producttype": "INTRADAY",
+                    "netqty": "0",
+                }],
+            }),
+            get_orderbook=mock.Mock(return_value={
+                "orders": [{
+                    "orderid": "angel-external-sell",
+                    "orderstatus": "complete",
+                    "transactiontype": "SELL",
+                    "producttype": "INTRADAY",
+                    "tradingsymbol": "NIFTY04AUG2624300CE",
+                    "filledshares": "65",
+                    "averageprice": 105.00,
+                    "exchtime": timezone.localtime(timezone.now()).strftime("%d-%b-%Y %H:%M:%S"),
+                }],
+            }),
+        )
+
+        response = reconcile_failed_exit_response(
+            history,
+            {"data": {"status": "Failed", "message": "Insufficient Funds."}},
+        )
+
+        history.refresh_from_db()
+        self.assertEqual(response["data"]["status"], "reconciled_closed")
+        self.assertEqual(history.trade_order_status, "CLOSE")
+        self.assertEqual(history.Exit_Price, Decimal("105.00"))
+        self.assertEqual(history.ExitQty, 65)
+
     @mock.patch("main.upstock.load_upstox_instruments")
     @mock.patch("main.upstock.requests.get")
     @mock.patch("main.upstock.requests.post")
