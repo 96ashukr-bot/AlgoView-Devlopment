@@ -5092,6 +5092,47 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertEqual(request.option_type, "CE")
 
     @mock.patch("main.sl_tp_watcher_service.get_live_price")
+    def test_sl_tp_payload_status_uses_resolved_instrument_key(self, mock_get_live_price):
+        service = SLTPWatcherService()
+        service._resolve_market_instrument = mock.Mock(
+            return_value=SimpleNamespace(instrument_key="NSE_FO|59079")
+        )
+        trade_order = SimpleNamespace(
+            trading_symbol="BANKNIFTY",
+            Index_Symbol="BANKNIFTY2657000CE25AUG",
+            sltp_metadata={
+                "underlying": "BANKNIFTY",
+                "expiry": "2026-08-25",
+                "strike": 57000,
+                "option_type": "CE",
+            },
+            order_params={},
+        )
+        payload = {
+            "instrument_key": "NSE_FO|59079",
+            "trading_symbol": "BANKNIFTY 57000 CE 25 AUG 26",
+            "ltp": 998.1,
+            "is_fresh": True,
+            "age_seconds": 0.5,
+            "underlying": "BANKNIFTY",
+            "expiry_date": "2026-08-25",
+            "strike": 57000,
+            "option_type": "CE",
+        }
+        mock_get_live_price.side_effect = (
+            lambda **kwargs: payload
+            if kwargs.get("instrument_key") == "NSE_FO|59079"
+            else None
+        )
+
+        ltp, price_status, age, subscription_status = service._get_cached_payload_status(trade_order)
+
+        self.assertEqual(ltp, 998.1)
+        self.assertIsNone(price_status)
+        self.assertEqual(age, 0.5)
+        self.assertEqual(subscription_status, "subscribed")
+
+    @mock.patch("main.sl_tp_watcher_service.get_live_price")
     def test_sl_tp_ltp_uses_option_contract_cache_not_plain_underlying_symbol(self, mock_get_live_price):
         service = SLTPWatcherService()
         service._upstox_resolver = SimpleNamespace(

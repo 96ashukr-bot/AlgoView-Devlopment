@@ -410,6 +410,13 @@ class SLTPWatcherService:
         instrument_key = str(metadata.get("instrument_key") or order_params.get("instrument_key") or "").strip()
         payload = get_live_price(instrument_key=instrument_key, max_age_seconds=self.max_price_age_seconds) if instrument_key else None
         if not payload:
+            instrument = self._resolve_market_instrument(trade_order)
+            if instrument:
+                payload = get_live_price(
+                    instrument_key=instrument.instrument_key,
+                    max_age_seconds=self.max_price_age_seconds,
+                )
+        if not payload:
             payload = get_live_price(
                 underlying=metadata.get("underlying") or metadata.get("symbol") or order_params.get("symbol") or order_params.get("underlying"),
                 expiry_date=metadata.get("expiry") or order_params.get("expiry") or order_params.get("expiry_date"),
