@@ -1,0 +1,19 @@
+[Unit]
+Description=SparkBridge Celery Beat scheduler
+After=network.target redis-server.service postgresql.service
+Requires=redis-server.service postgresql.service
+
+[Service]
+Type=simple
+User=ubuntu
+Group=www-data
+WorkingDirectory=/var/www/sparkbridge/Backend
+EnvironmentFile=/var/www/sparkbridge/Backend/.env
+ExecStart=/var/www/sparkbridge/Backend/venv/bin/celery -A algoview beat --loglevel=INFO --schedule=/var/www/sparkbridge/Backend/celerybeat-schedule
+Restart=always
+RestartSec=5
+KillSignal=SIGTERM
+TimeoutStopSec=120
+
+[Install]
+WantedBy=multi-user.target
