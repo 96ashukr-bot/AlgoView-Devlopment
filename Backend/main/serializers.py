@@ -785,6 +785,10 @@ class NewUserCreateSerializer(serializers.ModelSerializer):
             instance.can_place_manual_trades,
         )
         instance.save()
+        if access_token:
+            from main.tasks import schedule_broker_session_warmup
+
+            schedule_broker_session_warmup(instance.id)
         return instance
 
 class KYCSerializer(serializers.ModelSerializer):
@@ -1888,6 +1892,10 @@ class ClientBrokerDetailsUpdateSerializer(serializers.ModelSerializer):
         if instance.client_id and not instance.execution_node_id:
             sync_client_broker_execution_nodes(instance.client)
             instance.refresh_from_db(fields=["execution_node"])
+        if validated_data.get('access_token'):
+            from main.tasks import schedule_broker_session_warmup
+
+            schedule_broker_session_warmup(instance.id)
         return instance
 
 

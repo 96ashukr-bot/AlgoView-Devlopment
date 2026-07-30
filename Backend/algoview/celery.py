@@ -3,6 +3,7 @@ import os
 import logging
 from celery import Celery
 from celery.signals import worker_init, worker_ready
+from celery.schedules import crontab
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +19,14 @@ app.conf.beat_schedule = {
     "warm-active-angel-sessions": {
         "task": "main.tasks.warm_active_angel_sessions_task",
         "schedule": 300.0,
+    },
+    "refresh-pre-market-broker-masters": {
+        "task": "main.tasks.refresh_and_prewarm_broker_masters_task",
+        "schedule": crontab(hour=7, minute=45, day_of_week="1-5"),
+    },
+    "warm-pre-market-broker-sessions": {
+        "task": "main.tasks.warm_active_broker_sessions_task",
+        "schedule": crontab(hour=8, minute=30, day_of_week="1-5"),
     },
 }
 

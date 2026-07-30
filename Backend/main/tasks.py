@@ -39,6 +39,27 @@ from main.companysmtpsetails import get_company_profile,get_smtp_details
 
 FORCE_KILL_DISPATCH_TTL_SECONDS = 120
 FORCE_KILL_SWITCH_QUEUE = "kill_switch"
+WEBHOOK_EXECUTION_QUEUE = "webhook_execution"
+
+
+def schedule_broker_session_warmup(broker_details_id):
+    """Queue post-login warming without delaying the broker callback response."""
+    try:
+        broker_details_id = int(broker_details_id)
+    except (TypeError, ValueError):
+        return None
+    try:
+        result = warm_single_broker_session_task.apply_async(
+            kwargs={"broker_details_id": broker_details_id},
+            queue=WEBHOOK_EXECUTION_QUEUE,
+        )
+        return result.id
+    except Exception:
+        logger.exception(
+            "Unable to schedule broker session warmup broker_details_id=%s",
+            broker_details_id,
+        )
+        return None
 
 
 def _force_kill_dispatch_key(trade_history_id):
@@ -122,6 +143,112 @@ def warm_active_angel_sessions_task(self):
             countdown=round(index * spacing_seconds, 2),
         )
     return {"status": "scheduled", "count": count, "spacing_seconds": round(spacing_seconds, 3)}
+
+
+@shared_task(bind=True, autoretry_for=(), max_retries=0, soft_time_limit=120, time_limit=150)
+def warm_single_broker_session_task(self, *, broker_details_id):
+    """Validate one non-Angel broker session before trading starts."""
+    from main.broker_registry import normalize_broker_name
+    from main.brokers import get_broker_adapter
+    from main.models import ClientBrokerdetails
+    from main.services.execution_nodes import mark_execution_node_broker_verified_from_valid_token
+    from main.services.proxy_utils import build_requests_proxy_config
+
+    broker_details = ClientBrokerdetails.objects.select_related(
+        "client", "broker_name", "execution_node",
+    ).filter(pk=broker_details_id, client__is_enable=True).first()
+    if broker_details is None:
+        return {"status": "missing", "broker_details_id": broker_details_id}
+    if broker_details.execution_node is None:
+        return {"status": "skipped", "reason": "missing_execution_node", "broker_details_id": broker_details_id}
+    broker_name = normalize_broker_name(getattr(broker_details.broker_name, "broker_name", ""))
+    if broker_name == "angel one":
+        return warm_single_angel_session_task.run(broker_details_id=broker_details_id)
+    try:
+        proxy_config = build_requests_proxy_config(broker_details.execution_node)
+        result = get_broker_adapter(broker_details).validate_credentials(proxy_config=proxy_config)
+    except Exception as exc:
+        logger.warning(
+            "Broker session prewarm failed broker_details_id=%s broker=%s error=%s",
+            broker_details_id,
+            broker_name,
+            exc,
+        )
+        return {
+            "status": "failed",
+            "broker": broker_name,
+            "broker_details_id": broker_details_id,
+            "reason": str(exc),
+        }
+    status_value = str(result.get("status") or "").strip().lower()
+    if status_value == "success":
+        mark_execution_node_broker_verified_from_valid_token(
+            broker_details.client,
+            broker_details.execution_node,
+        )
+    return {
+        "status": status_value or "failed",
+        "broker": broker_name,
+        "broker_details_id": broker_details_id,
+        "message": result.get("message"),
+    }
+
+
+@shared_task(bind=True, autoretry_for=(), max_retries=0)
+def warm_active_broker_sessions_task(self):
+    """Spread all active broker-session checks across the pre-market window."""
+    from main.models import ClientBrokerdetails
+
+    broker_detail_ids = list(
+        ClientBrokerdetails.objects.filter(
+            client__is_enable=True,
+            execution_node__isnull=False,
+        )
+        .order_by("id")
+        .values_list("id", flat=True)
+    )
+    count = len(broker_detail_ids)
+    spacing_seconds = (900.0 / count) if count else 0
+    for index, broker_details_id in enumerate(broker_detail_ids):
+        warm_single_broker_session_task.apply_async(
+            kwargs={"broker_details_id": broker_details_id},
+            countdown=round(index * spacing_seconds, 2),
+            queue=WEBHOOK_EXECUTION_QUEUE,
+        )
+    return {"status": "scheduled", "count": count, "spacing_seconds": round(spacing_seconds, 3)}
+
+
+@shared_task(bind=True, autoretry_for=(), max_retries=0, soft_time_limit=1200, time_limit=1500)
+def refresh_and_prewarm_broker_masters_task(self):
+    """Refresh durable broker masters, then atomically load execution indexes."""
+    from django.core.management import call_command
+    from main.broker_instrument_cache import prewarm_broker_instrument_indexes
+
+    refresh_status = "success"
+    refresh_error = None
+    try:
+        call_command("refresh_broker_instrument_masters", verbosity=0)
+    except BaseException as exc:
+        # The refresh command intentionally fails when a provider is unavailable.
+        # Preserve and preload the previous valid snapshots instead of leaving the
+        # live execution path without an instrument index.
+        refresh_status = "cached_fallback"
+        refresh_error = str(exc)
+        logger.warning("Pre-market broker master refresh used cached fallback: %s", exc)
+    prewarm_broker_instrument_indexes()
+    prewarm_webhook_instrument_indexes_task.apply_async(queue=WEBHOOK_EXECUTION_QUEUE)
+    return {"status": refresh_status, "error": refresh_error}
+
+
+@shared_task(bind=True, autoretry_for=(), max_retries=0, soft_time_limit=300, time_limit=360)
+def prewarm_webhook_instrument_indexes_task(self):
+    """Load refreshed snapshots inside the dedicated webhook worker process."""
+    from main.broker_instrument_cache import prewarm_broker_instrument_indexes
+    from main.angelone.managers.contract_manager import ContractMasterManager
+
+    prewarm_broker_instrument_indexes()
+    angel_ready = ContractMasterManager.get_instance().initialize(blocking=True)
+    return {"status": "ready" if angel_ready else "cached_fallback"}
 
 
 @shared_task(bind=True, autoretry_for=(), max_retries=0)
@@ -456,7 +583,8 @@ def process_webhook_signal_task(self, *, trade_ids, context, history_mode="defau
                 "index": index,
                 "context": context,
                 "history_mode": history_mode,
-            }
+            },
+            queue=WEBHOOK_EXECUTION_QUEUE,
         )
         queued_tasks.append({"trade_setting_id": trade_id, "task_id": task.id})
 

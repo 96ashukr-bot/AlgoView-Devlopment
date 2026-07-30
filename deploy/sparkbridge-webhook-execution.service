@@ -1,0 +1,19 @@
+[Unit]
+Description=SparkBridge dedicated TradingView webhook execution worker
+After=network.target redis-server.service postgresql.service
+Requires=redis-server.service postgresql.service
+
+[Service]
+Type=simple
+User=ubuntu
+Group=www-data
+WorkingDirectory=/var/www/sparkbridge/Backend
+EnvironmentFile=/var/www/sparkbridge/Backend/.env
+ExecStart=/bin/sh -c 'exec /var/www/sparkbridge/Backend/venv/bin/celery -A algoview worker --loglevel=INFO --pool=threads --concurrency=${WEBHOOK_EXECUTION_WORKERS:-32} --prefetch-multiplier=1 --queues=webhook_execution --hostname=sparkbridge-webhook-execution@%%h'
+Restart=always
+RestartSec=5
+KillSignal=SIGTERM
+TimeoutStopSec=600
+
+[Install]
+WantedBy=multi-user.target

@@ -796,6 +796,10 @@ def _save_session_tokens_compat(broker_details, request_token, access_token, ref
                 node.mark_log("broker_verified", "Execution node marked broker verified after successful broker token generation.", client=broker_details.client)
             except Exception:
                 logger.debug("Unable to write execution node broker verification log", exc_info=True)
+    if access_token:
+        from main.tasks import schedule_broker_session_warmup
+
+        schedule_broker_session_warmup(broker_details.id)
 
 
 def _save_market_data_upstox_tokens(credential, request_token, access_token, refresh_token=None, expiry=None):

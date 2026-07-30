@@ -45,7 +45,7 @@ from main.services.upstox_market_data import UpstoxInstrumentResolver, _parse_op
 from main.serializers import ClientBrokerDetailsUpdateSerializer, TradeorderhistorySerializer
 from main.trade_history_service import save_trade_order_history
 from main.views import _build_regular_trade_exit_request, _is_regular_trade_open, _process_webhook_trade, _resolve_webhook_request_context, place_order_broker
-from main.tasks import process_single_webhook_trade_task, process_webhook_signal_task
+from main.tasks import process_single_webhook_trade_task, process_webhook_signal_task, schedule_broker_session_warmup
 from main.angelone.managers.contract_manager import ContractMasterManager
 
 
@@ -988,8 +988,24 @@ class ExecutionNodeManagerTests(TestCase):
             first_trade.pk,
         )
         self.assertEqual(
+            mock_apply_async.call_args_list[0].kwargs["queue"],
+            "webhook_execution",
+        )
+        self.assertEqual(
             mock_apply_async.call_args_list[1].kwargs["kwargs"]["trade_id"],
             second_trade.pk,
+        )
+
+    @mock.patch("main.tasks.warm_single_broker_session_task.apply_async")
+    def test_broker_login_warmup_uses_dedicated_execution_queue(self, mock_apply_async):
+        mock_apply_async.return_value = SimpleNamespace(id="warmup-task")
+
+        task_id = schedule_broker_session_warmup(self.broker_details.pk)
+
+        self.assertEqual(task_id, "warmup-task")
+        mock_apply_async.assert_called_once_with(
+            kwargs={"broker_details_id": self.broker_details.pk},
+            queue="webhook_execution",
         )
 
     @mock.patch("main.views._process_webhook_trade")
@@ -1049,7 +1065,7 @@ class ExecutionNodeManagerTests(TestCase):
         history = Tradeorderhistory.objects.get(history_id=expected_history_id)
         self.assertEqual(result["status"], "failed")
         self.assertEqual(history.order_status, "Failed")
-        self.assertEqual(history.trade_order_status, "SKIPPED")
+        self.assertEqual(history.trade_order_status, "Failed")
         self.assertIn("Webhook worker failed before broker execution", history.failure_reason)
 
     @mock.patch("main.views.place_order_broker")

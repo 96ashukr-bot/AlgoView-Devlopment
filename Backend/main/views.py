@@ -4733,10 +4733,13 @@ class PlaceOrderWebhookView(APIView):
         trade_ids = list(candidate_trades.values_list("id", flat=True))
         from main.tasks import process_webhook_signal_task
 
-        async_result = process_webhook_signal_task.delay(
-            trade_ids=trade_ids,
-            context=serialize_to_json(context),
-            history_mode="default",
+        async_result = process_webhook_signal_task.apply_async(
+            kwargs={
+                "trade_ids": trade_ids,
+                "context": serialize_to_json(context),
+                "history_mode": "default",
+            },
+            queue="webhook_execution",
         )
 
         summary = {
@@ -4792,10 +4795,13 @@ class MyPlaceOrderWebhookView(APIView):
         trade_ids = list(candidate_trades.values_list("id", flat=True))
         from main.tasks import process_webhook_signal_task
 
-        async_result = process_webhook_signal_task.delay(
-            trade_ids=trade_ids,
-            context=serialize_to_json(context),
-            history_mode="legacy",
+        async_result = process_webhook_signal_task.apply_async(
+            kwargs={
+                "trade_ids": trade_ids,
+                "context": serialize_to_json(context),
+                "history_mode": "legacy",
+            },
+            queue="webhook_execution",
         )
 
         summary = {
@@ -5299,6 +5305,9 @@ class BrokerGenerateTokenView(APIView):
                 broker_details.access_token = access_token
                 broker_details.isTokenExpired = False
                 broker_details.save()
+                from main.tasks import schedule_broker_session_warmup
+
+                schedule_broker_session_warmup(broker_details.id)
 
                 if not node.is_verified_with_broker:
                     node.is_verified_with_broker = True
@@ -5376,6 +5385,9 @@ class BrokerGenerateTokenView(APIView):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
+            from main.tasks import schedule_broker_session_warmup
+
+            schedule_broker_session_warmup(broker_details.id)
             runtime_summary = LoginActivityService().build_summary(request.user, request=request)
             broker_runtime = (runtime_summary.get("data") or {}).get("broker") or {}
 

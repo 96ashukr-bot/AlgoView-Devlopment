@@ -249,6 +249,9 @@ def angelone_callback(request):
             status=400,
         )
 
+    from main.tasks import schedule_broker_session_warmup
+
+    schedule_broker_session_warmup(broker_details.id)
     return redirect(state_record.frontend_redirect_url or "/dashboard/algoviewtech/user")
 
 

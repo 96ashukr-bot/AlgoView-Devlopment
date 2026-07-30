@@ -398,6 +398,7 @@ CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 # the database and execution-node connection limits; each worker handles one
 # client broker request at a time.
 MANUAL_TRADE_DISPATCH_WORKERS = config('MANUAL_TRADE_DISPATCH_WORKERS', default=32, cast=int)
+WEBHOOK_EXECUTION_WORKERS = config('WEBHOOK_EXECUTION_WORKERS', default=32, cast=int)
 
 CONTACT_NUM="+919988746583"
 REDIRECT_URL=config('BROKER_REDIRECT_URL', default="https://app.sparkstechnologies.co.in/api/broker/callback/")
