@@ -15,6 +15,8 @@ import time
 import requests
 import re
 import json
+import os
+import tempfile
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional, Dict, List, Any, Tuple
@@ -322,12 +324,24 @@ class ContractMasterManager:
 
     def _write_cached_contracts(self, data: List[Dict]) -> None:
         """Persist the last valid Angel One contract master for market-hour fallback."""
+        tmp_path = None
         try:
             cache_path = self._cache_path()
             cache_path.parent.mkdir(parents=True, exist_ok=True)
-            tmp_path = cache_path.with_suffix(f"{cache_path.suffix}.tmp")
-            tmp_path.write_text(json.dumps(data), encoding="utf-8")
-            tmp_path.replace(cache_path)
+            with tempfile.NamedTemporaryFile(
+                mode="w",
+                encoding="utf-8",
+                dir=cache_path.parent,
+                prefix=f".{cache_path.name}.",
+                suffix=".tmp",
+                delete=False,
+            ) as tmp_file:
+                json.dump(data, tmp_file)
+                tmp_file.flush()
+                os.fsync(tmp_file.fileno())
+                tmp_path = Path(tmp_file.name)
+            os.replace(tmp_path, cache_path)
+            tmp_path = None
             logger.info(
                 "Angel One contract master cached",
                 path=str(cache_path),
@@ -335,6 +349,12 @@ class ContractMasterManager:
             )
         except Exception as exc:
             logger.error("Angel One contract master cache write failed", error=str(exc))
+        finally:
+            if tmp_path is not None:
+                try:
+                    tmp_path.unlink(missing_ok=True)
+                except Exception:
+                    pass
 
     def _load_cached_contracts(self, *, require_fresh: bool = False) -> bool:
         """Load the last valid Angel One contract master from disk."""
