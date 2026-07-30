@@ -38,6 +38,7 @@ from main.companysmtpsetails import get_company_profile,get_smtp_details
 
 
 FORCE_KILL_DISPATCH_TTL_SECONDS = 120
+FORCE_KILL_SWITCH_QUEUE = "kill_switch"
 
 
 def _force_kill_dispatch_key(trade_history_id):

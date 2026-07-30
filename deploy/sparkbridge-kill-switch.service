@@ -1,0 +1,19 @@
+[Unit]
+Description=SparkBridge dedicated Kill Switch worker
+After=network.target redis-server.service postgresql.service
+Requires=redis-server.service postgresql.service
+
+[Service]
+Type=simple
+User=ubuntu
+Group=www-data
+WorkingDirectory=/var/www/sparkbridge/Backend
+EnvironmentFile=/var/www/sparkbridge/Backend/.env
+ExecStart=/var/www/sparkbridge/Backend/venv/bin/celery -A algoview worker --loglevel=INFO --pool=threads --concurrency=12 --prefetch-multiplier=1 --queues=kill_switch --hostname=sparkbridge-kill-switch@%%h
+Restart=always
+RestartSec=5
+KillSignal=SIGTERM
+TimeoutStopSec=600
+
+[Install]
+WantedBy=multi-user.target

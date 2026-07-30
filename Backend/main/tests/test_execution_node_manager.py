@@ -1667,6 +1667,62 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertEqual(denied_response.data["sent_count"], 0)
         self.assertEqual(mock_engine_factory.return_value.execute_order.call_count, 2)
 
+    @mock.patch("main.views.force_kill_switch_trade_task.apply_async")
+    def test_async_force_kill_switch_uses_dedicated_queue_for_every_selected_trade(self, mock_apply_async):
+        mock_apply_async.side_effect = [
+            SimpleNamespace(id="kill-task-1"),
+            SimpleNamespace(id="kill-task-2"),
+        ]
+        self.client_user.type_of_user = "is_client"
+        self.client_user.is_client = "True"
+        self.client_user.save(update_fields=["type_of_user", "is_client"])
+        trades = [
+            Tradeorderhistory.objects.create(
+                client=self.client_user,
+                GroupService="Lite",
+                trading_symbol=f"NIFTY16JUN26239{index}0PE",
+                Index_Symbol="NIFTY",
+                transaction_type="BUY",
+                trade_order_status="OPEN",
+                order_status="complete",
+                order_id=f"kill-entry-order-{index}",
+                history_id=f"kill-entry-history-{index}",
+                EntryQty=65,
+                Entry_Price=Decimal("21.10"),
+                order_params={
+                    "symbol": "NIFTY",
+                    "strike": 23900 + (index * 10),
+                    "option_type": "PE",
+                    "product_type": "MIS",
+                    "day": "16",
+                    "month": "JUN",
+                    "year": "26",
+                    "fullyear": "2026",
+                    "quantity": 65,
+                },
+            )
+            for index in range(2)
+        ]
+        token = str(RefreshToken.for_user(self.client_user).access_token)
+
+        response = self.client.post(
+            "/api/superadmin/force-kill-switch/",
+            data=json.dumps({
+                "trade_history_ids": [trade.id for trade in trades],
+                "reason": "Select all active orders",
+                "async": True,
+            }),
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Bearer {token}",
+        )
+
+        self.assertEqual(response.status_code, 202, response.data)
+        self.assertEqual(response.data["queued_count"], 2)
+        self.assertEqual(mock_apply_async.call_count, 2)
+        for call in mock_apply_async.call_args_list:
+            self.assertEqual(call.kwargs["queue"], "kill_switch")
+            self.assertEqual(call.kwargs["priority"], 9)
+
     def test_routed_open_exit_does_not_close_buy_position(self):
         buy_history = Tradeorderhistory.objects.create(
             client=self.client_user,

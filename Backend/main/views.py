@@ -50,6 +50,7 @@ from main.permissions import (
 from main.services.login_activity_service import LoginActivityService
 from main.broker_registry import broker_field_is_configured, get_broker_setup_spec, get_default_broker_catalog, normalize_broker_name
 from main.tasks import (
+    FORCE_KILL_SWITCH_QUEUE,
     acquire_force_kill_dispatch,
     force_kill_switch_trade_task,
     process_manual_trade_batch_task,
@@ -4482,6 +4483,7 @@ class SuperadminForceKillSwitchAPIView(APIView):
                                 "initiated_by_id": request.user.id,
                                 "dispatch_token": dispatch_token,
                             },
+                            queue=FORCE_KILL_SWITCH_QUEUE,
                             priority=9,
                         )
                     except Exception:
