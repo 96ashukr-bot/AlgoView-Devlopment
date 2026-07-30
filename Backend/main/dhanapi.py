@@ -19,6 +19,10 @@ from main.tasks import send_trade_email_async
 from main.broker_order_utils import extract_ltp_from_quote_payload, normalize_order_type, resolve_limit_price, resolve_limit_reference_price, to_float
 from main.services.live_price_cache import get_live_price
 from main.services.option_ltp_fallback import fetch_nse_option_chain_ltp
+from main.services.upstox_market_data import (
+    fetch_central_upstox_option_ltp,
+    get_upstox_instrument_resolver,
+)
 from main.trade_history_service import save_trade_order_history
 logger = logging.getLogger('main')
 DHAN_LTP_URL = "https://api.dhan.co/v2/marketfeed/ltp"
@@ -100,6 +104,24 @@ def fetch_dhan_option_ltp(
     )
     if central_ltp is not None:
         return central_ltp
+
+    contract = _dhan_option_contract_parts(
+        trading_symbol,
+        expiry_date=expiry_date,
+        underlying=underlying,
+    )
+    if contract:
+        instrument = get_upstox_instrument_resolver().resolve_contract(**contract)
+        if instrument:
+            upstox_ltp = fetch_central_upstox_option_ltp(instrument)
+            if upstox_ltp is not None:
+                logger.info(
+                    "%s : Using central Upstox on-demand option premium for Dhan %s.",
+                    user,
+                    trading_symbol,
+                )
+                return float(upstox_ltp)
+
     try:
         response = requests.post(
             DHAN_LTP_URL,

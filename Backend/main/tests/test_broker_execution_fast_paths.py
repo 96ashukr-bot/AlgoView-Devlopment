@@ -26,6 +26,41 @@ class BrokerExecutionFastPathTests(SimpleTestCase):
         self.assertEqual(price, 123.45)
         dhan_client.get_ltp_data.assert_not_called()
 
+    @patch("main.dhanapi.fetch_central_upstox_option_ltp", return_value=87.65)
+    @patch("main.dhanapi.get_upstox_instrument_resolver")
+    @patch("main.dhanapi.get_live_price", return_value=None)
+    def test_dhan_uses_central_upstox_on_demand_price_when_cache_is_missing(
+        self,
+        _get_live_price,
+        get_resolver,
+        fetch_central_ltp,
+    ):
+        instrument = Mock()
+        get_resolver.return_value.resolve_contract.return_value = instrument
+        dhan_client = Mock()
+
+        price = dhanapi.fetch_dhan_option_ltp(
+            dhan_client,
+            "client",
+            "token",
+            "NSE_FNO",
+            "65806",
+            {},
+            trading_symbol="NIFTYAug202624250CE",
+            expiry_date="2026-08-04",
+            underlying="NIFTY",
+        )
+
+        self.assertEqual(price, 87.65)
+        get_resolver.return_value.resolve_contract.assert_called_once_with(
+            underlying="NIFTY",
+            expiry_date="2026-08-04",
+            strike=24250.0,
+            option_type="CE",
+        )
+        fetch_central_ltp.assert_called_once_with(instrument)
+        dhan_client.get_ltp_data.assert_not_called()
+
     @patch("main.groww.fetch_groww_option_ltp")
     @patch("main.groww.get_live_price")
     def test_groww_uses_fresh_central_price_before_broker_quote(

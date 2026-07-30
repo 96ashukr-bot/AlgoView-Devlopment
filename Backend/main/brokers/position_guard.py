@@ -139,6 +139,18 @@ def history_strike(history):
             return group
         if len(group) > 6:
             return group[-5:]
+
+    order_params = getattr(history, "order_params", None)
+    if isinstance(order_params, dict):
+        stored_strike = (
+            order_params.get("strike")
+            if order_params.get("strike") not in (None, "")
+            else order_params.get("strike_price")
+        )
+        normalized_strike = _normalized_strike(stored_strike)
+        if normalized_strike:
+            return normalized_strike
+
     return round_strike_from_signal_price(_history_signal_price(history))
 
 

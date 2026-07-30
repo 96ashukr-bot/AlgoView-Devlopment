@@ -343,6 +343,47 @@ class ExecutionNodeManagerTests(TestCase):
 
         self.assertEqual(remaining_open_quantity(history), 0)
 
+    def test_selected_close_matches_generic_symbol_using_saved_strike(self):
+        history = Tradeorderhistory.objects.create(
+            client=self.client_user,
+            history_id="manual-dhan-generic-symbol",
+            trading_symbol="NIFTY",
+            Index_Symbol="NIFTY",
+            broker="Dhan",
+            transaction_type="BUY",
+            order_status="traded",
+            trade_order_status="OPEN",
+            order_id="dhan-entry-order",
+            Entry_Price=Decimal("109.20"),
+            EntryQty=65,
+            order_params={
+                "symbol": "NIFTY",
+                "strike": 24300.0,
+                "option_type": "PE",
+                "expiry": "2026-08-04",
+                "product_type": "MIS",
+            },
+        )
+        close_order = {
+            "transaction_type": "SELL",
+            "symbol": "NIFTY",
+            "strike": 24300.0,
+            "option_type": "PE",
+            "quantity": 65,
+            "order_params": {"original_history_id": history.history_id},
+        }
+
+        prepared, matched_history, error = prepare_close_order_from_open_position(
+            self.client_user,
+            close_order,
+            "dhan",
+        )
+
+        self.assertIsNone(error)
+        self.assertEqual(matched_history.id, history.id)
+        self.assertEqual(prepared["quantity"], 65)
+        self.assertEqual(prepared["strike"], "24300")
+
     def test_trade_history_serializer_backfills_missing_exit_quantity_for_completed_close(self):
         history = Tradeorderhistory.objects.create(
             client=self.client_user,
