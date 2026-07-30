@@ -69,7 +69,6 @@ from main.brokers.exchange_mapping import normalize_broker_exchange
 from main.brokers.position_guard import is_force_broker_squareoff, prepare_close_order_from_open_position
 from main.brokers.utils import build_trade_symbol
 from main.risk_manager import get_risk_manager
-from main.services.execution_nodes import get_execution_node_for_client
 from main.services.execution_router import route_order_to_execution_node
 from main.services.proxy_utils import build_requests_proxy_config
 from main.upstock import place_upstox_orders
@@ -1068,11 +1067,7 @@ class ExecutionEngine:
         if not client_broker:
             return self._failed_response("No broker details found for this client.")
         if not client_broker.execution_node_id:
-            assigned_node = get_execution_node_for_client(request.user)
-            if not assigned_node:
-                return self._failed_response("No verified execution node/proxy is assigned. Direct broker execution is blocked.")
-            client_broker.execution_node = assigned_node
-            client_broker.save(update_fields=["execution_node"])
+            return self._failed_response("No verified execution node/proxy is assigned. Direct broker execution is blocked.")
         contract = validation_context.get("contract")
         contract_expiry = getattr(contract, "expiry", None)
         broker_exchange = self._broker_exchange_name(request)
