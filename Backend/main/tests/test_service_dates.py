@@ -1,5 +1,6 @@
 from unittest import mock
 
+from dateutil.relativedelta import relativedelta
 from django.test import TestCase
 from django.utils import timezone
 
@@ -42,6 +43,27 @@ class ClientServiceDateTests(TestCase):
 
         self.assertEqual(client.start_date_client, start_date)
         self.assertEqual(client.end_date_client, end_date)
+
+    def test_expired_live_license_renewal_uses_renewal_date(self):
+        today = get_business_local_date()
+        original_start = today - timezone.timedelta(days=90)
+        expired_end = today - timezone.timedelta(days=2)
+        client = self._client(
+            "expired-renewal@example.com",
+            start_date=original_start,
+            end_date=expired_end,
+        )
+
+        client.to_month = 2
+        client.save()
+        client.refresh_from_db()
+
+        self.assertEqual(client.start_date_client, original_start)
+        self.assertEqual(
+            client.end_date_client,
+            today + relativedelta(months=2),
+        )
+        self.assertFalse(client.client_expiry_status)
 
     @mock.patch("main.serializers.EmailService.send_login_email_otp")
     def test_client_can_login_on_service_end_date_ist(self, mock_send_otp):

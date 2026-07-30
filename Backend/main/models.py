@@ -213,6 +213,16 @@ class User(AbstractBaseUser, PermissionsMixin):
             if 1 <= months <= 12:
                 self.to_month = months
                 self.start_date_client = self.start_date_client or today
+                renewing_expired_license = bool(
+                    original
+                    and original.end_date_client
+                    and original.end_date_client < today
+                    and not end_date_changed
+                    and (
+                        original.license_id != self.license_id
+                        or original.to_month != self.to_month
+                    )
+                )
                 should_recalculate = (
                     not self.end_date_client
                     or (
@@ -225,7 +235,9 @@ class User(AbstractBaseUser, PermissionsMixin):
                         )
                     )
                 )
-                if should_recalculate:
+                if renewing_expired_license:
+                    self.end_date_client = today + relativedelta(months=months)
+                elif should_recalculate:
                     self.end_date_client = self.start_date_client + relativedelta(months=months)
             else:
                 self.start_date_client = None
