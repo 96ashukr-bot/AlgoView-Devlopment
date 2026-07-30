@@ -23,7 +23,7 @@ from main.services.egress_guard import _is_broker_url, _is_public_instrument_mas
 from main.services.node_security import generate_node_signature, verify_node_signature
 from main.services.proxy_utils import build_requests_proxy_config, mask_proxy_url, verify_proxy_public_ip
 from main.fyersapi import place_fyers_orders
-from main.upstock import place_upstox_orders
+from main.upstock import _positive_number_or_none, handle_successful_order, place_upstox_orders
 from main.fivepaisa import place_5paisa_order
 from main.dhanapi import place_dhan_orders
 from main.dhanapi import get_trading_symbol_security_id
@@ -4259,6 +4259,40 @@ class ExecutionNodeManagerTests(TestCase):
         placed_payload = mock_post.call_args.kwargs["json"]
         self.assertEqual(placed_payload["price"], 10.25)
         self.assertNotIn("reference_price", placed_payload)
+
+    def test_upstox_fresh_central_price_is_normalized_safely(self):
+        self.assertEqual(_positive_number_or_none("92.55"), 92.55)
+        self.assertIsNone(_positive_number_or_none(None))
+        self.assertIsNone(_positive_number_or_none("invalid"))
+        self.assertIsNone(_positive_number_or_none(0))
+
+    @mock.patch("main.upstock.save_trade_order_history")
+    @mock.patch("main.upstock.get_order_details")
+    def test_upstox_completed_sell_returns_actual_fill_price(self, mock_get_order_details, mock_save_history):
+        mock_get_order_details.return_value = {
+            "status": "success",
+            "data": {
+                "status": "complete",
+                "order_id": "upstox-exit-1",
+                "transaction_type": "SELL",
+                "average_price": 86.65,
+                "filled_quantity": 130,
+                "quantity": 130,
+            },
+        }
+
+        response = handle_successful_order(
+            87.0, "Sparks Pro", "SELL", "upstox-exit-1",
+            self.client_user, "NIFTY2680424300CE", "Kill Switch",
+            None, "LX", 97.5, None, 130, 130, {},
+            "NFO", "FNO", "NIFTY", {"quantity": 130},
+            "upstox-access", "CLOSE", "upstox-exit-history",
+            proxy_config={"https": "http://proxy.example.com:8080"},
+        )
+
+        self.assertEqual(response["data"]["executed_price"], 86.65)
+        self.assertEqual(response["data"]["filled_quantity"], 130)
+        self.assertEqual(mock_save_history.call_args.args[14], 86.65)
 
     @mock.patch("main.upstock.load_upstox_instruments")
     @mock.patch("main.upstock.requests.get")

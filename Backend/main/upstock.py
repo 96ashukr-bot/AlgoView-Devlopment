@@ -35,6 +35,17 @@ def _response_json_or_error(response):
             "raw_response": getattr(response, "text", ""),
         }
 
+
+def _positive_number_or_none(value):
+    if value in (None, "", "None"):
+        return None
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed > 0 else None
+
+
 def get_upstox_login_url(request):
     return redirect("/broker_auth_login/?broker=upstox")
 
@@ -364,16 +375,18 @@ def handle_successful_order(LivePrice,group_service,transaction_type,
         logger.info(f"order_status:::{order_status}")
         if order_status in {"complete", "completed", "success"}:
             transaction_type=order_data.get('transaction_type', '')
+            executed_price = _positive_number_or_none(order_data.get('average_price'))
+            filled_quantity = order_data.get('filled_quantity') or order_data.get('quantity', 0)
             if transaction_type == "BUY":
                 trade_order_status="OPEN"
                 Entry_type="LE"
-                Entry_price=order_data.get('average_price', 0.0)
-                EntryQty=order_data.get('quantity', 0)
+                Entry_price=executed_price
+                EntryQty=filled_quantity
             elif transaction_type == "SELL": 
                 trade_order_status="CLOSE"
                 Exit_type="LX"
-                Exit_price=order_data.get('average_price', 0.0) 
-                ExitQty= order_data.get('quantity', 0)#disclosedquantity
+                Exit_price=executed_price
+                ExitQty=filled_quantity
             logger.info(f"Order Placed Successfully, Order ID:{order_id}")
             message = order_data.get('status_message', 'completed successfully ')
             res_data=order_details
@@ -382,7 +395,18 @@ def handle_successful_order(LivePrice,group_service,transaction_type,
             save_trade_order_history(LivePrice,group_service,transaction_type,trade_order_status,user,trade_symbol, order_id, status, res_data, message,  
                                      strategy, Entry_type, Exit_type,Entry_price,Exit_price,EntryQty,ExitQty ,
                                      webhook_signal , Exchange, Segment,Index_Symbol ,order_params,broker="upstox", history_id=history_id)
-            response={"data": {"status": "completed","message": "Order placed and details saved successfully."}}
+            response={
+                "data": {
+                    "status": "completed",
+                    "message": "Order placed and details saved successfully.",
+                    "order_id": order_id,
+                    "average_price": executed_price,
+                    "executed_price": executed_price,
+                    "filled_quantity": filled_quantity,
+                    "quantity": order_data.get('quantity', 0),
+                    "broker_order": order_data,
+                }
+            }
             return response
         elif order_status == "rejected":
             rejection_message= order_data.get('status_message', 'Unknown rejection reason')
