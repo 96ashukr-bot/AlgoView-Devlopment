@@ -36,7 +36,7 @@ from main.broker_registry import get_broker_setup_spec
 from main.broker_order_utils import extract_ltp_from_quote_payload
 from main.brokers.exchange_mapping import normalize_broker_exchange, normalize_fivepaisa_exchange
 from main.brokers.utils import build_trade_symbol
-from main.brokers.position_guard import find_matching_open_buy_position, mark_open_position_closed, prepare_close_order_from_open_position
+from main.brokers.position_guard import find_matching_open_buy_position, mark_open_position_closed, prepare_close_order_from_open_position, remaining_open_quantity
 from main.permissions import can_access_client_record
 from main.services.live_price_cache import build_live_price_payload, cache_live_price, get_live_price
 from main.services.option_ltp_fallback import cache_option_ltp, fetch_nse_option_chain_ltp, get_cached_option_ltp
@@ -44,7 +44,7 @@ from main.sl_tp_watcher_service import SLTPWatcherService, SUCCESS_EXIT_STATUSES
 from main.services.upstox_market_data import UpstoxInstrumentResolver, _parse_option_symbol, get_active_option_instruments
 from main.serializers import ClientBrokerDetailsUpdateSerializer, TradeorderhistorySerializer
 from main.trade_history_service import save_trade_order_history
-from main.views import _build_regular_trade_exit_request, _process_webhook_trade, _resolve_webhook_request_context, place_order_broker
+from main.views import _build_regular_trade_exit_request, _is_regular_trade_open, _process_webhook_trade, _resolve_webhook_request_context, place_order_broker
 from main.tasks import process_single_webhook_trade_task, process_webhook_signal_task
 from main.angelone.managers.contract_manager import ContractMasterManager
 
@@ -308,6 +308,40 @@ class ExecutionNodeManagerTests(TestCase):
         data = TradeorderhistorySerializer(history).data
 
         self.assertEqual(data["Total"], "-300.00")
+
+    def test_legacy_exit_quantity_does_not_block_an_open_buy(self):
+        history = Tradeorderhistory.objects.create(
+            client=self.client_user,
+            trading_symbol="NIFTY26MAY2624000CE",
+            transaction_type="BUY",
+            order_status="complete",
+            trade_order_status="OPEN",
+            order_id="legacy-open-buy",
+            Entry_Price=Decimal("100.00"),
+            EntryQty=65,
+            ExitQty=65,
+            Exit_status="Pending",
+        )
+
+        self.assertEqual(remaining_open_quantity(history), 65)
+        self.assertTrue(_is_regular_trade_open(history))
+
+    def test_confirmed_exit_quantity_still_closes_the_buy_allocation(self):
+        history = Tradeorderhistory.objects.create(
+            client=self.client_user,
+            trading_symbol="NIFTY26MAY2624000CE",
+            transaction_type="BUY",
+            order_status="complete",
+            trade_order_status="CLOSE",
+            order_id="confirmed-closed-buy",
+            Entry_Price=Decimal("100.00"),
+            EntryQty=65,
+            Exit_Price=Decimal("110.00"),
+            ExitQty=65,
+            Exit_status="COMPLETED",
+        )
+
+        self.assertEqual(remaining_open_quantity(history), 0)
 
     def test_trade_history_serializer_backfills_missing_exit_quantity_for_completed_close(self):
         history = Tradeorderhistory.objects.create(

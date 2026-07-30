@@ -367,8 +367,32 @@ def _allocated_exit_quantity(open_history):
     return allocated
 
 
+def _confirmed_recorded_exit_quantity(open_history):
+    """Return ExitQty only when the BUY row contains evidence of a real exit.
+
+    Older order-placement paths could copy the entry fill quantity into ExitQty
+    while leaving the trade open. ExitQty by itself must therefore never make an
+    open position unclosable.
+    """
+    quantity = int(open_history.ExitQty or 0)
+    if quantity <= 0:
+        return 0
+
+    trade_status = str(open_history.trade_order_status or "").strip().lower()
+    exit_status = str(open_history.Exit_status or "").strip().lower()
+    has_exit_execution = open_history.Exit_Price is not None
+
+    if trade_status in CLOSED_TRADE_STATUSES and (
+        has_exit_execution or exit_status in SUCCESS_EXIT_ORDER_STATUSES
+    ):
+        return quantity
+    if has_exit_execution and exit_status in SUCCESS_EXIT_ORDER_STATUSES:
+        return quantity
+    return 0
+
+
 def remaining_open_quantity(open_history):
-    recorded_exit = int(open_history.ExitQty or 0)
+    recorded_exit = _confirmed_recorded_exit_quantity(open_history)
     return max(0, int(open_history.EntryQty or 0) - max(recorded_exit, _allocated_exit_quantity(open_history)))
 
 

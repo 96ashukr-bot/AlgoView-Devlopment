@@ -4133,7 +4133,9 @@ def _is_regular_trade_open(trade_history):
     order_status = str(trade_history.order_status or "").strip().upper()
     if trade_status in CLOSED_TRADE_ORDER_STATUSES or order_status in FAILED_ORDER_STATUSES:
         return False
-    if trade_history.Exit_type or trade_history.Exit_Price or trade_history.ExitQty:
+    # ExitQty alone is not proof that the broker position was closed. Legacy
+    # entry records may contain the entry fill quantity in this field.
+    if trade_history.Exit_type or trade_history.Exit_Price:
         return False
     return (
         trade_status in OPEN_TRADE_ORDER_STATUSES
