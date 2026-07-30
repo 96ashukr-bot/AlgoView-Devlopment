@@ -2,7 +2,7 @@
 import os
 import logging
 from celery import Celery
-from celery.signals import worker_init, worker_ready
+from celery.signals import worker_init
 from celery.schedules import crontab
 
 logger = logging.getLogger(__name__)
@@ -16,17 +16,9 @@ app.autodiscover_tasks()
 app.conf.broker_connection_retry_on_startup = True
 app.conf.beat_schedule = {
     **(getattr(app.conf, "beat_schedule", {}) or {}),
-    "warm-active-angel-sessions": {
-        "task": "main.tasks.warm_active_angel_sessions_task",
-        "schedule": 300.0,
-    },
     "refresh-pre-market-broker-masters": {
         "task": "main.tasks.refresh_and_prewarm_broker_masters_task",
         "schedule": crontab(hour=7, minute=45, day_of_week="1-5"),
-    },
-    "warm-pre-market-broker-sessions": {
-        "task": "main.tasks.warm_active_broker_sessions_task",
-        "schedule": crontab(hour=8, minute=30, day_of_week="1-5"),
     },
 }
 
@@ -42,14 +34,3 @@ def prewarm_angel_contract_master(**_kwargs):
         # Worker startup must remain available; the order path retains its
         # durable-cache/API fallback if prewarming cannot complete.
         logger.exception("Angel contract-master prewarm failed")
-
-
-@worker_ready.connect(dispatch_uid="sparkbridge.warm_angel_sessions")
-def warm_angel_sessions_on_worker_ready(**_kwargs):
-    """Start one non-blocking session warmup whenever execution workers restart."""
-    try:
-        from main.tasks import warm_active_angel_sessions_task
-
-        warm_active_angel_sessions_task.delay()
-    except Exception:
-        logger.exception("Angel session warmup dispatch failed")

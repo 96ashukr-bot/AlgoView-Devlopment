@@ -110,13 +110,25 @@ def warm_single_angel_session_task(self, *, broker_details_id):
     except ValueError as exc:
         return {"status": "skipped", "reason": str(exc), "broker_details_id": broker_details_id}
 
-    result = AuthService().ensure_valid_session(
-        client_id=client_code,
-        api_key=api_key,
-        broker_details=broker_details,
-        verify_remote=True,
-        proxy_config=proxy_config,
-    )
+    try:
+        result = AuthService().ensure_valid_session(
+            client_id=client_code,
+            api_key=api_key,
+            broker_details=broker_details,
+            verify_remote=True,
+            proxy_config=proxy_config,
+        )
+    except Exception as exc:
+        logger.warning(
+            "Angel session warmup failed broker_details_id=%s error=%s",
+            broker_details_id,
+            exc,
+        )
+        return {
+            "status": "failed",
+            "broker_details_id": broker_details_id,
+            "reason": str(exc),
+        }
     return {
         "status": result.get("status"),
         "source": result.get("source"),
