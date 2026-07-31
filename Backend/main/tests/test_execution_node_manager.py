@@ -3086,6 +3086,37 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertEqual(history.failure_reason, "Insufficient funds")
         self.assertIsInstance(history.response_data["order_timestamp"], str)
 
+    @mock.patch("main.services.broker_fill_reconciliation.get_broker_adapter")
+    def test_broker_reconciliation_does_not_mark_rate_limit_as_trade_failure(self, mock_get_adapter):
+        from main.services.broker_fill_reconciliation import refresh_trade_fill_from_broker
+
+        history = Tradeorderhistory.objects.create(
+            client=self.client_user,
+            broker="Angel One",
+            transaction_type="BUY",
+            trade_order_status="OPEN",
+            order_status="pending",
+            order_id="angel-rate-limited-1",
+            trading_symbol="NIFTY04AUG2624400CE",
+            Index_Symbol="NIFTY",
+            EntryQty=65,
+        )
+        mock_get_adapter.return_value = SimpleNamespace(
+            get_orderbook=mock.Mock(
+                side_effect=ValueError(
+                    "Couldn't parse the JSON response received from the server: "
+                    "b'Access denied because of exceeding access rate'"
+                )
+            )
+        )
+
+        changed = refresh_trade_fill_from_broker(history, self.broker_details)
+
+        self.assertFalse(changed)
+        history.refresh_from_db()
+        self.assertEqual(history.order_status, "pending")
+        self.assertIsNone(history.failure_reason)
+
     def test_force_exit_history_saves_without_trade_setting_fk(self):
         from main.execution_engine import ExecutionEngine, ExecutionRequest
 

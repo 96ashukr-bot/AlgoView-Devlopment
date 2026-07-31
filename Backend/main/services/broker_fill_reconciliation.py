@@ -6,6 +6,7 @@ from decimal import Decimal, ROUND_HALF_UP
 from typing import Any, Iterable, Optional
 
 from django.core.serializers.json import DjangoJSONEncoder
+from django.core.cache import cache
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
@@ -16,6 +17,18 @@ from main.services.proxy_utils import build_requests_proxy_config
 
 SUCCESS_STATUSES = {"complete", "completed", "success", "traded", "filled", "executed"}
 TERMINAL_FAILURE_STATUSES = {"rejected", "cancelled", "canceled"}
+TRANSIENT_RECONCILIATION_MARKERS = (
+    "access denied because of exceeding access rate",
+    "access rate",
+    "rate limit",
+    "rate-limit",
+    "too many requests",
+    "429",
+    "temporarily unavailable",
+    "timeout",
+    "timed out",
+    "connection reset",
+)
 BROKER_STATUS_KEYS = ("status", "order_status", "orderStatus", "orderstatus", "Status", "trade_status", "tradeStatus")
 ORDER_ID_KEYS = (
     "order_id",
@@ -88,6 +101,11 @@ EXECUTION_TIME_KEYS = (
 
 def _normalize(value: Any) -> str:
     return str(value or "").strip().lower()
+
+
+def _is_transient_reconciliation_error(value: Any) -> bool:
+    message = _normalize(value)
+    return any(marker in message for marker in TRANSIENT_RECONCILIATION_MARKERS)
 
 
 def _to_decimal(value: Any) -> Optional[Decimal]:
@@ -303,6 +321,15 @@ def refresh_trade_fill_from_broker(trade_order: Tradeorderhistory, broker_detail
     if current_status in SUCCESS_STATUSES and current_price is not None:
         return False
 
+    # Multiple reconciliation tasks for the same account can overlap after a
+    # burst of order placements. Gate them across Celery processes so Angel
+    # One's order-book endpoint is not called concurrently for one client.
+    broker_name = _normalize(getattr(getattr(broker_details, "broker_name", None), "broker_name", ""))
+    if broker_name in {"angel one", "angelone", "angle one", "angleone"}:
+        lock_key = f"broker-fill-reconciliation:angel-one:{broker_details.pk}"
+        if not cache.add(lock_key, "1", timeout=2):
+            return False
+
     try:
         adapter = get_broker_adapter(broker_details)
         proxy_config = _build_proxy_config(broker_details)
@@ -312,6 +339,11 @@ def refresh_trade_fill_from_broker(trade_order: Tradeorderhistory, broker_detail
         else:
             orderbook = adapter.get_orderbook(proxy_config=proxy_config)
     except Exception as exc:
+        if _is_transient_reconciliation_error(exc):
+            # A temporary broker throttle does not mean the order failed.
+            # Leave lifecycle state untouched; the reconciliation task will
+            # retry with its increasing countdown.
+            return False
         message = f"Broker fill reconciliation failed: {exc}"
         if trade_order.failure_reason != message:
             trade_order.failure_reason = message
