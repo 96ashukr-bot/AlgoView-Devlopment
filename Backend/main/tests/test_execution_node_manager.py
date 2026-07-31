@@ -4378,6 +4378,93 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertEqual(history.ExitQty, 65)
         mock_sleep.assert_called_once_with(1.25)
 
+    @mock.patch(
+        "main.services.external_position_reconciliation.build_requests_proxy_config",
+        return_value={"https": "http://proxy.example:8080"},
+    )
+    @mock.patch("main.services.external_position_reconciliation.get_broker_adapter")
+    def test_failed_exit_order_id_can_later_reconcile_as_broker_fill(
+        self,
+        mock_get_adapter,
+        _mock_proxy,
+    ):
+        from main.services.external_position_reconciliation import reconcile_failed_exit_response
+
+        self.broker_details.execution_node = self.node
+        self.broker_details.save(update_fields=["execution_node"])
+        entry = Tradeorderhistory.objects.create(
+            client=self.client_user,
+            broker="Angel One",
+            transaction_type="BUY",
+            trade_order_status="OPEN",
+            order_status="complete",
+            order_id="dhan-entry-order",
+            trading_symbol="BANKNIFTY",
+            Index_Symbol="BANKNIFTYAUG202657300CE",
+            Entry_type="BUY",
+            Entry_Price=Decimal("860.80"),
+            EntryQty=60,
+            order_params={
+                "product_type": "MIS",
+                "underlying": "BANKNIFTY",
+                "strike": 57300,
+                "option_type": "CE",
+                "expiry": "2026-08-25",
+            },
+        )
+        Tradeorderhistory.objects.filter(pk=entry.pk).update(
+            SignalEntry_time=timezone.now() - timedelta(minutes=5),
+        )
+        entry.refresh_from_db()
+        Tradeorderhistory.objects.create(
+            client=self.client_user,
+            broker="Angel One",
+            transaction_type="SELL",
+            trade_order_status="CLOSE",
+            order_status="Failed",
+            Exit_status="Failed",
+            order_id="dhan-delayed-sell",
+            trading_symbol="BANKNIFTY",
+            Index_Symbol="BANKNIFTYAUG202657300CE",
+            Entry_Price=Decimal("860.80"),
+            EntryQty=60,
+            ExitQty=60,
+            failure_reason="Order placed but details could not be fetched.",
+            order_params={"product_type": "MIS"},
+        )
+        mock_get_adapter.return_value = SimpleNamespace(
+            get_positions=mock.Mock(return_value={
+                "data": [{
+                    "tradingSymbol": "BANKNIFTY-Aug2026-57300-CE",
+                    "productType": "INTRADAY",
+                    "netQty": 0,
+                }],
+            }),
+            get_orderbook=mock.Mock(return_value={
+                "data": [{
+                    "orderId": "dhan-delayed-sell",
+                    "orderStatus": "TRADED",
+                    "transactionType": "SELL",
+                    "productType": "INTRADAY",
+                    "tradingSymbol": "BANKNIFTY-Aug2026-57300-CE",
+                    "filledQty": 60,
+                    "averageTradedPrice": 882.65,
+                    "exchangeTime": timezone.localtime(timezone.now()).strftime("%Y-%m-%d %H:%M:%S"),
+                }],
+            }),
+        )
+
+        response = reconcile_failed_exit_response(
+            entry,
+            {"data": {"status": "Failed", "message": "Order details unavailable."}},
+        )
+
+        entry.refresh_from_db()
+        self.assertEqual(response["data"]["status"], "reconciled_closed")
+        self.assertEqual(entry.trade_order_status, "CLOSE")
+        self.assertEqual(entry.Exit_Price, Decimal("882.65"))
+        self.assertEqual(entry.ExitQty, 60)
+
     @mock.patch("main.upstock.load_upstox_instruments")
     @mock.patch("main.upstock.requests.get")
     @mock.patch("main.upstock.requests.post")

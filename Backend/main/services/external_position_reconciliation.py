@@ -164,13 +164,41 @@ def _record_matches_contract(record: dict[str, Any], symbols: set[str], product:
 
 
 def _known_broker_order_ids(client_id: int) -> set[str]:
+    """Return exit order IDs which have already closed a trade successfully.
+
+    Failed/pending SELL histories must remain eligible for broker
+    reconciliation: a broker can acknowledge or fill an order after our first
+    status lookup timed out. Treating those IDs as consumed prevents a
+    subsequently confirmed fill from closing the original BUY row.
+    """
     known = set()
     for history in Tradeorderhistory.objects.filter(client_id=client_id).only(
+        "transaction_type",
+        "trade_order_status",
+        "order_status",
+        "Exit_status",
+        "Exit_Price",
         "order_id",
         "order_params",
         "response_data",
         "webhook_signal",
     ).iterator():
+        transaction_type = str(history.transaction_type or "").strip().upper()
+        trade_status = str(history.trade_order_status or "").strip().lower()
+        order_status = str(history.order_status or "").strip().lower()
+        exit_status = str(history.Exit_status or "").strip().lower()
+        successful_sell = (
+            transaction_type == "SELL"
+            and (order_status in SUCCESS_STATUSES or exit_status in SUCCESS_STATUSES)
+            and history.Exit_Price is not None
+        )
+        consolidated_closed_entry = (
+            transaction_type == "BUY"
+            and trade_status in {"close", "closed"}
+            and history.Exit_Price is not None
+        )
+        if not successful_sell and not consolidated_closed_entry:
+            continue
         if history.order_id not in (None, "", "0"):
             known.add(str(history.order_id).strip())
         for payload in (history.order_params, history.response_data, history.webhook_signal):
