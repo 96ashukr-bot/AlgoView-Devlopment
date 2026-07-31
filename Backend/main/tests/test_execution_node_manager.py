@@ -4307,10 +4307,12 @@ class ExecutionNodeManagerTests(TestCase):
         "main.services.external_position_reconciliation.build_requests_proxy_config",
         return_value={"https": "http://proxy.example:8080"},
     )
+    @mock.patch("main.services.external_position_reconciliation.time.sleep")
     @mock.patch("main.services.external_position_reconciliation.get_broker_adapter")
     def test_failed_exit_reconciles_mis_as_angel_intraday(
         self,
         mock_get_adapter,
+        mock_sleep,
         _mock_proxy,
     ):
         from main.services.external_position_reconciliation import reconcile_failed_exit_response
@@ -4335,6 +4337,18 @@ class ExecutionNodeManagerTests(TestCase):
             SignalEntry_time=timezone.now() - timedelta(minutes=5),
         )
         history.refresh_from_db()
+        successful_orderbook = {
+            "orders": [{
+                "orderid": "angel-external-sell",
+                "orderstatus": "complete",
+                "transactiontype": "SELL",
+                "producttype": "INTRADAY",
+                "tradingsymbol": "NIFTY04AUG2624300CE",
+                "filledshares": "65",
+                "averageprice": 105.00,
+                "exchtime": timezone.localtime(timezone.now()).strftime("%d-%b-%Y %H:%M:%S"),
+            }],
+        }
         mock_get_adapter.return_value = SimpleNamespace(
             get_positions=mock.Mock(return_value={
                 "positions": [{
@@ -4343,18 +4357,13 @@ class ExecutionNodeManagerTests(TestCase):
                     "netqty": "0",
                 }],
             }),
-            get_orderbook=mock.Mock(return_value={
-                "orders": [{
-                    "orderid": "angel-external-sell",
-                    "orderstatus": "complete",
-                    "transactiontype": "SELL",
-                    "producttype": "INTRADAY",
-                    "tradingsymbol": "NIFTY04AUG2624300CE",
-                    "filledshares": "65",
-                    "averageprice": 105.00,
-                    "exchtime": timezone.localtime(timezone.now()).strftime("%d-%b-%Y %H:%M:%S"),
-                }],
-            }),
+            get_orderbook=mock.Mock(side_effect=[
+                ValueError(
+                    "Couldn't parse the JSON response received from the server: "
+                    "b'Access denied because of exceeding access rate'"
+                ),
+                successful_orderbook,
+            ]),
         )
 
         response = reconcile_failed_exit_response(
@@ -4367,6 +4376,7 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertEqual(history.trade_order_status, "CLOSE")
         self.assertEqual(history.Exit_Price, Decimal("105.00"))
         self.assertEqual(history.ExitQty, 65)
+        mock_sleep.assert_called_once_with(1.25)
 
     @mock.patch("main.upstock.load_upstox_instruments")
     @mock.patch("main.upstock.requests.get")

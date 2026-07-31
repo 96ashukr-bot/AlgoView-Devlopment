@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+import time
 from decimal import Decimal
 from typing import Any, Iterable
 
@@ -43,6 +44,18 @@ PRODUCT_ALIASES = {
     "NORMAL": "CARRYFORWARD",
     "CARRYFORWARD": "CARRYFORWARD",
 }
+TRANSIENT_BROKER_MARKERS = (
+    "access denied because of exceeding access rate",
+    "access rate",
+    "rate limit",
+    "rate-limit",
+    "too many requests",
+    "429",
+    "temporarily unavailable",
+    "timeout",
+    "timed out",
+    "connection reset",
+)
 
 
 def _compact_symbol(value: Any) -> str:
@@ -62,6 +75,22 @@ def _to_int(value: Any):
         return int(float(value))
     except (TypeError, ValueError):
         return None
+
+
+def _call_broker_with_cooldown(callback, *, attempts=3):
+    """Retry read-only broker reconciliation calls after a temporary throttle."""
+    last_error = None
+    for attempt in range(attempts):
+        try:
+            return callback()
+        except Exception as exc:
+            last_error = exc
+            message = str(exc or "").strip().lower()
+            transient = any(marker in message for marker in TRANSIENT_BROKER_MARKERS)
+            if not transient or attempt + 1 >= attempts:
+                raise
+            time.sleep(1.25 * (attempt + 1))
+    raise last_error
 
 
 def _history_contract_symbols(trade_history: Tradeorderhistory) -> set[str]:
@@ -232,12 +261,16 @@ def reconcile_externally_closed_trade(trade_history: Tradeorderhistory):
         return None
 
     adapter = get_broker_adapter(broker_details)
-    positions = adapter.get_positions(proxy_config=proxy_config)
+    positions = _call_broker_with_cooldown(
+        lambda: adapter.get_positions(proxy_config=proxy_config)
+    )
     product = _history_product(trade_history)
     if not _position_is_flat(positions, symbols, product):
         return None
 
-    orderbook = adapter.get_orderbook(proxy_config=proxy_config)
+    orderbook = _call_broker_with_cooldown(
+        lambda: adapter.get_orderbook(proxy_config=proxy_config)
+    )
     match = _find_unrecorded_external_sell(
         orderbook,
         symbols=symbols,
