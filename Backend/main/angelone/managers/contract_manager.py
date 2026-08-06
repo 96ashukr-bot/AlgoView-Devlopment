@@ -146,6 +146,7 @@ class ContractMasterManager:
     
     def __init__(self):
         self._lock = threading.RLock()
+        self._initialize_lock = threading.Lock()
         self._index = ContractIndex()
         self._raw_data: List[Dict] = []
         self._last_refresh: Optional[datetime] = None
@@ -178,17 +179,28 @@ class ContractMasterManager:
         Returns:
             True if initialized successfully
         """
-        if self._initialized and self._is_cache_valid():
-            return True
-        
-        if self._load_cached_contracts(require_fresh=True):
+        # The in-memory index remains usable after its refresh TTL.  Reloading
+        # the same 140k+ contract file on every order made all webhook worker
+        # threads rebuild identical indexes concurrently and delayed broker
+        # submission by minutes.  Only reload when another process has
+        # actually published a newer cache file.
+        if self._initialized and not self._cache_file_is_newer():
             return True
 
-        if blocking:
-            if self._refresh_contracts():
+        with self._initialize_lock:
+            # A different worker thread may have initialized or reloaded the
+            # singleton while this caller waited for the lock.
+            if self._initialized and not self._cache_file_is_newer():
                 return True
-            return self._load_cached_contracts(require_fresh=False)
-        else:
+
+            if self._load_cached_contracts(require_fresh=True):
+                return True
+
+            if blocking:
+                if self._refresh_contracts():
+                    return True
+                return self._load_cached_contracts(require_fresh=False)
+
             thread = threading.Thread(
                 target=self._refresh_contracts,
                 daemon=True,
@@ -467,6 +479,16 @@ class ContractMasterManager:
             return False
         age = (datetime.now() - self._last_refresh).total_seconds()
         return age < CONTRACT_MASTER_CACHE_TTL
+
+    def _cache_file_is_newer(self) -> bool:
+        """Return whether another process published a newer disk snapshot."""
+        if not self._last_refresh:
+            return True
+        try:
+            cache_modified = datetime.fromtimestamp(self._cache_path().stat().st_mtime)
+        except OSError:
+            return False
+        return cache_modified > self._last_refresh + timedelta(seconds=1)
     
     def get_contract_by_token(self, token: str) -> Optional[Contract]:
         """Get contract by token"""

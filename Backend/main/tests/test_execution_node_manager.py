@@ -169,6 +169,19 @@ class ExecutionNodeManagerTests(TestCase):
             self.assertEqual(contract.symbol, "NIFTY14JUL2624200CE")
             self.assertEqual(match["match_type"], "exact")
 
+    def test_initialized_angel_contract_master_does_not_reload_unchanged_expired_cache(self):
+        with tempfile.TemporaryDirectory() as tmpdir, override_settings(BASE_DIR=tmpdir):
+            manager = ContractMasterManager()
+            manager._initialized = True
+            manager._last_refresh = datetime.now() - timedelta(hours=2)
+
+            with mock.patch.object(manager, "_load_cached_contracts") as load_cache, \
+                    mock.patch.object(manager, "_refresh_contracts") as refresh_contracts:
+                self.assertTrue(manager.initialize(blocking=True))
+
+            load_cache.assert_not_called()
+            refresh_contracts.assert_not_called()
+
     @mock.patch("main.brokers.angelone.place_angel_one_order")
     def test_angel_one_adapter_maps_sensex_to_bfo(self, mock_place_order):
         mock_place_order.return_value = {"data": {"status": "completed", "order_id": "angel-sensex-1"}}
