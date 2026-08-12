@@ -1220,6 +1220,29 @@ class AngelOneExecutionValidationTests(TestCase):
         self.assertEqual(response["error_code"], "IP_NOT_WHITELISTED")
         self.assertIn("SmartAPI app", response["message"])
 
+    def test_order_service_preserves_new_smartapi_error_response_format(self):
+        service = OrderService.__new__(OrderService)
+        smart_connect = mock.Mock()
+        smart_connect._postRequest.return_value = {
+            "success": False,
+            "message": "64.224.18.225 is not a registered IP, please check your registered IP.",
+            "errorCode": "AG7002",
+            "data": "",
+        }
+
+        result = service._place_order_with_response(
+            smart_connect,
+            {"tradingsymbol": "NIFTY18AUG2624200PE", "quantity": "65"},
+        )
+        error_message = service._broker_response_error(result)
+        response = service._build_error_payload(error_message)
+
+        self.assertTrue(service._is_failed_broker_response(result))
+        self.assertIn("AG7002", error_message)
+        self.assertEqual(response["error_code"], "IP_NOT_WHITELISTED")
+        self.assertIn("SmartAPI app", response["message"])
+        smart_connect.placeOrder.assert_not_called()
+
     def test_order_service_maps_smartapi_timeout_to_unconfirmed_message(self):
         service = OrderService.__new__(OrderService)
 

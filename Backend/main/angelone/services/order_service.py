@@ -464,8 +464,11 @@ class OrderService:
             reconciled_broker_order = None
             for attempt in range(1, 3):
                 try:
-                    result = smart_connect.placeOrder(order_params)
+                    result = self._place_order_with_response(smart_connect, order_params)
                     if result:
+                        if self._is_failed_broker_response(result):
+                            last_error = self._broker_response_error(result)
+                            break
                         break
                     last_error = "Empty response from broker"
                 except Exception as exc:
@@ -612,7 +615,7 @@ class OrderService:
                     "broker_order": broker_order,
                 }
 
-            error_msg = result.get("message", "Order placement failed") if isinstance(result, dict) else (last_error or "Order placement failed")
+            error_msg = self._broker_response_error(result) if isinstance(result, dict) else (last_error or "Order placement failed")
             if existing:
                 self._idempotency_manager.remove_record(existing.idempotency_key)
             structured_error = self._build_error_payload(error_msg)
@@ -904,6 +907,31 @@ class OrderService:
             "error_code": "ORDER_EXECUTION_FAILED",
             "message": message,
         }
+
+    @staticmethod
+    def _place_order_with_response(smart_connect, order_params: Dict[str, Any]):
+        """Place through the SDK route while retaining structured broker failures."""
+        post_request = getattr(smart_connect, "_postRequest", None)
+        if callable(post_request):
+            params = {key: value for key, value in order_params.items() if value is not None}
+            return post_request("api.order.place", params)
+        return smart_connect.placeOrder(order_params)
+
+    @staticmethod
+    def _is_failed_broker_response(result: Any) -> bool:
+        if not isinstance(result, dict):
+            return False
+        if result.get("status") is False or result.get("success") is False:
+            return True
+        return bool(result.get("errorcode") or result.get("errorCode")) and not OrderService._extract_order_id(result)
+
+    @staticmethod
+    def _broker_response_error(result: Dict[str, Any]) -> str:
+        message = str(result.get("message") or "Order placement failed").strip()
+        error_code = str(result.get("errorcode") or result.get("errorCode") or "").strip()
+        if error_code and error_code.lower() not in message.lower():
+            return f"{message} ({error_code})"
+        return message
 
     @staticmethod
     def _extract_order_id(result: Any):
