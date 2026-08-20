@@ -188,8 +188,12 @@ def _eligible_for_eod_close(history: Tradeorderhistory, now=None) -> bool:
     if not ({order_status, trade_status} & SUCCESS_ENTRY_STATUSES):
         return False
     product = _normalize_product(_extract_product_type(history))
-    if product in MIS_PRODUCT_VALUES and _is_due_for_eod_close(history, now=now):
-        return True
+    # MIS lifecycle is governed by the trading session, not by an expiry value
+    # copied from an instrument lookup.  Falling through to expiry handling
+    # caused newly filled MIS orders with stale expiry metadata to be marked
+    # closed immediately, without a broker SELL.
+    if product in MIS_PRODUCT_VALUES:
+        return _is_due_for_eod_close(history, now=now)
     expiry_date = _extract_expiry_date(history)
     if not expiry_date:
         return False

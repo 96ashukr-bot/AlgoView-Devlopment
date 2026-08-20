@@ -467,6 +467,8 @@ class OrdersLifecycleTests(TestCase):
             LivePrice=Decimal("110"),
             order_params={"product_type": "MIS", "expiry": "2026-07-28"},
         )
+        Tradeorderhistory.objects.filter(pk=trade.pk).update(date=datetime(2026, 7, 27).date())
+        trade.refresh_from_db()
         now = timezone.make_aware(datetime(2026, 7, 28, 16, 0))
 
         result = close_expired_mis_trades(trade_id=trade.id, now=now)
@@ -477,6 +479,31 @@ class OrdersLifecycleTests(TestCase):
         self.assertEqual(trade.Exit_Price, Decimal("110"))
         self.assertEqual(trade.ExitQty, 65)
         self.assertEqual(trade.Total, Decimal("650"))
+
+    def test_current_session_mis_does_not_close_from_stale_expiry_metadata(self):
+        trade = Tradeorderhistory.objects.create(
+            client=self.client_user,
+            date=datetime(2026, 8, 20).date(),
+            trading_symbol="NIFTY25AUG2624200PE",
+            transaction_type="BUY",
+            trade_order_status="OPEN",
+            order_status="complete",
+            order_id="current-mis-stale-expiry",
+            Entry_type="LE",
+            Entry_Price=Decimal("60.40"),
+            EntryQty=65,
+            LivePrice=Decimal("60.20"),
+            order_params={"product_type": "MIS", "expiry": "2026-08-18"},
+        )
+        now = timezone.make_aware(datetime(2026, 8, 20, 12, 5))
+
+        result = close_expired_mis_trades(trade_id=trade.id, now=now)
+        trade.refresh_from_db()
+
+        self.assertEqual(result["closed"], 0)
+        self.assertEqual(result["skipped"], 1)
+        self.assertEqual(trade.trade_order_status, "OPEN")
+        self.assertIsNone(trade.Exit_Price)
 
     def test_eod_reconciliation_closes_expired_nrml_option(self):
         trade = Tradeorderhistory.objects.create(
