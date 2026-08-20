@@ -1780,6 +1780,17 @@ class ExecutionEngine:
         )
         history_order_params.update(self._build_sl_tp_snapshot(request, validation_context, normalized))
         sltp_metadata = self._build_sltp_metadata(request, validation_context, normalized)
+        broker_data = normalized.get("data", {}) if isinstance(normalized, dict) else {}
+        canonical_broker_fields = {
+            "original_broker_security_id": broker_data.get("security_id") or broker_data.get("securityId"),
+            "original_broker_trading_symbol": broker_data.get("resolved_trading_symbol") or broker_data.get("tradingSymbol"),
+            "original_broker_product_type": broker_data.get("product_type") or broker_data.get("productType"),
+            "original_broker_exchange": broker_data.get("exchange_segment") or broker_data.get("exchangeSegment"),
+            "original_broker_quantity": broker_data.get("filled_quantity") or broker_data.get("filledQty"),
+        }
+        canonical_broker_fields = {key: value for key, value in canonical_broker_fields.items() if value not in (None, "", "None")}
+        history_order_params.update(canonical_broker_fields)
+        sltp_metadata.update(canonical_broker_fields)
         if sltp_metadata:
             history_order_params.update(
                 {

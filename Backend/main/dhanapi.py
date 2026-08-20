@@ -301,7 +301,7 @@ def get_trading_symbol_security_id(symbol, segment, Exch,expiry_date, user=None)
 def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_id, trade_symbol, transaction_type, symbol, quantity,
     strategy, ordertype, product_type, price, user, Lots, Entry_type, Exit_type, Entry_price, Exit_price, 
     EntryQty, ExitQty, webhook_signal, Exchange, Segment,Index_Symbol, triggerPrice, trade_order_status, history_id,
-    proxy_config=None):
+    proxy_config=None, security_id_override=None):
     timing_started = time.perf_counter()
     timing_checkpoint = timing_started
 
@@ -360,7 +360,16 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
                         webhook_signal, Exchange, Segment, Index_Symbol, order_params, broker="dhan", history_id=history_id)
             return response
 
-        trading_symbol = get_trading_symbol_security_id(trade_symbol, dhan,Exchange,expiry_date, user)
+        security_id = None
+        if security_id_override not in (None, "", "None"):
+            try:
+                security_id = int(float(security_id_override))
+            except (TypeError, ValueError):
+                return {"data": {"status": "Failed", "message": "Stored Dhan security ID is invalid; exit was not submitted.", "error_code": "INVALID_STORED_INSTRUMENT"}}
+            trading_symbol = {"SECURITY_ID": security_id, "TRADING_SYMBOL": trade_symbol}
+            logger.info("%s : using broker-confirmed Dhan security ID %s", user, security_id)
+        else:
+            trading_symbol = get_trading_symbol_security_id(trade_symbol, dhan,Exchange,expiry_date, user)
         log_timing("instrument_lookup")
         if not trading_symbol:
             logger.error(f"{user} : trading_symbol details not found for {trade_symbol}")
@@ -373,7 +382,7 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
             return response
 
         logger.info(f"{user} : webhooks Fetched dhan trading_symbol: {trading_symbol}")
-        security_id = trading_symbol.get('SECURITY_ID', 0) 
+        security_id = security_id or trading_symbol.get('SECURITY_ID', 0)
         quantity = int(quantity) 
         Exchange = normalize_broker_exchange("dhan", exchange=Exchange, underlying=symbol)
         if Exchange=="NFO":
@@ -382,7 +391,7 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
             Exchange= dhan.NSE
         elif Exchange in {"BSE", "BFO", "BSE_FO", "BSE_FNO"}:
             Exchange = getattr(dhan, "BSE_FNO", "BSE_FNO")
-        if product_type.upper() in ["NRML", "NORMAL"]:
+        if product_type.upper() in ["NRML", "NORMAL", "MARGIN"]:
             product_type = dhan.NORMAL
         elif product_type.upper() in ["MIS", "INTRADAY"]:
             product_type = dhan.INTRA
@@ -532,6 +541,11 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
                         "price": price if requested_order_type == "LIMIT" else None,
                         "ltp": ltp,
                         "reference_price": ltp,
+                        "security_id": int(security_id),
+                        "resolved_trading_symbol": trading_symbol.get("TRADING_SYMBOL") or trade_symbol,
+                        "exchange_segment": Exchange,
+                        "product_type": product_type,
+                        "filled_quantity": int(quantity),
                     }
                 }
             order_history_response, res_data = _fetch_dhan_order_details_with_poll(order_id, dhan, user)
@@ -589,6 +603,11 @@ def place_dhan_orders(expiry_date,LivePrice,group_service,access_token, client_i
                         "price": res_data.get("averageTradedPrice") or order_params.get("price"),
                         "ltp": ltp,
                         "reference_price": ltp,
+                        "security_id": int(security_id),
+                        "resolved_trading_symbol": res_data.get("tradingSymbol") or trading_symbol.get("TRADING_SYMBOL") or trade_symbol,
+                        "exchange_segment": res_data.get("exchangeSegment") or Exchange,
+                        "product_type": res_data.get("productType") or product_type,
+                        "filled_quantity": int(res_data.get("filledQty") or res_data.get("quantity") or quantity),
                     }
                 }
                 logger.info(f"{user} : Order placed and details saved successfully for the Dhan.")

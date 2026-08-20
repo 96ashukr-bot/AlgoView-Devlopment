@@ -552,6 +552,34 @@ def prepare_close_order_from_open_position(client, order, broker_name):
     order["matched_open_history_id"] = open_position.history_id or open_position.id
     order["expected_broker_net_quantity"] = expected_broker_net
     order["allocated_exit_quantity"] = remaining_quantity
+    open_params = open_position.order_params if isinstance(open_position.order_params, dict) else {}
+    response_data = open_position.response_data if isinstance(open_position.response_data, dict) else {}
+
+    def broker_value(*keys):
+        def walk(value):
+            if isinstance(value, dict):
+                yield value
+                for nested in value.values():
+                    yield from walk(nested)
+            elif isinstance(value, (list, tuple)):
+                for nested in value:
+                    yield from walk(nested)
+        for source in (open_params, response_data):
+            for mapping in walk(source):
+                for key in keys:
+                    value = mapping.get(key)
+                    if value not in (None, "", "None"):
+                        return value
+        return None
+
+    canonical_fields = {
+        "original_broker_security_id": broker_value("original_broker_security_id", "security_id", "securityId"),
+        "original_broker_trading_symbol": broker_value("original_broker_trading_symbol", "resolved_trading_symbol", "tradingSymbol", "tradingsymbol"),
+        "original_broker_product_type": broker_value("original_broker_product_type", "product_type", "productType", "product"),
+        "original_broker_exchange": broker_value("original_broker_exchange", "exchange_segment", "exchangeSegment", "exchange"),
+        "original_broker_quantity": broker_value("original_broker_quantity", "filled_quantity", "filledQty", "quantity"),
+    }
+    order.update({key: value for key, value in canonical_fields.items() if value not in (None, "", "None")})
     if selected_explicitly:
         order["original_history_id"] = open_position.history_id or open_position.id
         order["targeted_position_exit"] = True

@@ -4702,6 +4702,85 @@ class ExecutionNodeManagerTests(TestCase):
         )
         self.assertEqual(mock_place_order.call_args.kwargs["proxy_config"], proxy_config)
 
+    @mock.patch("main.brokers.dhan.place_dhan_orders")
+    def test_dhan_exit_uses_live_position_security_id_and_product(self, mock_place_order):
+        broker = Broker.objects.create(broker_name="Dhan", is_active=True)
+        broker_details = ClientBrokerdetails.objects.create(
+            client=self.client_user,
+            broker_name=broker,
+            broker_API_UID="dhan-client",
+            access_token="dhan-access",
+        )
+        open_history = Tradeorderhistory.objects.create(
+            client=self.client_user,
+            GroupService="Lite",
+            broker="Dhan",
+            trading_symbol="BANKNIFTY",
+            Index_Symbol="BANKNIFTY",
+            transaction_type="BUY",
+            trade_order_status="OPEN",
+            order_status="complete",
+            order_id="buy-1",
+            Entry_type="BUY",
+            EntryQty=30,
+            Entry_Price=213,
+            order_params={"strike": 57600, "option_type": "PE", "day": "25", "month": "Aug", "year": "26", "fullyear": "2026"},
+        )
+        adapter = get_broker_adapter(broker_details)
+        adapter.get_positions = mock.Mock(return_value={"status": "success", "data": [{
+            "securityId": "59093",
+            "tradingSymbol": "BANKNIFTY-Aug2026-57600-PE",
+            "productType": "MARGIN",
+            "netQty": 30,
+        }]})
+        mock_place_order.return_value = {"data": {"status": "completed", "order_id": "sell-1"}}
+
+        adapter.place_order({
+            "symbol": "BANKNIFTY",
+            "strike": 57600,
+            "option_type": "PE",
+            "quantity": 30,
+            "transaction_type": "SELL",
+            "order_type": "LIMIT",
+            "group_service": "Lite",
+            "original_history_id": open_history.id,
+            "day": "25",
+            "month": "Aug",
+            "year": "26",
+            "fullyear": "2026",
+        })
+
+        self.assertEqual(mock_place_order.call_args.args[11], "MARGIN")
+        self.assertEqual(mock_place_order.call_args.kwargs["security_id_override"], "59093")
+
+    @mock.patch("main.brokers.dhan.place_dhan_orders")
+    def test_dhan_exit_fails_closed_when_live_position_cannot_be_verified(self, mock_place_order):
+        broker = Broker.objects.create(broker_name="Dhan", is_active=True)
+        broker_details = ClientBrokerdetails.objects.create(
+            client=self.client_user,
+            broker_name=broker,
+            broker_API_UID="dhan-client",
+            access_token="dhan-access",
+        )
+        open_history = Tradeorderhistory.objects.create(
+            client=self.client_user, GroupService="Lite", broker="Dhan",
+            trading_symbol="BANKNIFTY25AUG2657600PE", Index_Symbol="BANKNIFTY",
+            transaction_type="BUY", trade_order_status="OPEN", order_status="complete",
+            order_id="buy-2", Entry_type="BUY", EntryQty=30, Entry_Price=213,
+            order_params={"strike": 57600, "option_type": "PE"},
+        )
+        adapter = get_broker_adapter(broker_details)
+        adapter.get_positions = mock.Mock(return_value={"status": "success", "data": []})
+
+        response = adapter.place_order({
+            "symbol": "BANKNIFTY", "strike": 57600, "option_type": "PE",
+            "quantity": 30, "transaction_type": "SELL", "group_service": "Lite",
+            "original_history_id": open_history.id,
+        })
+
+        self.assertEqual(response["data"]["error_code"], "BROKER_POSITION_NOT_FOUND")
+        mock_place_order.assert_not_called()
+
     @mock.patch("main.dhanapi.requests.post")
     @mock.patch("main.dhanapi.get_trading_symbol_security_id")
     @mock.patch("main.dhanapi.dhanhq")
