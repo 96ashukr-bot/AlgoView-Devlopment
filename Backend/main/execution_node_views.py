@@ -20,7 +20,7 @@ from rest_framework.views import APIView
 from main.brokers import get_broker_adapter
 from main.models import ClientBrokerdetails, ExecutionNode, ExecutionNodeAssignment, ExecutionNodeLog, ExecutionOrderJob, User
 from main.permissions import can_access_client_record, is_superadmin_user
-from main.services.execution_nodes import assign_execution_node_to_client, broker_details_has_valid_token, get_execution_node_for_client, mark_execution_node_broker_verified_from_valid_token, release_all_execution_node_clients, release_execution_node
+from main.services.execution_nodes import assign_execution_node_to_client, broker_details_has_valid_token, execution_node_assigned_to_client, get_execution_node_for_client, mark_execution_node_broker_verified_from_valid_token, release_all_execution_node_clients, release_execution_node
 from main.services.execution_router import route_order_to_execution_node
 from main.services.node_security import verify_node_signature
 from main.services.proxy_utils import verify_proxy_public_ip
@@ -485,7 +485,14 @@ class ExecutionNodeHealthAPIView(APIView):
         try:
             response = requests.get(node.server_url.rstrip("/") + "/api/node/health/", timeout=settings.NODE_REQUEST_TIMEOUT)
             payload = response.json() if response.content else {}
-            return Response({"status": "success" if response.ok else "failed", "node": ExecutionNodeSerializer(node).data, "health": payload})
+            identity_matches = (
+                node.execution_type != ExecutionNode.EXECUTION_TYPE_VPS_NODE
+                or (payload.get("node_mode") is True and payload.get("node_id") == node.node_id)
+            )
+            health_ok = response.ok and identity_matches
+            if node.execution_type == ExecutionNode.EXECUTION_TYPE_VPS_NODE and not identity_matches:
+                payload["verification_error"] = "The remote server is not the configured AlgoView VPS node."
+            return Response({"status": "success" if health_ok else "failed", "node": ExecutionNodeSerializer(node).data, "health": payload})
         except requests.RequestException as exc:
             return Response({"status": "failed", "node": ExecutionNodeSerializer(node).data, "message": str(exc)}, status=status.HTTP_200_OK)
 
@@ -645,7 +652,11 @@ class NodeHealthAPIView(APIView):
     permission_classes = []
 
     def get(self, request):
-        return Response({"status": "ok", "node_id": settings.ALGOVIEW_NODE_ID, "node_mode": settings.ALGOVIEW_NODE_MODE})
+        return Response({
+            "status": "ok",
+            "node_id": settings.ALGOVIEW_NODE_ID,
+            "node_mode": settings.ALGOVIEW_NODE_MODE,
+        })
 
 
 class NodePublicIPAPIView(APIView):
@@ -665,22 +676,38 @@ class NodeHeartbeatAPIView(APIView):
     permission_classes = []
 
     def post(self, request):
-        node_id = request.headers.get("X-ALGOVIEW-NODE-ID") or request.data.get("node_id") or settings.ALGOVIEW_NODE_ID
-        secret = settings.ALGOVIEW_NODE_SECRET
+        node_id = request.headers.get("X-ALGOVIEW-NODE-ID") or request.data.get("node_id")
+        if not node_id:
+            return Response({"status": "failed", "message": "Missing node ID."}, status=status.HTTP_400_BAD_REQUEST)
+        node = ExecutionNode.objects.filter(node_id=node_id, execution_type=ExecutionNode.EXECUTION_TYPE_VPS_NODE).first()
+        if node is None:
+            return Response({"status": "failed", "message": "Unknown VPS node."}, status=status.HTTP_404_NOT_FOUND)
         verify_node_signature(
-            secret,
+            node.get_node_secret(),
             request.headers.get("X-ALGOVIEW-TIMESTAMP"),
             request.data,
             request.headers.get("X-ALGOVIEW-SIGNATURE"),
         )
-        node = ExecutionNode.objects.filter(node_id=node_id).first()
-        if node:
-            node.last_heartbeat = timezone.now()
-            node.last_seen_ip = request.META.get("HTTP_X_FORWARDED_FOR", request.META.get("REMOTE_ADDR", "")).split(",")[0]
-            has_clients = node.assigned_client_id or node.client_assignments.exists()
-            node.status = ExecutionNode.STATUS_ONLINE if has_clients else ExecutionNode.STATUS_FREE
+        node.last_heartbeat = timezone.now()
+        reported_ip = str(request.data.get("public_ip") or "").strip()
+        remote_ip = request.META.get("HTTP_X_FORWARDED_FOR", request.META.get("REMOTE_ADDR", "")).split(",")[0].strip()
+        node.last_seen_ip = reported_ip or remote_ip or None
+        if reported_ip and str(node.ip_address) != reported_ip:
+            node.status = ExecutionNode.STATUS_OFFLINE
             node.save(update_fields=["last_heartbeat", "last_seen_ip", "status", "updated_at"])
-            node.mark_log("heartbeat", "Execution node heartbeat received.", metadata={"ip": node.last_seen_ip})
+            node.mark_log(
+                "heartbeat_ip_mismatch",
+                "Execution node reported an unexpected public IP.",
+                metadata={"expected_ip": str(node.ip_address), "reported_ip": reported_ip},
+            )
+            return Response(
+                {"status": "failed", "message": "Execution node public IP does not match its configured IP."},
+                status=status.HTTP_409_CONFLICT,
+            )
+        has_clients = node.assigned_client_id or node.client_assignments.exists()
+        node.status = ExecutionNode.STATUS_ONLINE if has_clients else ExecutionNode.STATUS_FREE
+        node.save(update_fields=["last_heartbeat", "last_seen_ip", "status", "updated_at"])
+        node.mark_log("heartbeat", "Execution node heartbeat received.", metadata={"ip": node.last_seen_ip})
         return Response({"status": "ok", "node_id": node_id})
 
 
@@ -689,6 +716,11 @@ class NodePlaceOrderAPIView(APIView):
     permission_classes = []
 
     def post(self, request):
+        if not settings.ALGOVIEW_NODE_MODE:
+            return Response({"status": "failed", "message": "This server is not configured as an execution node."}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        request_node_id = request.headers.get("X-ALGOVIEW-NODE-ID")
+        if not settings.ALGOVIEW_NODE_ID or request_node_id != settings.ALGOVIEW_NODE_ID:
+            return Response({"status": "failed", "message": "Execution node ID mismatch."}, status=status.HTTP_403_FORBIDDEN)
         idempotency_key = request.headers.get("X-ALGOVIEW-IDEMPOTENCY-KEY")
         if not idempotency_key:
             return Response({"status": "failed", "message": "Missing idempotency key."}, status=status.HTTP_400_BAD_REQUEST)
@@ -698,17 +730,38 @@ class NodePlaceOrderAPIView(APIView):
             request.data,
             request.headers.get("X-ALGOVIEW-SIGNATURE"),
         )
+        broker_details = ClientBrokerdetails.objects.select_related("client", "broker_name").filter(pk=request.data.get("broker_details_id")).first()
+        if broker_details is None:
+            return Response({"status": "failed", "message": "Unknown broker account."}, status=status.HTTP_404_NOT_FOUND)
+        if broker_details.client_id != request.data.get("client_id"):
+            return Response({"status": "failed", "message": "Broker account does not belong to the routed client."}, status=status.HTTP_403_FORBIDDEN)
+        configured_node = ExecutionNode.objects.filter(
+            node_id=settings.ALGOVIEW_NODE_ID,
+            execution_type=ExecutionNode.EXECUTION_TYPE_VPS_NODE,
+            is_active=True,
+        ).first()
+        if configured_node is None or not execution_node_assigned_to_client(configured_node, broker_details.client):
+            return Response({"status": "failed", "message": "Client is not assigned to this execution node."}, status=status.HTTP_403_FORBIDDEN)
+        if broker_details.execution_node_id and broker_details.execution_node_id != configured_node.id:
+            return Response({"status": "failed", "message": "Broker account is assigned to another execution node."}, status=status.HTTP_403_FORBIDDEN)
+        routed_order = request.data.get("order")
+        if not isinstance(routed_order, dict) or not routed_order:
+            return Response({"status": "failed", "message": "Missing routed order payload."}, status=status.HTTP_400_BAD_REQUEST)
         cache_key = f"execution-node:idempotency:{idempotency_key}"
         if not cache.add(cache_key, timezone.now().isoformat(), timeout=86400):
             return Response({"status": "duplicate", "message": "Duplicate idempotency key rejected."}, status=status.HTTP_409_CONFLICT)
-
-        broker_details = ClientBrokerdetails.objects.select_related("client", "broker_name").get(pk=request.data.get("broker_details_id"))
         adapter = get_broker_adapter(broker_details)
         validation = adapter.validate_credentials()
         if validation.get("status") != "success":
             return Response({"status": "failed", "message": validation.get("message")}, status=status.HTTP_400_BAD_REQUEST)
         try:
-            order_payload = {**request.data, "_allow_direct_node_execution": True}
+            order_payload = {
+                **routed_order,
+                "client_id": broker_details.client_id,
+                "broker_details_id": broker_details.id,
+                "idempotency_key": idempotency_key,
+                "_allow_direct_node_execution": True,
+            }
             broker_response = adapter.place_order(order_payload)
             broker_status = str(broker_response.get("status", broker_response.get("data", {}).get("status", ""))).lower()
             safe_response = {

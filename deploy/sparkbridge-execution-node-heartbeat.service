@@ -1,0 +1,16 @@
+[Unit]
+Description=AlgoView AWS execution node heartbeat
+After=network-online.target sparkbridge.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/var/www/sparkbridge/Backend
+EnvironmentFile=/var/www/sparkbridge/Backend/.env
+ExecStart=/var/www/sparkbridge/Backend/venv/bin/python manage.py run_execution_node_heartbeat --interval 30
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

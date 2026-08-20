@@ -61,6 +61,7 @@ TEST_CACHES = {
     NODE_ALLOWED_CLOCK_SKEW_SECONDS=60,
     ALGOVIEW_NODE_SECRET="node-secret",
     ALGOVIEW_NODE_ID="node-1",
+    ALGOVIEW_NODE_MODE=True,
 )
 class ExecutionNodeManagerTests(TestCase):
     def setUp(self):
@@ -6079,7 +6080,9 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertFalse(_is_public_instrument_master_url("https://api.dhan.co/v2/orders"))
 
     def test_node_idempotency_duplicate_rejection(self):
-        payload = {"broker_details_id": self.broker_details.id, "order": {"symbol": "NIFTY"}}
+        assign_execution_node_to_client(self.client_user, self.node)
+        self.broker_details.refresh_from_db()
+        payload = {"client_id": self.client_user.id, "broker_details_id": self.broker_details.id, "order": {"symbol": "NIFTY"}}
         timestamp = str(int(timezone.now().timestamp()))
         signature = generate_node_signature("node-secret", timestamp, payload)
         headers = {
@@ -6095,7 +6098,84 @@ class ExecutionNodeManagerTests(TestCase):
             second = self.client.post("/api/node/place-order/", data=payload, content_type="application/json", **headers)
         self.assertEqual(first.status_code, 200)
         self.assertEqual(second.status_code, 409)
-        self.assertTrue(adapter_factory.return_value.place_order.call_args.args[0]["_allow_direct_node_execution"])
+        placed_payload = adapter_factory.return_value.place_order.call_args.args[0]
+        self.assertEqual(placed_payload["symbol"], "NIFTY")
+        self.assertNotIn("order", placed_payload)
+        self.assertTrue(placed_payload["_allow_direct_node_execution"])
+
+    def test_node_order_rejects_wrong_node_identity(self):
+        payload = {"client_id": self.client_user.id, "broker_details_id": self.broker_details.id, "order": {"symbol": "NIFTY"}}
+        timestamp = str(int(timezone.now().timestamp()))
+        signature = generate_node_signature("node-secret", timestamp, payload)
+        response = self.client.post(
+            "/api/node/place-order/",
+            data=payload,
+            content_type="application/json",
+            HTTP_X_ALGOVIEW_NODE_ID="another-node",
+            HTTP_X_ALGOVIEW_TIMESTAMP=timestamp,
+            HTTP_X_ALGOVIEW_SIGNATURE=signature,
+            HTTP_X_ALGOVIEW_IDEMPOTENCY_KEY="wrong-node",
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def test_node_order_rejects_client_not_assigned_to_receiver(self):
+        payload = {"client_id": self.client_user.id, "broker_details_id": self.broker_details.id, "order": {"symbol": "NIFTY"}}
+        timestamp = str(int(timezone.now().timestamp()))
+        signature = generate_node_signature("node-secret", timestamp, payload)
+        response = self.client.post(
+            "/api/node/place-order/",
+            data=payload,
+            content_type="application/json",
+            HTTP_X_ALGOVIEW_NODE_ID="node-1",
+            HTTP_X_ALGOVIEW_TIMESTAMP=timestamp,
+            HTTP_X_ALGOVIEW_SIGNATURE=signature,
+            HTTP_X_ALGOVIEW_IDEMPOTENCY_KEY="unassigned-client",
+        )
+        self.assertEqual(response.status_code, 403)
+
+    @override_settings(ALGOVIEW_NODE_MODE=False)
+    def test_main_server_cannot_accept_direct_node_orders(self):
+        response = self.client.post(
+            "/api/node/place-order/",
+            data={},
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 503)
+
+    def test_signed_heartbeat_marks_vps_node_online(self):
+        self.node.assigned_client = self.client_user
+        self.node.save(update_fields=["assigned_client"])
+        payload = {"node_id": "node-1", "public_ip": "10.0.0.10"}
+        timestamp = str(int(timezone.now().timestamp()))
+        signature = generate_node_signature("node-secret", timestamp, payload)
+        response = self.client.post(
+            "/api/node/heartbeat/",
+            data=payload,
+            content_type="application/json",
+            HTTP_X_ALGOVIEW_NODE_ID="node-1",
+            HTTP_X_ALGOVIEW_TIMESTAMP=timestamp,
+            HTTP_X_ALGOVIEW_SIGNATURE=signature,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.node.refresh_from_db()
+        self.assertEqual(self.node.status, ExecutionNode.STATUS_ONLINE)
+        self.assertEqual(str(self.node.last_seen_ip), "10.0.0.10")
+
+    def test_heartbeat_rejects_changed_aws_public_ip(self):
+        payload = {"node_id": "node-1", "public_ip": "10.0.0.99"}
+        timestamp = str(int(timezone.now().timestamp()))
+        signature = generate_node_signature("node-secret", timestamp, payload)
+        response = self.client.post(
+            "/api/node/heartbeat/",
+            data=payload,
+            content_type="application/json",
+            HTTP_X_ALGOVIEW_NODE_ID="node-1",
+            HTTP_X_ALGOVIEW_TIMESTAMP=timestamp,
+            HTTP_X_ALGOVIEW_SIGNATURE=signature,
+        )
+        self.assertEqual(response.status_code, 409)
+        self.node.refresh_from_db()
+        self.assertEqual(self.node.status, ExecutionNode.STATUS_OFFLINE)
 
     def test_direct_order_helpers_fail_closed_without_proxy(self):
         common = dict(
