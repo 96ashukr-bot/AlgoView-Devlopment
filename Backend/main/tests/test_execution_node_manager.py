@@ -4781,6 +4781,35 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertEqual(response["data"]["error_code"], "BROKER_POSITION_NOT_FOUND")
         mock_place_order.assert_not_called()
 
+    @mock.patch("main.brokers.upstox.place_upstox_orders")
+    def test_upstox_exit_reconciles_an_already_flat_broker_position(self, mock_place_order):
+        broker = Broker.objects.create(broker_name="Upstox", is_active=True)
+        details = ClientBrokerdetails.objects.create(client=self.client_user, broker_name=broker, access_token="token")
+        opened = Tradeorderhistory.objects.create(
+            client=self.client_user, GroupService="Lite", broker="Upstox", trading_symbol="NIFTY",
+            Index_Symbol="NIFTY", transaction_type="BUY", trade_order_status="OPEN",
+            order_status="complete", order_id="up-buy", Entry_type="BUY",
+            EntryQty=130, Entry_Price=Decimal("60.40"),
+            order_params={"strike": 24200, "option_type": "PE", "month": "Aug", "year": "26"},
+        )
+        adapter = get_broker_adapter(details)
+        adapter.get_positions = mock.Mock(return_value={"status": "success", "data": [{
+            "instrument_token": "NSE_FO|61670", "trading_symbol": "NIFTY26AUG24200PE",
+            "product": "I", "quantity": 0, "sell_price": 52.8,
+        }]})
+
+        response = adapter.place_order({
+            "symbol": "NIFTY", "strike": 24200, "option_type": "PE", "quantity": 130,
+            "transaction_type": "SELL", "group_service": "Lite", "original_history_id": opened.id,
+            "month": "Aug", "year": "26",
+        })
+        opened.refresh_from_db()
+
+        self.assertEqual(response["data"]["status"], "reconciled_closed")
+        self.assertEqual(response["data"]["executed_price"], 52.8)
+        self.assertEqual(opened.trade_order_status, "CLOSE")
+        mock_place_order.assert_not_called()
+
     @mock.patch("main.dhanapi.requests.post")
     @mock.patch("main.dhanapi.get_trading_symbol_security_id")
     @mock.patch("main.dhanapi.dhanhq")

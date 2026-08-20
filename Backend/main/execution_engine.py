@@ -1782,6 +1782,7 @@ class ExecutionEngine:
         sltp_metadata = self._build_sltp_metadata(request, validation_context, normalized)
         broker_data = normalized.get("data", {}) if isinstance(normalized, dict) else {}
         canonical_broker_fields = {
+            "original_broker_instrument_key": broker_data.get("instrument_key") or broker_data.get("instrument_token"),
             "original_broker_security_id": broker_data.get("security_id") or broker_data.get("securityId"),
             "original_broker_trading_symbol": broker_data.get("resolved_trading_symbol") or broker_data.get("tradingSymbol"),
             "original_broker_product_type": broker_data.get("product_type") or broker_data.get("productType"),

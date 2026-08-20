@@ -12,7 +12,7 @@ from main.models import Tradeorderhistory
 OPEN_BUY_ORDER_STATUSES = {"complete", "completed", "success", "traded"}
 BROKER_ACCEPTED_OPEN_STATUSES = {"open", "placed", "accepted_by_node", "sent_to_node", "put order req received"}
 CLOSED_TRADE_STATUSES = {"close", "closed"}
-SUCCESS_CLOSE_STATUSES = {"completed", "complete", "success"}
+SUCCESS_CLOSE_STATUSES = {"completed", "complete", "success", "reconciled_closed"}
 SUCCESS_EXIT_ORDER_STATUSES = {"complete", "completed", "success", "executed", "traded"}
 FAILED_EXIT_ORDER_STATUSES = {"failed", "failure", "rejected", "cancelled", "canceled", "error"}
 KNOWN_UNDERLYINGS = ("MIDCPNIFTY", "BANKNIFTY", "FINNIFTY", "SENSEX", "BANKEX", "NIFTY")
@@ -573,6 +573,7 @@ def prepare_close_order_from_open_position(client, order, broker_name):
         return None
 
     canonical_fields = {
+        "original_broker_instrument_key": broker_value("original_broker_instrument_key", "instrument_key", "instrument_token", "instrumentToken"),
         "original_broker_security_id": broker_value("original_broker_security_id", "security_id", "securityId"),
         "original_broker_trading_symbol": broker_value("original_broker_trading_symbol", "resolved_trading_symbol", "tradingSymbol", "tradingsymbol"),
         "original_broker_product_type": broker_value("original_broker_product_type", "product_type", "productType", "product"),
