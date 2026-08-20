@@ -393,6 +393,33 @@ def refresh_trade_fill_from_broker(trade_order: Tradeorderhistory, broker_detail
             update_fields.append("sltp_metadata")
             changed = True
 
+        if status in SUCCESS_STATUSES and quantity:
+            from main.brokers.contract_snapshot import SNAPSHOT_KEY, build_snapshot, canonical_contract_fields
+
+            fields = canonical_contract_fields(match.get("record") or {}, order_params, sltp_metadata)
+            fields = {key: value for key, value in fields.items() if value not in (None, "", "None")}
+            order_params.update(fields)
+            sltp_metadata.update(fields)
+            snapshot = build_snapshot(
+                broker_name=trade_order.broker,
+                fields=fields,
+                underlying=(sltp_metadata.get("underlying") or trade_order.Index_Symbol),
+                expiry=(sltp_metadata.get("expiry") or order_params.get("expiry")),
+                strike=(sltp_metadata.get("strike") or order_params.get("strike") or order_params.get("strike_price")),
+                option_type=(sltp_metadata.get("option_type") or order_params.get("option_type") or order_params.get("Type")),
+                buy_order_id=trade_order.order_id,
+                filled_quantity=quantity,
+            )
+            order_params[SNAPSHOT_KEY] = snapshot
+            sltp_metadata[SNAPSHOT_KEY] = snapshot
+            trade_order.order_params = order_params
+            trade_order.sltp_metadata = sltp_metadata
+            if "order_params" not in update_fields:
+                update_fields.append("order_params")
+            if "sltp_metadata" not in update_fields:
+                update_fields.append("sltp_metadata")
+            changed = True
+
     if status and status != current_status:
         trade_order.order_status = status
         update_fields.append("order_status")

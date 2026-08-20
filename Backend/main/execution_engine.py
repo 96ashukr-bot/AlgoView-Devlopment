@@ -67,6 +67,7 @@ from main.models import ClientBrokerdetails, ClientTradeSetting
 from main.broker_registry import normalize_broker_name
 from main.brokers.exchange_mapping import normalize_broker_exchange
 from main.brokers.position_guard import is_force_broker_squareoff, prepare_close_order_from_open_position
+from main.brokers.contract_snapshot import SNAPSHOT_KEY, build_snapshot, canonical_contract_fields
 from main.brokers.utils import build_trade_symbol
 from main.risk_manager import get_risk_manager
 from main.services.execution_router import route_order_to_execution_node
@@ -1781,17 +1782,28 @@ class ExecutionEngine:
         history_order_params.update(self._build_sl_tp_snapshot(request, validation_context, normalized))
         sltp_metadata = self._build_sltp_metadata(request, validation_context, normalized)
         broker_data = normalized.get("data", {}) if isinstance(normalized, dict) else {}
-        canonical_broker_fields = {
-            "original_broker_instrument_key": broker_data.get("instrument_key") or broker_data.get("instrument_token"),
-            "original_broker_security_id": broker_data.get("security_id") or broker_data.get("securityId"),
-            "original_broker_trading_symbol": broker_data.get("resolved_trading_symbol") or broker_data.get("tradingSymbol"),
-            "original_broker_product_type": broker_data.get("product_type") or broker_data.get("productType"),
-            "original_broker_exchange": broker_data.get("exchange_segment") or broker_data.get("exchangeSegment"),
-            "original_broker_quantity": broker_data.get("filled_quantity") or broker_data.get("filledQty"),
-        }
+        canonical_broker_fields = canonical_contract_fields(normalized, history_order_params, sltp_metadata)
         canonical_broker_fields = {key: value for key, value in canonical_broker_fields.items() if value not in (None, "", "None")}
         history_order_params.update(canonical_broker_fields)
         sltp_metadata.update(canonical_broker_fields)
+        successful_buy_statuses = {"complete", "completed", "executed", "traded", "success", "filled"}
+        if (
+            str(request.transaction_type or "").strip().upper() == "BUY"
+            and str(status_value or "").strip().lower() in successful_buy_statuses
+            and order_id not in (None, "", 0, "0")
+        ):
+            snapshot = build_snapshot(
+                broker_name=request.trade.broker,
+                fields=canonical_broker_fields,
+                underlying=sltp_metadata.get("underlying") or request.underlying_symbol,
+                expiry=sltp_metadata.get("expiry") or history_order_params.get("expiry"),
+                strike=sltp_metadata.get("strike") or request.strike_value,
+                option_type=sltp_metadata.get("option_type") or request.option_type_value,
+                buy_order_id=order_id,
+                filled_quantity=canonical_broker_fields.get("original_broker_quantity") or request.quantity_int,
+            )
+            history_order_params[SNAPSHOT_KEY] = snapshot
+            sltp_metadata[SNAPSHOT_KEY] = snapshot
         if sltp_metadata:
             history_order_params.update(
                 {

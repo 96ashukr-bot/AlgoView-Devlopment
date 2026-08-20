@@ -7,6 +7,7 @@ from datetime import datetime
 from django.db.models import Q
 
 from main.brokers.utils import build_trade_symbol, common_order_kwargs, order_value
+from main.brokers.contract_snapshot import immutable_snapshot, snapshot_exit_fields
 from main.models import Tradeorderhistory
 
 OPEN_BUY_ORDER_STATUSES = {"complete", "completed", "success", "traded"}
@@ -554,6 +555,7 @@ def prepare_close_order_from_open_position(client, order, broker_name):
     order["allocated_exit_quantity"] = remaining_quantity
     open_params = open_position.order_params if isinstance(open_position.order_params, dict) else {}
     response_data = open_position.response_data if isinstance(open_position.response_data, dict) else {}
+    metadata = open_position.sltp_metadata if isinstance(open_position.sltp_metadata, dict) else {}
 
     def broker_value(*keys):
         def walk(value):
@@ -564,7 +566,7 @@ def prepare_close_order_from_open_position(client, order, broker_name):
             elif isinstance(value, (list, tuple)):
                 for nested in value:
                     yield from walk(nested)
-        for source in (open_params, response_data):
+        for source in (open_params, metadata, response_data):
             for mapping in walk(source):
                 for key in keys:
                     value = mapping.get(key)
@@ -581,6 +583,14 @@ def prepare_close_order_from_open_position(client, order, broker_name):
         "original_broker_quantity": broker_value("original_broker_quantity", "filled_quantity", "filledQty", "quantity"),
     }
     order.update({key: value for key, value in canonical_fields.items() if value not in (None, "", "None")})
+    snapshot = immutable_snapshot(open_params, metadata)
+    if snapshot:
+        order.update(snapshot_exit_fields(snapshot))
+        order["trade_symbol"] = snapshot["broker_trading_symbol"]
+        order["trading_symbol"] = snapshot["broker_trading_symbol"]
+        order["tradingsymbol"] = snapshot["broker_trading_symbol"]
+        order["product_type"] = snapshot["broker_product_type"]
+        order["product"] = snapshot["broker_product_type"]
     if selected_explicitly:
         order["original_history_id"] = open_position.history_id or open_position.id
         order["targeted_position_exit"] = True
