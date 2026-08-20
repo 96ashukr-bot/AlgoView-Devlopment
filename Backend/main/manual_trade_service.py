@@ -15,6 +15,7 @@ from django.db.models import Q
 from django.utils import timezone
 
 from main.execution_engine import ContractInfo, ExecutionRequest, get_execution_engine
+from main.broker_registry import normalize_broker_name
 from main.broker_instrument_cache import load_upstox_instruments
 from main.models import (
     ClientBrokerdetails,
@@ -133,6 +134,12 @@ def _broker_status(client, trade_setting, broker_details_list=None) -> Dict[str,
     broker_name = str(getattr(trade_setting, "broker", "") or "").strip()
     if not broker_name:
         return {"ready": False, "broker": "", "reason": "Broker is not selected in client saved script setting."}
+    if normalize_broker_name(broker_name) == "demo broker":
+        return {
+            "ready": True,
+            "broker": "Demo Broker",
+            "reason": "Demo Broker is ready; credentials and execution IP are not required.",
+        }
 
     available_details = list(broker_details_list) if broker_details_list is not None else list(
         ClientBrokerdetails.objects.select_related("broker_name", "execution_node").filter(client=client)

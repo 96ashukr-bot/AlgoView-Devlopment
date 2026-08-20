@@ -5135,6 +5135,16 @@ class BrokerRuntimeStatusView(APIView):
             )
             summary = LoginActivityService().build_summary(request.user, request=request)
             broker_data = (summary.get("data") or {}).get("broker") or {}
+            is_demo_broker = normalize_broker_name(
+                broker_details.broker_name.broker_name if broker_details and broker_details.broker_name else None
+            ) == "demo broker"
+            if is_demo_broker:
+                broker_data = {
+                    **broker_data,
+                    "session": {"status": "demo", "is_active": True},
+                    "token": {"status": "not_required", "is_active": True},
+                    "is_demo": True,
+                }
 
             return Response(
                 {
@@ -5147,6 +5157,7 @@ class BrokerRuntimeStatusView(APIView):
                         "supports_redirect": bool(setup_spec.get("supports_redirect")) if setup_spec else False,
                         "supports_callback": bool(setup_spec.get("supports_callback")) if setup_spec else False,
                         "connect_path": setup_spec.get("connect_path") if setup_spec else None,
+                        "is_demo": is_demo_broker,
                     },
                 },
                 status=status.HTTP_200_OK,

@@ -48,6 +48,7 @@ from main.execution_node_views import (
     NodePlaceOrderAPIView,
     NodePublicIPAPIView,
 )
+from main.aws_ami_node_views import AwsAmiNodeRegisterAPIView, ClientAwsAmiNodeClaimAPIView
 from main.chat_views import (
     ChatAccessibleClientListAPIView,
     ChatMessageCreateAPIView,
@@ -258,6 +259,7 @@ urlpatterns = [
     path('execution-nodes/<int:node_id>/test-broker-login/', ExecutionNodeTestBrokerLoginAPIView.as_view(), name='execution-node-test-broker-login'),
     path('execution-nodes/<int:node_id>/health/', ExecutionNodeHealthAPIView.as_view(), name='execution-node-health'),
     path('client/execution-node/', ClientExecutionNodeAPIView.as_view(), name='client-execution-node'),
+    path('client/aws-ami-node/', ClientAwsAmiNodeClaimAPIView.as_view(), name='client-aws-ami-node'),
     path('client/execution-node/verify-proxy/', ClientExecutionNodeVerifyProxyAPIView.as_view(), name='client-execution-node-verify-proxy'),
     path('execution-order-jobs/', ExecutionOrderJobListAPIView.as_view(), name='execution-order-job-list'),
     path('execution-order-jobs/<int:job_id>/retry/', ExecutionOrderJobRetryAPIView.as_view(), name='execution-order-job-retry'),
@@ -265,6 +267,7 @@ urlpatterns = [
     path('node/public-ip/', NodePublicIPAPIView.as_view(), name='node-public-ip'),
     path('node/heartbeat/', NodeHeartbeatAPIView.as_view(), name='node-heartbeat'),
     path('node/place-order/', NodePlaceOrderAPIView.as_view(), name='node-place-order'),
+    path('node/aws-ami/register/', AwsAmiNodeRegisterAPIView.as_view(), name='node-aws-ami-register'),
     path('support-chat/clients/', ChatAccessibleClientListAPIView.as_view(), name='support-chat-clients'),
     path('support-chat/unread-count/', ChatUnreadCountAPIView.as_view(), name='support-chat-unread-count'),
     path('support-chat/threads/', ChatThreadListCreateAPIView.as_view(), name='support-chat-threads'),

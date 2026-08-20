@@ -127,6 +127,19 @@ ALGOVIEW_NODE_ID = config("ALGOVIEW_NODE_ID", default="").strip()
 ALGOVIEW_NODE_MODE = config("ALGOVIEW_NODE_MODE", default=False, cast=_env_bool)
 NODE_ALLOWED_CLOCK_SKEW_SECONDS = config("NODE_ALLOWED_CLOCK_SKEW_SECONDS", default=60, cast=int)
 NODE_REQUEST_TIMEOUT = config("NODE_REQUEST_TIMEOUT", default=10, cast=int)
+AWS_AMI_NODE_ENABLED = config("AWS_AMI_NODE_ENABLED", default=False, cast=_env_bool)
+AWS_AMI_PROXY_PORT = config("AWS_AMI_PROXY_PORT", default=3128, cast=int)
+AWS_AMI_CLAIM_TTL_SECONDS = config("AWS_AMI_CLAIM_TTL_SECONDS", default=1800, cast=int)
+AWS_AMI_ALLOWED_IDS = {value.strip() for value in config("AWS_AMI_ALLOWED_IDS", default="").split(",") if value.strip()}
+AWS_AMI_ALLOWED_REGIONS = {value.strip() for value in config("AWS_AMI_ALLOWED_REGIONS", default="ap-south-1").split(",") if value.strip()}
+AWS_AMI_ALLOWED_ARCHITECTURES = {value.strip() for value in config("AWS_AMI_ALLOWED_ARCHITECTURES", default="arm64").split(",") if value.strip()}
+AWS_IID_CERTIFICATE_DIR = config(
+    "AWS_IID_CERTIFICATE_DIR",
+    default=str(BASE_DIR / "main" / "certs" / "aws-iid"),
+).strip()
+AWS_AMI_TRUSTED_PROXY_IPS = {
+    value.strip() for value in config("AWS_AMI_TRUSTED_PROXY_IPS", default="127.0.0.1,::1").split(",") if value.strip()
+}
 
 # Application definition
 

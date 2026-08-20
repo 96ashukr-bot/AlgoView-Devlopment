@@ -2,6 +2,18 @@ from copy import deepcopy
 
 
 BROKER_SETUP_SPECS = {
+    "demo broker": {
+        "display_name": "Demo Broker",
+        "slug": "demo-broker",
+        "auth_mode": "demo",
+        "description": "Simulate trades using live market prices without connecting a demat account.",
+        "save_action_label": "Select Demo Broker",
+        "connect_action_label": "Demo account ready",
+        "connect_path": None,
+        "supports_callback": False,
+        "supports_redirect": False,
+        "fields": [],
+    },
     "angel one": {
         "display_name": "Angel One",
         "slug": "angel-one",

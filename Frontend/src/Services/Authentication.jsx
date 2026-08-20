@@ -4958,6 +4958,40 @@ export const getMyExecutionNode = async (clientId = "") => {
   }
 };
 
+export const getAwsAmiNodeClaim = async (clientId = "") => {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error("No authentication token found.");
+  }
+  try {
+    const response = await axios.get(`${baseUrl}/client/aws-ami-node/`, {
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      params: clientId ? { client: clientId } : {},
+    });
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.detail || "Failed to fetch AWS AMI node status.");
+  }
+};
+
+export const claimAwsAmiNode = async (publicIp, nodeName = "", clientId = "") => {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error("No authentication token found.");
+  }
+  try {
+    const payload = { public_ip: publicIp, node_name: nodeName };
+    if (clientId) payload.client = clientId;
+    const response = await axios.post(`${baseUrl}/client/aws-ami-node/`, payload, {
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      params: clientId ? { client: clientId } : {},
+    });
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.detail || "Failed to claim AWS AMI node.");
+  }
+};
+
 export const saveMyExecutionNode = async (payload, hasExistingNode = false, clientId = "") => {
   const token = getAuthToken();
   if (!token) {

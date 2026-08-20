@@ -1,0 +1,101 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Secure launch template for an AlgoView ARM64 execution-node AMI
+
+Parameters:
+  AlgoViewAmiId:
+    Type: AWS::EC2::Image::Id
+  KeyPairName:
+    Type: AWS::EC2::KeyPair::KeyName
+  InstanceType:
+    Type: String
+    Default: t4g.micro
+    AllowedValues: [t4g.nano, t4g.micro]
+  MainAlgoViewPublicIp:
+    Type: String
+    Description: Main AlgoView server IPv4 without /32
+  AdministratorCidr:
+    Type: String
+    Description: Client administrator IPv4 CIDR allowed to use SSH
+  SubnetId:
+    Type: AWS::EC2::Subnet::Id
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+
+Resources:
+  ExecutionNodeSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: AlgoView execution node restricted ingress
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3128
+          ToPort: 3128
+          CidrIp: !Sub '${MainAlgoViewPublicIp}/32'
+          Description: Authenticated trade proxy from AlgoView only
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref AdministratorCidr
+          Description: Restricted emergency SSH
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+          Description: AlgoView registration and broker HTTPS APIs
+        - IpProtocol: udp
+          FromPort: 53
+          ToPort: 53
+          CidrIp: 0.0.0.0/0
+          Description: DNS resolution
+        - IpProtocol: tcp
+          FromPort: 53
+          ToPort: 53
+          CidrIp: 0.0.0.0/0
+          Description: DNS fallback
+        - IpProtocol: udp
+          FromPort: 123
+          ToPort: 123
+          CidrIp: 0.0.0.0/0
+          Description: NTP clock synchronization
+
+  ExecutionNodeLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub 'algoview-execution-node-${AWS::StackName}'
+      LaunchTemplateData:
+        ImageId: !Ref AlgoViewAmiId
+        InstanceType: !Ref InstanceType
+        KeyName: !Ref KeyPairName
+        MetadataOptions:
+          HttpEndpoint: enabled
+          HttpTokens: required
+          HttpPutResponseHopLimit: 1
+        NetworkInterfaces:
+          - DeviceIndex: 0
+            AssociatePublicIpAddress: true
+            DeleteOnTermination: true
+            Groups:
+              - !Ref ExecutionNodeSecurityGroup
+            SubnetId: !Ref SubnetId
+        BlockDeviceMappings:
+          - DeviceName: /dev/sda1
+            Ebs:
+              DeleteOnTermination: true
+              Encrypted: true
+              VolumeSize: 8
+              VolumeType: gp3
+        TagSpecifications:
+          - ResourceType: instance
+            Tags:
+              - Key: Name
+                Value: AlgoView Execution Node
+              - Key: Application
+                Value: AlgoView
+
+Outputs:
+  LaunchTemplateId:
+    Value: !Ref ExecutionNodeLaunchTemplate
+  SecurityGroupId:
+    Value: !Ref ExecutionNodeSecurityGroup

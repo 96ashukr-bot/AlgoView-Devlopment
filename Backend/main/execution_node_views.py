@@ -604,6 +604,19 @@ class ClientExecutionNodeAPIView(APIView):
     def delete(self, request):
         client = self._target_client(request)
         node = release_execution_node(client)
+        if node and node.provider == "AWS AMI":
+            from main.models import AwsAmiNodeClaim
+
+            node.is_active = False
+            node.status = ExecutionNode.STATUS_DISABLED
+            node.is_verified_with_broker = False
+            node.proxy_public_ip_verified = False
+            node.save(update_fields=["is_active", "status", "is_verified_with_broker", "proxy_public_ip_verified", "updated_at"])
+            AwsAmiNodeClaim.objects.filter(client=client, execution_node=node).update(
+                status=AwsAmiNodeClaim.STATUS_CANCELLED,
+                execution_node=None,
+                updated_at=timezone.now(),
+            )
         return Response({"status": "released", "node_id": node.id if node else None})
 
 

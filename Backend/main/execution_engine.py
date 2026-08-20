@@ -449,7 +449,29 @@ class ExecutionEngine:
             return duplicate_result
 
         context = dict(duplicate_result)
-        if request.broker_name in {"angel one", "angle one"}:
+        if request.broker_name == "demo broker":
+            demo_price = self._demo_fill_price(request)
+            if demo_price is None:
+                if context.get("idempotency_key") and context.get("idempotency_record"):
+                    self._idempotency_manager.remove_record(context["idempotency_key"])
+                return {
+                    "status": "error",
+                    "message": "A valid live price is required to simulate a demo trade.",
+                    "error_code": "INVALID_LTP",
+                }
+            context.update(
+                {
+                    "ltp": demo_price,
+                    "validated_price": demo_price,
+                    "resolved_order_type": request.order_type_name,
+                    "compliance_checks": {
+                        "price_check": "passed",
+                        "market_price_protection": "simulated_at_live_price",
+                        "demo_execution": "passed",
+                    },
+                }
+            )
+        elif request.broker_name in {"angel one", "angle one"}:
             angel_context = self._validate_angel_one_request(request)
             if angel_context.get("status") == "error":
                 if context.get("idempotency_key") and context.get("idempotency_record"):
@@ -1052,10 +1074,45 @@ class ExecutionEngine:
         return contract_expiry
 
     def _dispatch(self, request: ExecutionRequest, validation_context: Dict[str, Any]) -> Dict[str, Any]:
+        if request.broker_name == "demo broker":
+            fill_price = self._demo_fill_price(request)
+            if fill_price is None:
+                return self._failed_response(
+                    "A valid live price is required to simulate a demo trade.",
+                    error_code="INVALID_LTP",
+                )
+            return {
+                "data": {
+                    "status": "complete",
+                    "message": "Demo trade executed successfully.",
+                    "order_id": f"DEMO-{request.request_id}",
+                    "executed_price": fill_price,
+                    "average_price": fill_price,
+                    "ltp": fill_price,
+                    "filled_quantity": request.quantity_int,
+                    "pending_quantity": 0,
+                    "order_type": request.order_type_name,
+                    "requested_order_type": request.order_type_name,
+                    "is_demo": True,
+                }
+            }
         routed_response = self._route_to_execution_node_if_configured(request, validation_context)
         if routed_response is None:
             return self._failed_response("Execution routing failed closed before broker dispatch.")
         return routed_response
+
+    def _demo_fill_price(self, request: ExecutionRequest) -> Optional[float]:
+        """Return the market reference used for a credential-free simulated fill."""
+        candidates = (
+            request.LivePrice,
+            request.limit_price,
+            request.Exit_price if request.is_exit_order else request.Entry_price,
+        )
+        for candidate in candidates:
+            value = self._to_float(candidate)
+            if value is not None and MIN_VALID_LTP <= value <= MAX_VALID_LTP:
+                return round(value, 2)
+        return None
 
     def _route_to_execution_node_if_configured(
         self,

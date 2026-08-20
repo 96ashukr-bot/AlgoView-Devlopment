@@ -5894,6 +5894,80 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertEqual(trade_order.sltp_status, "CLOSED")
         service._execution_engine.execute_order.assert_called_once()
 
+    def test_demo_broker_executes_buy_without_credentials_or_execution_node(self):
+        from main.execution_engine import ExecutionEngine, ExecutionRequest
+
+        trade_setting = ClientTradeSetting.objects.create(
+            client=self.other_client,
+            symbol="NIFTY",
+            strategy="Demo Strategy",
+            broker="Demo Broker",
+            product_type="MIS",
+            order_type="LIMIT",
+            quantity=65,
+            group_service="DEMO",
+            expiry_date=timezone.now() + timedelta(days=7),
+            sl_type="POINTS",
+            stop_loss=20,
+            target=30,
+        )
+        request = ExecutionRequest(
+            LivePrice=Decimal("118.25"), group_service="DEMO", trade=trade_setting,
+            user=self.other_client, transaction_type="BUY", symbol="NIFTY", quantity=65,
+            strategy="Demo Strategy", ordertype="LIMIT", product_type="MIS",
+            price=Decimal("120.00"), Lots=1, trade_order_status="OPEN", Entry_type="BUY",
+            Exit_type=None, Entry_price=Decimal("118.25"), Exit_price=None, EntryQty=65,
+            ExitQty=None, webhook_signal={}, Exchange="NFO", Segment="FNO",
+            Index_Symbol="NIFTY25AUG2624100PE", triggerPrice=0, day="25", month="AUG",
+            year="26", fullyear="2026", strike=24100, option_type="PE",
+            order_params={"symbol": "NIFTY", "strike": 24100, "option_type": "PE"},
+            history_id="demo-engine-buy",
+        )
+        engine = ExecutionEngine()
+        engine._risk_manager = SimpleNamespace(
+            validate_and_reserve=mock.Mock(return_value=SimpleNamespace(
+                allowed=True, message="", error_code=None, reservation_key=None,
+                trade_limit_reservation_key=None,
+            )),
+            release_reservation=mock.Mock(), release_trade_limit_reservation=mock.Mock(),
+            complete_trade_limit_reservation=mock.Mock(),
+        )
+        engine._validate_market_hours = mock.Mock(return_value=None)
+
+        result = engine.execute_order(request)
+
+        self.assertEqual(result["data"]["status"], "complete")
+        self.assertEqual(result["data"]["executed_price"], 118.25)
+        self.assertTrue(result["data"]["is_demo"])
+        history = Tradeorderhistory.objects.get(history_id="demo-engine-buy")
+        self.assertEqual(history.broker, "Demo Broker")
+        self.assertEqual(history.order_status.lower(), "complete")
+        self.assertEqual(history.Entry_Price, Decimal("118.25"))
+        self.assertEqual(history.sltp_metadata["calculated_stoploss_price"], 98.25)
+        self.assertEqual(history.sltp_metadata["calculated_target_price"], 148.25)
+
+        exit_request = ExecutionRequest(
+            LivePrice=Decimal("130.50"), group_service="DEMO", trade=trade_setting,
+            user=self.other_client, transaction_type="SELL", symbol="NIFTY", quantity=65,
+            strategy="Demo Strategy", ordertype="MARKET", product_type="MIS", price=None,
+            Lots=1, trade_order_status="CLOSE", Entry_type="BUY", Exit_type="SELL",
+            Entry_price=Decimal("118.25"), Exit_price=Decimal("130.50"), EntryQty=65,
+            ExitQty=65, webhook_signal={}, Exchange="NFO", Segment="FNO",
+            Index_Symbol="NIFTY25AUG2624100PE", triggerPrice=0, day="25", month="AUG",
+            year="26", fullyear="2026", strike=24100, option_type="PE",
+            order_params={"symbol": "NIFTY", "strike": 24100, "option_type": "PE"},
+            history_id="demo-engine-sell",
+        )
+        exit_result = engine.execute_order(exit_request)
+
+        self.assertEqual(exit_result["data"]["status"], "complete")
+        self.assertEqual(exit_result["data"]["executed_price"], 130.50)
+        history.refresh_from_db()
+        self.assertEqual(history.trade_order_status, "CLOSE")
+        self.assertEqual(history.Exit_Price, Decimal("130.50"))
+        self.assertEqual(history.ExitQty, 65)
+        self.assertEqual(history.Total, Decimal("796.25"))
+
     def test_sl_tp_watcher_demo_broker_exit_does_not_require_broker_details(self):
         trade_setting = ClientTradeSetting.objects.create(
             client=self.other_client,

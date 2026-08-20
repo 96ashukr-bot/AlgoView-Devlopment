@@ -8,6 +8,8 @@ import {
   getBrokerRuntimeStatus,
   generateBrokerToken,
   getMyExecutionNode,
+  getAwsAmiNodeClaim,
+  claimAwsAmiNode,
   saveMyExecutionNode,
   releaseMyExecutionNode,
   verifyMyExecutionProxy,
@@ -196,11 +198,19 @@ const ClientHeader = ({ clientId = "" }) => {
     is_active: true,
   });
   const [isExecutionSaving, setIsExecutionSaving] = useState(false);
+  const [awsAmiClaim, setAwsAmiClaim] = useState(null);
+  const [awsAmiEnabled, setAwsAmiEnabled] = useState(false);
 
   useEffect(() => {
     fetchBrokerList();
     fetchClientExecutionNode();
   }, []);
+
+  useEffect(() => {
+    if (!isExecutionModalOpen || awsAmiClaim?.status !== "pending") return undefined;
+    const interval = window.setInterval(() => fetchClientExecutionNode(), 5000);
+    return () => window.clearInterval(interval);
+  }, [isExecutionModalOpen, awsAmiClaim?.status, clientId]);
 
   const fetchBrokerList = async () => {
     try {
@@ -225,12 +235,18 @@ const ClientHeader = ({ clientId = "" }) => {
 
   const fetchClientExecutionNode = async () => {
     try {
-      const response = await getMyExecutionNode(clientId);
+      const [response, awsResponse] = await Promise.all([
+        getMyExecutionNode(clientId),
+        getAwsAmiNodeClaim(clientId).catch(() => ({ enabled: false, claim: null, node: null })),
+      ]);
       const node = response?.node || null;
+      const isAwsAmiNode = node?.provider === "AWS AMI";
       setExecutionNode(node);
+      setAwsAmiClaim(awsResponse?.claim || null);
+      setAwsAmiEnabled(Boolean(awsResponse?.enabled));
       setExecutionNodeInput({
         name: node?.name || "",
-        execution_type: node?.execution_type || "vps_node",
+        execution_type: isAwsAmiNode ? "aws_ami" : (node?.execution_type || "vps_node"),
         ip_address: node?.ip_address || "",
         provider: node?.provider || "",
         server_url: node?.server_url || "",
@@ -267,21 +283,37 @@ const ClientHeader = ({ clientId = "" }) => {
 
   const handleSaveExecutionNode = async () => {
     const isProxy = executionNodeInput.execution_type === "proxy";
+    const isAwsAmi = executionNodeInput.execution_type === "aws_ami";
     const requiredFields = isProxy
       ? ["name", "ip_address", "proxy_protocol", "proxy_host", "proxy_port"]
-      : ["name", "ip_address", "server_url", "node_id"];
+      : isAwsAmi ? ["ip_address"] : ["name", "ip_address", "server_url", "node_id"];
     const missingField = requiredFields.find((field) => !String(executionNodeInput[field] || "").trim());
     if (missingField) {
-      Swal.fire("Error", "Please fill node name, static IP, server URL, and node ID.", "error");
+      Swal.fire("Error", isAwsAmi ? "Please enter the AWS instance public IPv4." : "Please fill all required execution-node fields.", "error");
       return;
     }
-    if (!isProxy && !executionNode && !String(executionNodeInput.node_secret || "").trim()) {
+    if (!isProxy && !isAwsAmi && !executionNode && !String(executionNodeInput.node_secret || "").trim()) {
       Swal.fire("Error", "Please add node secret when creating a new execution IP.", "error");
       return;
     }
 
     setIsExecutionSaving(true);
     try {
+      if (isAwsAmi) {
+        const response = await claimAwsAmiNode(
+          executionNodeInput.ip_address.trim(),
+          executionNodeInput.name.trim(),
+          clientId,
+        );
+        setAwsAmiClaim(response?.claim || null);
+        Swal.fire(
+          "AWS node claim created",
+          "Keep the instance running. AlgoView will detect and verify the approved AMI automatically.",
+          "success",
+        );
+        await fetchClientExecutionNode();
+        return;
+      }
       const payload = {
         name: executionNodeInput.name.trim(),
         execution_type: executionNodeInput.execution_type,
@@ -332,6 +364,7 @@ const ClientHeader = ({ clientId = "" }) => {
     try {
       await releaseMyExecutionNode(clientId);
       setExecutionNode(null);
+      setAwsAmiClaim(null);
       setExecutionNodeInput({
         name: "",
         execution_type: "vps_node",
@@ -740,8 +773,9 @@ const ClientHeader = ({ clientId = "" }) => {
   const dashboardConnectLabel = currentBrokerSchema?.connect_action_label || "Generate Token";
   const runtimeSessionStatus = brokerRuntimeStatus?.session?.status || "unavailable";
   const runtimeTokenStatus = brokerRuntimeStatus?.token?.status || "unavailable";
+  const isDemoBroker = normalizeBrokerName(currentBrokerDisplayName) === "demo broker";
   const isRuntimeActive = Boolean(
-    brokerRuntimeStatus?.session?.is_active || brokerRuntimeStatus?.token?.is_active
+    isDemoBroker || brokerRuntimeStatus?.session?.is_active || brokerRuntimeStatus?.token?.is_active
   );
   const runtimeBadgeStyles = {
     backgroundColor: isRuntimeActive ? "#dcfce7" : "#fee2e2",
@@ -775,7 +809,7 @@ const ClientHeader = ({ clientId = "" }) => {
             Execution IP
           </Button>
           <span className="client-header-status" style={runtimeBadgeStyles}>
-            {isRuntimeActive ? "Active" : "Inactive"}
+            {isDemoBroker ? "Demo Active" : isRuntimeActive ? "Active" : "Inactive"}
           </span>
         </div>
       </div>
@@ -916,6 +950,15 @@ const ClientHeader = ({ clientId = "" }) => {
             </div>
           )}
 
+          {selectedBroker && normalizeBrokerName(selectedBroker) === "demo broker" && (
+            <div style={{ background: "#ecfdf5", border: "1px solid #86efac", borderRadius: "12px", padding: "14px 16px" }}>
+              <div style={{ fontWeight: 700, color: "#166534", marginBottom: "6px" }}>Demo account ready</div>
+              <div style={{ color: "#166534", fontSize: "14px" }}>
+                No API credentials or broker token are required. Trades will be simulated using the live price and will appear in the normal active orders, closed orders, and P&amp;L screens.
+              </div>
+            </div>
+          )}
+
         </ModalBody>
         <ModalFooter>
           <Button
@@ -985,11 +1028,12 @@ const ClientHeader = ({ clientId = "" }) => {
               onChange={handleExecutionInputChange}
             >
               <option value="vps_node">VPS Node</option>
+              {awsAmiEnabled && <option value="aws_ami">AWS AMI Node (IP only)</option>}
               <option value="proxy">Executional Client IP</option>
             </Input>
           </FormGroup>
           <div className="row">
-            <div className="col-md-6">
+            {executionNodeInput.execution_type !== "aws_ami" && <div className="col-md-6">
               <FormGroup>
                 <Label>Node Name *</Label>
                 <Input
@@ -999,8 +1043,8 @@ const ClientHeader = ({ clientId = "" }) => {
                   placeholder="My execution VPS"
                 />
               </FormGroup>
-            </div>
-            <div className="col-md-6">
+            </div>}
+            <div className={executionNodeInput.execution_type === "aws_ami" ? "col-md-12" : "col-md-6"}>
               <FormGroup>
                 <Label>Static IP *</Label>
                 <Input
@@ -1012,7 +1056,7 @@ const ClientHeader = ({ clientId = "" }) => {
               </FormGroup>
             </div>
           </div>
-          <FormGroup>
+          {executionNodeInput.execution_type !== "aws_ami" && <FormGroup>
             <Label>Provider</Label>
             <Input
               name="provider"
@@ -1020,7 +1064,7 @@ const ClientHeader = ({ clientId = "" }) => {
               onChange={handleExecutionInputChange}
               placeholder={executionNodeInput.execution_type === "proxy" ? "IP vendor" : "AWS"}
             />
-          </FormGroup>
+          </FormGroup>}
           {executionNodeInput.execution_type === "vps_node" ? (
             <>
               <div className="row">
@@ -1059,7 +1103,7 @@ const ClientHeader = ({ clientId = "" }) => {
                 />
               </FormGroup>
             </>
-          ) : (
+          ) : executionNodeInput.execution_type === "proxy" ? (
             <>
               <div className="row">
                 <div className="col-md-4">
@@ -1100,6 +1144,18 @@ const ClientHeader = ({ clientId = "" }) => {
                 </div>
               </div>
             </>
+          ) : (
+            <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: "10px", padding: "12px 14px", marginBottom: "14px" }}>
+              <div style={{ fontWeight: 700, marginBottom: "4px" }}>Automatic AWS AMI registration</div>
+              <div style={{ color: "#475569", fontSize: "14px" }}>
+                Launch the approved AlgoView AMI, keep it running, and paste its public IPv4 above. Node credentials and routing are configured automatically.
+              </div>
+              {awsAmiClaim && (
+                <div style={{ marginTop: "8px", fontWeight: 600 }}>
+                  Status: {awsAmiClaim.status}{awsAmiClaim.status === "pending" ? " — waiting for the instance agent" : ""}
+                </div>
+              )}
+            </div>
           )}
           <FormGroup check>
             <Input

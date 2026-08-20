@@ -188,6 +188,29 @@ class ManualTradeTests(APITestCase):
         result = response.data["results"][0]
         self.assertEqual(result["client_id"], self.client_user.id)
         self.assertEqual(result["request_snapshot"]["quantity"], 50)
+
+    def test_demo_broker_preview_does_not_require_live_broker_token_or_execution_node(self):
+        self.setting.broker = "Demo Broker"
+        self.setting.save(update_fields=["broker"])
+        broker_details = ClientBrokerdetails.objects.get(client=self.client_user)
+        broker_details.isTokenExpired = True
+        broker_details.access_token_expiry = timezone.now() - timedelta(minutes=1)
+        broker_details.save(update_fields=["isTokenExpired", "access_token_expiry"])
+
+        response = self.client.post(reverse("manual-trade-preview"), {
+            "group_service_id": self.group.id,
+            "symbol": "NIFTY",
+            "action": "BUY_CE",
+            "strike_price": "22900",
+        }, format="json")
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data["eligible_count"], 1)
+        self.assertEqual(response.data["skipped_count"], 0)
+        result = response.data["results"][0]
+        self.assertEqual(result["broker"], "Demo Broker")
+        self.assertEqual(result["status"], ManualTradeResult.STATUS_PENDING)
+        self.assertTrue(result["request_snapshot"]["broker_ready"])
         self.assertEqual(result["request_snapshot"]["order_type"], "LIMIT")
         self.assertEqual(result["request_snapshot"]["product_type"], "INTRADAY")
 

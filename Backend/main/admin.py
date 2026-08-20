@@ -207,6 +207,14 @@ class ExecutionNodeLogAdmin(admin.ModelAdmin):
     search_fields = ("execution_node__node_id", "client__email", "message")
     readonly_fields = ("created_at",)
 
+
+@admin.register(AwsAmiNodeClaim)
+class AwsAmiNodeClaimAdmin(admin.ModelAdmin):
+    list_display = ("id", "client", "public_ip", "status", "execution_node", "instance_id", "ami_id", "region", "expires_at", "activated_at")
+    list_filter = ("status", "region", "architecture", "ami_id")
+    search_fields = ("client__email", "public_ip", "instance_id", "ami_id")
+    readonly_fields = ("created_at", "updated_at", "activated_at")
+
 @admin.register(Tradeorderhistory)    
 class ClientTradeHistoryAdmin(admin.ModelAdmin):
     list_display = ("id", "client", "history_id", "transaction_type", "trading_symbol", "date", "strategy", "GroupService", "order_id", "broker", "order_status", "SignalEntry_time")     

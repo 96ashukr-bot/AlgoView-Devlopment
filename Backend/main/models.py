@@ -1367,6 +1367,60 @@ class ExecutionNodeLog(models.Model):
 
     def __str__(self):
         return f"{self.event_type}: {self.execution_node_id}"
+
+
+class AwsAmiNodeClaim(models.Model):
+    STATUS_PENDING = "pending"
+    STATUS_ACTIVATED = "activated"
+    STATUS_EXPIRED = "expired"
+    STATUS_CANCELLED = "cancelled"
+    STATUS_CHOICES = [
+        (STATUS_PENDING, "Pending"),
+        (STATUS_ACTIVATED, "Activated"),
+        (STATUS_EXPIRED, "Expired"),
+        (STATUS_CANCELLED, "Cancelled"),
+    ]
+
+    client = models.OneToOneField(
+        'User',
+        on_delete=models.CASCADE,
+        related_name="aws_ami_node_claim",
+    )
+    public_ip = models.GenericIPAddressField(unique=True)
+    node_name = models.CharField(max_length=150)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING, db_index=True)
+    execution_node = models.OneToOneField(
+        ExecutionNode,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="aws_ami_claim",
+    )
+    created_by = models.ForeignKey(
+        'User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_aws_ami_node_claims",
+    )
+    expires_at = models.DateTimeField(db_index=True)
+    activated_at = models.DateTimeField(null=True, blank=True)
+    agent_version = models.CharField(max_length=50, blank=True, null=True)
+    instance_id = models.CharField(max_length=100, blank=True, null=True, unique=True)
+    ami_id = models.CharField(max_length=100, blank=True, null=True)
+    region = models.CharField(max_length=50, blank=True, null=True)
+    architecture = models.CharField(max_length=30, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["public_ip", "status"], name="main_awsami_public__2cbca1_idx"),
+            models.Index(fields=["client", "status"], name="main_awsami_client__3aa22e_idx"),
+        ]
+
+    def __str__(self):
+        return f"{self.client_id}: {self.public_ip} ({self.status})"
     
 class Tradeorderhistory(models.Model):
     client = models.ForeignKey('User', on_delete=models.CASCADE)

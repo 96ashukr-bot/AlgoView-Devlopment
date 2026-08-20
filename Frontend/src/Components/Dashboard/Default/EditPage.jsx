@@ -85,10 +85,12 @@ const EditPage = () => {
       if (response) {
         // If broker_names array is available, set it
         if (response.broker_names) {
-          setBrokerNames(response.broker_names);
+          setBrokerNames(Array.from(new Set([
+            ...response.broker_names,
+            "Demo Broker",
+          ])));
         } else {
-          console.error("Broker names data is not available.");
-          setBrokerNames([]);
+          setBrokerNames(["Demo Broker"]);
         }
 
         if (response?.Group_service?.json_data) {

@@ -473,6 +473,13 @@ def _merge_completed_exit_into_entry(entry, defaults, response_payload, order_pa
     entry.trade_order_status = "CLOSE"
     entry.LivePrice = defaults.get("LivePrice") or entry.LivePrice
     entry.failure_reason = defaults.get("failure_reason")
+    entry_price = _to_decimal(entry.Entry_Price)
+    exit_price = _to_decimal(entry.Exit_Price)
+    exit_quantity = _to_decimal(entry.ExitQty or entry.EntryQty)
+    if entry_price is not None and exit_price is not None and exit_quantity is not None:
+        is_short = str(entry.Entry_type or "").strip().upper() in {"SELL", "SHORT"}
+        price_difference = entry_price - exit_price if is_short else exit_price - entry_price
+        entry.Total = price_difference * exit_quantity
     entry.save()
 
     if history_id:
