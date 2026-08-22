@@ -37,9 +37,12 @@ source "amazon-ebs" "algoview_arm64" {
 
 build {
   sources = ["source.amazon-ebs.algoview_arm64"]
+  provisioner "shell" {
+    inline = ["mkdir -p /tmp/algoview-ami-node"]
+  }
   provisioner "file" {
     source      = "deploy/aws-ami-node/"
-    destination = "/tmp/algoview-ami-node"
+    destination = "/tmp/algoview-ami-node/"
   }
   provisioner "shell" {
     environment_vars = [
@@ -48,7 +51,7 @@ build {
       "ALGOVIEW_AMI_PROXY_PORT=3128",
       "ALGOVIEW_AMI_AGENT_VERSION=1",
     ]
-    execute_command = "sudo -E bash '{{.Path}}'"
+    execute_command = "sudo -E env {{ .Vars }} bash '{{.Path}}'"
     script          = "deploy/aws-ami-node/install.sh"
   }
 }

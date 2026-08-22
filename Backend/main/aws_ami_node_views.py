@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 from django.conf import settings
 from django.core.cache import cache
 from django.core.exceptions import PermissionDenied, ValidationError
@@ -14,6 +16,9 @@ from main.models import AwsAmiNodeClaim, User
 from main.permissions import can_access_client_record
 from main.services.aws_ami_nodes import create_or_replace_claim, register_ami_agent, verify_registered_ami_proxy
 from main.services.aws_instance_identity import verify_aws_instance_identity
+
+
+logger = logging.getLogger(__name__)
 
 
 def _claim_payload(claim):
@@ -86,7 +91,10 @@ class AwsAmiNodeRegisterAPIView(APIView):
 
     def _source_ip(self, request):
         remote_ip = str(request.META.get("REMOTE_ADDR") or "").strip()
-        if remote_ip in settings.AWS_AMI_TRUSTED_PROXY_IPS:
+        # Gunicorn is reached through nginx's Unix socket in production, where
+        # REMOTE_ADDR is empty. In that topology nginx is the only caller and
+        # supplies the original peer address in the forwarding headers.
+        if not remote_ip or remote_ip in settings.AWS_AMI_TRUSTED_PROXY_IPS:
             real_ip = str(request.META.get("HTTP_X_REAL_IP") or "").strip()
             forwarded = str(request.META.get("HTTP_X_FORWARDED_FOR") or "").split(",")[0].strip()
             return real_ip or forwarded or remote_ip
@@ -97,8 +105,14 @@ class AwsAmiNodeRegisterAPIView(APIView):
             return Response({"status": "disabled"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
         source_ip = self._source_ip(request)
         throttle_key = f"aws-ami-register:{source_ip}"
-        attempts = int(cache.get(throttle_key, 0) or 0) + 1
-        cache.set(throttle_key, attempts, timeout=60)
+        if cache.add(throttle_key, 1, timeout=60):
+            attempts = 1
+        else:
+            try:
+                attempts = int(cache.incr(throttle_key))
+            except ValueError:
+                cache.set(throttle_key, 1, timeout=60)
+                attempts = 1
         if attempts > 12:
             return Response({"status": "failed", "message": "Registration rate limit exceeded."}, status=status.HTTP_429_TOO_MANY_REQUESTS)
         try:
@@ -111,6 +125,7 @@ class AwsAmiNodeRegisterAPIView(APIView):
             )
         except ValidationError as exc:
             message = "; ".join(exc.messages)
+            logger.warning("AWS AMI registration rejected for source_ip=%s: %s", source_ip, message)
             response_status = status.HTTP_404_NOT_FOUND if "No pending" in message else status.HTTP_400_BAD_REQUEST
             return Response({"status": "waiting" if response_status == 404 else "failed", "message": message}, status=response_status)
 

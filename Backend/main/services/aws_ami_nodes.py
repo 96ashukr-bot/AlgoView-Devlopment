@@ -68,7 +68,10 @@ def register_ami_agent(*, source_ip: str, proxy_username: str, proxy_password: s
         raise ValidationError("AWS AMI node onboarding is disabled.")
     source_ip = normalize_public_ip(source_ip)
     now = timezone.now()
-    claim = AwsAmiNodeClaim.objects.select_for_update().select_related("client", "execution_node").filter(public_ip=source_ip).first()
+    # Do not join the nullable execution_node relation in a FOR UPDATE query.
+    # PostgreSQL rejects row locks applied to the nullable side of an outer
+    # join. The relation is fetched lazily only for an already activated claim.
+    claim = AwsAmiNodeClaim.objects.select_for_update().select_related("client").filter(public_ip=source_ip).first()
     if claim is None:
         raise ValidationError("No pending AWS node claim exists for this public IPv4.")
     if claim.status == AwsAmiNodeClaim.STATUS_ACTIVATED and claim.execution_node_id:
