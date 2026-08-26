@@ -463,6 +463,12 @@ def place_zerodha_orders(
                             "price": res_data.get("average_price") or order_params.get("price"),
                             "ltp": ltp,
                             "reference_price": reference_price if requested_order_type == "LIMIT" else ltp,
+                            # Preserve the broker-confirmed contract identity so
+                            # every later exit uses Zerodha's exact option symbol
+                            # instead of the request's underlying display name.
+                            "resolved_trading_symbol": res_data.get("tradingsymbol") or trading_symbol,
+                            "instrument_token": res_data.get("instrument_token"),
+                            "broker_order": res_data,
                         }
                     }
 

@@ -3582,8 +3582,12 @@ class ExecutionNodeManagerTests(TestCase):
         kite.instruments.return_value = [{"tradingsymbol": "NIFTY24400CE"}]
         kite.ltp.return_value = {"NFO:NIFTY24400CE": {"last_price": 10}}
         kite.place_order.return_value = "kite-order-1"
-        kite.order_history.return_value = [{"status": "COMPLETE", "transaction_type": "BUY", "average_price": 10, "filled_quantity": 65}]
-        place_zerodha_orders(
+        kite.order_history.return_value = [{
+            "status": "COMPLETE", "transaction_type": "BUY", "average_price": 10,
+            "filled_quantity": 65, "tradingsymbol": "NIFTY24400CE",
+            "instrument_token": 123456,
+        }]
+        response = place_zerodha_orders(
             10,
             "Lite",
             "kite-access",
@@ -3616,6 +3620,9 @@ class ExecutionNodeManagerTests(TestCase):
         mock_kite_class.assert_called_once_with(api_key="kite-api", proxies=proxy_config)
         self.assertEqual(kite.place_order.call_args.kwargs["price"], 10.0)
         self.assertNotIn("reference_price", kite.place_order.call_args.kwargs)
+        self.assertEqual(response["data"]["resolved_trading_symbol"], "NIFTY24400CE")
+        self.assertEqual(response["data"]["instrument_token"], 123456)
+        self.assertEqual(response["data"]["broker_order"]["tradingsymbol"], "NIFTY24400CE")
 
     @mock.patch("main.groww._iter_groww_instruments")
     def test_groww_trading_symbol_resolves_from_instrument_master(self, mock_instruments):
