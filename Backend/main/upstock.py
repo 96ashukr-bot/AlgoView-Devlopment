@@ -92,7 +92,20 @@ def place_upstox_orders(LivePrice,group_service,
             "MCX": "MCX",
             "MCX_FO": "MCX",
         }.get(str(Exchange or "").upper(), "NSE")
-        result = fetch_instrument_details(trade_symbol, upstox_exchange, user)
+        signal = webhook_signal if isinstance(webhook_signal, dict) else {}
+        saved_symbol = str(signal.get("original_broker_trading_symbol") or "").strip()
+        saved_instrument_key = str(signal.get("original_broker_instrument_key") or "").strip()
+        is_exit = str(transaction_type or "").strip().upper() == "SELL"
+        # A broker-confirmed identifier captured from the BUY is authoritative
+        # for an exit. Re-resolving a generic display symbol such as NIFTY can
+        # otherwise select the index instrument instead of the option contract.
+        if is_exit and saved_symbol and saved_instrument_key:
+            result = {
+                "trading_symbol": saved_symbol,
+                "instrument_key": saved_instrument_key,
+            }
+        else:
+            result = fetch_instrument_details(trade_symbol, upstox_exchange, user)
         log_timing("instrument_lookup")
         
         logger.info(f"{user} : The exchange result is : {result}")

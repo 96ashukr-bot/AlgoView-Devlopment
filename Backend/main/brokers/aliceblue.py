@@ -12,6 +12,27 @@ class AliceBlueBroker(BaseBroker):
     broker_name = "alice blue"
     supports_proxy = True
 
+    @staticmethod
+    def _normalize_aggregated_fill_response(response, expected_quantity):
+        """Treat a broker-confirmed full aggregate fill as completed."""
+        if not isinstance(response, dict) or isinstance(response.get("data"), dict):
+            return response
+        try:
+            filled_quantity = int(float(response.get("aggregated_fills") or 0))
+            expected_quantity = int(float(expected_quantity or 0))
+        except (TypeError, ValueError):
+            return response
+        if expected_quantity <= 0 or filled_quantity < expected_quantity:
+            return response
+        return {
+            **response,
+            "data": {
+                "status": "complete",
+                "message": "Alice Blue exit fully filled.",
+                "filled_quantity": filled_quantity,
+            },
+        }
+
     def validate_credentials(self, proxy_config=None):
         if not self.broker_details.broker_API_KEY or not self.broker_details.broker_API_UID:
             return {"status": "failed", "message": "Missing Alice Blue API key or user id."}
@@ -71,6 +92,7 @@ class AliceBlueBroker(BaseBroker):
             session_id=get_access_token(self.broker_details),
             allow_direct_node_execution=bool(payload.get("_allow_direct_node_execution")),
         )
+        response = self._normalize_aggregated_fill_response(response, order.get("quantity"))
         mark_open_position_closed(open_position, response)
         return response
 
