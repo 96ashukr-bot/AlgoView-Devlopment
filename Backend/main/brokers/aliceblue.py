@@ -47,6 +47,54 @@ class AliceBlueBroker(BaseBroker):
                 return {"status": "failed", "message": "Alice Blue session token has expired. Connect to Alice Blue again through the assigned proxy before trading."}
         return {"status": "success"}
 
+    def _recover_exit_contract(self, order, proxy_config=None):
+        """Recover immutable Alice fields from the broker-confirmed BUY."""
+        snapshot = order.get("broker_contract_snapshot")
+        if not isinstance(snapshot, dict):
+            snapshot = {}
+        instrument_id = str(
+            order.get("original_broker_instrument_key")
+            or order.get("original_broker_symbol_token")
+            or snapshot.get("broker_instrument_id")
+            or ""
+        ).strip()
+        original_order_id = str(
+            order.get("original_broker_order_id")
+            or order.get("matched_open_order_id")
+            or snapshot.get("buy_order_id")
+            or ""
+        ).strip()
+        if instrument_id or not original_order_id:
+            return instrument_id
+
+        response = get_alice_a3_orderbook(
+            get_access_token(self.broker_details), proxy_config=proxy_config
+        )
+        candidates = response.get("result") if isinstance(response, dict) else None
+        for broker_order in candidates if isinstance(candidates, list) else []:
+            if str(broker_order.get("brokerOrderId") or "").strip() != original_order_id:
+                continue
+            if str(broker_order.get("transactionType") or "").upper() != "BUY":
+                continue
+            instrument_id = str(broker_order.get("instrumentId") or "").strip()
+            if not instrument_id:
+                continue
+            order["original_broker_instrument_key"] = instrument_id
+            order["original_broker_trading_symbol"] = (
+                broker_order.get("tradingSymbol") or order.get("symbol")
+            )
+            order["original_broker_exchange"] = (
+                broker_order.get("exchange") or order.get("Exchange")
+            )
+            order["original_broker_product_type"] = (
+                broker_order.get("product") or order.get("product_type")
+            )
+            order["product_type"] = (
+                broker_order.get("product") or order.get("product_type")
+            )
+            return instrument_id
+        return ""
+
     def place_order(self, payload, proxy_config=None):
         order = payload.get("order", payload)
         order, open_position, close_error = prepare_close_order_from_open_position(
@@ -54,6 +102,15 @@ class AliceBlueBroker(BaseBroker):
         )
         if close_error:
             return close_error
+        is_exit = str(order.get("transaction_type") or "").upper() == "SELL"
+        stored_instrument_id = (
+            self._recover_exit_contract(order, proxy_config=proxy_config) if is_exit else ""
+        )
+        if is_exit and stored_instrument_id:
+            # Exact-ID MARKET exits offset the position immediately. Alice
+            # treated protected LIMIT exits as fresh shorts in production.
+            order["order_type"] = "MARKET"
+            order["ordertype"] = "MARKET"
         trade_symbol = (
             order.get("trade_symbol")
             or order.get("trading_symbol")
@@ -91,6 +148,7 @@ class AliceBlueBroker(BaseBroker):
             proxy_config=proxy_config,
             session_id=get_access_token(self.broker_details),
             allow_direct_node_execution=bool(payload.get("_allow_direct_node_execution")),
+            instrument_id_override=stored_instrument_id,
         )
         response = self._normalize_aggregated_fill_response(response, order.get("quantity"))
         mark_open_position_closed(open_position, response)

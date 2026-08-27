@@ -2609,6 +2609,43 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertEqual(mock_place_order.call_args.kwargs["proxy_config"], proxy_config)
         self.assertEqual(mock_place_order.call_args.kwargs["session_id"], "alice-session-token")
 
+    @mock.patch("main.brokers.aliceblue.prepare_close_order_from_open_position")
+    @mock.patch("main.brokers.aliceblue.place_alice_orders")
+    def test_alice_blue_exit_uses_stored_instrument_id_and_market(
+        self, mock_place_order, mock_prepare_close
+    ):
+        broker = Broker.objects.create(broker_name="Alice Blue", is_active=True)
+        broker_details = ClientBrokerdetails.objects.create(
+            client=self.client_user,
+            broker_name=broker,
+            broker_API_KEY="alice-api",
+            broker_API_UID="alice-user",
+            access_token="alice-session-token",
+        )
+        exit_order = {
+            "symbol": "NIFTY",
+            "quantity": 65,
+            "transaction_type": "SELL",
+            "order_type": "LIMIT",
+            "Exchange": "NFO",
+            "original_broker_instrument_key": "46990",
+            "original_broker_order_id": "buy-order-1",
+        }
+        mock_prepare_close.return_value = (exit_order, None, None)
+        mock_place_order.return_value = {
+            "data": {"status": "complete", "order_id": "alice-exit-1"}
+        }
+
+        get_broker_adapter(broker_details).place_order(
+            exit_order,
+            proxy_config={"https": "http://proxy.example.com:8080"},
+        )
+
+        self.assertEqual(mock_place_order.call_args.args[9], "MARKET")
+        self.assertEqual(
+            mock_place_order.call_args.kwargs["instrument_id_override"], "46990"
+        )
+
     @mock.patch("main.brokers.aliceblue.place_alice_orders")
     def test_alice_blue_adapter_builds_contract_symbol_when_trade_symbol_missing(self, mock_place_order):
         broker = Broker.objects.create(broker_name="Alice Blue", is_active=True)

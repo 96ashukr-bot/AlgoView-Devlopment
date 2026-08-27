@@ -702,6 +702,7 @@ def place_alice_orders(
     webhook_signal, Exchange, Segment, Index_Symbol, history_id=None,
     trigger_price=None, proxy_config=None, session_id=None,
     allow_direct_node_execution=False,
+    instrument_id_override=None,
 ):
     if not proxy_config and not allow_direct_node_execution:
         return _alice_failed_response("Proxy/static-IP execution route is required for Alice Blue orders.")
@@ -724,19 +725,22 @@ def place_alice_orders(
         if not alice:
             return _alice_failed_response(session_error or "Alice Blue login failed or API is disabled.")
 
-        # Instrument
         exchange = str(Exchange or "NFO").strip().upper()
-        try:
-            fetch_exchange = exchange if exchange in {"NFO", "NSE", "BSE", "BFO", "MCX"} else "NFO"
-            fetch_instrument_data(alice, fetch_exchange)
-            instrument = alice.get_instrument_by_symbol(fetch_exchange, trading_symbol_aliceblue)
-        except Exception as e:
-            return _alice_failed_response(str(e))
-
-        if not instrument:
-            return _alice_failed_response("Instrument not found")
-
+        fetch_exchange = exchange if exchange in {"NFO", "NSE", "BSE", "BFO", "MCX"} else "NFO"
         requested_order_type = normalize_order_type(order_type)
+        stored_instrument_id = str(instrument_id_override or "").strip()
+        instrument = None
+        # A broker-confirmed instrumentId is authoritative for an urgent
+        # MARKET exit. Entries and LIMIT orders still validate against the
+        # contract master.
+        if not (requested_order_type == "MARKET" and stored_instrument_id):
+            try:
+                fetch_instrument_data(alice, fetch_exchange)
+                instrument = alice.get_instrument_by_symbol(fetch_exchange, trading_symbol_aliceblue)
+            except Exception as e:
+                return _alice_failed_response(str(e))
+            if not instrument:
+                return _alice_failed_response("Instrument not found")
         ltp = 0
         if requested_order_type == "LIMIT":
             explicit_price = price
@@ -768,12 +772,19 @@ def place_alice_orders(
         else:
             return _alice_failed_response(f"Unsupported Alice Blue order type: {requested_order_type}")
 
-        instrument_id = str(
-            getattr(instrument, "token", "")
-            or getattr(instrument, "instrument_token", "")
-            or getattr(instrument, "instrumentId", "")
-            or ""
-        ).strip()
+        resolved_instrument_id = ""
+        if instrument is not None:
+            resolved_instrument_id = str(
+                getattr(instrument, "token", "")
+                or getattr(instrument, "instrument_token", "")
+                or getattr(instrument, "instrumentId", "")
+                or ""
+            ).strip()
+        if stored_instrument_id and resolved_instrument_id and stored_instrument_id != resolved_instrument_id:
+            return _alice_failed_response(
+                "Stored Alice Blue instrument ID does not match the selected contract; exit was not submitted."
+            )
+        instrument_id = stored_instrument_id or resolved_instrument_id
         if not instrument_id:
             return _alice_failed_response("Alice Blue instrument token was not found for the selected symbol.")
 
@@ -831,6 +842,11 @@ def place_alice_orders(
                     "reference_price": ltp or None,
                     "response": response,
                     "broker_order": response,
+                    "resolved_trading_symbol": trading_symbol_aliceblue,
+                    "instrumentId": instrument_id,
+                    "exchange": fetch_exchange,
+                    "product_type": _alice_a3_product(product_type),
+                    "quantity": int(quantity or 0),
                 }
             }
 
