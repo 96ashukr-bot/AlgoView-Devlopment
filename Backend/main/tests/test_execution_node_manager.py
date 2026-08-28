@@ -30,7 +30,7 @@ from main.dhanapi import get_trading_symbol_security_id
 from main.groww import generate_groww_access_token, generate_groww_checksum, place_groww_orders, resolve_groww_trading_symbol
 from main.zerodha import place_zerodha_orders
 from main.Alice_Blue_Api import place_alice_orders
-from main.dematemodule import LEGACY_OPEN_BUY_ORDER_STATUSES, _broker_proxy_config_or_none, _legacy_exit_completed, _save_session_tokens_compat
+from main.dematemodule import LEGACY_OPEN_BUY_ORDER_STATUSES, _broker_proxy_config_or_none, _legacy_exit_completed, _save_session_tokens_compat, exit_existing_buy_position_Aliceblue
 from main.dematemodule import BrokerCallbackView, BrokerLoginRedirectView
 from main.broker_registry import get_broker_setup_spec
 from main.broker_order_utils import extract_ltp_from_quote_payload
@@ -2645,6 +2645,65 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertEqual(
             mock_place_order.call_args.kwargs["instrument_id_override"], "46990"
         )
+
+    @mock.patch("main.dematemodule.get_alice_a3_orderbook", return_value={"result": []})
+    @mock.patch("main.dematemodule._broker_proxy_config_or_none", return_value={"https": "http://proxy.example.com:8080"})
+    @mock.patch("main.dematemodule.place_alice_orders")
+    def test_legacy_alice_exit_uses_buy_snapshot_market_order(
+        self, mock_place_order, _mock_proxy, _mock_orderbook
+    ):
+        self.broker_details.delete()
+        alice = Broker.objects.create(broker_name="Alice Blue", is_active=True)
+        ClientBrokerdetails.objects.create(
+            client=self.client_user,
+            broker_name=alice,
+            broker_API_KEY="alice-api",
+            broker_API_UID="alice-user",
+            access_token="alice-session",
+            execution_node=self.node,
+        )
+        buy = Tradeorderhistory.objects.create(
+            client=self.client_user,
+            broker="Alice Blue",
+            GroupService="Sparks Pro",
+            Index_Symbol="NIFTY",
+            trading_symbol="NIFTY",
+            transaction_type="BUY",
+            trade_order_status="OPEN",
+            order_status="complete",
+            order_id="alice-buy-1",
+            Entry_type="BUY",
+            EntryQty=65,
+            Entry_Price=Decimal("49.05"),
+            LivePrice=Decimal("24100"),
+            SignalEntry_time=timezone.now(),
+            order_params={
+                "original_broker_instrument_key": "46990",
+                "original_broker_trading_symbol": "NIFTY01Sep26P24100",
+                "broker_contract_snapshot": {
+                    "broker_instrument_id": "46990",
+                    "broker_trading_symbol": "NIFTY01Sep26P24100",
+                },
+            },
+        )
+        mock_place_order.return_value = {
+            "data": {"status": "complete", "order_id": "alice-sell-1"}
+        }
+
+        result = exit_existing_buy_position_Aliceblue(
+            60, "Sparks Pro", "PE", "01", "Sep", "26",
+            "alice-api", "alice-user", "NIFTY01Sep26P24100", "SELL",
+            "NIFTY", 65, "Kill Switch", "LIMIT", "MIS", None,
+            self.client_user, 1, "CLOSE", "BUY", "SELL", 49.05, None,
+            65, 65, {}, "NFO", "NFO", "NIFTY", 0,
+        )
+
+        self.assertEqual(result["data"]["status"], "complete")
+        self.assertEqual(mock_place_order.call_args.args[9], "MARKET")
+        self.assertEqual(mock_place_order.call_args.kwargs["instrument_id_override"], "46990")
+        self.assertEqual(mock_place_order.call_args.kwargs["session_id"], "alice-session")
+        buy.refresh_from_db()
+        self.assertEqual(buy.trade_order_status, "CLOSE")
 
     @mock.patch("main.brokers.aliceblue.place_alice_orders")
     def test_alice_blue_adapter_builds_contract_symbol_when_trade_symbol_missing(self, mock_place_order):

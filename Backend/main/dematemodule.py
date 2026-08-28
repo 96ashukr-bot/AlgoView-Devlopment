@@ -8,7 +8,7 @@ import time
 import requests
 import logging
 from django.db.models import Q
-from main.Alice_Blue_Api import get_alice_vendor_session, place_alice_orders
+from main.Alice_Blue_Api import get_alice_a3_orderbook, get_alice_vendor_session, place_alice_orders
 from main.dhanapi import place_dhan_orders
 from main.fivepaisa import fetch_access_token_5paisa, place_5paisa_order
 from main.fyersapi import place_fyers_orders
@@ -258,7 +258,21 @@ def exit_existing_buy_position_Aliceblue(LivePrice,group_service, Type, day, mon
                 oid = open_buy_order.order_id
                 price_of_order = open_buy_order.LivePrice
                 LivePrice = open_buy_order.LivePrice
-                old_trade_symbol = open_buy_order.trading_symbol
+                open_order_params = open_buy_order.order_params if isinstance(open_buy_order.order_params, dict) else {}
+                contract_snapshot = open_order_params.get("broker_contract_snapshot")
+                if not isinstance(contract_snapshot, dict):
+                    contract_snapshot = {}
+                instrument_id = str(
+                    open_order_params.get("original_broker_instrument_key")
+                    or contract_snapshot.get("broker_instrument_id")
+                    or ""
+                ).strip()
+                old_trade_symbol = str(
+                    open_order_params.get("original_broker_trading_symbol")
+                    or contract_snapshot.get("broker_trading_symbol")
+                    or open_buy_order.trading_symbol
+                    or trade_symbol
+                ).strip()
                 buy_order_close_status = open_buy_order.trade_order_status
 
                 if buy_order_close_status == "CLOSE":
@@ -268,18 +282,55 @@ def exit_existing_buy_position_Aliceblue(LivePrice,group_service, Type, day, mon
 
                 print("price_of_order>>>", int(price_of_order))
                 symbol = symbol.upper()
-                trade_symbol = f"{symbol}{day}{month}{year}{Type[0]}{int(price_of_order)}"
+                trade_symbol = old_trade_symbol or f"{symbol}{day}{month}{year}{Type[0]}{int(price_of_order)}"
                 logger.info(f"trade_symbol alice blue sell >>>>:{trade_symbol}" )
-                if trade_symbol != old_trade_symbol:
-                    msg=f"sell request not matching with existing order :{old_trade_symbol} new symbol: {trade_symbol} client: {user}"
-                    logger.info(f"{msg}")  
-                    return {"data": {"status": "error", "message": msg}}
                 logger.info(f"Previous order {oid}, entry price is: {Entry_price}. Found open BUY order for {symbol}. Exiting position. Order ID: {open_buy_order.order_id}")
 
-                # Place sell order
-                sell_response = place_alice_orders(LivePrice,group_service, api_skey, api_uid, trade_symbol, transaction_type, symbol, quantity, strategy, ordertype,
-                                                   product_type, price, user, Lots, trade_order_status, Entry_type, Exit_type, Entry_price, Exit_price,
-                                                   EntryQty, ExitQty, webhook_signal, Exchange, Segment, Index_Symbol, triggerPrice)
+                broker_details = ClientBrokerdetails.objects.select_related("execution_node").filter(client=user).first()
+                proxy_config = _broker_proxy_config_or_none(broker_details, require_broker_verified=False) if broker_details else None
+                session_id = getattr(broker_details, "access_token", None) if broker_details else None
+                if not proxy_config or not session_id:
+                    return {"data": {"status": "Failed", "message": "Alice Blue execution route or session token is unavailable."}}
+
+                # A broker-completed SELL may exist even when a legacy panel
+                # row was never consolidated. Reconcile it before submitting
+                # another SELL, which Alice would treat as a fresh short.
+                sell_response = None
+                if instrument_id:
+                    orderbook = get_alice_a3_orderbook(session_id, proxy_config=proxy_config)
+                    broker_orders = orderbook.get("result", []) if isinstance(orderbook, dict) else []
+                    completed_sells = [
+                        broker_order for broker_order in broker_orders
+                        if str(broker_order.get("instrumentId") or "").strip() == instrument_id
+                        and str(broker_order.get("transactionType") or "").strip().upper() == "SELL"
+                        and str(broker_order.get("orderStatus") or "").strip().upper() in {"COMPLETE", "COMPLETED", "TRADED", "FILLED"}
+                        and int(float(broker_order.get("filledQuantity") or 0)) >= int(EntryQty or quantity or 0)
+                        and str(broker_order.get("orderTime") or broker_order.get("exchangeTimestamp") or "") >= timezone.localtime(open_buy_order.SignalEntry_time).strftime("%Y-%m-%d %H:%M:%S")
+                    ]
+                    if completed_sells:
+                        completed_sells.sort(key=lambda broker_order: str(broker_order.get("orderTime") or broker_order.get("exchangeTimestamp") or ""))
+                        matched_sell = completed_sells[-1]
+                        sell_response = {
+                            "data": {
+                                "status": "complete",
+                                "order_id": matched_sell.get("brokerOrderId"),
+                                "executed_price": matched_sell.get("averageTradedPrice") or matched_sell.get("price"),
+                                "filled_quantity": matched_sell.get("filledQuantity"),
+                                "broker_order": matched_sell,
+                                "message": "Existing Alice Blue SELL fill reconciled from broker orderbook.",
+                            }
+                        }
+
+                # Place a fresh exit only when the broker has not already
+                # confirmed a matching SELL for this BUY.
+                if sell_response is None:
+                    exit_history_id = f"alice_exit_{open_buy_order.id}_{timezone.now().strftime('%Y%m%d%H%M%S%f')}"
+                    sell_response = place_alice_orders(LivePrice,group_service, api_skey, api_uid, trade_symbol, transaction_type, symbol, quantity, strategy, "MARKET" if instrument_id else ordertype,
+                                                       product_type, price, user, Lots, trade_order_status, Entry_type, Exit_type, Entry_price, Exit_price,
+                                                       EntryQty, ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,
+                                                       history_id=exit_history_id, trigger_price=triggerPrice,
+                                                       proxy_config=proxy_config, session_id=session_id,
+                                                       instrument_id_override=instrument_id or None)
                 
                 if _legacy_exit_completed(sell_response):
                     try:
