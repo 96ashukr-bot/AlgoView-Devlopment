@@ -2705,6 +2705,67 @@ class ExecutionNodeManagerTests(TestCase):
         buy.refresh_from_db()
         self.assertEqual(buy.trade_order_status, "CLOSE")
 
+    @mock.patch("main.dematemodule._broker_proxy_config_or_none", return_value={"https": "http://proxy.example.com:8080"})
+    @mock.patch("main.dematemodule.place_alice_orders")
+    @mock.patch("main.dematemodule.get_alice_a3_orderbook")
+    def test_legacy_alice_exit_recovers_instrument_from_original_buy(
+        self, mock_orderbook, mock_place_order, _mock_proxy
+    ):
+        self.broker_details.delete()
+        alice = Broker.objects.create(broker_name="Alice Blue", is_active=True)
+        ClientBrokerdetails.objects.create(
+            client=self.client_user,
+            broker_name=alice,
+            broker_API_KEY="alice-api",
+            broker_API_UID="alice-user",
+            access_token="alice-session",
+            execution_node=self.node,
+        )
+        buy = Tradeorderhistory.objects.create(
+            client=self.client_user,
+            broker="Alice Blue",
+            GroupService="Sparks Pro",
+            Index_Symbol="NIFTY",
+            trading_symbol="NIFTY",
+            transaction_type="BUY",
+            trade_order_status="OPEN",
+            order_status="complete",
+            order_id="alice-buy-legacy",
+            Entry_type="BUY",
+            EntryQty=65,
+            Entry_Price=Decimal("112.30"),
+            LivePrice=Decimal("80.65"),
+            SignalEntry_time=timezone.now(),
+            order_params={"broker_contract_snapshot": {"broker_instrument_id": None}},
+        )
+        mock_orderbook.return_value = {"result": [{
+            "brokerOrderId": "alice-buy-legacy",
+            "transactionType": "BUY",
+            "instrumentId": "46989",
+            "formattedInstrumentName": "NIFTY 1st SEP 24100 CE",
+            "tradingSymbol": "NIFTY",
+            "exchange": "NFO",
+            "product": "INTRADAY",
+        }]}
+        mock_place_order.return_value = {
+            "data": {"status": "complete", "order_id": "alice-sell-legacy"}
+        }
+
+        result = exit_existing_buy_position_Aliceblue(
+            80.65, "Sparks Pro", "CE", "01", "Sep", "26",
+            "alice-api", "alice-user", "NIFTY01Sep26C24100", "SELL",
+            "NIFTY", 65, "Kill Switch", "LIMIT", "MIS", None,
+            self.client_user, 1, "CLOSE", "BUY", "SELL", 112.30, None,
+            65, 65, {}, "NFO", "NFO", "NIFTY", 0,
+        )
+
+        self.assertEqual(result["data"]["status"], "complete")
+        self.assertEqual(mock_place_order.call_args.args[9], "MARKET")
+        self.assertEqual(mock_place_order.call_args.kwargs["instrument_id_override"], "46989")
+        self.assertEqual(mock_place_order.call_args.args[10], "INTRADAY")
+        buy.refresh_from_db()
+        self.assertEqual(buy.trade_order_status, "CLOSE")
+
     @mock.patch("main.brokers.aliceblue.place_alice_orders")
     def test_alice_blue_adapter_builds_contract_symbol_when_trade_symbol_missing(self, mock_place_order):
         broker = Broker.objects.create(broker_name="Alice Blue", is_active=True)

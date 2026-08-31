@@ -106,6 +106,16 @@ class AliceBlueBroker(BaseBroker):
         stored_instrument_id = (
             self._recover_exit_contract(order, proxy_config=proxy_config) if is_exit else ""
         )
+        if is_exit and not stored_instrument_id:
+            return {
+                "data": {
+                    "status": "Failed",
+                    "message": (
+                        "Alice Blue exit was blocked because the exact instrumentId "
+                        "could not be recovered from the broker-confirmed BUY."
+                    ),
+                }
+            }
         if is_exit and stored_instrument_id:
             # Exact-ID MARKET exits offset the position immediately. Alice
             # treated protected LIMIT exits as fresh shorts in production.
@@ -176,3 +186,21 @@ class AliceBlueBroker(BaseBroker):
             "message": response.get("emsg") if isinstance(response, dict) else str(response),
             "response": response,
         }
+
+    def get_positions(self, proxy_config=None):
+        validation = self.validate_credentials(proxy_config=proxy_config)
+        if validation.get("status") != "success":
+            return validation
+        alice, error = get_alice_saved_session(
+            self.broker_details.broker_API_UID,
+            self.broker_details.broker_API_KEY,
+            get_access_token(self.broker_details),
+            proxy_config=proxy_config,
+            return_error=True,
+        )
+        if not alice:
+            return {"status": "failed", "message": error or "Alice Blue saved session could not be prepared."}
+        try:
+            return {"status": "success", "response": alice.get_netwise_positions()}
+        except Exception as exc:
+            return {"status": "failed", "message": str(exc)}

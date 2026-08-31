@@ -292,13 +292,47 @@ def exit_existing_buy_position_Aliceblue(LivePrice,group_service, Type, day, mon
                 if not proxy_config or not session_id:
                     return {"data": {"status": "Failed", "message": "Alice Blue execution route or session token is unavailable."}}
 
+                # Legacy BUY rows may predate immutable contract snapshots.
+                # Recover the exact broker-confirmed instrument from the
+                # original BUY before submitting an exit.  Alice Blue exposes
+                # only the underlying in tradingSymbol (for example NIFTY), so
+                # resolving by that display value can target the wrong option.
+                orderbook = get_alice_a3_orderbook(session_id, proxy_config=proxy_config)
+                broker_orders = orderbook.get("result", []) if isinstance(orderbook, dict) else []
+                if not instrument_id:
+                    original_buy = next(
+                        (
+                            broker_order for broker_order in broker_orders
+                            if str(broker_order.get("brokerOrderId") or "").strip() == str(oid or "").strip()
+                            and str(broker_order.get("transactionType") or "").strip().upper() == "BUY"
+                        ),
+                        None,
+                    )
+                    if original_buy:
+                        instrument_id = str(original_buy.get("instrumentId") or "").strip()
+                        old_trade_symbol = str(
+                            original_buy.get("formattedInstrumentName")
+                            or original_buy.get("tradingSymbol")
+                            or old_trade_symbol
+                        ).strip()
+                        product_type = original_buy.get("product") or product_type
+                        Exchange = original_buy.get("exchange") or Exchange
+                if not instrument_id:
+                    return {
+                        "data": {
+                            "status": "Failed",
+                            "message": (
+                                "Alice Blue exit was blocked because the exact instrumentId "
+                                "could not be recovered from the broker-confirmed BUY."
+                            ),
+                        }
+                    }
+
                 # A broker-completed SELL may exist even when a legacy panel
                 # row was never consolidated. Reconcile it before submitting
                 # another SELL, which Alice would treat as a fresh short.
                 sell_response = None
                 if instrument_id:
-                    orderbook = get_alice_a3_orderbook(session_id, proxy_config=proxy_config)
-                    broker_orders = orderbook.get("result", []) if isinstance(orderbook, dict) else []
                     completed_sells = [
                         broker_order for broker_order in broker_orders
                         if str(broker_order.get("instrumentId") or "").strip() == instrument_id
@@ -325,7 +359,7 @@ def exit_existing_buy_position_Aliceblue(LivePrice,group_service, Type, day, mon
                 # confirmed a matching SELL for this BUY.
                 if sell_response is None:
                     exit_history_id = f"alice_exit_{open_buy_order.id}_{timezone.now().strftime('%Y%m%d%H%M%S%f')}"
-                    sell_response = place_alice_orders(LivePrice,group_service, api_skey, api_uid, trade_symbol, transaction_type, symbol, quantity, strategy, "MARKET" if instrument_id else ordertype,
+                    sell_response = place_alice_orders(LivePrice,group_service, api_skey, api_uid, trade_symbol, transaction_type, symbol, quantity, strategy, "MARKET",
                                                        product_type, price, user, Lots, trade_order_status, Entry_type, Exit_type, Entry_price, Exit_price,
                                                        EntryQty, ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,
                                                        history_id=exit_history_id, trigger_price=triggerPrice,
