@@ -359,8 +359,8 @@ def exit_existing_buy_position_Aliceblue(LivePrice,group_service, Type, day, mon
                 # confirmed a matching SELL for this BUY.
                 if sell_response is None:
                     exit_history_id = f"alice_exit_{open_buy_order.id}_{timezone.now().strftime('%Y%m%d%H%M%S%f')}"
-                    sell_response = place_alice_orders(LivePrice,group_service, api_skey, api_uid, trade_symbol, transaction_type, symbol, quantity, strategy, "MARKET",
-                                                       product_type, price, user, Lots, trade_order_status, Entry_type, Exit_type, Entry_price, Exit_price,
+                    sell_response = place_alice_orders(LivePrice,group_service, api_skey, api_uid, trade_symbol, transaction_type, symbol, quantity, strategy, "LIMIT",
+                                                       product_type, None, user, Lots, trade_order_status, Entry_type, Exit_type, Entry_price, Exit_price,
                                                        EntryQty, ExitQty, webhook_signal, Exchange, Segment, Index_Symbol,
                                                        history_id=exit_history_id, trigger_price=triggerPrice,
                                                        proxy_config=proxy_config, session_id=session_id,

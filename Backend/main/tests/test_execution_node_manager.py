@@ -2644,7 +2644,7 @@ class ExecutionNodeManagerTests(TestCase):
 
     @mock.patch("main.brokers.aliceblue.prepare_close_order_from_open_position")
     @mock.patch("main.brokers.aliceblue.place_alice_orders")
-    def test_alice_blue_exit_uses_stored_instrument_id_and_market(
+    def test_alice_blue_exit_uses_stored_instrument_id_and_protected_limit(
         self, mock_place_order, mock_prepare_close
     ):
         broker = Broker.objects.create(broker_name="Alice Blue", is_active=True)
@@ -2674,7 +2674,8 @@ class ExecutionNodeManagerTests(TestCase):
             proxy_config={"https": "http://proxy.example.com:8080"},
         )
 
-        self.assertEqual(mock_place_order.call_args.args[9], "MARKET")
+        self.assertEqual(mock_place_order.call_args.args[9], "LIMIT")
+        self.assertIsNone(mock_place_order.call_args.args[11])
         self.assertEqual(
             mock_place_order.call_args.kwargs["instrument_id_override"], "46990"
         )
@@ -2682,7 +2683,7 @@ class ExecutionNodeManagerTests(TestCase):
     @mock.patch("main.dematemodule.get_alice_a3_orderbook", return_value={"result": []})
     @mock.patch("main.dematemodule._broker_proxy_config_or_none", return_value={"https": "http://proxy.example.com:8080"})
     @mock.patch("main.dematemodule.place_alice_orders")
-    def test_legacy_alice_exit_uses_buy_snapshot_market_order(
+    def test_legacy_alice_exit_uses_buy_snapshot_protected_limit_order(
         self, mock_place_order, _mock_proxy, _mock_orderbook
     ):
         self.broker_details.delete()
@@ -2732,7 +2733,8 @@ class ExecutionNodeManagerTests(TestCase):
         )
 
         self.assertEqual(result["data"]["status"], "complete")
-        self.assertEqual(mock_place_order.call_args.args[9], "MARKET")
+        self.assertEqual(mock_place_order.call_args.args[9], "LIMIT")
+        self.assertIsNone(mock_place_order.call_args.args[11])
         self.assertEqual(mock_place_order.call_args.kwargs["instrument_id_override"], "46990")
         self.assertEqual(mock_place_order.call_args.kwargs["session_id"], "alice-session")
         buy.refresh_from_db()
@@ -2793,7 +2795,8 @@ class ExecutionNodeManagerTests(TestCase):
         )
 
         self.assertEqual(result["data"]["status"], "complete")
-        self.assertEqual(mock_place_order.call_args.args[9], "MARKET")
+        self.assertEqual(mock_place_order.call_args.args[9], "LIMIT")
+        self.assertIsNone(mock_place_order.call_args.args[11])
         self.assertEqual(mock_place_order.call_args.kwargs["instrument_id_override"], "46989")
         self.assertEqual(mock_place_order.call_args.args[10], "INTRADAY")
         buy.refresh_from_db()

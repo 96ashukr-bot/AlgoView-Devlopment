@@ -730,10 +730,10 @@ def place_alice_orders(
         requested_order_type = normalize_order_type(order_type)
         stored_instrument_id = str(instrument_id_override or "").strip()
         instrument = None
-        # A broker-confirmed instrumentId is authoritative for an urgent
-        # MARKET exit. Entries and LIMIT orders still validate against the
-        # contract master.
-        if not (requested_order_type == "MARKET" and stored_instrument_id):
+        # A broker-confirmed instrumentId is authoritative for exits. It must
+        # not be replaced by a contract-master lookup, which may be stale or
+        # may only have the underlying display symbol for legacy BUY rows.
+        if not stored_instrument_id:
             try:
                 fetch_instrument_data(alice, fetch_exchange)
                 instrument = alice.get_instrument_by_symbol(fetch_exchange, trading_symbol_aliceblue)
@@ -745,13 +745,50 @@ def place_alice_orders(
         if requested_order_type == "LIMIT":
             explicit_price = price
             if not explicit_price:
-                try:
-                    ltp_payload = alice.get_scrip_info(instrument)
-                    ltp = float(extract_ltp_from_quote_payload(ltp_payload) or 0)
+                if stored_instrument_id:
+                    try:
+                        positions = alice.get_netwise_positions() or []
+                        matching_position = next(
+                            (
+                                position for position in positions
+                                if str(position.get("Token") or position.get("instrumentId") or "").strip()
+                                == stored_instrument_id
+                            ),
+                            None,
+                        )
+                        if not matching_position:
+                            return _alice_failed_response(
+                                "Alice Blue has no matching broker position for the stored instrumentId; exit was not submitted."
+                            )
+                        if str(transaction_type or "").strip().upper() == "SELL" and int(
+                            float(matching_position.get("Netqty") or matching_position.get("netQuantity") or 0)
+                        ) <= 0:
+                            return _alice_failed_response(
+                                "Alice Blue confirms no open BUY quantity for the stored instrumentId."
+                            )
+                        ltp = float(
+                            (matching_position or {}).get("LTP")
+                            or (matching_position or {}).get("ltp")
+                            or 0
+                        )
+                    except Exception as e:
+                        logger.error(f"{user}: Alice Blue exact-position LTP fetch failed: {str(e)}")
+                        ltp = 0
+                else:
+                    try:
+                        ltp_payload = alice.get_scrip_info(instrument)
+                        ltp = float(extract_ltp_from_quote_payload(ltp_payload) or 0)
+                    except Exception as e:
+                        logger.error(f"{user}: Alice Blue LTP fetch failed: {str(e)}")
+                        ltp = 0
+
+                if ltp > 0:
                     cache_option_ltp(trading_symbol_aliceblue, ltp, underlying=symbol, source="alice-blue")
-                except Exception as e:
-                    logger.error(f"{user}: Alice Blue LTP fetch failed: {str(e)}")
-                    ltp = 0
+
+                if stored_instrument_id and ltp == 0:
+                    return _alice_failed_response(
+                        "Alice Blue live price is unavailable for the exact open position; exit was not submitted."
+                    )
 
                 if ltp == 0:
                     ltp = fetch_nse_option_chain_ltp(

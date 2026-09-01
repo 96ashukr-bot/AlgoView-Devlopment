@@ -117,10 +117,12 @@ class AliceBlueBroker(BaseBroker):
                 }
             }
         if is_exit and stored_instrument_id:
-            # Exact-ID MARKET exits offset the position immediately. Alice
-            # treated protected LIMIT exits as fresh shorts in production.
-            order["order_type"] = "MARKET"
-            order["ordertype"] = "MARKET"
+            # Alice A3 can reject MARKET for option exits. Build a protected
+            # LIMIT from the broker position's exact instrumentId/LTP instead
+            # of trusting a panel price that may be stale or be the strike.
+            order["order_type"] = "LIMIT"
+            order["ordertype"] = "LIMIT"
+            order["price"] = None
         trade_symbol = (
             order.get("trade_symbol")
             or order.get("trading_symbol")
