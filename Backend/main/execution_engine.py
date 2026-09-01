@@ -1782,7 +1782,15 @@ class ExecutionEngine:
         history_order_params.update(self._build_sl_tp_snapshot(request, validation_context, normalized))
         sltp_metadata = self._build_sltp_metadata(request, validation_context, normalized)
         broker_data = normalized.get("data", {}) if isinstance(normalized, dict) else {}
-        canonical_broker_fields = canonical_contract_fields(normalized, history_order_params, sltp_metadata)
+        # Broker response is authoritative. Request-derived display symbols
+        # are recovery data only and must never replace the confirmed
+        # tradingsymbol/instrument identifier saved after a BUY.
+        canonical_broker_fields = canonical_contract_fields(
+            broker_data,
+            normalized,
+            sltp_metadata,
+            history_order_params,
+        )
         canonical_broker_fields = {key: value for key, value in canonical_broker_fields.items() if value not in (None, "", "None")}
         history_order_params.update(canonical_broker_fields)
         sltp_metadata.update(canonical_broker_fields)

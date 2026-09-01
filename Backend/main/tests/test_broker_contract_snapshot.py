@@ -1,4 +1,5 @@
 from django.test import SimpleTestCase
+from unittest import mock
 
 from main.brokers.contract_snapshot import (
     SNAPSHOT_KEY,
@@ -8,9 +9,39 @@ from main.brokers.contract_snapshot import (
     snapshot_exit_fields,
     valid_snapshot,
 )
+from main.brokers.zerodha import ZerodhaBroker
 
 
 class BrokerContractSnapshotTests(SimpleTestCase):
+    def test_broker_response_symbol_wins_over_generic_request_symbol(self):
+        fields = canonical_contract_fields(
+            {"resolved_trading_symbol": "FINNIFTY26SEP26000PE", "instrument_token": 18378242},
+            {"original_broker_trading_symbol": "FINNIFTY", "instrument_token": "FINNIFTY"},
+        )
+
+        self.assertEqual(fields["original_broker_trading_symbol"], "FINNIFTY26SEP26000PE")
+        self.assertEqual(fields["original_broker_instrument_key"], 18378242)
+
+    def test_zerodha_legacy_exit_recovers_exact_live_contract(self):
+        adapter = object.__new__(ZerodhaBroker)
+        adapter.get_positions = mock.Mock(return_value={"net": [{
+            "tradingsymbol": "FINNIFTY26SEP26000PE",
+            "instrument_token": 18378242,
+            "exchange": "NFO",
+            "product": "MIS",
+            "quantity": 60,
+        }]})
+
+        match = adapter._matching_live_position({
+            "original_broker_trading_symbol": "FINNIFTY",
+            "symbol": "FINNIFTY",
+            "strike": 26000,
+            "option_type": "PE",
+        }, proxy_config={"https": "http://proxy.example:3128"})
+
+        self.assertEqual(match["tradingsymbol"], "FINNIFTY26SEP26000PE")
+        self.assertEqual(match["instrument_token"], 18378242)
+
     def test_maps_broker_specific_identifiers(self):
         fields = canonical_contract_fields({
             "tradingSymbol": "BANKNIFTY-Aug2026-57600-PE",

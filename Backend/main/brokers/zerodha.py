@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 from kiteconnect import KiteConnect
 
 from main.brokers.base import BaseBroker
@@ -26,6 +28,40 @@ class ZerodhaBroker(BaseBroker):
         )
         if close_error:
             return close_error
+        if open_position is not None and str(order.get("transaction_type") or "").upper() == "SELL":
+            live_position = self._matching_live_position(order, proxy_config=proxy_config)
+            if live_position is None:
+                return {
+                    "data": {
+                        "status": "Failed",
+                        "message": "Matching Zerodha broker position could not be verified; exit was not submitted.",
+                        "error_code": "BROKER_POSITION_NOT_FOUND",
+                    }
+                }
+            live_quantity = int(float(live_position.get("quantity") or 0))
+            if live_quantity <= 0:
+                response = {
+                    "data": {
+                        "status": "reconciled_closed",
+                        "message": "Matching Zerodha broker position was already flat; panel reconciled without another SELL.",
+                        "error_code": "POSITION_ALREADY_FLAT",
+                        "filled_quantity": int(open_position.EntryQty or order.get("quantity") or 0),
+                        "resolved_trading_symbol": live_position.get("tradingsymbol"),
+                        "instrument_token": live_position.get("instrument_token"),
+                        "product_type": live_position.get("product"),
+                    }
+                }
+                mark_open_position_closed(open_position, response)
+                return response
+            order["quantity"] = min(int(order.get("quantity") or live_quantity), live_quantity)
+            order["product_type"] = live_position.get("product") or order.get("product_type")
+            order["product"] = order["product_type"]
+            order["original_broker_instrument_key"] = live_position.get("instrument_token")
+            order["original_broker_trading_symbol"] = live_position.get("tradingsymbol")
+            order["original_broker_exchange"] = live_position.get("exchange")
+            order["trade_symbol"] = live_position.get("tradingsymbol")
+            order["trading_symbol"] = live_position.get("tradingsymbol")
+            order["tradingsymbol"] = live_position.get("tradingsymbol")
         values = common_order_kwargs(order)
         response = place_zerodha_orders(
             values["LivePrice"],
@@ -60,6 +96,46 @@ class ZerodhaBroker(BaseBroker):
         )
         mark_open_position_closed(open_position, response)
         return response
+
+    @staticmethod
+    def _compact(value):
+        return re.sub(r"[^A-Z0-9]", "", str(value or "").upper())
+
+    def _matching_live_position(self, order, proxy_config=None):
+        positions = self.get_positions(proxy_config=proxy_config)
+        records = positions.get("net", []) if isinstance(positions, dict) else []
+        target_token = str(order.get("original_broker_instrument_key") or "").strip()
+        target_symbol = self._compact(
+            order.get("original_broker_trading_symbol")
+            or order.get("tradingsymbol")
+            or order.get("trading_symbol")
+            or order.get("trade_symbol")
+        )
+        underlying = self._compact(order.get("symbol") or order.get("underlying") or order.get("Index_Symbol"))
+        option_type = str(order.get("option_type") or order.get("Type") or "").upper()
+        try:
+            strike = str(int(float(order.get("strike") or order.get("strike_price"))))
+        except (TypeError, ValueError):
+            strike = ""
+
+        fallback = None
+        for record in records:
+            record_symbol = self._compact(record.get("tradingsymbol"))
+            record_token = str(record.get("instrument_token") or "").strip()
+            if target_token and record_token == target_token:
+                return record
+            if target_symbol and record_symbol == target_symbol:
+                return record
+            match = re.search(r"(\d+)(CE|PE)$", record_symbol)
+            if (
+                match
+                and underlying
+                and record_symbol.startswith(underlying)
+                and match.group(1) == strike
+                and match.group(2) == option_type
+            ):
+                fallback = record
+        return fallback
 
     def get_orderbook(self, proxy_config=None):
         proxy_config = self.require_proxy_config(proxy_config)

@@ -33,8 +33,11 @@ def canonical_contract_fields(*sources):
     mappings = [mapping for source in sources for mapping in _walk(source)]
 
     def first(*keys):
-        for key in keys:
-            for mapping in mappings:
+        # Source precedence is more important than alias precedence.  A
+        # broker-confirmed response must win over a generic value carried in
+        # the original request (for example ``FINNIFTY``).
+        for mapping in mappings:
+            for key in keys:
                 lowered = {str(name).lower(): value for name, value in mapping.items()}
                 value = mapping.get(key)
                 if value in (None, "", "None"):
