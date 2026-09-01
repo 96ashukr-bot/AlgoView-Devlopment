@@ -2184,6 +2184,39 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertEqual(sent_payload["order"]["Entry_price"], 123.45)
         self.assertEqual(sent_payload["order"]["order_params"]["current_ltp"], 120.5)
 
+    @mock.patch("main.services.execution_router.requests.post")
+    def test_idless_open_broker_response_remains_pending_confirmation(self, mock_post):
+        assign_execution_node_to_client(self.client_user, self.node)
+        self.broker_details.refresh_from_db()
+        broker_response = {
+            "data": {
+                "status": "open",
+                "message": "Broker confirmation is continuing.",
+                "order_id": None,
+            }
+        }
+        mock_post.return_value = SimpleNamespace(
+            ok=True,
+            status_code=200,
+            content=b"{}",
+            json=lambda: {"status": "placed", "broker_response": broker_response},
+        )
+
+        result = route_order_to_execution_node(
+            self.client_user,
+            self.broker_details,
+            {
+                "symbol": "BANKNIFTY",
+                "quantity": 30,
+                "transaction_type": "BUY",
+                "idempotency_key": "route-idless-open",
+            },
+        )
+
+        self.assertEqual(result["status"], ExecutionOrderJob.STATUS_ACCEPTED_BY_NODE)
+        job = ExecutionOrderJob.objects.get(idempotency_key="route-idless-open")
+        self.assertEqual(job.status, ExecutionOrderJob.STATUS_ACCEPTED_BY_NODE)
+
     @mock.patch("main.services.execution_router.requests.post", side_effect=TimeoutError("timeout"))
     def test_failed_node_timeout_handling(self, mock_post):
         import requests

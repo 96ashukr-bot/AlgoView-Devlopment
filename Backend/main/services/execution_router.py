@@ -97,6 +97,23 @@ def _extract_job_fields(order_payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _broker_order_id(response) -> str | None:
+    """Return a broker-confirmed order id from common adapter envelopes."""
+    if not isinstance(response, dict):
+        return None
+    candidates = [response]
+    for key in ("data", "meta", "broker_response", "response"):
+        nested = response.get(key)
+        if isinstance(nested, dict):
+            candidates.append(nested)
+    for payload in candidates:
+        for key in ("order_id", "orderid", "orderId", "groww_order_id", "BrokerOrderID"):
+            value = payload.get(key)
+            if value not in (None, "", 0, "0"):
+                return str(value)
+    return None
+
+
 def route_order_to_execution_node(client: User, broker_details: ClientBrokerdetails, order_payload: dict[str, Any]) -> dict[str, Any]:
     if not client or not getattr(client, "id", None):
         raise ValidationError("Client is required for execution routing.")
@@ -163,8 +180,16 @@ def route_order_to_execution_node(client: User, broker_details: ClientBrokerdeta
                 raise ValidationError(validation.get("message") or "Broker credentials are invalid.")
             broker_response = adapter.place_order(request_payload, proxy_config=proxy_config)
             response_status = str(broker_response.get("status", broker_response.get("data", {}).get("status", ""))).lower()
+            broker_order_id = _broker_order_id(broker_response)
             job.broker_response = broker_response
-            job.status = ExecutionOrderJob.STATUS_PLACED if response_status in {"success", "complete", "completed", "open", "placed"} else ExecutionOrderJob.STATUS_REJECTED
+            if response_status in {"success", "complete", "completed", "open", "placed"}:
+                job.status = (
+                    ExecutionOrderJob.STATUS_PLACED
+                    if broker_order_id
+                    else ExecutionOrderJob.STATUS_ACCEPTED_BY_NODE
+                )
+            else:
+                job.status = ExecutionOrderJob.STATUS_REJECTED
             if job.status == ExecutionOrderJob.STATUS_REJECTED:
                 job.error_message = broker_response.get("message") or broker_response.get("data", {}).get("message") or "Broker rejected proxy-routed order."
             else:
@@ -210,7 +235,11 @@ def route_order_to_execution_node(client: User, broker_details: ClientBrokerdeta
         broker_response = response_payload.get("broker_response") if isinstance(response_payload, dict) else None
         job.broker_response = broker_response
         if response.ok and str(response_payload.get("status", "")).lower() in {"accepted", "placed", "success"}:
-            job.status = ExecutionOrderJob.STATUS_PLACED if response_payload.get("broker_response") else ExecutionOrderJob.STATUS_ACCEPTED_BY_NODE
+            job.status = (
+                ExecutionOrderJob.STATUS_PLACED
+                if _broker_order_id(broker_response)
+                else ExecutionOrderJob.STATUS_ACCEPTED_BY_NODE
+            )
             job.error_message = None
         else:
             job.status = ExecutionOrderJob.STATUS_REJECTED if response.status_code < 500 else ExecutionOrderJob.STATUS_FAILED

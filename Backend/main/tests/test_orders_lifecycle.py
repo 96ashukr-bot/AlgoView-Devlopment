@@ -95,6 +95,32 @@ class OrdersLifecycleTests(TestCase):
                     .exists()
                 )
 
+    def test_idless_routed_buy_is_not_exposed_as_an_active_position(self):
+        trade = Tradeorderhistory.objects.create(
+            client=self.client_user,
+            trading_symbol="BANKNIFTY29SEP2657500CE",
+            transaction_type="BUY",
+            trade_order_status="open",
+            order_status="open",
+            order_id=None,
+            Entry_type="LE",
+            Entry_Price=Decimal("915.00"),
+            EntryQty=30,
+            response_data={
+                "data": {
+                    "status": "open",
+                    "message": "Broker confirmation is continuing.",
+                },
+                "meta": {"job_id": 20506, "order_id": None},
+            },
+        )
+
+        self.assertFalse(
+            Tradeorderhistory.objects.filter(pk=trade.pk)
+            .filter(_orders_status_filter("ACTIVE"))
+            .exists()
+        )
+
     def test_completed_exit_moves_original_buy_to_closed(self):
         buy = Tradeorderhistory.objects.create(
             client=self.client_user,

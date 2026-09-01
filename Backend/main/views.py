@@ -5936,7 +5936,18 @@ def _orders_status_filter(bucket):
             | Q(Exit_type__isnull=False)
             | Q(Exit_Price__isnull=False)
         ) & ~failed_filter
-    return (
+    # Active positions must be broker-addressable BUY rows. A routed broker
+    # response can be temporarily labelled OPEN before it contains an order
+    # id; treating that uncertain submission as a filled position creates a
+    # phantom Active trade which can never be exited. Reconciliation may move
+    # it to Active later after a broker order id/fill is confirmed.
+    confirmed_entry = (
+        Q(transaction_type__iexact="BUY")
+        & Q(order_id__isnull=False)
+        & ~Q(order_id__in=["", "0"])
+        & Q(Entry_Price__isnull=False, EntryQty__gt=0)
+    )
+    return confirmed_entry & (
         _case_insensitive_status_filter(
             "trade_order_status",
             OPEN_TRADE_ORDER_STATUSES,
