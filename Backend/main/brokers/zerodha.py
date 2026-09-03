@@ -126,13 +126,16 @@ class ZerodhaBroker(BaseBroker):
                 return record
             if target_symbol and record_symbol == target_symbol:
                 return record
-            match = re.search(r"(\d+)(CE|PE)$", record_symbol)
             if (
-                match
-                and underlying
+                underlying
                 and record_symbol.startswith(underlying)
-                and match.group(1) == strike
-                and match.group(2) == option_type
+                and strike
+                and option_type in {"CE", "PE"}
+                # Zerodha symbols contain expiry digits immediately before
+                # the strike (for example NIFTY2690824000PE). Parsing the
+                # final numeric run therefore produces 2690824000, not the
+                # strike 24000. Match the canonical strike/type suffix instead.
+                and record_symbol.endswith(f"{strike}{option_type}")
             ):
                 fallback = record
         return fallback
