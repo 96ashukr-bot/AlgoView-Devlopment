@@ -559,19 +559,43 @@ def _execute_manual_trade_result(result_id: int) -> None:
 
 
 def dispatch_manual_trade_batch(batch_id: int) -> Dict[str, Any]:
-    """Submit every client immediately to the dependency-free thread pool."""
-    result_ids = list(
+    """Publish each client independently to its broker-specific entry queue."""
+    results = list(
         ManualTradeResult.objects.filter(batch_id=batch_id, status=ManualTradeResult.STATUS_PENDING)
+        .only("id", "batch_id", "client_id", "broker")
         .order_by("id")
-        .values_list("id", flat=True)
     )
-    if not result_ids:
+    if not results:
         return _finalize_manual_trade_batch(batch_id)
-    dispatcher = _get_manual_trade_dispatcher()
+    from main.services.entry_control import enqueue_account_order
+    from main.services.entry_dispatch import entry_queue_for_broker
+    from main.tasks import process_single_manual_trade_result_task
+
     submitted = 0
-    for result_id in result_ids:
+    stream_specs = []
+    for result in results:
+        result_id = result.id
+        order_key = f"manual:{result.batch_id}:{result.client_id}"
         try:
-            dispatcher.submit(_execute_manual_trade_result, result_id)
+            if getattr(settings, "ORDER_STREAMS_ENABLED", False):
+                from main.models import BrokerOrderIntent
+                stream_specs.append({
+                    "idempotency_key": order_key,
+                    "kind": BrokerOrderIntent.KIND_ENTRY,
+                    "broker": result.broker,
+                    "client_id": result.client_id,
+                    "source_type": "manual_trade_result",
+                    "source_id": str(result_id),
+                    "payload": {"manual_trade_batch_id": result.batch_id,
+                                "manual_trade_result_id": result_id},
+                })
+            enqueue_account_order(broker=result.broker, client_id=result.client_id, order_key=order_key)
+            process_single_manual_trade_result_task.apply_async(
+                kwargs={"result_id": result_id, "entry_order_key": order_key,
+                        "broker": result.broker, "client_id": result.client_id},
+                queue=entry_queue_for_broker(result.broker),
+                priority=8,
+            )
             submitted += 1
         except Exception as exc:
             logger.exception("Could not dispatch manual trade result_id=%s", result_id)
@@ -581,7 +605,10 @@ def dispatch_manual_trade_batch(batch_id: int) -> Dict[str, Any]:
                 response_snapshot={"error": str(exc)},
                 updated_at=timezone.now(),
             )
-    if submitted != len(result_ids):
+    if stream_specs:
+        from main.services.order_streams import create_intents_batch
+        create_intents_batch(stream_specs)
+    if submitted != len(results):
         _finalize_manual_trade_batch(batch_id)
     return {"status": ManualTradeBatch.STATUS_PROCESSING, "submitted_count": submitted}
 

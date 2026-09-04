@@ -1,0 +1,18 @@
+[Unit]
+Description=AlgoView broker-isolated BUY execution workers
+After=network.target redis-server.service
+
+[Service]
+Type=simple
+User=ubuntu
+Group=www-data
+WorkingDirectory=/var/www/sparkbridge/Backend
+EnvironmentFile=-/var/www/sparkbridge/Backend/.env
+ExecStart=/bin/sh -c 'exec /var/www/sparkbridge/Backend/venv/bin/celery -A algoview worker --loglevel=INFO --pool=threads --concurrency=${ENTRY_EXECUTION_WORKERS:-32} --prefetch-multiplier=1 --queues=priority_entry,entry_angelone,entry_zerodha,entry_upstox,entry_groww,entry_dhan,entry_aliceblue,entry_fyers,entry_5paisa,entry_demo --hostname=sparkbridge-entry-execution@%%h'
+Restart=always
+RestartSec=5
+TimeoutStopSec=330
+KillSignal=SIGTERM
+
+[Install]
+WantedBy=multi-user.target

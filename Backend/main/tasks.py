@@ -489,7 +489,9 @@ def process_manual_trade_batch_task(self, *, batch_id):
     soft_time_limit=240,
     time_limit=300,
 )
-def process_single_webhook_trade_task(self, *, trade_id, index, context, history_mode="default"):
+def process_single_webhook_trade_task(
+    self, *, trade_id, index, context, history_mode="default", entry_order_key=None
+):
     """Execute one webhook-matched trade so slow clients cannot block the batch."""
     from django.utils import timezone
     from main.models import ClientTradeSetting
@@ -520,7 +522,30 @@ def process_single_webhook_trade_task(self, *, trade_id, index, context, history
         history_id = f"{timezone.now().strftime('%Y%m%d%H%M%S%f')}_{trade.client_id}_{trade.id}"
 
     try:
-        return _process_webhook_trade(trade, index, context, history_id=history_id)
+        from celery.exceptions import Retry
+        from main.services.entry_control import (
+            EntryAccountTurnDeferred,
+            account_fifo_turn,
+            reserve_entry,
+        )
+
+        order_key = str(entry_order_key or history_id or f"webhook:{trade.client_id}:{trade.id}")
+        reserve_entry(order_key)
+        transaction_type = str(context.get("transaction_type") or "").strip().upper()
+        is_exit = transaction_type in {"SELL", "EXIT", "CLOSE", "SELL_CE", "SELL_PE"}
+        if is_exit:
+            return _process_webhook_trade(trade, index, context, history_id=history_id)
+        try:
+            with account_fifo_turn(
+                broker=trade.broker,
+                client_id=trade.client_id,
+                order_key=order_key,
+            ):
+                return _process_webhook_trade(trade, index, context, history_id=history_id)
+        except EntryAccountTurnDeferred as exc:
+            raise self.retry(exc=exc, countdown=1, max_retries=300)
+    except Retry:
+        raise
     except Exception as exc:
         logger.exception(
             "Webhook single trade task failed for trade_setting=%s task_id=%s",
@@ -587,18 +612,57 @@ def process_webhook_signal_task(self, *, trade_ids, context, history_mode="defau
     trade_ids = list(trade_ids or [])
     context = dict(context or {})
     queued_tasks = []
+    from main.models import ClientTradeSetting
+    from main.services.entry_control import enqueue_account_order
+    from main.services.entry_dispatch import entry_queue_for_broker
+
+    rows = ClientTradeSetting.objects.filter(pk__in=trade_ids).values("id", "client_id", "broker")
+    accounts = {row["id"]: row for row in rows}
+    transaction_type = str(context.get("transaction_type") or "").strip().upper()
+    is_exit = transaction_type in {"SELL", "EXIT", "CLOSE", "SELL_CE", "SELL_PE"}
+    stream_specs = []
 
     for index, trade_id in enumerate(trade_ids, start=1):
+        account = accounts.get(trade_id, {})
+        signal_id = context.get("signal_log_id") or context.get("webhook_signal_log_id") or "legacy"
+        order_key = f"webhook:{signal_id}:{account.get('client_id')}:{trade_id}"
+        broker = account.get("broker")
+        client_id = account.get("client_id")
+        if (
+            getattr(settings, "ORDER_STREAMS_ENABLED", False)
+            and not is_exit
+            and broker
+            and client_id
+        ):
+            from main.models import BrokerOrderIntent
+            stream_specs.append({
+                "idempotency_key": order_key,
+                "kind": BrokerOrderIntent.KIND_ENTRY,
+                "broker": broker,
+                "client_id": client_id,
+                "source_type": "webhook_trade",
+                "source_id": str(trade_id),
+                "payload": {"index": index, "context": context, "history_mode": history_mode,
+                            "trade_setting_id": trade_id},
+            })
+        if not is_exit:
+            enqueue_account_order(broker=broker, client_id=client_id, order_key=order_key)
         task = process_single_webhook_trade_task.apply_async(
             kwargs={
                 "trade_id": trade_id,
                 "index": index,
                 "context": context,
                 "history_mode": history_mode,
+                "entry_order_key": order_key,
             },
-            queue=WEBHOOK_EXECUTION_QUEUE,
+            queue=WEBHOOK_EXECUTION_QUEUE if is_exit else entry_queue_for_broker(broker),
+            priority=8,
         )
         queued_tasks.append({"trade_setting_id": trade_id, "task_id": task.id})
+
+    if stream_specs:
+        from main.services.order_streams import create_intents_batch
+        create_intents_batch(stream_specs)
 
     summary = {
         "total": len(trade_ids),
@@ -606,6 +670,36 @@ def process_webhook_signal_task(self, *, trade_ids, context, history_mode="defau
     }
     logger.info("Webhook dispatch task completed task_id=%s summary=%s", getattr(self.request, "id", None), summary)
     return {"summary": summary, "queued_tasks": queued_tasks}
+
+
+@shared_task(
+    bind=True,
+    autoretry_for=(),
+    max_retries=300,
+    acks_late=True,
+    reject_on_worker_lost=True,
+    soft_time_limit=240,
+    time_limit=300,
+)
+def process_single_manual_trade_result_task(
+    self, *, result_id, entry_order_key=None, broker=None, client_id=None
+):
+    """Execute one manual BUY on its broker queue and serialize its account."""
+    from main.manual_trade_service import _execute_manual_trade_result
+    from main.services.entry_control import EntryAccountTurnDeferred, account_fifo_turn, reserve_entry
+
+    order_key = str(entry_order_key or f"manual-result:{result_id}")
+    reserve_entry(order_key)
+    try:
+        with account_fifo_turn(
+            broker=str(broker or "unknown"),
+            client_id=int(client_id or 0),
+            order_key=order_key,
+        ):
+            _execute_manual_trade_result(result_id)
+    except EntryAccountTurnDeferred as exc:
+        raise self.retry(exc=exc, countdown=1, max_retries=300)
+    return {"result_id": result_id, "status": "processed"}
 
 company_profile=company_profile if company_profile else None
 

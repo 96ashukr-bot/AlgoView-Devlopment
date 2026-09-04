@@ -1474,6 +1474,129 @@ class Tradeorderhistory(models.Model):
         return f"Order ID: {self.order_id}"
 
 
+class BrokerOrderIntent(models.Model):
+    """Durable, credential-free lifecycle ledger for broker submissions."""
+
+    KIND_ENTRY = "entry"
+    KIND_EXIT = "exit"
+    KIND_CHOICES = [(KIND_ENTRY, "Entry"), (KIND_EXIT, "Exit")]
+
+    STATUS_RESERVED = "reserved"
+    STATUS_PUBLISHED = "published"
+    STATUS_SUBMITTING = "submitting"
+    STATUS_ACKNOWLEDGED = "acknowledged"
+    STATUS_AMBIGUOUS = "ambiguous"
+    STATUS_RECONCILING = "reconciling"
+    STATUS_REJECTED = "rejected"
+    STATUS_DEAD_LETTER = "dead_letter"
+    STATUS_CANCELLED = "cancelled"
+    STATUS_CHOICES = [(value, value.replace("_", " ").title()) for value in (
+        STATUS_RESERVED, STATUS_PUBLISHED, STATUS_SUBMITTING, STATUS_ACKNOWLEDGED,
+        STATUS_AMBIGUOUS, STATUS_RECONCILING, STATUS_REJECTED,
+        STATUS_DEAD_LETTER, STATUS_CANCELLED,
+    )]
+
+    LIFECYCLE_TRIGGERED = "triggered"
+    LIFECYCLE_QUEUED = "queued"
+    LIFECYCLE_SUBMITTING = "submitting"
+    LIFECYCLE_BROKER_ACCEPTED = "broker_accepted"
+    LIFECYCLE_PARTIAL = "partial"
+    LIFECYCLE_FILLED = "filled"
+    LIFECYCLE_RECONCILED = "reconciled"
+    LIFECYCLE_UNCERTAIN = "submission_uncertain"
+    LIFECYCLE_RETRYABLE = "retryable_failure"
+    LIFECYCLE_ATTENTION = "manual_attention"
+    LIFECYCLE_CANCELLED = "cancelled"
+    LIFECYCLE_CHOICES = [(value, value.replace("_", " ").title()) for value in (
+        LIFECYCLE_TRIGGERED, LIFECYCLE_QUEUED, LIFECYCLE_SUBMITTING,
+        LIFECYCLE_BROKER_ACCEPTED, LIFECYCLE_PARTIAL, LIFECYCLE_FILLED,
+        LIFECYCLE_RECONCILED, LIFECYCLE_UNCERTAIN, LIFECYCLE_RETRYABLE,
+        LIFECYCLE_ATTENTION, LIFECYCLE_CANCELLED,
+    )]
+
+    idempotency_key = models.CharField(max_length=160, unique=True)
+    kind = models.CharField(max_length=10, choices=KIND_CHOICES, db_index=True)
+    broker = models.CharField(max_length=40, db_index=True)
+    client = models.ForeignKey('User', on_delete=models.PROTECT, related_name='broker_order_intents')
+    account_partition = models.CharField(max_length=96, db_index=True)
+    source_type = models.CharField(max_length=32)
+    source_id = models.CharField(max_length=96)
+    exit_trade_history = models.ForeignKey(
+        'Tradeorderhistory', on_delete=models.PROTECT, null=True, blank=True,
+        related_name='broker_exit_intents',
+    )
+    exit_generation = models.PositiveIntegerField(default=0)
+    lifecycle_state = models.CharField(
+        max_length=32, choices=LIFECYCLE_CHOICES,
+        default=LIFECYCLE_TRIGGERED, db_index=True,
+    )
+    trigger_sources = models.JSONField(default=list, blank=True)
+    contract_snapshot = models.JSONField(default=dict, blank=True)
+    requested_quantity = models.PositiveIntegerField(default=0)
+    remaining_quantity = models.PositiveIntegerField(default=0)
+    filled_quantity = models.PositiveIntegerField(default=0)
+    fencing_token = models.PositiveBigIntegerField(default=0)
+    owner_token = models.CharField(max_length=160, blank=True)
+    heartbeat_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    payload = models.JSONField(default=dict, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_RESERVED, db_index=True)
+    stream_name = models.CharField(max_length=96, blank=True)
+    stream_message_id = models.CharField(max_length=64, blank=True)
+    consumer = models.CharField(max_length=128, blank=True)
+    broker_order_id = models.CharField(max_length=255, blank=True)
+    broker_status = models.CharField(max_length=80, blank=True)
+    outcome = models.JSONField(default=dict, blank=True)
+    attempt_count = models.PositiveIntegerField(default=0)
+    reconcile_after = models.DateTimeField(null=True, blank=True, db_index=True)
+    last_error = models.TextField(blank=True)
+    published_at = models.DateTimeField(null=True, blank=True)
+    submission_started_at = models.DateTimeField(null=True, blank=True)
+    acknowledged_at = models.DateTimeField(null=True, blank=True)
+    broker_accepted_at = models.DateTimeField(null=True, blank=True)
+    filled_at = models.DateTimeField(null=True, blank=True)
+    reconciled_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["status", "created_at"], name="intent_status_created_idx"),
+            models.Index(fields=["broker", "kind", "status"], name="main_intent_broker_kind_idx"),
+            models.Index(fields=["account_partition", "created_at"], name="intent_account_created_idx"),
+            models.Index(fields=["exit_trade_history", "lifecycle_state"], name="intent_exit_lifecycle_idx"),
+            models.Index(fields=["kind", "lifecycle_state", "created_at"], name="intent_kind_lifecycle_idx"),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["kind", "exit_trade_history", "exit_generation"],
+                condition=models.Q(exit_trade_history__isnull=False),
+                name="unique_exit_generation_per_buy",
+            ),
+        ]
+
+
+class BrokerOrderFill(models.Model):
+    """Immutable broker fills used for weighted exit price and P&L."""
+
+    intent = models.ForeignKey(BrokerOrderIntent, on_delete=models.PROTECT, related_name="fills")
+    broker_order_id = models.CharField(max_length=255, blank=True, db_index=True)
+    broker_trade_id = models.CharField(max_length=255, blank=True)
+    quantity = models.PositiveIntegerField()
+    price = models.DecimalField(max_digits=15, decimal_places=4)
+    executed_at = models.DateTimeField(null=True, blank=True)
+    raw_fill = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [models.Index(fields=["intent", "created_at"], name="broker_fill_intent_time_idx")]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["intent", "broker_order_id", "broker_trade_id"],
+                name="unique_broker_fill_per_intent",
+            ),
+        ]
+
+
 class ManualTradeBatch(models.Model):
     STATUS_PREVIEW = "PREVIEW"
     STATUS_QUEUED = "QUEUED"

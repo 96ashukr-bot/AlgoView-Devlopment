@@ -337,6 +337,15 @@ AUTHENTICATION_BACKENDS = (
 )
 
 REDIS_URL = config('REDIS_URL', default='').strip()
+ORDER_STREAMS_ENABLED = config('ORDER_STREAMS_ENABLED', default=True, cast=bool)
+# Shadow mode keeps the proven Celery submission path authoritative while
+# recording every entry/exit as a durable intent for audit and recovery.
+ORDER_STREAM_SHADOW_MODE = config('ORDER_STREAM_SHADOW_MODE', default=True, cast=bool)
+ORDER_STREAM_MAXLEN = config('ORDER_STREAM_MAXLEN', default=200000, cast=int)
+ORDER_STREAM_CLAIM_IDLE_MS = config('ORDER_STREAM_CLAIM_IDLE_MS', default=120000, cast=int)
+ORDER_STREAM_MAX_RECONCILE_ATTEMPTS = config(
+    'ORDER_STREAM_MAX_RECONCILE_ATTEMPTS', default=12, cast=int
+)
 if IS_PRODUCTION:
     _require("REDIS_URL", REDIS_URL)
 
