@@ -13,8 +13,8 @@ import {
   updateClientMultiLegSetting,
 } from "../../../Services/Authentication";
 
-const DEFAULT_BUFFER_PERCENTAGE = 2.5;
-const MIN_BUFFER_PERCENTAGE = 0.1;
+const DEFAULT_BUFFER_PERCENTAGE = 0.001;
+const MIN_BUFFER_PERCENTAGE = 0.001;
 const MAX_BUFFER_PERCENTAGE = 10;
 
 const UNDERLYING_OPTIONS = ["NIFTY", "BANKNIFTY", "SENSEX", "FINNIFTY"];
@@ -540,7 +540,7 @@ const MultiLegEditPage = () => {
                     name="bufferPercentage"
                     min={MIN_BUFFER_PERCENTAGE}
                     max={MAX_BUFFER_PERCENTAGE}
-                    step="0.1"
+                    step="0.001"
                     value={formData.bufferPercentage}
                     onChange={handleChange}
                   />

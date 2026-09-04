@@ -71,8 +71,8 @@ RETRY_BACKOFF_FACTOR = 2
 RETRY_MAX_WAIT = 10  # seconds
 
 # Buffer defaults
-DEFAULT_BUFFER_PERCENTAGE = 2.5
-MIN_BUFFER_PERCENTAGE = 0.1
+DEFAULT_BUFFER_PERCENTAGE = 0.001
+MIN_BUFFER_PERCENTAGE = 0.001
 MAX_BUFFER_PERCENTAGE = 10.0
 
 # Contract master URL (official Angel One source)
@@ -122,7 +122,7 @@ class AngelOneConfig:
     
     def __post_init__(self):
         """Validate configuration after initialization."""
-        if not 0.1 <= self.buffer_percentage <= MAX_BUFFER_PERCENTAGE:
+        if not MIN_BUFFER_PERCENTAGE <= self.buffer_percentage <= MAX_BUFFER_PERCENTAGE:
             self.buffer_percentage = DEFAULT_BUFFER_PERCENTAGE
 
 

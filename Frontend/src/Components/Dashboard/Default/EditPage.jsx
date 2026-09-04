@@ -5,8 +5,8 @@ import { getClientTradeSetting, getSpecificDetails, updateTradeClient, getExpiry
 import Swal from 'sweetalert2';
 
 const EditPage = () => {
-  const DEFAULT_BUFFER_PERCENTAGE = 2.5;
-  const MIN_BUFFER_PERCENTAGE = 0.1;
+  const DEFAULT_BUFFER_PERCENTAGE = 0.001;
+  const MIN_BUFFER_PERCENTAGE = 0.001;
   const MAX_BUFFER_PERCENTAGE = 10;
   const { clientId, segmentId, subSegmentId } = useParams();
   // console.log('ididididdidi', clientId, segmentId, subSegmentId);
@@ -17,7 +17,7 @@ const EditPage = () => {
     broker: "",
     productType: "",
     orderType: "LIMIT",
-    bufferPercentage: "2.5",
+    bufferPercentage: "0.001",
     quantity: "",
     stopLoss: "",
     slType: "",
@@ -507,7 +507,7 @@ const EditPage = () => {
                     id="bufferPercentage"
                     min={MIN_BUFFER_PERCENTAGE}
                     max={MAX_BUFFER_PERCENTAGE}
-                    step="0.1"
+                    step="0.001"
                     value={formData.bufferPercentage}
                     onChange={handleChange}
                   />

@@ -284,7 +284,7 @@ class AngelOneSettingsView(APIView):
                 "status": "success",
                 "data": {
                     "client_code": client_code,
-                    "buffer_percentage": float(broker_details.buffer_percentage) if broker_details.buffer_percentage else 2.5,
+                    "buffer_percentage": float(broker_details.buffer_percentage) if broker_details.buffer_percentage is not None else 0.001,
                     "enable_market_orders": bool(broker_details.enable_market_orders),
                     "is_configured": bool(
                         broker_details.broker_API_KEY
@@ -318,12 +318,12 @@ class AngelOneSettingsView(APIView):
             if buffer_percentage is not None:
                 try:
                     buffer = float(buffer_percentage)
-                    if 0.1 <= buffer <= 10.0:
+                    if 0.001 <= buffer <= 10.0:
                         broker_details.buffer_percentage = buffer
                     else:
                         return Response({
                             "status": "error",
-                            "message": "Buffer percentage must be between 0.1 and 10.0"
+                            "message": "Buffer percentage must be between 0.001 and 10.0"
                         }, status=400)
                 except ValueError:
                     return Response({
@@ -487,7 +487,7 @@ def place_angel_one_trade(request_data, user, broker_details):
 
         requested_buffer = request_data.get("buffer_percentage")
         if requested_buffer is None:
-            buffer_percentage = float(broker_details.buffer_percentage) if broker_details.buffer_percentage else 2.5
+            buffer_percentage = float(broker_details.buffer_percentage) if broker_details.buffer_percentage is not None else 0.001
         else:
             buffer_percentage = requested_buffer
 

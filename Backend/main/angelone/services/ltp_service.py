@@ -348,7 +348,7 @@ class LTPService:
         self,
         ltp: float,
         side: str,
-        buffer_percentage: float = 2.5,
+        buffer_percentage: float = 0.001,
         tick_size: float = DEFAULT_TICK_SIZE,
     ) -> float:
         """

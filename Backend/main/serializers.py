@@ -1429,7 +1429,7 @@ class ClientTradeSettingSerializer(serializers.ModelSerializer):
     sub_segment = serializers.PrimaryKeyRelatedField(queryset=SubSegment.objects.all())
     expiry_date = serializers.DateTimeField(required=False, allow_null=True)
     order_type = serializers.ChoiceField(choices=["MARKET", "LIMIT"], required=False)
-    buffer_percentage = serializers.DecimalField(max_digits=5, decimal_places=2, required=False, allow_null=True)
+    buffer_percentage = serializers.DecimalField(max_digits=6, decimal_places=3, required=False, allow_null=True)
 
 
     class Meta:
@@ -1514,9 +1514,9 @@ class ClientTradeSettingSerializer(serializers.ModelSerializer):
         if order_type == "LIMIT":
             if buffer_percentage is not None:
                 buffer_value = float(buffer_percentage)
-                if buffer_value < 0.1 or buffer_value > 10.0:
+                if buffer_value < 0.001 or buffer_value > 10.0:
                     raise serializers.ValidationError({
-                        "buffer_percentage": "Buffer percentage must be between 0.1 and 10.0."
+                        "buffer_percentage": "Buffer percentage must be between 0.001 and 10.0."
                     })
         else:
             attrs["buffer_percentage"] = None
@@ -1564,7 +1564,7 @@ class ClientMultiLegStrategySettingSerializer(serializers.ModelSerializer):
     segment = serializers.PrimaryKeyRelatedField(queryset=Segment.objects.all(), required=False, allow_null=True)
     expiry_date = serializers.DateTimeField(required=False, allow_null=True)
     order_type = serializers.ChoiceField(choices=["MARKET", "LIMIT"], required=False)
-    buffer_percentage = serializers.DecimalField(max_digits=5, decimal_places=2, required=False, allow_null=True)
+    buffer_percentage = serializers.DecimalField(max_digits=6, decimal_places=3, required=False, allow_null=True)
 
     class Meta:
         model = ClientMultiLegStrategySetting
@@ -1639,9 +1639,9 @@ class ClientMultiLegStrategySettingSerializer(serializers.ModelSerializer):
         if order_type == "LIMIT":
             if buffer_percentage is not None:
                 buffer_value = float(buffer_percentage)
-                if buffer_value < 0.1 or buffer_value > 10.0:
+                if buffer_value < 0.001 or buffer_value > 10.0:
                     raise serializers.ValidationError({
-                        "buffer_percentage": "Buffer percentage must be between 0.1 and 10.0."
+                        "buffer_percentage": "Buffer percentage must be between 0.001 and 10.0."
                     })
         else:
             attrs["buffer_percentage"] = None

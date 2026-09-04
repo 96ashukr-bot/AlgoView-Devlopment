@@ -670,7 +670,7 @@ class ClientMultiLegStrategySetting(models.Model):
         null=True,
         blank=True,
     )
-    buffer_percentage = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    buffer_percentage = models.DecimalField(max_digits=6, decimal_places=3, null=True, blank=True)
     quantity = models.IntegerField(null=True, blank=True)
     trade_limit = models.IntegerField(null=True, blank=True)
     max_loss_for_day = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
@@ -901,7 +901,7 @@ class ClientTradeSetting(models.Model):
     broker = models.CharField(max_length=50,null=True, blank=True)
     product_type = models.CharField(max_length=20,null=True, blank=True)
     order_type = models.CharField(max_length=20, choices=ORDER_TYPE_CHOICES, default="LIMIT", null=True, blank=True)
-    buffer_percentage = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    buffer_percentage = models.DecimalField(max_digits=6, decimal_places=3, null=True, blank=True)
     
     buy_sell = models.CharField(max_length=10, null=True, blank=True)  # "Buy" or "Sell"
     quantity = models.IntegerField(null=True, blank=True)
@@ -942,12 +942,12 @@ class ClientBrokerdetails(models.Model):
     
     # Buffer settings for limit orders (per compliance requirements)
     buffer_percentage = models.DecimalField(
-        max_digits=5, 
-        decimal_places=2, 
-        default=2.50,
+        max_digits=6,
+        decimal_places=3,
+        default=0.001,
         null=True,
         blank=True,
-        help_text="Buffer percentage for limit orders (0.1 to 10.0). Default: 2.5%"
+        help_text="Buffer percentage for limit orders (0.001 to 10.0). Default: 0.001%"
     )
     enable_market_orders = models.BooleanField(
         default=False,

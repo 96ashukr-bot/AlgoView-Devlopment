@@ -26,8 +26,8 @@ ENFORCE_MARKET_HOURS: Final[bool] = True
 # =========================
 # BUFFER CONFIGURATION
 # =========================
-DEFAULT_BUFFER_PERCENTAGE: Final[float] = 2.5
-MIN_BUFFER_PERCENTAGE: Final[float] = 0.1
+DEFAULT_BUFFER_PERCENTAGE: Final[float] = 0.001
+MIN_BUFFER_PERCENTAGE: Final[float] = 0.001
 MAX_BUFFER_PERCENTAGE: Final[float] = 10.0
 DEFAULT_TICK_SIZE: Final[float] = 0.05
 ALLOW_STRIKE_FALLBACK: Final[bool] = False
