@@ -439,13 +439,23 @@ def expected_contract_net_quantity(open_history):
     return total
 
 
-def find_matching_open_buy_position(client, order, require_exact_strike=False):
+def find_matching_open_buy_position(
+    client,
+    order,
+    require_exact_strike=False,
+    require_exact_expiry=False,
+    allow_webhook_signal_strike=False,
+):
     values = common_order_kwargs(order)
     option_type = str(order_value(order, "option_type", "Type") or "").upper()
     if option_type not in {"CE", "PE"}:
         option_type = extract_option_type(build_trade_symbol(order, "upstox"))
     if option_type not in {"CE", "PE"}:
         return None
+    requested_strike = _normalized_strike(
+        order_value(order, "strike", "strike_price", "selected_strike", "StrikePrice")
+    )
+    requested_expiry = str(order_value(order, "expiry", "expiry_date") or "").strip()[:10]
 
     qs = (
         Tradeorderhistory.objects.filter(
@@ -460,6 +470,27 @@ def find_matching_open_buy_position(client, order, require_exact_strike=False):
     if values["group_service"]:
         qs = qs.filter(GroupService=values["group_service"])
     for history in qs:
+        if require_exact_strike:
+            history_strike_value = _normalized_strike(history_strike(history))
+            history_params = history.order_params if isinstance(history.order_params, dict) else {}
+            original_signal_strike = _normalized_strike(history_params.get("signal_strike"))
+            if history_strike_value != requested_strike and not (
+                allow_webhook_signal_strike and original_signal_strike == requested_strike
+            ):
+                continue
+        if require_exact_expiry:
+            day, month, year, fullyear = _history_expiry_parts(history)
+            try:
+                history_expiry = datetime.strptime(
+                    f"{str(day).zfill(2)}{str(month)[:3].upper()}{fullyear or year}",
+                    "%d%b%Y" if len(str(fullyear or year)) == 4 else "%d%b%y",
+                ).date().isoformat()
+            except (TypeError, ValueError):
+                history_expiry = ""
+            if not requested_expiry or history_expiry != requested_expiry:
+                continue
+        if _matching_exit_exists_after_open(history):
+            continue
         if _history_matches_underlying(history, values["symbol"]) and _history_matches_open_buy(history, option_type):
             return history
     return None

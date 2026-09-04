@@ -54,6 +54,12 @@ class AngelOneBroker(BaseBroker):
         )
         if close_error:
             return close_error
+
+        transaction_type = str(order.get("transaction_type") or "").upper()
+        if transaction_type == "SELL":
+            cancellation_error = self._cancel_matching_pending_exits(order, proxy_config=proxy_config)
+            if cancellation_error:
+                return cancellation_error
         response = place_angel_one_order(
             broker_details=self.broker_details,
             symbol=order.get("symbol") or order.get("underlying") or order.get("Index_Symbol"),
@@ -61,7 +67,15 @@ class AngelOneBroker(BaseBroker):
             option_type=order.get("option_type") or order.get("Type"),
             quantity=int(order.get("quantity") or 0),
             transaction_type=str(order.get("transaction_type") or "").upper(),
-            buffer_percentage=float(order.get("buffer_percentage") or self.broker_details.buffer_percentage or 2.5),
+            buffer_percentage=float(
+                order.get("buffer_percentage")
+                if order.get("buffer_percentage") is not None
+                else (
+                    self.broker_details.buffer_percentage
+                    if self.broker_details.buffer_percentage is not None
+                    else 0.001
+                )
+            ),
             order_type=order.get("order_type") or order.get("ordertype") or "LIMIT",
             price=order.get("price"),
             exchange=normalize_broker_exchange(
@@ -83,6 +97,92 @@ class AngelOneBroker(BaseBroker):
         )
         mark_open_position_closed(open_position, response)
         return response
+
+    def _cancel_matching_pending_exits(self, order, proxy_config=None):
+        """Release quantity reserved by an older, unfilled exit before replacing it.
+
+        Angel One treats a second SELL as a new short while an earlier SELL still
+        reserves the long position.  Only exact-contract, unfilled SELL orders are
+        cancelled; a partial fill or an ambiguous contract fails closed.
+        """
+        nested = order.get("order_params") if isinstance(order.get("order_params"), dict) else {}
+        trading_symbol = str(
+            order.get("broker_tradingsymbol")
+            or order.get("original_broker_trading_symbol")
+            or nested.get("broker_tradingsymbol")
+            or order.get("tradingsymbol")
+            or nested.get("tradingsymbol")
+            or order.get("trading_symbol")
+            or ""
+        ).strip().upper()
+        symbol_token = str(
+            order.get("symboltoken")
+            or order.get("original_broker_instrument_key")
+            or nested.get("symboltoken")
+            or ""
+        ).strip()
+        product_type = str(order.get("product_type") or order.get("product") or "INTRADAY").strip().upper()
+        normalized_product = {"MIS": "INTRADAY", "INTRA": "INTRADAY"}.get(product_type, product_type)
+        if not trading_symbol or not symbol_token:
+            return None
+
+        result = self.get_orderbook(proxy_config=proxy_config)
+        if result.get("status") != "success":
+            return {
+                "data": {
+                    "status": "Failed",
+                    "message": "Could not verify pending Angel One exit orders before submitting the replacement exit.",
+                }
+            }
+
+        pending_statuses = {"open", "pending", "put order req received", "trigger pending", "validation pending"}
+        for broker_order in result.get("orders") or []:
+            if not isinstance(broker_order, dict):
+                continue
+            if str(broker_order.get("transactiontype") or "").upper() != "SELL":
+                continue
+            if str(broker_order.get("tradingsymbol") or "").upper() != trading_symbol:
+                continue
+            if str(broker_order.get("symboltoken") or "") != symbol_token:
+                continue
+            broker_product = str(broker_order.get("producttype") or "").upper()
+            broker_product = {"MIS": "INTRADAY", "INTRA": "INTRADAY"}.get(broker_product, broker_product)
+            if broker_product and broker_product != normalized_product:
+                continue
+            status = str(broker_order.get("orderstatus") or broker_order.get("status") or "").strip().lower()
+            if status not in pending_statuses:
+                continue
+            try:
+                filled = int(float(broker_order.get("filledshares") or 0))
+            except (TypeError, ValueError):
+                filled = 0
+            if filled:
+                return {
+                    "data": {
+                        "status": "Failed",
+                        "message": "A matching Angel One exit is partially filled. Reconciliation is required before another exit.",
+                    }
+                }
+            order_id = broker_order.get("orderid") or broker_order.get("order_id")
+            if not order_id:
+                return {
+                    "data": {
+                        "status": "Failed",
+                        "message": "A matching pending Angel One exit has no broker order ID and cannot be replaced safely.",
+                    }
+                }
+            cancelled = self.cancel_order(
+                {"order_id": str(order_id), "variety": broker_order.get("variety") or "NORMAL"},
+                proxy_config=proxy_config,
+            )
+            if cancelled.get("status") != "success":
+                return {
+                    "data": {
+                        "status": "Failed",
+                        "message": cancelled.get("message") or "The matching pending Angel One exit could not be cancelled.",
+                    }
+                }
+        return None
 
     def cancel_order(self, payload, proxy_config=None):
         order_id = payload.get("order_id") or payload.get("orderid")

@@ -25,6 +25,11 @@ app.conf.beat_schedule = {
         "schedule": 60.0,
         "options": {"queue": "priority_entry", "priority": 7},
     },
+    "reconcile-durable-exit-intents": {
+        "task": "main.tasks.reconcile_exit_intents_task",
+        "schedule": 10.0,
+        "options": {"queue": "priority_exit_dispatch", "priority": 9},
+    },
 }
 
 

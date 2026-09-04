@@ -1,0 +1,25 @@
+[Unit]
+Description=AlgoView %i Broker Priority Exit Pool
+After=network.target redis-server.service postgresql.service sparkbridge-exit-dispatcher.service
+Requires=redis-server.service postgresql.service sparkbridge-exit-dispatcher.service
+
+[Service]
+Type=simple
+User=ubuntu
+Group=www-data
+WorkingDirectory=/var/www/sparkbridge/Backend
+EnvironmentFile=/var/www/sparkbridge/Backend/.env
+Environment=SKIP_INSTRUMENT_PREWARM=true
+ExecStart=/var/www/sparkbridge/Backend/venv/bin/celery -A algoview worker --loglevel=INFO --queues=exit_%i --hostname=exit-%i@%%h --pool=threads --concurrency=12 --prefetch-multiplier=1 -Ofair
+Restart=always
+RestartSec=3
+KillSignal=SIGTERM
+TimeoutStopSec=90
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+UMask=0027
+
+[Install]
+WantedBy=multi-user.target

@@ -50,9 +50,7 @@ from main.permissions import (
 from main.services.login_activity_service import LoginActivityService
 from main.broker_registry import broker_field_is_configured, get_broker_setup_spec, get_default_broker_catalog, normalize_broker_name
 from main.tasks import (
-    FORCE_KILL_SWITCH_QUEUE,
     acquire_force_kill_dispatch,
-    force_kill_switch_trade_task,
     process_manual_trade_batch_task,
     resend_otp_email_async,
     send_kyc_email_async,
@@ -529,6 +527,55 @@ def _webhook_leg_order_params(order_params, *, transaction_type, option_type):
     return leg_params
 
 
+def _bind_webhook_close_to_open_buy(
+    *, user, broker, group_service, symbol, strike, option_type, expiry, order_params,
+    broker_order_intent_id=None, trigger_id="",
+):
+    """Bind a webhook close to the exact executed BUY and its immutable contract."""
+    from main.brokers.position_guard import find_matching_open_buy_position, history_strike
+    from main.services.exit_intents import bind_webhook_intent_to_buy, reserve_exit_intent
+
+    lookup = {
+        "transaction_type": "SELL", "broker": broker, "group_service": group_service,
+        "symbol": symbol, "underlying": symbol, "strike": strike,
+        "option_type": option_type, "expiry": expiry,
+    }
+    open_buy = find_matching_open_buy_position(
+        user, lookup, require_exact_strike=True, require_exact_expiry=True,
+        allow_webhook_signal_strike=True,
+    )
+    if open_buy is None:
+        return order_params
+    if broker_order_intent_id:
+        intent = bind_webhook_intent_to_buy(broker_order_intent_id, open_buy, trigger_id=trigger_id)
+        intent_id = intent.id if intent else broker_order_intent_id
+        joined_existing = bool(intent and int(intent.id) != int(broker_order_intent_id))
+    else:
+        intent, created = reserve_exit_intent(
+            trade=open_buy, source="webhook", source_type="webhook_exit_direct",
+            trigger_id=trigger_id, payload={"history_id": trigger_id}, publish=False,
+        )
+        intent_id = intent.id
+        joined_existing = not created
+        BrokerOrderIntent.objects.filter(pk=intent.id).update(
+            lifecycle_state=BrokerOrderIntent.LIFECYCLE_SUBMITTING,
+            heartbeat_at=timezone.now(),
+        )
+    bound = dict(order_params or {})
+    bound["original_history_id"] = open_buy.history_id or open_buy.id
+    bound["webhook_bound_open_history_id"] = open_buy.history_id or open_buy.id
+    executed_strike = history_strike(open_buy)
+    if executed_strike not in (None, "", "None"):
+        bound.update({
+            "strike": executed_strike, "strike_price": executed_strike,
+            "default_price": executed_strike, "webhook_exit_signal_strike": strike,
+        })
+    bound["broker_order_intent_id"] = intent_id
+    if joined_existing:
+        bound["exit_intent_joined_existing"] = True
+    return bound
+
+
 def _process_webhook_trade(trade, index, context, *, history_id=None):
     history_id = history_id or f"{datetime.now().strftime('%Y%m%d%H%M%S%f')}_{trade.client_id}_{trade.id}"
     alert_data = context["alert_data"]
@@ -680,6 +727,30 @@ def _process_webhook_trade(trade, index, context, *, history_id=None):
         price = limit_price
         ordertype = resolved_order_type
         entry_type = exit_type = entry_price = exit_price = entry_qty = exit_qty = None
+
+        close_option_type = {
+            "SELL-C": "CE", "SELL-C_O": "CE",
+            "BUY-C": "PE", "BUY-C_O": "PE",
+        }.get(str(transaction_type or "").strip().upper())
+        if close_option_type:
+            order_params = _bind_webhook_close_to_open_buy(
+                user=user, broker=trade.broker, group_service=group_service,
+                symbol=trade_symbol, strike=default_price, option_type=close_option_type,
+                expiry=expiry_date.strftime("%Y-%m-%d") if expiry_date else "",
+                order_params=order_params,
+                broker_order_intent_id=context.get("broker_order_intent_id"),
+                trigger_id=str(context.get("signal_log_id") or history_id or ""),
+            )
+            default_price = order_params.get("strike", default_price)
+            if order_params.get("exit_intent_joined_existing"):
+                return {
+                    "history_id": history_id, "client_id": trade.client_id,
+                    "client_name": getattr(user, "fullName", None) or getattr(user, "userName", None),
+                    "trade_setting_id": trade.id, "script_name": trade_symbol,
+                    "status": "pending", "broker_status": "exit_already_in_progress",
+                    "reason": "This webhook joined the existing exit for the exact BUY; no duplicate SELL was submitted.",
+                    "response": {"exit_intent_id": order_params.get("broker_order_intent_id")},
+                }
 
         order_response = None
         if transaction_type == "SELL-C_O":
@@ -4358,6 +4429,80 @@ def _mark_trade_closed_after_force_exit(trade_history, response):
     return True
 
 
+def _mark_trade_kill_switch_pending(trade_history, *, captured_ltp, captured_at, reason=""):
+    """Persist an exit reservation without claiming that the broker is flat."""
+    with transaction.atomic():
+        locked = Tradeorderhistory.objects.select_for_update().get(pk=trade_history.pk)
+        params = dict(locked.order_params or {})
+        params["force_kill_exit"] = {
+            "status": "pending_broker_confirmation",
+            "captured_ltp": float(captured_ltp),
+            "captured_at": captured_at.isoformat(),
+            "reason": str(reason or ""),
+        }
+        locked.Exit_type = "KILL_SWITCH"
+        locked.Exit_status = "PENDING_BROKER_CONFIRMATION"
+        locked.Exit_Price = captured_ltp
+        locked.ExitQty = locked.EntryQty
+        locked.SignalExit_time = captured_at
+        locked.order_params = params
+        locked.sltp_status = "KILL_SWITCH_PENDING_CONFIRMATION"
+        locked.sltp_last_action = "KILL_SWITCH_REQUESTED"
+        locked.sltp_last_failure_reason = None
+        locked.sltp_manual_attention = False
+        locked.save(update_fields=[
+            "Exit_type", "Exit_status", "Exit_Price", "ExitQty", "SignalExit_time",
+            "order_params", "sltp_status", "sltp_last_action",
+            "sltp_last_failure_reason", "sltp_manual_attention",
+        ])
+
+
+def _restore_trade_after_failed_kill_switch(trade_history, message):
+    """Restore a provisionally marked row when the broker rejects the exit."""
+    with transaction.atomic():
+        locked = Tradeorderhistory.objects.select_for_update().get(pk=trade_history.pk)
+        params = dict(locked.order_params or {})
+        pending_attempt = params.get("force_kill_exit") if isinstance(params.get("force_kill_exit"), dict) else {}
+        is_pending = (
+            str(locked.sltp_status or "").upper() == "KILL_SWITCH_PENDING_CONFIRMATION"
+            or str(locked.Exit_status or "").upper() == "PENDING_BROKER_CONFIRMATION"
+            or str(pending_attempt.get("status") or "").lower() == "pending_broker_confirmation"
+        )
+        if not is_pending:
+            return
+        if str(locked.trade_order_status or "").strip().upper() in {"CLOSE", "CLOSED"}:
+            params.pop("force_kill_exit", None)
+            locked.order_params = params
+            locked.sltp_status = "CLOSED"
+            locked.sltp_last_action = "KILL_SWITCH_DUPLICATE_AFTER_CLOSE"
+            locked.sltp_last_failure_reason = None
+            locked.sltp_manual_attention = False
+            locked.save(update_fields=[
+                "order_params", "sltp_status", "sltp_last_action",
+                "sltp_last_failure_reason", "sltp_manual_attention",
+            ])
+            return
+        attempt = dict(pending_attempt)
+        attempt.update({"status": "broker_rejected", "message": str(message or "Exit rejected")})
+        params["last_force_kill_exit"] = attempt
+        params.pop("force_kill_exit", None)
+        locked.Exit_type = None
+        locked.Exit_status = None
+        locked.Exit_Price = None
+        locked.ExitQty = None
+        locked.SignalExit_time = None
+        locked.order_params = params
+        locked.sltp_status = "KILL_SWITCH_ATTENTION"
+        locked.sltp_last_action = "KILL_SWITCH_REJECTED_POSITION_OPEN"
+        locked.sltp_last_failure_reason = str(message or "Exit rejected")
+        locked.sltp_manual_attention = True
+        locked.save(update_fields=[
+            "Exit_type", "Exit_status", "Exit_Price", "ExitQty", "SignalExit_time",
+            "order_params", "sltp_status", "sltp_last_action",
+            "sltp_last_failure_reason", "sltp_manual_attention",
+        ])
+
+
 class ClientGlobalKillSwitchAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -4375,21 +4520,50 @@ class ClientGlobalKillSwitchAPIView(APIView):
         exited_regular_ids = []
         failed_regular = []
         for trade_history in open_regular_trades:
+            exit_intent = None
             try:
-                exit_request = _build_regular_trade_exit_request(trade_history)
+                from main.services.exit_intents import reserve_exit_intent, reconcile_intent_from_trade
+                from main.services.order_streams import record_outcome
+                exit_intent, created = reserve_exit_intent(
+                    trade=trade_history, source="kill_switch",
+                    source_type="client_global_kill_switch",
+                    trigger_id=f"client-global:{user.id}:{trade_history.id}",
+                    payload={"reason": reason}, publish=False,
+                )
+                if not created:
+                    failed_regular.append({
+                        "trade_history_id": trade_history.id,
+                        "message": "An exit for this exact BUY is already queued or in progress.",
+                    })
+                    continue
+                exit_request = _build_regular_trade_exit_request(
+                    trade_history, force_broker_squareoff=True,
+                    source="client_global_kill_switch", reason=reason, initiated_by=user,
+                )
+                exit_request.order_params["broker_order_intent_id"] = exit_intent.id
                 response = get_execution_engine().execute_order(exit_request)
                 from main.services.external_position_reconciliation import reconcile_failed_exit_response
                 response = reconcile_failed_exit_response(trade_history, response)
                 response_status = str(response.get("status") or response.get("data", {}).get("status") or "").lower()
                 if response_status in {"success", "complete", "completed", "open", "placed", "reconciled_closed"}:
+                    record_outcome(exit_intent.id, status=BrokerOrderIntent.STATUS_ACKNOWLEDGED,
+                                   outcome=response.get("data") or response)
                     _mark_trade_closed_after_force_exit(trade_history, response)
+                    reconcile_intent_from_trade(exit_intent.id)
                     exited_regular_ids.append(trade_history.id)
                 else:
+                    record_outcome(
+                        exit_intent.id, status=BrokerOrderIntent.STATUS_REJECTED,
+                        outcome=response.get("data") or response,
+                        error=response.get("message") or "Exit rejected.",
+                    )
                     failed_regular.append({
                         "trade_history_id": trade_history.id,
                         "message": response.get("message") or response.get("data", {}).get("message") or "Exit failed.",
                     })
             except Exception as exc:
+                if exit_intent is not None:
+                    record_outcome(exit_intent.id, status=BrokerOrderIntent.STATUS_AMBIGUOUS, error=str(exc))
                 failed_regular.append({"trade_history_id": trade_history.id, "message": str(exc)})
 
         return Response(
@@ -4477,18 +4651,59 @@ class SuperadminForceKillSwitchAPIView(APIView):
                             "duplicate_blocked": True,
                         })
                         continue
+                    captured_at = timezone.now()
+                    captured_ltp = trade_history.LivePrice or trade_history.Entry_Price
+                    exit_intent = None
                     try:
-                        task = force_kill_switch_trade_task.apply_async(
+                        from main.services.exit_intents import reserve_exit_intent
+                        from main.tasks import dispatch_kill_switch_trade_task
+
+                        exit_intent, created = reserve_exit_intent(
+                            trade=trade_history, source="kill_switch",
+                            source_type="kill_switch_exit",
+                            trigger_id=f"authorized:{request.user.id}:{trade_history.id}:{dispatch_token}",
+                            payload={"reason": reason, "initiated_by_id": request.user.id,
+                                     "dispatch_token": dispatch_token, "captured_ltp": captured_ltp,
+                                     "captured_at": captured_at.isoformat()},
+                            publish=False,
+                        )
+                        if not created:
+                            release_force_kill_dispatch(trade_history.id, dispatch_token)
+                            results.append({
+                                "trade_history_id": trade_history.id,
+                                "client_id": trade_history.client_id,
+                                "status": "queued",
+                                "message": "An exit for this exact BUY is already queued or in progress.",
+                                "duplicate_blocked": True,
+                            })
+                            continue
+                        _mark_trade_kill_switch_pending(
+                            trade_history, captured_ltp=captured_ltp,
+                            captured_at=captured_at, reason=reason,
+                        )
+                        task = dispatch_kill_switch_trade_task.apply_async(
                             kwargs={
+                                "broker": trade_history.broker,
+                                "client_id": trade_history.client_id,
                                 "trade_history_id": trade_history.id,
                                 "reason": reason,
                                 "initiated_by_id": request.user.id,
                                 "dispatch_token": dispatch_token,
+                                "captured_ltp": captured_ltp,
+                                "captured_at": captured_at.isoformat(),
+                                "exit_intent_id": exit_intent.id,
                             },
-                            queue=FORCE_KILL_SWITCH_QUEUE,
+                            queue="priority_exit_dispatch",
                             priority=9,
                         )
                     except Exception:
+                        if exit_intent is not None:
+                            BrokerOrderIntent.objects.filter(pk=exit_intent.id).update(
+                                lifecycle_state=BrokerOrderIntent.LIFECYCLE_RETRYABLE,
+                                last_error="Kill Switch task publication failed before broker submission.",
+                                reconcile_after=timezone.now(),
+                            )
+                        _restore_trade_after_failed_kill_switch(trade_history, "Kill Switch could not be queued.")
                         release_force_kill_dispatch(trade_history.id, dispatch_token)
                         raise
                     results.append({
@@ -4507,12 +4722,30 @@ class SuperadminForceKillSwitchAPIView(APIView):
                     reason=reason,
                     initiated_by=request.user,
                 )
+                from main.services.exit_intents import reserve_exit_intent, reconcile_intent_from_trade
+                exit_intent, created = reserve_exit_intent(
+                    trade=trade_history, source="kill_switch",
+                    source_type="authorized_force_kill_switch",
+                    trigger_id=f"authorized-sync:{request.user.id}:{trade_history.id}",
+                    payload={"reason": reason}, publish=False,
+                )
+                if not created:
+                    results.append({
+                        "trade_history_id": trade_history.id,
+                        "client_id": trade_history.client_id,
+                        "status": "queued",
+                        "message": "An exit for this exact BUY is already queued or in progress.",
+                        "duplicate_blocked": True,
+                    })
+                    continue
+                exit_request.order_params["broker_order_intent_id"] = exit_intent.id
                 response = get_execution_engine().execute_order(exit_request)
                 from main.services.external_position_reconciliation import reconcile_failed_exit_response
                 response = reconcile_failed_exit_response(trade_history, response)
                 response_data = response.get("data", {}) if isinstance(response, dict) else {}
                 response_status = str(response_data.get("status") or response.get("status") or "").lower()
                 success = response_status in {"success", "complete", "completed", "open", "placed", "reconciled_closed"}
+                reconcile_intent_from_trade(exit_intent.id)
                 message = _extract_force_exit_message(response)
                 if not success and message.strip().lower() == "success":
                     message = f"Broker rejected force exit. Broker status: {response_status or 'unknown'}."

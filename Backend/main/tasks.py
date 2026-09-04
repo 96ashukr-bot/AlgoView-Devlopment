@@ -15,6 +15,7 @@ from django.core.mail import send_mail
 from django.conf import settings
 from django.core.cache import cache
 from django.utils import timezone
+from dataclasses import replace
 import logging
 import uuid
 logger = logging.getLogger('main')
@@ -281,16 +282,87 @@ def route_execution_order_task(self, *, client_id, broker_details_id, order_payl
     return route_order_to_execution_node(client, broker_details, payload)
 
 
-@shared_task(bind=True, autoretry_for=(), max_retries=0)
-def force_kill_switch_trade_task(self, *, trade_history_id, reason="", initiated_by_id=None, dispatch_token=None):
+@shared_task(
+    bind=True,
+    autoretry_for=(),
+    max_retries=0,
+    acks_late=True,
+    reject_on_worker_lost=True,
+    soft_time_limit=240,
+    time_limit=300,
+    queue="sltp_exits",
+)
+def process_sltp_exit_task(self, *, trade_history_id, dispatch_token, trigger_snapshot, exit_intent_id=None):
+    """Execute one durable SL/TP exit on the account's broker-specific queue."""
+    from main.models import BrokerOrderIntent, Tradeorderhistory
+    from main.services.entry_control import EXIT_TURN_WAIT_SECONDS, ExitAccountTurnDeferred, exit_account_turn
+    from main.services.exit_intents import reconcile_intent_from_trade
+    from main.sl_tp_watcher_service import get_sl_tp_watcher_service
+
+    service = get_sl_tp_watcher_service()
+    trade = Tradeorderhistory.objects.select_related("client", "trade_setting").filter(pk=trade_history_id).first()
+    if trade is None:
+        return {"status": "missing", "trade_history_id": trade_history_id}
+    try:
+        if exit_intent_id:
+            BrokerOrderIntent.objects.filter(pk=exit_intent_id).update(
+                lifecycle_state=BrokerOrderIntent.LIFECYCLE_SUBMITTING,
+                heartbeat_at=timezone.now(),
+            )
+        with exit_account_turn(
+            broker=trade.broker,
+            client_id=trade.client_id,
+            order_key=f"sltp:{trade.history_id or trade.id}",
+            timeout=EXIT_TURN_WAIT_SECONDS,
+        ):
+            result = service.process_trade(trade, execute_exit=True, dispatch_async=False)
+        if exit_intent_id and not reconcile_intent_from_trade(exit_intent_id):
+            state = BrokerOrderIntent.LIFECYCLE_BROKER_ACCEPTED if result.status == "triggered" else BrokerOrderIntent.LIFECYCLE_RETRYABLE
+            BrokerOrderIntent.objects.filter(pk=exit_intent_id).update(
+                lifecycle_state=state,
+                broker_accepted_at=timezone.now() if result.status == "triggered" else None,
+                last_error="" if result.status == "triggered" else result.message,
+            )
+        return result.to_dict()
+    except ExitAccountTurnDeferred as exc:
+        raise self.retry(exc=exc, countdown=1, max_retries=300)
+    except Exception as exc:
+        if exit_intent_id:
+            BrokerOrderIntent.objects.filter(pk=exit_intent_id).update(
+                lifecycle_state=BrokerOrderIntent.LIFECYCLE_RETRYABLE,
+                last_error=str(exc),
+                reconcile_after=timezone.now(),
+            )
+        raise
+    finally:
+        service.release_dispatch(trade, dispatch_token)
+
+
+@shared_task(
+    bind=True,
+    autoretry_for=(),
+    max_retries=0,
+    acks_late=True,
+    reject_on_worker_lost=True,
+    soft_time_limit=240,
+    time_limit=300,
+    queue="priority_order_exits",
+)
+def force_kill_switch_trade_task(self, *, trade_history_id, reason="", initiated_by_id=None, dispatch_token=None, captured_ltp=None, captured_at=None, exit_timing=None, exit_intent_id=None):
     """Run a force kill-switch exit outside the request/response cycle."""
     from django.contrib.auth import get_user_model
     from main.execution_engine import get_execution_engine
     from main.models import Tradeorderhistory
+    from main.services.entry_control import (
+        EXIT_TURN_WAIT_SECONDS,
+        ExitAccountTurnDeferred,
+        exit_account_turn,
+    )
     from main.views import (
         _build_regular_trade_exit_request,
         _extract_force_exit_message,
         _mark_trade_closed_after_force_exit,
+        _restore_trade_after_failed_kill_switch,
     )
 
     owns_dispatch = bool(dispatch_token)
@@ -305,6 +377,11 @@ def force_kill_switch_trade_task(self, *, trade_history_id, reason="", initiated
             }
 
     try:
+        if exit_intent_id:
+            BrokerOrderIntent.objects.filter(pk=exit_intent_id).update(
+                lifecycle_state=BrokerOrderIntent.LIFECYCLE_SUBMITTING,
+                heartbeat_at=timezone.now(),
+            )
         trade_history = Tradeorderhistory.objects.select_related("client").filter(pk=trade_history_id).first()
         if trade_history is None:
             return {"trade_history_id": trade_history_id, "status": "missing", "message": "Trade history row not found."}
@@ -320,18 +397,64 @@ def force_kill_switch_trade_task(self, *, trade_history_id, reason="", initiated
             reason=reason,
             initiated_by=initiated_by,
         )
-        response = get_execution_engine().execute_order(exit_request)
-        from main.services.external_position_reconciliation import reconcile_failed_exit_response
-
-        response = reconcile_failed_exit_response(trade_history, response)
+        if isinstance(exit_request.order_params, dict):
+            if exit_intent_id:
+                exit_request.order_params["broker_order_intent_id"] = int(exit_intent_id)
+            timing = exit_request.order_params.setdefault("exit_timing", {})
+            timing.update(dict(exit_timing or {}))
+            timing.setdefault("trigger_received_at", str(captured_at or timezone.now().isoformat()))
+            timing["worker_started_at"] = timezone.now().isoformat()
+            timing["exit_reserved_at"] = timezone.now().isoformat()
+        if captured_ltp not in (None, ""):
+            # ExecutionRequest is intentionally immutable. Preserve the
+            # kill-switch snapshot by creating a new request instead of
+            # mutating the frozen dataclass (which aborts before broker exit).
+            exit_request = replace(exit_request, LivePrice=captured_ltp)
+        kill_switch_time = timezone.now()
+        if captured_at:
+            from django.utils.dateparse import parse_datetime
+            kill_switch_time = parse_datetime(str(captured_at)) or kill_switch_time
+        order_key = f"kill:{trade_history.id}:{dispatch_token}"
+        with exit_account_turn(
+            broker=trade_history.broker,
+            client_id=trade_history.client_id,
+            order_key=order_key,
+            timeout=EXIT_TURN_WAIT_SECONDS,
+        ):
+            response = get_execution_engine().execute_order(exit_request)
+            # Keep post-order position reconciliation in the same account
+            # turn. Multiple selected exits for one Angel account must not
+            # call the rate-limited position endpoint concurrently.
+            from main.services.external_position_reconciliation import reconcile_failed_exit_response
+            response = reconcile_failed_exit_response(
+                trade_history,
+                response,
+                kill_switch_ltp=exit_request.LivePrice,
+                kill_switch_time=kill_switch_time,
+            )
         response_data = response.get("data", {}) if isinstance(response, dict) else {}
         response_status = str(response_data.get("status") or response.get("status") or "").lower()
-        success = response_status in {"success", "complete", "completed", "open", "placed", "reconciled_closed"}
+        terminal_success = response_status in {"success", "complete", "completed", "traded", "filled", "executed", "reconciled_closed"}
+        accepted_pending = response_status in {"open", "placed", "pending", "accepted"}
+        success = terminal_success or accepted_pending
         message = _extract_force_exit_message(response)
         if not success and message.strip().lower() == "success":
             message = f"Broker rejected force exit. Broker status: {response_status or 'unknown'}."
-        if success:
+        if terminal_success and response_status != "reconciled_closed":
             _mark_trade_closed_after_force_exit(trade_history, response)
+        elif not success:
+            _restore_trade_after_failed_kill_switch(trade_history, message)
+        if exit_intent_id:
+            from main.services.exit_intents import reconcile_intent_from_trade
+            if not reconcile_intent_from_trade(exit_intent_id):
+                BrokerOrderIntent.objects.filter(pk=exit_intent_id).update(
+                    lifecycle_state=(
+                        BrokerOrderIntent.LIFECYCLE_BROKER_ACCEPTED
+                        if success else BrokerOrderIntent.LIFECYCLE_ATTENTION
+                    ),
+                    broker_accepted_at=timezone.now() if success else None,
+                    last_error="" if success else message,
+                )
         return {
             "trade_history_id": trade_history.id,
             "client_id": trade_history.client_id,
@@ -342,9 +465,50 @@ def force_kill_switch_trade_task(self, *, trade_history_id, reason="", initiated
             "order_id": response_data.get("order_id"),
             "response": response,
         }
+    except ExitAccountTurnDeferred as exc:
+        raise self.retry(exc=exc, countdown=1, max_retries=300)
+    except Exception as exc:
+        if 'trade_history' in locals() and trade_history is not None:
+            from main.views import _restore_trade_after_failed_kill_switch
+            _restore_trade_after_failed_kill_switch(trade_history, str(exc))
+        if exit_intent_id:
+            BrokerOrderIntent.objects.filter(pk=exit_intent_id).update(
+                lifecycle_state=BrokerOrderIntent.LIFECYCLE_UNCERTAIN,
+                last_error=str(exc), reconcile_after=timezone.now(),
+            )
+        raise
     finally:
         if owns_dispatch:
             release_force_kill_dispatch(trade_history_id, dispatch_token)
+
+
+@shared_task(
+    bind=True,
+    autoretry_for=(),
+    max_retries=0,
+    acks_late=True,
+    reject_on_worker_lost=True,
+    queue="priority_exit_dispatch",
+)
+def dispatch_kill_switch_trade_task(self, *, broker, client_id, **dispatch_payload):
+    """Move a prepared Kill Switch request onto its isolated broker queue."""
+    from main.services.entry_control import enqueue_exit_account_order
+    from main.services.exit_dispatch import exit_queue_for_broker
+
+    trade_history_id = dispatch_payload.get("trade_history_id")
+    dispatch_token = dispatch_payload.get("dispatch_token")
+    order_key = f"kill:{trade_history_id}:{dispatch_token}"
+    enqueue_exit_account_order(
+        broker=broker,
+        client_id=client_id,
+        order_key=order_key,
+    )
+    queued = force_kill_switch_trade_task.apply_async(
+        kwargs=dispatch_payload,
+        queue=exit_queue_for_broker(broker),
+        priority=9,
+    )
+    return {"status": "dispatched", "task_id": queued.id, "queue": exit_queue_for_broker(broker)}
 
 
 def _history_has_reconciled_price(history):
@@ -470,6 +634,62 @@ def reconcile_broker_order_task(self, *, trade_history_id):
     raise self.retry(countdown=countdown)
 
 
+@shared_task(queue="priority_exit_dispatch", acks_late=True)
+def reconcile_exit_intents_task(limit=200):
+    """Resolve accepted or uncertain exits from broker truth without resubmitting."""
+    from datetime import timedelta
+    from django.db.models import Q
+    from django.utils.dateparse import parse_datetime
+    from main.models import BrokerOrderIntent
+    from main.services.exit_intents import record_fill, reconcile_intent_from_trade
+    from main.services.external_position_reconciliation import reconcile_externally_closed_trade
+
+    now = timezone.now()
+    candidates = BrokerOrderIntent.objects.select_related("exit_trade_history").filter(
+        kind=BrokerOrderIntent.KIND_EXIT,
+        lifecycle_state__in={
+            BrokerOrderIntent.LIFECYCLE_SUBMITTING,
+            BrokerOrderIntent.LIFECYCLE_BROKER_ACCEPTED,
+            BrokerOrderIntent.LIFECYCLE_PARTIAL,
+            BrokerOrderIntent.LIFECYCLE_FILLED,
+            BrokerOrderIntent.LIFECYCLE_UNCERTAIN,
+        },
+    ).filter(
+        Q(reconcile_after__isnull=True) | Q(reconcile_after__lte=now)
+    ).order_by("created_at")[:max(1, min(int(limit or 200), 500))]
+    reconciled = 0
+    deferred = 0
+    for intent in candidates:
+        if reconcile_intent_from_trade(intent.id):
+            reconciled += 1
+            continue
+        trade = intent.exit_trade_history
+        if not trade:
+            continue
+        try:
+            result = reconcile_externally_closed_trade(trade)
+            data = result.get("data", {}) if isinstance(result, dict) else {}
+            if data.get("status") == "reconciled_closed":
+                record_fill(
+                    intent_id=intent.id,
+                    quantity=data.get("filled_quantity") or intent.requested_quantity,
+                    price=data.get("executed_price"),
+                    broker_order_id=str(data.get("order_id") or intent.broker_order_id or ""),
+                    executed_at=parse_datetime(str(data.get("exchange_time") or "")),
+                    raw_fill=data,
+                )
+                reconcile_intent_from_trade(intent.id)
+                reconciled += 1
+                continue
+        except Exception as exc:
+            BrokerOrderIntent.objects.filter(pk=intent.id).update(last_error=str(exc))
+        BrokerOrderIntent.objects.filter(pk=intent.id).update(
+            reconcile_after=now + timedelta(seconds=10),
+        )
+        deferred += 1
+    return {"checked": len(candidates), "reconciled": reconciled, "deferred": deferred}
+
+
 @shared_task(bind=True, autoretry_for=(), max_retries=0, acks_late=True, soft_time_limit=300, time_limit=360)
 def process_manual_trade_batch_task(self, *, batch_id):
     from main.manual_trade_service import execute_manual_trade_batch
@@ -490,7 +710,8 @@ def process_manual_trade_batch_task(self, *, batch_id):
     time_limit=300,
 )
 def process_single_webhook_trade_task(
-    self, *, trade_id, index, context, history_mode="default", entry_order_key=None
+    self, *, trade_id, index, context, history_mode="default", entry_order_key=None,
+    entry_account_key=None,
 ):
     """Execute one webhook-matched trade so slow clients cannot block the batch."""
     from django.utils import timezone
@@ -540,24 +761,27 @@ def process_single_webhook_trade_task(
         from celery.exceptions import Retry
         from main.services.entry_control import (
             EntryAccountTurnDeferred,
+            ExitAccountTurnDeferred,
             account_fifo_turn,
+            exit_account_turn,
             reserve_entry,
         )
 
         order_key = str(entry_order_key or history_id or f"webhook:{trade.client_id}:{trade.id}")
         reserve_entry(order_key)
         transaction_type = str(context.get("transaction_type") or "").strip().upper()
-        is_exit = transaction_type in {"SELL", "EXIT", "CLOSE", "SELL_CE", "SELL_PE"}
-        if is_exit:
-            return _process_webhook_trade(trade, index, context, history_id=history_id)
+        is_exit = transaction_type in {
+            "SELL", "EXIT", "CLOSE", "SELL_CE", "SELL_PE", "SELL-C", "BUY-C",
+        }
         try:
-            with account_fifo_turn(
+            account_turn = exit_account_turn if is_exit else account_fifo_turn
+            with account_turn(
                 broker=trade.broker,
                 client_id=trade.client_id,
                 order_key=order_key,
             ):
                 return _process_webhook_trade(trade, index, context, history_id=history_id)
-        except EntryAccountTurnDeferred as exc:
+        except (EntryAccountTurnDeferred, ExitAccountTurnDeferred) as exc:
             raise self.retry(exc=exc, countdown=1, max_retries=300)
     except Retry:
         raise
@@ -628,13 +852,16 @@ def process_webhook_signal_task(self, *, trade_ids, context, history_mode="defau
     context = dict(context or {})
     queued_tasks = []
     from main.models import ClientTradeSetting
-    from main.services.entry_control import enqueue_account_order
+    from main.services.entry_control import enqueue_account_order, enqueue_exit_account_order
     from main.services.entry_dispatch import entry_queue_for_broker
+    from main.services.exit_dispatch import exit_queue_for_broker
 
     rows = ClientTradeSetting.objects.filter(pk__in=trade_ids).values("id", "client_id", "broker")
     accounts = {row["id"]: row for row in rows}
     transaction_type = str(context.get("transaction_type") or "").strip().upper()
-    is_exit = transaction_type in {"SELL", "EXIT", "CLOSE", "SELL_CE", "SELL_PE"}
+    is_exit = transaction_type in {
+        "SELL", "EXIT", "CLOSE", "SELL_CE", "SELL_PE", "SELL-C", "BUY-C",
+    }
     stream_specs = []
 
     for index, trade_id in enumerate(trade_ids, start=1):
@@ -664,8 +891,8 @@ def process_webhook_signal_task(self, *, trade_ids, context, history_mode="defau
                 "payload": {"index": index, "context": task_context, "history_mode": history_mode,
                             "trade_setting_id": trade_id},
             })
-        if not is_exit:
-            enqueue_account_order(broker=broker, client_id=client_id, order_key=order_key)
+        enqueue = enqueue_exit_account_order if is_exit else enqueue_account_order
+        enqueue(broker=broker, client_id=client_id, order_key=order_key)
         task = process_single_webhook_trade_task.apply_async(
             kwargs={
                 "trade_id": trade_id,
@@ -673,8 +900,9 @@ def process_webhook_signal_task(self, *, trade_ids, context, history_mode="defau
                 "context": task_context,
                 "history_mode": history_mode,
                 "entry_order_key": order_key,
+                "entry_account_key": f"{broker or 'unknown'}:{client_id}",
             },
-            queue=WEBHOOK_EXECUTION_QUEUE if is_exit else entry_queue_for_broker(broker),
+            queue=exit_queue_for_broker(broker) if is_exit else entry_queue_for_broker(broker),
             priority=8,
         )
         queued_tasks.append({"trade_setting_id": trade_id, "task_id": task.id})

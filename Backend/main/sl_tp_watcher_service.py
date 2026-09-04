@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+import uuid
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Dict, List, Optional
@@ -99,6 +100,7 @@ class SLTPWatcherService:
     RATE_LIMIT_COOLDOWN_SECONDS = 180
     EMPTY_RESPONSE_COOLDOWN_SECONDS = 120
     MAX_EXIT_RETRIES = 3
+    DISPATCH_LOCK_TIMEOUT_SECONDS = 300
 
     @staticmethod
     def _build_watch_result(
@@ -684,6 +686,16 @@ class SLTPWatcherService:
         lock_key = f"sl_tp_watcher_lock:{trade_order.history_id or trade_order.id}"
         cache.delete(lock_key)
 
+    def _reserve_dispatch(self, trade_order: Tradeorderhistory) -> Optional[str]:
+        token = uuid.uuid4().hex
+        key = f"sl_tp_watcher_dispatch:{trade_order.history_id or trade_order.id}"
+        return token if cache.add(key, token, timeout=self.DISPATCH_LOCK_TIMEOUT_SECONDS) else None
+
+    def release_dispatch(self, trade_order: Tradeorderhistory, token: str) -> None:
+        key = f"sl_tp_watcher_dispatch:{trade_order.history_id or trade_order.id}"
+        if token and cache.get(key) == token:
+            cache.delete(key)
+
     def _exit_cooldown_key(self, trade_order: Tradeorderhistory) -> str:
         return f"sl_tp_watcher_exit_cooldown:{trade_order.history_id or trade_order.id}"
 
@@ -849,7 +861,7 @@ class SLTPWatcherService:
             subscription_status=subscription_status,
         )
 
-    def process_trade(self, trade_order: Tradeorderhistory, execute_exit: bool = True) -> WatchResult:
+    def process_trade(self, trade_order: Tradeorderhistory, execute_exit: bool = True, dispatch_async: bool = True) -> WatchResult:
         if getattr(trade_order, "sltp_manual_attention", False):
             return self._build_watch_result(
                 trade_order,
@@ -1005,6 +1017,68 @@ class SLTPWatcherService:
                 cache_age_seconds=cache_age,
                 subscription_status=subscription_status,
             )
+
+        if dispatch_async:
+            dispatch_token = self._reserve_dispatch(trade_order)
+            if not dispatch_token:
+                return self._build_watch_result(
+                    trade_order, status="triggered",
+                    message="SL/TP exit is already queued for priority execution.",
+                    current_ltp=current_ltp, stop_loss_price=stop_loss_price,
+                    target_price=target_price, trigger_reason=trigger_reason,
+                    cache_age_seconds=cache_age, subscription_status=subscription_status,
+                )
+            try:
+                from main.services.entry_control import enqueue_exit_account_order
+                from main.services.exit_dispatch import exit_queue_for_broker
+                from main.services.exit_intents import reserve_exit_intent
+                from main.tasks import process_sltp_exit_task
+
+                trigger_snapshot = {
+                    "current_ltp": current_ltp,
+                    "trigger_reason": trigger_reason,
+                    "cache_age_seconds": cache_age,
+                    "subscription_status": subscription_status,
+                }
+                intent, created = reserve_exit_intent(
+                    trade=trade_order, source="sl_tp", source_type="sltp_exit",
+                    trigger_id=dispatch_token,
+                    payload={"dispatch_token": dispatch_token, "trigger_snapshot": trigger_snapshot,
+                             "trade_history_id": trade_order.id},
+                    publish=False,
+                )
+                if not created:
+                    self.release_dispatch(trade_order, dispatch_token)
+                    return self._build_watch_result(
+                        trade_order, status="triggered",
+                        message="An exit for this exact BUY is already queued or in progress.",
+                        current_ltp=current_ltp, stop_loss_price=stop_loss_price,
+                        target_price=target_price, trigger_reason=trigger_reason,
+                        response={"exit_intent_id": intent.id},
+                        cache_age_seconds=cache_age, subscription_status=subscription_status,
+                    )
+                queue = exit_queue_for_broker(trade_order.broker)
+                enqueue_exit_account_order(
+                    broker=trade_order.broker, client_id=trade_order.client_id,
+                    order_key=f"sltp:{trade_order.history_id or trade_order.id}",
+                )
+                task = process_sltp_exit_task.apply_async(
+                    kwargs={"trade_history_id": trade_order.id, "dispatch_token": dispatch_token,
+                            "trigger_snapshot": trigger_snapshot, "exit_intent_id": intent.id},
+                    queue=queue, priority=9,
+                )
+                self._mark_sltp_state(trade_order, status="EXIT_QUEUED", action="PRIORITY_EXIT_QUEUED")
+                return self._build_watch_result(
+                    trade_order, status="triggered",
+                    message="SL/TP crossed; exit queued for priority execution.",
+                    current_ltp=current_ltp, stop_loss_price=stop_loss_price,
+                    target_price=target_price, trigger_reason=trigger_reason,
+                    response={"dispatch_id": task.id, "queue": queue, "exit_intent_id": intent.id},
+                    cache_age_seconds=cache_age, subscription_status=subscription_status,
+                )
+            except Exception:
+                logger.exception("Priority SL/TP dispatch failed; using synchronous fallback", trade_id=trade_order.id)
+                self.release_dispatch(trade_order, dispatch_token)
 
         if not self._try_acquire_lock(trade_order):
             return self._build_watch_result(

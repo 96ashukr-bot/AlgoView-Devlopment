@@ -9,6 +9,7 @@ from django.utils import timezone
 
 SNAPSHOT_KEY = "broker_contract_snapshot"
 SCHEMA_VERSION = 1
+SNAPSHOT_SCHEMA_VERSION = SCHEMA_VERSION
 
 
 def _json_value(value):
@@ -114,6 +115,18 @@ def build_snapshot(*, broker_name, fields, underlying, expiry, strike, option_ty
     return {key: _json_value(value) for key, value in snapshot.items()}
 
 
+def build_broker_contract_snapshot(
+    *, broker_name, fields, underlying, expiry, strike, option_type,
+    buy_order_id, filled_quantity=None,
+):
+    """SaaS-compatible name for the canonical immutable BUY snapshot."""
+    return build_snapshot(
+        broker_name=broker_name, fields=fields, underlying=underlying,
+        expiry=expiry, strike=strike, option_type=option_type,
+        buy_order_id=buy_order_id, filled_quantity=filled_quantity,
+    )
+
+
 def valid_snapshot(value):
     if not isinstance(value, dict) or value.get("schema_version") != SCHEMA_VERSION:
         return False
@@ -134,6 +147,26 @@ def immutable_snapshot(*sources):
         if isinstance(source, dict) and valid_snapshot(source.get(SNAPSHOT_KEY)):
             return deepcopy(source[SNAPSHOT_KEY])
     return None
+
+
+def recoverable_exit_snapshot(value, *, expected_buy_order_id=None):
+    """Accept identity-complete legacy snapshots for exact reducing exits."""
+    if not isinstance(value, dict) or value.get("schema_version") != SCHEMA_VERSION:
+        return None
+    required = (
+        "broker_trading_symbol", "broker_instrument_id", "broker_exchange",
+        "broker_product_type", "filled_quantity", "buy_order_id",
+    )
+    if any(value.get(key) in (None, "", "None") for key in required):
+        return None
+    if expected_buy_order_id not in (None, "", "None") and str(value.get("buy_order_id")) != str(expected_buy_order_id):
+        return None
+    try:
+        if int(float(value["filled_quantity"])) <= 0:
+            return None
+    except (TypeError, ValueError):
+        return None
+    return deepcopy(value)
 
 
 def snapshot_exit_fields(snapshot):

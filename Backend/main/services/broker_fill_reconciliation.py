@@ -312,13 +312,22 @@ def _recalculate_sltp_fields(trade_order: Tradeorderhistory, entry_price: Decima
     return order_params, sltp_metadata
 
 
-def refresh_trade_fill_from_broker(trade_order: Tradeorderhistory, broker_details: ClientBrokerdetails) -> bool:
+def refresh_trade_fill_from_broker(
+    trade_order: Tradeorderhistory,
+    broker_details: ClientBrokerdetails,
+    *,
+    force: bool = False,
+) -> bool:
     if not trade_order or not broker_details or not trade_order.order_id:
         return False
 
     current_status = _normalize(trade_order.order_status)
     current_price = _to_decimal(trade_order.Entry_Price if str(trade_order.transaction_type).upper() == "BUY" else trade_order.Exit_Price)
-    if current_status in SUCCESS_STATUSES and current_price is not None:
+    # Normal background polling can stop once a terminal fill has been stored.
+    # Administrative repair/audit runs must be able to re-read the exact broker
+    # order because an early provisional/reference price may have been persisted
+    # before the final average fill became available.
+    if not force and current_status in SUCCESS_STATUSES and current_price is not None:
         return False
 
     # Multiple reconciliation tasks for the same account can overlap after a
@@ -464,6 +473,23 @@ def refresh_trade_fill_from_broker(trade_order: Tradeorderhistory, broker_detail
 
         order_params = trade_order.order_params if isinstance(trade_order.order_params, dict) else {}
         release_successful_buy_slot(order_params.get("trade_limit_reservation_key"))
+    if str(trade_order.transaction_type or "").upper() == "SELL" and status in SUCCESS_STATUSES and price is not None and quantity:
+        from main.services.exit_intents import record_trade_exit_fill
+
+        record_trade_exit_fill(
+            trade_order,
+            quantity=quantity,
+            price=price,
+            broker_order_id=str(trade_order.order_id or ""),
+            broker_trade_id=str(
+                broker_record.get("trade_id")
+                or broker_record.get("tradeId")
+                or broker_record.get("exchange_order_id")
+                or ""
+            ),
+            executed_at=execution_time,
+            raw_fill=broker_record,
+        )
     if str(trade_order.transaction_type or "").upper() == "SELL" and status in SUCCESS_STATUSES:
         from main.trade_history_service import consolidate_completed_exit_history
 
