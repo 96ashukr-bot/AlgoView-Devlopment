@@ -498,6 +498,21 @@ def process_single_webhook_trade_task(
     from main.views import _get_trade_execution_symbol, _process_webhook_trade, _save_webhook_trade_skip
 
     context = dict(context or {})
+    worker_started_at = timezone.now()
+    context.setdefault("entry_timing", {})["worker_started_at"] = worker_started_at.isoformat()
+    published_at = context.get("entry_task_published_at")
+    if published_at:
+        try:
+            from datetime import datetime
+            queued_for = (
+                worker_started_at - datetime.fromisoformat(str(published_at).replace("Z", "+00:00"))
+            ).total_seconds()
+            logger.info(
+                "Entry worker started trade_setting=%s queue_wait_ms=%s task_id=%s",
+                trade_id, max(0, round(queued_for * 1000)), getattr(self.request, "id", None),
+            )
+        except (TypeError, ValueError):
+            pass
     trade = (
         ClientTradeSetting.objects.select_related(
             "client",
@@ -624,6 +639,10 @@ def process_webhook_signal_task(self, *, trade_ids, context, history_mode="defau
 
     for index, trade_id in enumerate(trade_ids, start=1):
         account = accounts.get(trade_id, {})
+        task_context = dict(context)
+        task_context["entry_timing"] = dict(context.get("entry_timing") or {})
+        task_context["entry_task_published_at"] = timezone.now().isoformat()
+        task_context["entry_timing"]["task_published_at"] = task_context["entry_task_published_at"]
         signal_id = context.get("signal_log_id") or context.get("webhook_signal_log_id") or "legacy"
         order_key = f"webhook:{signal_id}:{account.get('client_id')}:{trade_id}"
         broker = account.get("broker")
@@ -642,7 +661,7 @@ def process_webhook_signal_task(self, *, trade_ids, context, history_mode="defau
                 "client_id": client_id,
                 "source_type": "webhook_trade",
                 "source_id": str(trade_id),
-                "payload": {"index": index, "context": context, "history_mode": history_mode,
+                "payload": {"index": index, "context": task_context, "history_mode": history_mode,
                             "trade_setting_id": trade_id},
             })
         if not is_exit:
@@ -651,7 +670,7 @@ def process_webhook_signal_task(self, *, trade_ids, context, history_mode="defau
             kwargs={
                 "trade_id": trade_id,
                 "index": index,
-                "context": context,
+                "context": task_context,
                 "history_mode": history_mode,
                 "entry_order_key": order_key,
             },
@@ -700,6 +719,13 @@ def process_single_manual_trade_result_task(
     except EntryAccountTurnDeferred as exc:
         raise self.retry(exc=exc, countdown=1, max_retries=300)
     return {"result_id": result_id, "status": "processed"}
+
+
+@shared_task
+def recover_stale_manual_trade_results_task():
+    from main.manual_trade_service import recover_stale_manual_trade_results
+
+    return recover_stale_manual_trade_results()
 
 company_profile=company_profile if company_profile else None
 

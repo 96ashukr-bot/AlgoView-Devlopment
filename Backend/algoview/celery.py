@@ -20,6 +20,11 @@ app.conf.beat_schedule = {
         "task": "main.tasks.refresh_and_prewarm_broker_masters_task",
         "schedule": crontab(hour=7, minute=45, day_of_week="1-5"),
     },
+    "recover-stale-manual-trade-results": {
+        "task": "main.tasks.recover_stale_manual_trade_results_task",
+        "schedule": 60.0,
+        "options": {"queue": "priority_entry", "priority": 7},
+    },
 }
 
 

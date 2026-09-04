@@ -5,7 +5,7 @@ import logging
 import threading
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime, timezone as datetime_timezone
+from datetime import datetime, timedelta, timezone as datetime_timezone
 from decimal import Decimal, InvalidOperation
 from typing import Any, Dict, Iterable, Optional
 
@@ -377,7 +377,16 @@ def _build_execution_request(result: ManualTradeResult) -> ExecutionRequest:
     batch = result.batch
     setting = result.trade_setting
     transaction_type, option_type = ACTION_TO_ORDER[batch.action]
-    live_price, live_price_source = _manual_trade_live_price(batch, setting, option_type)
+    shared_snapshot = (result.request_snapshot or {}).get("entry_price_snapshot") or {}
+    try:
+        live_price = Decimal(str(shared_snapshot.get("ltp")))
+    except (InvalidOperation, TypeError):
+        live_price = Decimal("0")
+    if live_price > 0:
+        live_price = live_price.quantize(Decimal("0.01"))
+        live_price_source = str(shared_snapshot.get("source") or "manual_shared_snapshot")
+    else:
+        live_price, live_price_source = _manual_trade_live_price(batch, setting, option_type)
     expiry = _local_expiry(setting.expiry_date)
     expiry_date = _local_expiry_date(setting.expiry_date)
     day, month, year, fullyear = _date_parts(expiry)
@@ -509,6 +518,23 @@ def _execute_manual_trade_result(result_id: int) -> None:
             "batch", "batch__group_service", "batch__requested_by", "client",
             "trade_setting", "trade_setting__segment", "trade_setting__sub_segment",
         ).get(pk=result_id)
+        result.request_snapshot = dict(result.request_snapshot or {})
+        result.request_snapshot.setdefault("entry_timing", {})["worker_started_at"] = timezone.now().isoformat()
+        readiness = result.request_snapshot.get("broker_session_readiness") or {}
+        if readiness.get("status") == "INVALID":
+            from main.services.broker_session_readiness import validate_broker_session
+
+            detail = ClientBrokerdetails.objects.select_related(
+                "client", "broker_name", "execution_node"
+            ).filter(
+                client_id=result.client_id,
+                broker_name__broker_name__iexact=str(result.broker or "").strip(),
+            ).first()
+            if detail:
+                readiness = validate_broker_session(detail, verify_remote=False)
+                result.request_snapshot["broker_session_readiness"] = readiness
+        if readiness.get("status") == "INVALID":
+            raise ValueError(readiness.get("reason") or "Broker session is invalid—reconnect broker.")
         execution_request = _build_execution_request(result)
         result.history_id = execution_request.history_id
         result.request_snapshot = {
@@ -562,21 +588,48 @@ def dispatch_manual_trade_batch(batch_id: int) -> Dict[str, Any]:
     """Publish each client independently to its broker-specific entry queue."""
     results = list(
         ManualTradeResult.objects.filter(batch_id=batch_id, status=ManualTradeResult.STATUS_PENDING)
-        .only("id", "batch_id", "client_id", "broker")
+        .select_related("batch", "trade_setting", "client")
         .order_by("id")
     )
     if not results:
         return _finalize_manual_trade_batch(batch_id)
     from main.services.entry_control import enqueue_account_order
     from main.services.entry_dispatch import entry_queue_for_broker
+    from main.services.broker_session_readiness import get_cached_readiness, validate_broker_session
     from main.tasks import process_single_manual_trade_result_task
 
     submitted = 0
     stream_specs = []
+    price_snapshots = {}
+    broker_details = {
+        (detail.client_id, normalize_broker_name(getattr(detail.broker_name, "broker_name", ""))): detail
+        for detail in ClientBrokerdetails.objects.select_related("client", "broker_name", "execution_node").filter(
+            client_id__in=[row.client_id for row in results]
+        )
+    }
     for result in results:
         result_id = result.id
         order_key = f"manual:{result.batch_id}:{result.client_id}"
         try:
+            setting = result.trade_setting
+            option_type = ACTION_TO_ORDER[result.batch.action][1]
+            price_key = (result.batch.symbol, str(_local_expiry_date(setting.expiry_date)),
+                         str(result.batch.strike_price), option_type)
+            if price_key not in price_snapshots:
+                price, source = _manual_trade_live_price(result.batch, setting, option_type)
+                price_snapshots[price_key] = {
+                    "ltp": float(price), "source": source, "captured_at": timezone.now().isoformat(),
+                }
+            detail = broker_details.get((result.client_id, normalize_broker_name(result.broker)))
+            readiness = get_cached_readiness(detail.id) if detail else None
+            if detail and not readiness:
+                readiness = validate_broker_session(detail, verify_remote=False)
+            snapshot = dict(result.request_snapshot or {})
+            snapshot["entry_price_snapshot"] = price_snapshots[price_key]
+            snapshot["broker_session_readiness"] = readiness
+            snapshot.setdefault("entry_timing", {})["task_published_at"] = timezone.now().isoformat()
+            result.request_snapshot = snapshot
+            result.save(update_fields=["request_snapshot", "updated_at"])
             if getattr(settings, "ORDER_STREAMS_ENABLED", False):
                 from main.models import BrokerOrderIntent
                 stream_specs.append({
@@ -611,6 +664,44 @@ def dispatch_manual_trade_batch(batch_id: int) -> Dict[str, Any]:
     if submitted != len(results):
         _finalize_manual_trade_batch(batch_id)
     return {"status": ManualTradeBatch.STATUS_PROCESSING, "submitted_count": submitted}
+
+
+def recover_stale_manual_trade_results(*, stale_seconds: Optional[int] = None) -> Dict[str, int]:
+    """Resolve abandoned PROCESSING claims without blindly resubmitting orders."""
+    from main.models import Tradeorderhistory
+
+    lease = max(60, int(stale_seconds or getattr(settings, "MANUAL_TRADE_PROCESSING_LEASE_SECONDS", 300)))
+    cutoff = timezone.now() - timedelta(seconds=lease)
+    recovered = failed = pending = 0
+    batch_ids = set()
+    for row in ManualTradeResult.objects.filter(
+        status=ManualTradeResult.STATUS_PROCESSING, updated_at__lt=cutoff,
+    ).order_by("id")[:500]:
+        batch_ids.add(row.batch_id)
+        history = Tradeorderhistory.objects.filter(history_id=row.history_id).first() if row.history_id else None
+        status = str(getattr(history, "order_status", "") or "").strip().lower()
+        if status in {"complete", "completed", "success", "executed", "traded", "filled"}:
+            ManualTradeResult.objects.filter(pk=row.pk).update(
+                status=ManualTradeResult.STATUS_SUCCESS, broker_status=status,
+                order_id=getattr(history, "order_id", None),
+                reason="Recovered from broker-confirmed order history after worker interruption.",
+                updated_at=timezone.now(),
+            )
+            recovered += 1
+        elif status in {"failed", "failure", "rejected", "cancelled", "canceled", "error"} or history is None:
+            reason = getattr(history, "failure_reason", None) if history else None
+            ManualTradeResult.objects.filter(pk=row.pk).update(
+                status=ManualTradeResult.STATUS_FAILED, broker_status=status,
+                order_id=getattr(history, "order_id", None),
+                reason=reason or "Worker result was uncertain; automatic resubmission was suppressed to prevent duplication.",
+                updated_at=timezone.now(),
+            )
+            failed += 1
+        else:
+            pending += 1
+    for batch_id in batch_ids:
+        _finalize_manual_trade_batch(batch_id)
+    return {"recovered": recovered, "failed": failed, "still_pending": pending}
 
 
 def execute_manual_trade_batch(batch_id: int) -> Dict[str, Any]:

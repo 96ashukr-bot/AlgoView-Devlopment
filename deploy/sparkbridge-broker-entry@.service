@@ -1,0 +1,18 @@
+[Unit]
+Description=AlgoView dedicated %i broker BUY worker
+After=network.target redis-server.service
+
+[Service]
+Type=simple
+User=ubuntu
+Group=www-data
+WorkingDirectory=/var/www/sparkbridge/Backend
+EnvironmentFile=-/var/www/sparkbridge/Backend/.env
+ExecStart=/bin/sh -c 'exec /var/www/sparkbridge/Backend/venv/bin/celery -A algoview worker --loglevel=INFO --queues=entry_%i --hostname=entry-%i@%%h --pool=threads --concurrency=${BROKER_ENTRY_WORKERS:-8} --prefetch-multiplier=1 -Ofair'
+Restart=always
+RestartSec=5
+TimeoutStopSec=330
+KillSignal=SIGTERM
+
+[Install]
+WantedBy=multi-user.target
