@@ -374,7 +374,13 @@ def reconcile_externally_closed_trade(trade_history: Tradeorderhistory):
     }
 
 
-def reconcile_failed_exit_response(trade_history: Tradeorderhistory, response: Any):
+def reconcile_failed_exit_response(
+    trade_history: Tradeorderhistory,
+    response: Any,
+    *,
+    kill_switch_ltp: Any = None,
+    kill_switch_time=None,
+):
     """Reconcile an external close after a panel exit receives broker failure."""
     response_data = response.get("data", {}) if isinstance(response, dict) else {}
     response_status = str(
