@@ -210,9 +210,11 @@ def find_broker_fill(orderbook_response: Any, order_id: Any) -> Optional[dict[st
     total_quantity = 0
     execution_time = None
     fill_statuses = set()
+    matched_records = []
     for record in _walk_dicts(orderbook_response):
         if expected_order_id not in _record_order_ids(record):
             continue
+        matched_records.append(record)
         price = _record_price(record)
         status = _record_status(record)
         if status:
@@ -233,8 +235,26 @@ def find_broker_fill(orderbook_response: Any, order_id: Any) -> Optional[dict[st
             "execution_time": execution_time,
         }
     if total_quantity > 0:
+        # Retain the broker's order record while aggregating fills. Contract
+        # identifiers such as Angel One's symboltoken/tradingsymbol are needed
+        # to build the immutable BUY snapshot used by every exit path.
+        identity_keys = {
+            "tradingsymbol", "trading_symbol", "symboltoken", "symbol_token",
+            "instrument_token", "instrument_key", "instrumentid", "securityid",
+            "exchange", "producttype", "product_type", "product", "pcode",
+        }
+        authoritative = max(
+            matched_records,
+            key=lambda item: sum(
+                1 for key, value in item.items()
+                if str(key).lower() in identity_keys and value not in (None, "", "None")
+            ),
+            default={},
+        )
+        authoritative_record = dict(authoritative)
+        authoritative_record["aggregated_fills"] = total_quantity
         return {
-            "record": {"aggregated_fills": total_quantity},
+            "record": authoritative_record,
             "price": (weighted_total / Decimal(total_quantity)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
             "quantity": total_quantity,
             "status": next(iter(fill_statuses)) if len(fill_statuses) == 1 else "executed",
@@ -323,11 +343,19 @@ def refresh_trade_fill_from_broker(
 
     current_status = _normalize(trade_order.order_status)
     current_price = _to_decimal(trade_order.Entry_Price if str(trade_order.transaction_type).upper() == "BUY" else trade_order.Exit_Price)
-    # Normal background polling can stop once a terminal fill has been stored.
+    is_buy = str(trade_order.transaction_type or "").upper() == "BUY"
+    snapshot_is_valid = True
+    if is_buy:
+        from main.brokers.contract_snapshot import SNAPSHOT_KEY, valid_snapshot
+
+        snapshot_is_valid = valid_snapshot((trade_order.order_params or {}).get(SNAPSHOT_KEY))
+
+    # Normal background polling can stop once a terminal fill and, for BUYs,
+    # a broker-confirmed contract snapshot have both been stored.
     # Administrative repair/audit runs must be able to re-read the exact broker
     # order because an early provisional/reference price may have been persisted
     # before the final average fill became available.
-    if not force and current_status in SUCCESS_STATUSES and current_price is not None:
+    if not force and current_status in SUCCESS_STATUSES and current_price is not None and snapshot_is_valid:
         return False
 
     # Multiple reconciliation tasks for the same account can overlap after a

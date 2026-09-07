@@ -16,7 +16,7 @@ from main.brokers.contract_snapshot import (
     recoverable_exit_snapshot,
     valid_snapshot,
 )
-from main.models import BrokerOrderFill, BrokerOrderIntent, Tradeorderhistory
+from main.models import BrokerOrderFill, BrokerOrderIntent, ClientBrokerdetails, Tradeorderhistory
 from main.services.order_streams import create_intent
 
 
@@ -28,6 +28,39 @@ ACTIVE_LIFECYCLES = {
     BrokerOrderIntent.LIFECYCLE_PARTIAL,
     BrokerOrderIntent.LIFECYCLE_UNCERTAIN,
 }
+
+
+def _refresh_missing_buy_snapshot(trade: Tradeorderhistory) -> Tradeorderhistory:
+    """Recover broker-confirmed BUY identity before an exit fails closed.
+
+    New orders normally receive this snapshot during fill reconciliation. This
+    synchronous read-only recovery covers legacy rows and a reconciliation
+    race without ever deriving a live broker identifier from display fields.
+    """
+    params = trade.order_params if isinstance(trade.order_params, dict) else {}
+    if valid_snapshot(params.get("broker_contract_snapshot")):
+        return trade
+    if str(trade.broker or "").strip().lower() in {"demo", "demo broker"}:
+        return trade
+
+    from main.broker_registry import normalize_broker_name
+    from main.services.broker_fill_reconciliation import refresh_trade_fill_from_broker
+
+    target_broker = normalize_broker_name(trade.broker)
+    broker_details = next(
+        (
+            details
+            for details in ClientBrokerdetails.objects.select_related(
+                "broker_name", "execution_node"
+            ).filter(client=trade.client)
+            if normalize_broker_name(getattr(details.broker_name, "broker_name", "")) == target_broker
+        ),
+        None,
+    )
+    if broker_details:
+        refresh_trade_fill_from_broker(trade, broker_details, force=True)
+        trade.refresh_from_db()
+    return trade
 
 
 def _source_event(source: str, *, trigger_id: str = "", metadata: dict | None = None) -> dict:
@@ -126,6 +159,9 @@ def reserve_exit_intent(
     duplicate protection. Redis publication happens after commit via the
     existing durable outbox.
     """
+    # Do not hold a database row lock during a broker order-book request.
+    # The row is locked and re-read immediately afterwards before reservation.
+    trade = _refresh_missing_buy_snapshot(trade)
     with transaction.atomic():
         locked = Tradeorderhistory.objects.select_for_update().select_related("client").get(pk=trade.pk)
         existing = BrokerOrderIntent.objects.select_for_update().filter(

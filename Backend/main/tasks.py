@@ -522,7 +522,14 @@ def _reconciliation_is_terminal(history):
     if status in {"rejected", "cancelled", "canceled", "failed"}:
         return True
     if status in {"complete", "completed", "success", "traded", "filled", "executed"}:
-        return _history_has_reconciled_price(history)
+        if not _history_has_reconciled_price(history):
+            return False
+        if str(getattr(history, "transaction_type", "") or "").strip().upper() == "BUY":
+            from main.brokers.contract_snapshot import SNAPSHOT_KEY, valid_snapshot
+
+            params = history.order_params if isinstance(history.order_params, dict) else {}
+            return valid_snapshot(params.get(SNAPSHOT_KEY))
+        return True
     return False
 
 
@@ -571,7 +578,7 @@ def reconcile_zerodha_order_task(self, *, trade_history_id):
         return {"status": "missing", "trade_history_id": trade_history_id}
 
     current_status = str(trade_history.order_status or "").strip().lower()
-    if current_status in terminal_statuses:
+    if current_status in terminal_statuses and _reconciliation_is_terminal(trade_history):
         return {"status": current_status, "trade_history_id": trade_history_id}
 
     broker_details = next(
@@ -590,7 +597,7 @@ def reconcile_zerodha_order_task(self, *, trade_history_id):
     refresh_trade_fill_from_broker(trade_history, broker_details)
     trade_history.refresh_from_db()
     current_status = str(trade_history.order_status or "").strip().lower()
-    if current_status in terminal_statuses:
+    if current_status in terminal_statuses and _reconciliation_is_terminal(trade_history):
         return {"status": current_status, "trade_history_id": trade_history_id}
 
     countdown = min(15 + (self.request.retries * 5), 60)
