@@ -3596,6 +3596,8 @@ class UpdateTradeSettingStatusView(APIView):
             with transaction.atomic():
                 trade_setting.is_tread_status = is_trade_status
                 trade_setting.save()
+                from main.services.entry_readiness import invalidate_entry_readiness
+                invalidate_entry_readiness()
                 # Serialize and return updated data
                                 # Create a TradeLog entry to record the update
                 TradeLog.objects.create(
@@ -3661,6 +3663,8 @@ class UpdateTradeStatusView(APIView):
             with transaction.atomic():
                 trade_setting.is_tread_status = is_trade_status
                 trade_setting.save()
+                from main.services.entry_readiness import invalidate_entry_readiness
+                invalidate_entry_readiness()
                 TradeLog.objects.create(
                     client=user,
                     trade_setting=trade_setting,
@@ -5153,6 +5157,8 @@ class ClientsTradeStatusView(APIView):
         # Update the client's trading status
         client.is_enable = is_enable
         client.save()
+        from main.services.entry_readiness import invalidate_entry_readiness
+        invalidate_entry_readiness()
 
         # Serialize the updated client
         serializer = UserclientSerializer(client)
@@ -5308,6 +5314,8 @@ class EnableDisableBrokerView(APIView):
         # Update the 'is_enable' field
         client.is_enable = is_enable
         client.save()
+        from main.services.entry_readiness import invalidate_entry_readiness
+        invalidate_entry_readiness()
 
         status_message = "enabled" if is_enable else "disabled"
         return Response(

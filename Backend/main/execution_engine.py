@@ -429,6 +429,10 @@ class ExecutionEngine:
             return response
 
     def _run_pre_dispatch_validations(self, request: ExecutionRequest) -> Dict[str, Any]:
+        entry_authorization = self._validate_entry_authorization(request)
+        if entry_authorization:
+            return entry_authorization
+
         basic_validation = self._validate_basic_order_fields(request)
         if basic_validation:
             return basic_validation
@@ -517,6 +521,73 @@ class ExecutionEngine:
         }
 
         return {"status": "success", **context}
+
+    @staticmethod
+    def _validate_entry_authorization(request: ExecutionRequest) -> Optional[Dict[str, Any]]:
+        """Re-check mutable BUY permissions immediately before broker dispatch."""
+        if request.is_exit_order:
+            return None
+
+        user_id = getattr(request.user, "id", None)
+        if not user_id:
+            return {
+                "status": "error",
+                "message": "Client identity is unavailable for this BUY order.",
+                "error_code": "MISSING_CLIENT",
+            }
+
+        from main.models import User
+
+        client_state = User.objects.filter(pk=user_id).values(
+            "is_active", "is_enable", "client_status"
+        ).first()
+        if not client_state or not client_state.get("is_active"):
+            return {
+                "status": "error",
+                "message": "Client login is inactive. BUY order was blocked.",
+                "error_code": "CLIENT_INACTIVE",
+            }
+        if not client_state.get("is_enable"):
+            return {
+                "status": "error",
+                "message": "Client trading status is OFF. BUY order was blocked before broker submission.",
+                "error_code": "CLIENT_TRADING_DISABLED",
+            }
+        if client_state.get("client_status") is False:
+            return {
+                "status": "error",
+                "message": "Client status is inactive. BUY order was blocked.",
+                "error_code": "CLIENT_STATUS_INACTIVE",
+            }
+
+        trade_id = getattr(request.trade, "id", None)
+        if trade_id and not ClientTradeSetting.objects.filter(
+            pk=trade_id, client_id=user_id, is_tread_status=True
+        ).exists():
+            return {
+                "status": "error",
+                "message": "Client script trading status is OFF. BUY order was blocked before broker submission.",
+                "error_code": "SCRIPT_TRADING_DISABLED",
+            }
+
+        if request.broker_name in {"angel one", "angle one"}:
+            broker_detail = (
+                ClientBrokerdetails.objects.filter(
+                    client_id=user_id,
+                    broker_name__broker_name__iexact="Angel One",
+                )
+                .only("tokenCreatedAt")
+                .first()
+            )
+            token_created_at = getattr(broker_detail, "tokenCreatedAt", None)
+            token_login_date = timezone.localtime(token_created_at).date() if token_created_at else None
+            if token_login_date != timezone.localdate():
+                return {
+                    "status": "error",
+                    "message": "Angel One daily login is required before placing a BUY order.",
+                    "error_code": "ANGEL_ONE_DAILY_LOGIN_REQUIRED",
+                }
+        return None
 
     def _align_exit_request_with_open_position(self, request: ExecutionRequest) -> Optional[Dict[str, Any]]:
         if request.transaction_type.upper() != "SELL" or request.is_multi_leg_order:

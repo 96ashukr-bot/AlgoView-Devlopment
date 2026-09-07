@@ -130,6 +130,23 @@ class LoginActivityService:
     def _session_status(self, broker_payload: Dict[str, Any], token_status: Dict[str, Any]) -> Dict[str, Any]:
         client_code = (broker_payload.get("broker_Demate_User_Name") or broker_payload.get("broker_API_UID") or "").strip() or None
         api_key = (broker_payload.get("broker_API_KEY") or "").strip() or None
+        broker_name = str(broker_payload.get("broker_name__broker_name") or "").strip().casefold()
+        token_created_at = broker_payload.get("tokenCreatedAt")
+        if broker_name in {"angel one", "angle one"}:
+            token_login_date = None
+            if token_created_at:
+                try:
+                    token_login_date = timezone.localtime(token_created_at).date()
+                except (TypeError, ValueError):
+                    token_login_date = None
+            if token_login_date != timezone.localdate():
+                return {
+                    "status": "inactive",
+                    "is_active": False,
+                    "last_activity_at": token_created_at.isoformat() if token_created_at else None,
+                    "validated_at": None,
+                    "source": "daily_login_required",
+                }
         if not client_code or not api_key:
             return {
                 "status": "unavailable",
@@ -247,10 +264,24 @@ class LoginActivityService:
         token_status = self._token_status(broker_payload)
         session_status = self._session_status(broker_payload, token_status)
 
+        if session_status.get("source") == "daily_login_required":
+            token_status = {
+                **token_status,
+                "status": "expired",
+                "is_active": False,
+                "is_expired": True,
+            }
+
         client_code = (broker_payload.get("broker_Demate_User_Name") or broker_payload.get("broker_API_UID") or "").strip() or None
         api_key = (broker_payload.get("broker_API_KEY") or "").strip() or None
 
-        if client_code and api_key and (not session_status.get("is_active")) and self._has_recoverable_auth(broker_payload):
+        if (
+            client_code
+            and api_key
+            and not session_status.get("is_active")
+            and session_status.get("source") != "daily_login_required"
+            and self._has_recoverable_auth(broker_payload)
+        ):
             try:
                 ensure = AuthService().ensure_valid_session(
                     client_id=client_code,
