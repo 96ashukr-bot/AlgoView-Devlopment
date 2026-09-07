@@ -121,6 +121,30 @@ def get_execution_node_for_client(client: User) -> ExecutionNode | None:
     return broker_node.execution_node if broker_node else None
 
 
+def ensure_broker_execution_node(broker_details: ClientBrokerdetails) -> ExecutionNode | None:
+    """Resolve and persist the broker row's route from its client assignment.
+
+    Broker credentials may be saved after an execution node was assigned. In
+    that case the authoritative client assignment is valid while the newer
+    broker row still has a NULL route. Readiness checks must repair that
+    denormalised reference instead of rejecting an otherwise routable order.
+    """
+    if not broker_details or not broker_details.client_id:
+        return None
+    current = broker_details.execution_node
+    if current and execution_node_assigned_to_client(current, broker_details.client):
+        return current
+    node = get_execution_node_for_client(broker_details.client)
+    if not node or not execution_node_assigned_to_client(node, broker_details.client):
+        return None
+    ClientBrokerdetails.objects.filter(
+        pk=broker_details.pk,
+        client_id=broker_details.client_id,
+    ).update(execution_node=node)
+    broker_details.execution_node = node
+    return node
+
+
 def sync_client_broker_execution_nodes(client: User) -> ExecutionNode | None:
     node = get_execution_node_for_client(client)
     if node:
