@@ -31,7 +31,15 @@ SELL_VALUES = {"sell", "s", "-1"}
 SYMBOL_KEYS = ("tradingsymbol", "tradingSymbol", "trading_symbol", "symbol", "symbolName")
 PRODUCT_KEYS = ("producttype", "productType", "product", "product_type")
 TRANSACTION_KEYS = ("transactiontype", "transactionType", "transaction_type", "side")
-NET_QUANTITY_KEYS = ("netqty", "netQty", "net_quantity", "netQuantity", "quantity")
+NET_QUANTITY_KEYS = (
+    "netqty",
+    "Netqty",  # Alice Blue A3 position payload
+    "netQty",
+    "NetQty",
+    "net_quantity",
+    "netQuantity",
+    "quantity",
+)
 PRODUCT_ALIASES = {
     "MIS": "INTRADAY",
     "I": "INTRADAY",
