@@ -14,6 +14,7 @@ import uuid
 from datetime import timedelta
 
 from django.conf import settings
+from django.core.serializers.json import DjangoJSONEncoder
 from django.db import close_old_connections, connections, transaction
 from django.db.models import Case, CharField, Value, When
 from django.utils import timezone
@@ -72,14 +73,28 @@ def _assert_credential_free(value, path="payload"):
             _assert_credential_free(child, f"{path}[{index}]")
 
 
+def _json_safe(value):
+    """Return a detached value accepted by PostgreSQL JSON fields.
+
+    Prices on trade rows are Decimals, while intent payloads can also contain
+    datetimes/UUIDs.  Django's model JSONField does not apply DjangoJSONEncoder
+    by default, so normalise the complete intent document before persisting it.
+    Decimal values intentionally become strings to avoid losing price precision;
+    execution consumers already parse numeric payload fields at their boundary.
+    """
+    return json.loads(json.dumps(value, cls=DjangoJSONEncoder))
+
+
 def create_intent(*, idempotency_key: str, kind: str, broker: str, client_id: int,
                   source_type: str, source_id: str, payload: dict | None = None,
                   exit_trade_history_id: int | None = None, exit_generation: int = 0,
                   trigger_sources: list | None = None, contract_snapshot: dict | None = None,
                   requested_quantity: int = 0, publish: bool = True) -> tuple[BrokerOrderIntent, bool]:
     """Reserve a durable intent; repeated publication returns the original row."""
-    safe_payload = dict(payload or {})
+    safe_payload = _json_safe(dict(payload or {}))
     _assert_credential_free(safe_payload)
+    safe_trigger_sources = _json_safe(list(trigger_sources or []))
+    safe_contract_snapshot = _json_safe(dict(contract_snapshot or {}))
     partition = f"{broker_slug(broker)}:{int(client_id)}"
     with transaction.atomic():
         intent, created = BrokerOrderIntent.objects.get_or_create(
@@ -94,8 +109,8 @@ def create_intent(*, idempotency_key: str, kind: str, broker: str, client_id: in
                     BrokerOrderIntent.LIFECYCLE_TRIGGERED
                     if kind == BrokerOrderIntent.KIND_EXIT else BrokerOrderIntent.LIFECYCLE_QUEUED
                 ),
-                "trigger_sources": list(trigger_sources or []),
-                "contract_snapshot": dict(contract_snapshot or {}),
+                "trigger_sources": safe_trigger_sources,
+                "contract_snapshot": safe_contract_snapshot,
                 "requested_quantity": max(int(requested_quantity or 0), 0),
                 "remaining_quantity": max(int(requested_quantity or 0), 0),
             },
@@ -118,7 +133,7 @@ def create_intents_batch(specs: list[dict]) -> dict[str, BrokerOrderIntent]:
     rows = []
     for spec in specs:
         key = str(spec["idempotency_key"])
-        payload = dict(spec.get("payload") or {})
+        payload = _json_safe(dict(spec.get("payload") or {}))
         _assert_credential_free(payload)
         broker = normalize_broker_name(spec["broker"])
         client_id = int(spec["client_id"])

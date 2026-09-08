@@ -1,5 +1,7 @@
 from unittest import mock
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timezone
+from decimal import Decimal
 
 from django.test import TestCase, override_settings
 
@@ -37,6 +39,26 @@ class OrderStreamArchitectureTests(TestCase):
         self.assertFalse(duplicate_created)
         self.assertEqual(first.pk, second.pk)
         self.assertEqual(first.status, BrokerOrderIntent.STATUS_RESERVED)
+
+    def test_intent_normalizes_decimal_and_datetime_json_values(self):
+        captured_at = datetime(2026, 9, 8, 10, 30, tzinfo=timezone.utc)
+        with self.captureOnCommitCallbacks(execute=False):
+            intent, created = create_intent(
+                idempotency_key="decimal-kill-switch", kind=BrokerOrderIntent.KIND_EXIT,
+                broker="Angel One", client_id=self.client.id,
+                source_type="kill_switch_exit", source_id="72912",
+                payload={"captured_ltp": Decimal("61.85"), "captured_at": captured_at},
+                trigger_sources=[{"metadata": {"captured_ltp": Decimal("61.85")}}],
+                contract_snapshot={"strike": Decimal("23800.00")},
+                publish=False,
+            )
+
+        self.assertTrue(created)
+        intent.refresh_from_db()
+        self.assertEqual(intent.payload["captured_ltp"], "61.85")
+        self.assertEqual(intent.payload["captured_at"], "2026-09-08T10:30:00Z")
+        self.assertEqual(intent.trigger_sources[0]["metadata"]["captured_ltp"], "61.85")
+        self.assertEqual(intent.contract_snapshot["strike"], "23800.00")
 
     @mock.patch("main.services.order_streams.publish_intent", side_effect=ConnectionError("redis unavailable"))
     def test_redis_failure_keeps_committed_outbox_without_bubbling(self, _publish):
