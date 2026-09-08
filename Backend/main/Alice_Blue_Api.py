@@ -703,6 +703,7 @@ def place_alice_orders(
     trigger_price=None, proxy_config=None, session_id=None,
     allow_direct_node_execution=False,
     instrument_id_override=None,
+    buffer_percentage=None,
 ):
     if not proxy_config and not allow_direct_node_execution:
         return _alice_failed_response("Proxy/static-IP execution route is required for Alice Blue orders.")
@@ -801,7 +802,9 @@ def place_alice_orders(
                 if ltp == 0:
                     return _alice_failed_response("Alice Blue live price is unavailable for this option. Please retry after quotes are available.")
 
-            price = resolve_limit_price(explicit_price, ltp, transaction_type)
+            price = resolve_limit_price(
+                explicit_price, ltp, transaction_type, buffer_percentage=buffer_percentage
+            )
             if not price:
                 return _alice_failed_response("Unable to calculate Alice Blue limit price.")
         elif requested_order_type == "MARKET":

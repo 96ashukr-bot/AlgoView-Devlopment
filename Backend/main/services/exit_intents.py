@@ -17,7 +17,7 @@ from main.brokers.contract_snapshot import (
     valid_snapshot,
 )
 from main.models import BrokerOrderFill, BrokerOrderIntent, ClientBrokerdetails, Tradeorderhistory
-from main.services.order_streams import create_intent
+from main.services.order_streams import create_intent, _json_safe
 
 
 ACTIVE_LIFECYCLES = {
@@ -68,7 +68,8 @@ def _source_event(source: str, *, trigger_id: str = "", metadata: dict | None = 
         "source": str(source or "unknown").strip().lower(),
         "trigger_id": str(trigger_id or ""),
         "triggered_at": timezone.now().isoformat(),
-        "metadata": deepcopy(metadata or {}),
+        # Retry events bypass create_intent; normalise before JSONField saves too.
+        "metadata": _json_safe(metadata or {}),
     }
 
 

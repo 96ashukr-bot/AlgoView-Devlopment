@@ -129,6 +129,12 @@ class AliceBlueBroker(BaseBroker):
             or order.get("tradingsymbol")
             or build_trade_symbol(order, self.broker_name)
         )
+        # Preserve the validated request buffer, or the account setting for
+        # exits built directly from trade history. The API helper's global
+        # default can round back to LTP and leave an urgent SELL unfilled.
+        buffer_percentage = order.get("buffer_percentage")
+        if buffer_percentage in (None, ""):
+            buffer_percentage = getattr(self.broker_details, "buffer_percentage", None)
         response = place_alice_orders(
             order.get("LivePrice"),
             order.get("group_service"),
@@ -161,6 +167,7 @@ class AliceBlueBroker(BaseBroker):
             session_id=get_access_token(self.broker_details),
             allow_direct_node_execution=bool(payload.get("_allow_direct_node_execution")),
             instrument_id_override=stored_instrument_id,
+            buffer_percentage=buffer_percentage,
         )
         response = self._normalize_aggregated_fill_response(response, order.get("quantity"))
         mark_open_position_closed(open_position, response)

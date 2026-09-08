@@ -38,6 +38,28 @@ class UnifiedExitIntentTests(TestCase):
             order_params={"broker_contract_snapshot": self.snapshot},
         )
 
+    def test_decimal_retry_joins_broker_accepted_exit_without_new_order(self):
+        first, _ = reserve_exit_intent(
+            trade=self.buy, source="kill_switch", source_type="kill_switch_exit",
+            trigger_id="initial", payload={"captured_ltp": Decimal("49.65")}, publish=False,
+        )
+        first.lifecycle_state = BrokerOrderIntent.LIFECYCLE_BROKER_ACCEPTED
+        first.save(update_fields=["lifecycle_state"])
+        payload = {"captured_ltp": Decimal("47.00"),
+                   "nested": [{"price": Decimal("49.65")} ]}
+        joined, created = reserve_exit_intent(
+            trade=self.buy, source="kill_switch", source_type="kill_switch_exit",
+            trigger_id="retry", payload=payload, publish=False,
+        )
+        self.assertFalse(created)
+        self.assertEqual(joined.pk, first.pk)
+        joined.refresh_from_db()
+        self.assertEqual(joined.lifecycle_state, BrokerOrderIntent.LIFECYCLE_BROKER_ACCEPTED)
+        self.assertEqual(joined.trigger_sources[-1]["metadata"]["captured_ltp"], "47.00")
+        self.assertEqual(joined.trigger_sources[-1]["metadata"]["nested"][0]["price"], "49.65")
+        self.assertEqual(payload["captured_ltp"], Decimal("47.00"))
+        self.assertEqual(BrokerOrderIntent.objects.filter(exit_trade_history=self.buy).count(), 1)
+
     def test_all_exit_sources_join_one_exact_buy(self):
         first, created = reserve_exit_intent(
             trade=self.buy, source="sl_tp", source_type="sltp_exit",
