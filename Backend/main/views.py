@@ -4772,6 +4772,17 @@ class SuperadminForceKillSwitchAPIView(APIView):
 
         failed_count = sum(1 for item in results if item["status"] in {"failed", "broker_rejected"})
         queued_count = sum(1 for item in results if item["status"] == "queued")
+        logger.info(
+            "Force Kill Switch request processed",
+            extra={
+                "user_id": request.user.id,
+                "trade_history_ids": trade_ids,
+                "async_mode": async_mode,
+                "queued_count": queued_count,
+                "failed_count": failed_count,
+                "results": results,
+            },
+        )
         response_status = status.HTTP_202_ACCEPTED if async_mode and failed_count == 0 else (
             status.HTTP_200_OK if failed_count == 0 else status.HTTP_207_MULTI_STATUS
         )

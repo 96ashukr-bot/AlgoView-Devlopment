@@ -356,15 +356,37 @@ const Orders = () => {
         reason: "Orders selected kill switch",
         async: true,
       });
-      setOrders((current) => current.filter((order) => !selectedEligibleIds.includes(order.id)));
-      setSelectedTradeIds((current) => current.filter((id) => !selectedEligibleIds.includes(id)));
-      window.setTimeout(() => {
-        fetchOrders();
-      }, 1200);
+      const results = Array.isArray(response?.results) ? response.results : [];
+      const acceptedIds = new Set(
+        results
+          .filter((result) => ["queued", "sent"].includes(String(result?.status || "").toLowerCase()))
+          .map((result) => Number(result?.trade_history_id))
+          .filter(Number.isFinite)
+      );
+      setSelectedTradeIds((current) => current.filter((id) => !acceptedIds.has(Number(id))));
+
+      // Keep rows visible until the backend confirms broker completion. Some
+      // adapters acknowledge the SELL first and reconcile the BUY a few
+      // seconds later. Optimistically removing every selected row previously
+      // made validation failures look like successful exits.
+      [1200, 4000, 10000].forEach((delay) => {
+        window.setTimeout(() => fetchOrders({ silent: true }), delay);
+      });
       const failedCount = response?.failed_count || 0;
       const queuedCount = response?.queued_count || 0;
+      const failedMessages = results
+        .filter((result) => ["failed", "broker_rejected"].includes(String(result?.status || "").toLowerCase()))
+        .map((result) => {
+          const order = orders.find((row) => Number(row.id) === Number(result?.trade_history_id));
+          const client = order?.client_name || order?.client?.fullName || `Trade #${result?.trade_history_id}`;
+          return `${client}: ${result?.message || "Exit request was rejected."}`;
+        });
       if (failedCount) {
-        Swal.fire("Kill Switch Queued", `${queuedCount || response?.sent_count || 0} exit order(s) queued. ${failedCount} failed validation.`, "warning");
+        Swal.fire({
+          title: "Kill Switch Partially Queued",
+          text: `${queuedCount || response?.sent_count || 0} exit order(s) queued.\n\n${failedMessages.join("\n")}`,
+          icon: "warning",
+        });
       } else {
         Swal.fire("Kill Switch Sent", `${queuedCount || selectedEligibleIds.length} exit order(s) queued for immediate square off.`, "success");
       }
