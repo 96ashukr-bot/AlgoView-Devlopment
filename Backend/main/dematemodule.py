@@ -869,7 +869,8 @@ def _save_session_tokens_compat(broker_details, request_token, access_token, ref
     broker_details.access_token = access_token or None
     broker_details.refreshToken = refresh_token or None
     broker_details.feed_token = feed_token or None
-    broker_details.isTokenExpired = not bool(access_token)
+    from main.services.daily_broker_sessions import session_policy_error
+    broker_details.isTokenExpired = not bool(access_token) or bool(session_policy_error(broker_details))
     broker_details.tokenCreatedAt = now()
     broker_details.save()
     node = getattr(broker_details, "execution_node", None)

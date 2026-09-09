@@ -81,13 +81,21 @@ class ClientSession:
         with self._lock:
             if self.status != SessionStatus.ACTIVE or not self.access_token:
                 return False
-            if self.session_expiry and timezone.now() > self.session_expiry:
+            from main.services.daily_broker_sessions import daily_cutoff, aware
+            now = timezone.now()
+            if not self.login_time or now < aware(self.login_time) or now >= daily_cutoff(self.login_time):
+                self.status = SessionStatus.EXPIRED
+                return False
+            if self.session_expiry and now >= self.session_expiry:
                 self.status = SessionStatus.EXPIRED
                 return False
             return True
 
     def can_refresh(self) -> bool:
         with self._lock:
+            from main.services.daily_broker_sessions import daily_cutoff
+            if not self.login_time or timezone.now() >= daily_cutoff(self.login_time):
+                return False
             if not self.refresh_token:
                 return False
             if self.refresh_token_expiry and timezone.now() > self.refresh_token_expiry:
@@ -525,6 +533,11 @@ class SessionManager:
         verify_remote: bool = True,
         proxy_config: Optional[Dict[str, str]] = None,
     ) -> Dict[str, Any]:
+        from main.services.daily_broker_sessions import session_policy_error
+        if broker_details is not None:
+            policy_error = session_policy_error(broker_details, refresh=True)
+            if policy_error:
+                return {"status": "error", "message": policy_error}
         session_key = self._get_session_key(client_id, api_key, proxy_config)
         breaker = self._breaker_for_session(session_key)
         if breaker.is_open():

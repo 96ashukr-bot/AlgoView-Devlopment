@@ -11,6 +11,13 @@
 #     send_mail(subject, message, from_email, [email])
 # tasks.py
 from celery import shared_task
+
+
+@shared_task
+def expire_daily_broker_tokens_task():
+    from main.services.daily_broker_sessions import expire_due_client_tokens
+    return {"expired": expire_due_client_tokens()}
+
 from django.core.mail import send_mail
 from django.conf import settings
 from django.core.cache import cache

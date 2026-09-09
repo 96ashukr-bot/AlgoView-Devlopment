@@ -5566,7 +5566,8 @@ class BrokerGenerateTokenView(APIView):
                     mark_token_created=True,
                 )
                 broker_details.access_token = access_token
-                broker_details.isTokenExpired = False
+                from main.services.daily_broker_sessions import session_policy_error
+                broker_details.isTokenExpired = bool(session_policy_error(broker_details))
                 broker_details.save()
                 from main.tasks import schedule_broker_session_warmup
 

@@ -47,6 +47,9 @@ class AngelOneBroker(BaseBroker):
         return {"status": "success"}
 
     def place_order(self, payload, proxy_config=None):
+        policy_error = self.daily_session_error()
+        if policy_error:
+            return policy_error
         order = payload.get("order", payload)
         nested_order_params = order.get("order_params") if isinstance(order.get("order_params"), dict) else {}
         order, open_position, close_error = prepare_close_order_from_open_position(

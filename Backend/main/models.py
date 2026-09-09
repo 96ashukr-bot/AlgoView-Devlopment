@@ -1108,10 +1108,12 @@ class ClientBrokerdetails(models.Model):
             self.access_token = None
             self.refreshToken = None
             self.feed_token = None
-        self.access_token_expiry = expiry
-        self.isTokenExpired = not bool(access_token)
-        if mark_token_created:
+        from main.services.daily_broker_sessions import capped_expiry, session_policy_error
+        if mark_token_created and access_token:
             self.tokenCreatedAt = timezone.now()
+        self.access_token_expiry = capped_expiry(self.tokenCreatedAt, expiry) if access_token and self.tokenCreatedAt else expiry
+        self.isTokenExpired = not bool(access_token)
+        self.isTokenExpired = self.isTokenExpired or bool(session_policy_error(self, require_token=False))
 
     def clear_session_tokens(self) -> None:
         self.set_session_tokens(None, None, None, expiry=None)

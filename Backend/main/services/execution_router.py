@@ -120,6 +120,10 @@ def route_order_to_execution_node(client: User, broker_details: ClientBrokerdeta
     if not broker_details or broker_details.client_id != client.id:
         raise ValidationError("Broker details do not belong to the selected client.")
 
+    from main.services.daily_broker_sessions import session_policy_error
+    policy_error = session_policy_error(broker_details, refresh=True)
+    if policy_error:
+        raise ValidationError(policy_error)
     node = broker_details.execution_node or get_execution_node_for_client(client)
     if not node:
         raise ValidationError("No execution node assigned to this client.")

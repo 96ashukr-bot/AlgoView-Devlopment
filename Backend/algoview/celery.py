@@ -16,6 +16,14 @@ app.autodiscover_tasks()
 app.conf.broker_connection_retry_on_startup = True
 app.conf.beat_schedule = {
     **(getattr(app.conf, "beat_schedule", {}) or {}),
+    "expire-client-broker-tokens-at-2355-ist": {
+        "task": "main.tasks.expire_daily_broker_tokens_task",
+        "schedule": crontab(hour=23, minute=55),
+    },
+    "recover-overdue-client-broker-token-expiry": {
+        "task": "main.tasks.expire_daily_broker_tokens_task",
+        "schedule": 60.0,
+    },
     "refresh-pre-market-broker-masters": {
         "task": "main.tasks.refresh_and_prewarm_broker_masters_task",
         "schedule": crontab(hour=7, minute=45, day_of_week="1-5"),

@@ -21,7 +21,16 @@ def readiness_key(broker_details_id: int) -> str:
 
 def get_cached_readiness(broker_details_id: int) -> dict[str, Any] | None:
     value = cache.get(readiness_key(broker_details_id))
-    return value if isinstance(value, dict) else None
+    if not isinstance(value, dict):
+        return None
+    from main.models import ClientBrokerdetails
+    from main.services.daily_broker_sessions import session_policy_error
+    details = ClientBrokerdetails.objects.select_related("broker_name").filter(pk=broker_details_id).first()
+    if details is None:
+        return None
+    if normalize_broker_name(details.broker_name.broker_name) != "demo broker" and session_policy_error(details):
+        return None
+    return value
 
 
 def _save(details, *, status: str, reason: str, remote_verified: bool = False) -> dict[str, Any]:
@@ -43,6 +52,10 @@ def validate_broker_session(details, *, verify_remote: bool = False) -> dict[str
     broker = normalize_broker_name(getattr(details.broker_name, "broker_name", ""))
     if broker == "demo broker":
         return _save(details, status="READY", reason="Demo Broker requires no session.", remote_verified=True)
+    from main.services.daily_broker_sessions import session_policy_error
+    policy_error = session_policy_error(details)
+    if policy_error:
+        return _save(details, status="INVALID", reason=policy_error)
     service_error = details.client.service_access_error()
     if service_error:
         return _save(details, status="INVALID", reason=service_error)

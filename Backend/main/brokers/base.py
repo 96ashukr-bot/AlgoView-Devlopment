@@ -13,6 +13,13 @@ class BaseBrokerAdapter(ABC):
     def __init__(self, broker_details):
         self.broker_details = broker_details
 
+    def daily_session_error(self):
+        from main.services.daily_broker_sessions import session_policy_error
+        error = session_policy_error(self.broker_details, refresh=True)
+        if error:
+            return {"status": "failed", "message": error, "data": {"status": "Failed", "message": error, "error_code": "DAILY_BROKER_TOKEN_REQUIRED"}}
+        return None
+
     def require_proxy_config(self, proxy_config: dict[str, str] | None) -> dict[str, str]:
         if not proxy_config:
             raise ProxyRoutingRequiredError(

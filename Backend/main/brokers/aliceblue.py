@@ -96,6 +96,9 @@ class AliceBlueBroker(BaseBroker):
         return ""
 
     def place_order(self, payload, proxy_config=None):
+        policy_error = self.daily_session_error()
+        if policy_error:
+            return policy_error
         order = payload.get("order", payload)
         order, open_position, close_error = prepare_close_order_from_open_position(
             self.broker_details.client, order, self.broker_name

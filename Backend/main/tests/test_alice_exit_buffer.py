@@ -14,7 +14,7 @@ class AliceExitBufferTests(TestCase):
         order = dict(symbol='NIFTY', transaction_type='SELL', quantity=130,
                      original_broker_instrument_key='42628', Exchange='NFO',
                      buffer_percentage=requested)
-        with mock.patch('main.brokers.aliceblue.prepare_close_order_from_open_position', return_value=(order, None, None)), \
+        with mock.patch.object(AliceBlueBroker, 'daily_session_error', return_value=None), mock.patch('main.brokers.aliceblue.prepare_close_order_from_open_position', return_value=(order, None, None)), \
              mock.patch('main.brokers.aliceblue.get_access_token', return_value='test'), \
              mock.patch('main.brokers.aliceblue.mark_open_position_closed'), \
              mock.patch('main.brokers.aliceblue.place_alice_orders', return_value={'data': {'status': 'open'}}) as place:

@@ -429,6 +429,11 @@ class ExecutionEngine:
             return response
 
     def _run_pre_dispatch_validations(self, request: ExecutionRequest) -> Dict[str, Any]:
+        if request.broker_name != "demo broker":
+            from main.services.daily_broker_sessions import session_policy_error
+            policy_error = session_policy_error(self._get_client_broker(request))
+            if policy_error:
+                return {"status": "error", "message": policy_error, "error_code": "DAILY_BROKER_TOKEN_REQUIRED"}
         entry_authorization = self._validate_entry_authorization(request)
         if entry_authorization:
             return entry_authorization
@@ -1146,6 +1151,11 @@ class ExecutionEngine:
         return contract_expiry
 
     def _dispatch(self, request: ExecutionRequest, validation_context: Dict[str, Any]) -> Dict[str, Any]:
+        if request.broker_name != "demo broker":
+            from main.services.daily_broker_sessions import session_policy_error
+            policy_error = session_policy_error(self._get_client_broker(request))
+            if policy_error:
+                return self._failed_response(policy_error, error_code="DAILY_BROKER_TOKEN_REQUIRED")
         if request.broker_name == "demo broker":
             fill_price = self._demo_fill_price(request)
             if fill_price is None:
