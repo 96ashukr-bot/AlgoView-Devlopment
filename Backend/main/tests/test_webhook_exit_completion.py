@@ -107,3 +107,34 @@ class WebhookExitCompletionTests(TestCase):
         self.intent.lifecycle_state='broker_accepted';self.intent.save(update_fields=['lifecycle_state'])
         self.assertFalse(self.record({'data':{'status':'Failed','error_code':'INVALID_SESSION'}}))
         self.assertEqual(self.intent.lifecycle_state,'broker_accepted')
+
+
+class AngelFreshCallbackTests(SimpleTestCase):
+    def test_fresh_token_verifies_before_replacing_expired_saved_session(self):
+        from main.angelone.services.auth_service import AuthService
+        manager=Mock()
+        session=Mock(access_token='fresh-test-token',refresh_token='test-refresh',feed_token='test-feed')
+        session.session_expiry=datetime(2026,9,9,23,55,tzinfo=IST)
+        session.to_dict.return_value={}
+        manager.create_session_from_tokens.return_value=session
+        manager.validate_session.return_value={'status':'success','session':session}
+        details=Mock(isTokenExpired=True)
+        details.access_token_expiry=session.session_expiry
+        details.execution_node=None
+        with patch('main.angelone.services.auth_service.SessionManager.get_instance',return_value=manager):
+            result=AuthService().register_existing_tokens(client_id='test',api_key='test',access_token='fresh-test-token',broker_details=details,verify_remote=True)
+        self.assertEqual(result['status'],'success')
+        self.assertIsNone(manager.validate_session.call_args.kwargs['broker_details'])
+        self.assertTrue(manager.validate_session.call_args.kwargs['verify_remote'])
+        self.assertTrue(details.set_session_tokens.call_args.kwargs['mark_token_created'])
+
+    def test_rejected_fresh_token_cannot_replace_saved_credentials(self):
+        from main.angelone.services.auth_service import AuthService
+        manager=Mock()
+        manager.validate_session.return_value={'status':'error','message':'Invalid token'}
+        details=Mock(isTokenExpired=True)
+        with patch('main.angelone.services.auth_service.SessionManager.get_instance',return_value=manager):
+            result=AuthService().register_existing_tokens(client_id='test',api_key='test',access_token='invalid-test-token',broker_details=details,verify_remote=True)
+        self.assertEqual(result['status'],'error')
+        details.set_session_tokens.assert_not_called()
+        details.save.assert_not_called()

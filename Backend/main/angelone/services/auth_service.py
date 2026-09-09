@@ -232,10 +232,12 @@ class AuthService:
                 persist=True,
                 proxy_config=proxy_config,
             )
+            # Verify the newly supplied session, not yesterday's saved login.
+            # Durable token timestamps are updated only after broker verification.
             validation = self._session_manager.validate_session(
                 client_id=client_id,
                 api_key=api_key,
-                broker_details=broker_details,
+                broker_details=None,
                 verify_remote=True,
                 proxy_config=proxy_config,
             )
