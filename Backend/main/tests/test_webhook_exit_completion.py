@@ -1,0 +1,109 @@
+from datetime import datetime, timedelta
+from types import SimpleNamespace
+from unittest.mock import Mock, patch
+import inspect
+
+from django.test import TestCase, SimpleTestCase
+from django.utils import timezone
+from main.models import BrokerOrderIntent, Role, Tradeorderhistory, User
+from main.services.daily_broker_sessions import IST
+from main.services.exit_intents import ACTIVE_LIFECYCLES
+from main.services.webhook_exit_completion import record_direct_webhook_exit_result, mark_stale_direct_webhook_exits
+
+
+class AngelLoginExpiryTests(SimpleTestCase):
+    def test_login_expiry_is_today_2355_before_and_after_nine_am(self):
+        from main.angelone_views import _calculate_session_expiry
+        for hour, minute in [(0,1),(8,0),(9,0),(12,30),(23,54),(23,55)]:
+            now=datetime(2026,9,9,hour,minute,tzinfo=IST)
+            with self.subTest(time=now), patch('django.utils.timezone.now',return_value=now):
+                self.assertEqual(_calculate_session_expiry(),datetime(2026,9,9,23,55,tzinfo=IST))
+
+
+class WebhookExitCompletionTests(TestCase):
+    def setUp(self):
+        role=Role.objects.create(name='exit-completion-test')
+        self.user=User.objects.create_user(email='exit-completion@example.test',firstName='Test',lastName='Client',phoneNumber='9000000992',password='test',role=role)
+        self.trade=Tradeorderhistory.objects.create(client=self.user,broker='Angel One',transaction_type='BUY',order_status='complete',trade_order_status='OPEN',EntryQty=65)
+        self.intent=BrokerOrderIntent.objects.create(client=self.user,broker='angel one',idempotency_key='completion-test',kind='exit',account_partition='angelone:test',source_type='webhook_exit_direct',source_id=str(self.trade.pk),exit_trade_history=self.trade,lifecycle_state='submitting',status='published',remaining_quantity=65,requested_quantity=65,heartbeat_at=timezone.now())
+
+    def record(self,response,**kwargs):
+        result=record_direct_webhook_exit_result(self.intent.pk,client_id=kwargs.get('client_id',self.user.pk),side=kwargs.get('side','SELL'),response=response,history_id='test-history')
+        self.intent.refresh_from_db()
+        return result
+
+    def test_pre_submission_token_failure_releases_active_state(self):
+        self.record({'data':{'status':'Failed','error_code':'DAILY_BROKER_TOKEN_REQUIRED','message':'Generate today token'}})
+        self.assertEqual(self.intent.status,'rejected')
+        self.assertNotIn(self.intent.lifecycle_state,ACTIVE_LIFECYCLES)
+        self.assertEqual(self.intent.last_error,'Generate today token')
+
+    def test_timeout_remains_duplicate_protected(self):
+        self.record({'data':{'status':'Failed','message':'Order placement timed out'}})
+        self.assertEqual(self.intent.lifecycle_state,'submission_uncertain')
+        self.assertIn(self.intent.lifecycle_state,ACTIVE_LIFECYCLES)
+        self.assertEqual(self.intent.remaining_quantity,65)
+
+    def test_broker_acknowledgement_is_saved_without_inventing_fill(self):
+        self.record({'data':{'status':'open','order_id':'BROKER-1'}})
+        self.assertEqual(self.intent.lifecycle_state,'broker_accepted')
+        self.assertEqual(self.intent.broker_order_id,'BROKER-1')
+        self.assertEqual(self.intent.remaining_quantity,65)
+        self.assertIsNone(self.intent.filled_at)
+
+    def test_success_without_order_id_remains_uncertain(self):
+        self.record({'data':{'status':'success'}})
+        self.assertEqual(self.intent.lifecycle_state,'submission_uncertain')
+
+    def test_confirmed_closed_trade_is_reconciled(self):
+        self.trade.trade_order_status='CLOSED';self.trade.save(update_fields=['trade_order_status'])
+        self.record({'data':{'status':'complete','order_id':'BROKER-1'}})
+        self.assertEqual(self.intent.lifecycle_state,'reconciled')
+        self.assertEqual(self.intent.remaining_quantity,0)
+
+    def test_entry_leg_and_foreign_client_cannot_overwrite_exit(self):
+        self.assertFalse(self.record({'status':'Failed'},side='BUY'))
+        self.assertFalse(self.record({'status':'Failed'},client_id=self.user.pk+999))
+        self.assertEqual(self.intent.lifecycle_state,'submitting')
+
+    def test_recorded_fill_cannot_be_downgraded(self):
+        self.intent.lifecycle_state='filled';self.intent.save(update_fields=['lifecycle_state'])
+        self.assertFalse(self.record({'status':'Failed'}))
+        self.assertEqual(self.intent.lifecycle_state,'filled')
+
+    def test_stale_worker_is_marked_uncertain_and_not_replayed(self):
+        now=timezone.now()
+        self.assertEqual(mark_stale_direct_webhook_exits(now=now),0)
+        self.assertEqual(mark_stale_direct_webhook_exits(now=now+timedelta(minutes=7)),1)
+        self.assertEqual(mark_stale_direct_webhook_exits(now=now+timedelta(minutes=8)),0)
+        self.intent.refresh_from_db()
+        self.assertEqual(self.intent.lifecycle_state,'submission_uncertain')
+        self.assertIn(self.intent.lifecycle_state,ACTIVE_LIFECYCLES)
+
+    def test_joining_existing_exit_does_not_reset_state_or_heartbeat(self):
+        from main.views import _bind_webhook_close_to_open_buy
+        self.intent.lifecycle_state='broker_accepted';self.intent.save(update_fields=['lifecycle_state'])
+        original_heartbeat=self.intent.heartbeat_at
+        with patch('main.brokers.position_guard.find_matching_open_buy_position',return_value=self.trade),patch('main.brokers.position_guard.history_strike',return_value=23500),patch('main.services.exit_intents.reserve_exit_intent',return_value=(self.intent,False)):
+            result=_bind_webhook_close_to_open_buy(user=self.user,broker='Angel One',group_service='',symbol='NIFTY',strike=23500,option_type='PE',expiry='2026-09-15',order_params={})
+        self.intent.refresh_from_db()
+        self.assertEqual(self.intent.lifecycle_state,'broker_accepted')
+        self.assertEqual(self.intent.heartbeat_at,original_heartbeat)
+        self.assertTrue(result['exit_intent_joined_existing'])
+
+    def test_direct_webhook_wrapper_records_engine_validation_failure(self):
+        from main.views import place_order_broker
+        kwargs={name:None for name in inspect.signature(place_order_broker).parameters}
+        kwargs.update(user=self.user,trade=SimpleNamespace(broker='Angel One'),transaction_type='SELL',symbol='NIFTY',order_params={'broker_order_intent_id':self.intent.pk},history_id='test-history')
+        response={'data':{'status':'Failed','error_code':'INVALID_SESSION','message':'Reconnect broker'}}
+        engine=Mock();engine.execute_order.return_value=response
+        with patch('main.views.ExecutionRequest'),patch('main.views.get_execution_engine',return_value=engine),patch('main.views.save_trade_order_history'):
+            self.assertEqual(place_order_broker(**kwargs),response)
+        self.intent.refresh_from_db()
+        self.assertEqual(self.intent.lifecycle_state,'manual_attention')
+        self.assertEqual(self.intent.last_error,'Reconnect broker')
+
+    def test_late_failure_cannot_downgrade_broker_accepted_order(self):
+        self.intent.lifecycle_state='broker_accepted';self.intent.save(update_fields=['lifecycle_state'])
+        self.assertFalse(self.record({'data':{'status':'Failed','error_code':'INVALID_SESSION'}}))
+        self.assertEqual(self.intent.lifecycle_state,'broker_accepted')

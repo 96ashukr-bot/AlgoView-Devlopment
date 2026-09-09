@@ -51,12 +51,8 @@ def _get_angel_broker_details_for_user(user):
 
 
 def _calculate_session_expiry():
-    current_time = timezone.now()
-    if current_time.hour < 3 or (current_time.hour == 3 and current_time.minute < 30):
-        expiry_date = current_time.date()
-    else:
-        expiry_date = current_time.date() + timedelta(days=1)
-    return datetime.combine(expiry_date, datetime.min.time(), tzinfo=current_time.tzinfo) + timedelta(hours=3, minutes=30)
+    from main.services.daily_broker_sessions import daily_cutoff
+    return daily_cutoff(timezone.now())
 
 
 def _is_public_browser_origin(origin):

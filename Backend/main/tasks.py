@@ -658,7 +658,9 @@ def reconcile_exit_intents_task(limit=200):
     from main.services.exit_intents import record_fill, reconcile_intent_from_trade
     from main.services.external_position_reconciliation import reconcile_externally_closed_trade
 
+    from main.services.webhook_exit_completion import mark_stale_direct_webhook_exits
     now = timezone.now()
+    mark_stale_direct_webhook_exits(now=now)
     candidates = BrokerOrderIntent.objects.select_related("exit_trade_history").filter(
         kind=BrokerOrderIntent.KIND_EXIT,
         lifecycle_state__in={

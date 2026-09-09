@@ -557,10 +557,11 @@ def _bind_webhook_close_to_open_buy(
         )
         intent_id = intent.id
         joined_existing = not created
-        BrokerOrderIntent.objects.filter(pk=intent.id).update(
-            lifecycle_state=BrokerOrderIntent.LIFECYCLE_SUBMITTING,
-            heartbeat_at=timezone.now(),
-        )
+        if created:
+            BrokerOrderIntent.objects.filter(pk=intent.id).update(
+                lifecycle_state=BrokerOrderIntent.LIFECYCLE_SUBMITTING,
+                heartbeat_at=timezone.now(),
+            )
     bound = dict(order_params or {})
     bound["original_history_id"] = open_buy.history_id or open_buy.id
     bound["webhook_bound_open_history_id"] = open_buy.history_id or open_buy.id
@@ -4046,6 +4047,21 @@ def place_order_broker(LivePrice,group_service,
             history_id=history_id
         )
         return response
+    finally:
+        # Persist direct webhook completion even for pre-dispatch validation
+        # failures. A joined exit or the entry leg must never overwrite it.
+        try:
+            from main.services.webhook_exit_completion import record_direct_webhook_exit_result
+            params = order_params if isinstance(order_params, dict) else {}
+            if not params.get("exit_intent_joined_existing"):
+                record_direct_webhook_exit_result(
+                    params.get("broker_order_intent_id"), client_id=user.pk,
+                    side=transaction_type,
+                    response=locals().get("order_response") or locals().get("response") or {},
+                    history_id=history_id,
+                )
+        except Exception:
+            logger.exception("Could not record direct webhook exit completion")
 
 
 OPEN_TRADE_ORDER_STATUSES = {
