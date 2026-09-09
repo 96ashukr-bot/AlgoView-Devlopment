@@ -658,6 +658,7 @@ def reconcile_exit_intents_task(limit=200):
     from main.services.exit_intents import record_fill, reconcile_intent_from_trade
     from main.services.external_position_reconciliation import reconcile_externally_closed_trade
 
+    from main.services.uncertain_exit_recovery import recover_broker_absent_exit
     from main.services.webhook_exit_completion import mark_stale_direct_webhook_exits, recover_saved_token_rejection
     now = timezone.now()
     mark_stale_direct_webhook_exits(now=now)
@@ -682,6 +683,13 @@ def reconcile_exit_intents_task(limit=200):
             continue
         if reconcile_intent_from_trade(intent.id):
             reconciled += 1
+            continue
+        absence_result = recover_broker_absent_exit(intent.id)
+        if absence_result == "released":
+            recovered_failures += 1
+            continue
+        if absence_result == "observing":
+            deferred += 1
             continue
         trade = intent.exit_trade_history
         if not trade:
