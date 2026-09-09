@@ -82,3 +82,60 @@ def mark_stale_direct_webhook_exits(*, now=None):
         last_error="Exit worker finished without a recorded outcome. Broker confirmation is required before another exit; no order was replayed.",
         reconcile_after=now, updated_at=now,
     )
+
+
+def recover_saved_token_rejection(intent_id, *, now=None):
+    """Release a stale direct exit only from its exact persisted token rejection.
+
+    This repairs the ledger; it neither queues an exit nor changes credentials.
+    Unknown outcomes and any evidence of broker acceptance remain protected.
+    """
+    now = now or timezone.now()
+    with transaction.atomic():
+        intent = BrokerOrderIntent.objects.select_for_update().filter(
+            pk=intent_id, kind=BrokerOrderIntent.KIND_EXIT,
+            source_type="webhook_exit_direct",
+            lifecycle_state=BrokerOrderIntent.LIFECYCLE_UNCERTAIN,
+        ).first()
+        if not intent or intent.broker_order_id or intent.broker_accepted_at:
+            return False
+        if (intent.heartbeat_at or intent.created_at) > now - timedelta(minutes=6):
+            return False
+        trade = Tradeorderhistory.objects.filter(
+            pk=intent.exit_trade_history_id, client_id=intent.client_id,
+            transaction_type__iexact="BUY",
+        ).first()
+        if not trade:
+            return False
+        # Inspect the latest linked result, including successes, rather than
+        # selecting an older failure that could hide a later submission.
+        history = Tradeorderhistory.objects.filter(
+            client_id=intent.client_id, transaction_type__iexact="SELL",
+        ).filter(
+            Q(order_params__broker_order_intent_id=intent.pk)
+            | Q(order_params__broker_order_intent_id=str(intent.pk))
+        ).order_by("-pk").first()
+        if not history or history.order_id not in (None, "", "0"):
+            return False
+        params = history.order_params or {}
+        identities = {str(trade.pk)}
+        if trade.history_id:
+            identities.add(str(trade.history_id))
+        if str(params.get("original_history_id") or "") not in identities:
+            return False
+        bound = params.get("webhook_bound_open_history_id")
+        if bound is not None and str(bound) not in identities:
+            return False
+        response = history.response_data if isinstance(history.response_data, dict) else {}
+        data = response.get("data") if isinstance(response.get("data"), dict) else response
+        if (
+            str(data.get("status") or "").lower() not in {"failed", "error", "rejected"}
+            or data.get("error_code") != "DAILY_BROKER_TOKEN_REQUIRED"
+            or data.get("order_id") not in (None, "", "0", 0)
+            or data.get("orderid") not in (None, "", "0", 0)
+        ):
+            return False
+        return record_direct_webhook_exit_result(
+            intent.pk, client_id=intent.client_id, side="SELL",
+            response=response, history_id=history.history_id or history.pk,
+        )

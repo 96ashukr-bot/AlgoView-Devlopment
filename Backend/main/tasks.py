@@ -658,7 +658,7 @@ def reconcile_exit_intents_task(limit=200):
     from main.services.exit_intents import record_fill, reconcile_intent_from_trade
     from main.services.external_position_reconciliation import reconcile_externally_closed_trade
 
-    from main.services.webhook_exit_completion import mark_stale_direct_webhook_exits
+    from main.services.webhook_exit_completion import mark_stale_direct_webhook_exits, recover_saved_token_rejection
     now = timezone.now()
     mark_stale_direct_webhook_exits(now=now)
     candidates = BrokerOrderIntent.objects.select_related("exit_trade_history").filter(
@@ -674,8 +674,12 @@ def reconcile_exit_intents_task(limit=200):
         Q(reconcile_after__isnull=True) | Q(reconcile_after__lte=now)
     ).order_by("created_at")[:max(1, min(int(limit or 200), 500))]
     reconciled = 0
+    recovered_failures = 0
     deferred = 0
     for intent in candidates:
+        if recover_saved_token_rejection(intent.id, now=now):
+            recovered_failures += 1
+            continue
         if reconcile_intent_from_trade(intent.id):
             reconciled += 1
             continue
@@ -703,7 +707,7 @@ def reconcile_exit_intents_task(limit=200):
             reconcile_after=now + timedelta(seconds=10),
         )
         deferred += 1
-    return {"checked": len(candidates), "reconciled": reconciled, "deferred": deferred}
+    return {"checked": len(candidates), "reconciled": reconciled, "recovered_failures": recovered_failures, "deferred": deferred}
 
 
 @shared_task(bind=True, autoretry_for=(), max_retries=0, acks_late=True, soft_time_limit=300, time_limit=360)

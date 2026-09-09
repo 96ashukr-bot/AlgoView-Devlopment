@@ -138,3 +138,82 @@ class AngelFreshCallbackTests(SimpleTestCase):
         self.assertEqual(result['status'],'error')
         details.set_session_tokens.assert_not_called()
         details.save.assert_not_called()
+
+
+class SavedTokenRejectionRecoveryTests(TestCase):
+    def setUp(self):
+        WebhookExitCompletionTests.setUp(self)
+        self.intent.lifecycle_state = 'submission_uncertain'
+        self.intent.heartbeat_at = timezone.now() - timedelta(minutes=10)
+        self.intent.save(update_fields=['lifecycle_state', 'heartbeat_at'])
+        self.failure = Tradeorderhistory.objects.create(
+            client=self.user, transaction_type='SELL', order_status='Failed',
+            order_params={'broker_order_intent_id': self.intent.pk, 'original_history_id': str(self.trade.pk)},
+            response_data={'data': {'status': 'Failed', 'error_code': 'DAILY_BROKER_TOKEN_REQUIRED', 'message': 'Generate today token'}},
+        )
+
+    def recover(self):
+        from main.services.webhook_exit_completion import recover_saved_token_rejection
+        result = recover_saved_token_rejection(self.intent.pk)
+        self.intent.refresh_from_db()
+        return result
+
+    def test_exact_saved_rejection_releases_only_ledger_and_is_idempotent(self):
+        self.assertTrue(self.recover())
+        self.assertEqual(self.intent.lifecycle_state, 'manual_attention')
+        self.assertEqual(self.intent.status, 'rejected')
+        self.assertFalse(self.recover())
+        self.trade.refresh_from_db()
+        self.assertEqual(self.trade.trade_order_status, 'OPEN')
+        self.assertEqual(BrokerOrderIntent.objects.count(), 1)
+
+    def test_string_intent_id_and_buy_history_id_supported(self):
+        self.trade.history_id = 'original-buy'; self.trade.save(update_fields=['history_id'])
+        self.failure.order_params = {'broker_order_intent_id': str(self.intent.pk), 'original_history_id': 'original-buy'}
+        self.failure.save(update_fields=['order_params'])
+        self.assertTrue(self.recover())
+
+    def test_foreign_intent_or_buy_binding_cannot_release(self):
+        for params in [
+            {'broker_order_intent_id': self.intent.pk + 99, 'original_history_id': str(self.trade.pk)},
+            {'broker_order_intent_id': self.intent.pk, 'original_history_id': 'unrelated-buy'},
+            {'broker_order_intent_id': self.intent.pk, 'original_history_id': str(self.trade.pk), 'webhook_bound_open_history_id': 'unrelated-buy'},
+        ]:
+            self.failure.order_params = params; self.failure.save(update_fields=['order_params'])
+            self.assertFalse(self.recover())
+
+    def test_foreign_client_cannot_release(self):
+        self.failure.client = User.objects.create_user(email='other-recovery@example.test', firstName='Other', lastName='Client', phoneNumber='9000000993', role=self.user.role)
+        self.failure.save(update_fields=['client'])
+        self.assertFalse(self.recover())
+
+    def test_timeout_or_generic_failure_cannot_release(self):
+        for code in ['', 'NETWORK_TIMEOUT']:
+            self.failure.response_data = {'data': {'status': 'Failed', 'error_code': code}}
+            self.failure.save(update_fields=['response_data'])
+            self.assertFalse(self.recover())
+
+    def test_accepted_or_recent_intent_cannot_release(self):
+        self.intent.lifecycle_state = 'broker_accepted'; self.intent.save(update_fields=['lifecycle_state'])
+        self.assertFalse(self.recover())
+        self.intent.lifecycle_state = 'submission_uncertain'
+        self.intent.heartbeat_at = timezone.now()
+        self.intent.save(update_fields=['lifecycle_state', 'heartbeat_at'])
+        self.assertFalse(self.recover())
+
+    def test_broker_order_evidence_cannot_release(self):
+        self.failure.order_id = 'ACCEPTED-1'; self.failure.save(update_fields=['order_id'])
+        self.assertFalse(self.recover())
+        self.failure.order_id = ''; self.failure.save(update_fields=['order_id'])
+        self.intent.broker_order_id = 'ACCEPTED-1'; self.intent.save(update_fields=['broker_order_id'])
+        self.assertFalse(self.recover())
+
+    def test_newer_unknown_or_success_result_cannot_be_hidden_by_old_failure(self):
+        latest = Tradeorderhistory.objects.create(
+            client=self.user, transaction_type='SELL', order_params=self.failure.order_params,
+            response_data={'data': {'status': 'Failed', 'message': 'Timeout'}},
+        )
+        self.assertFalse(self.recover())
+        latest.response_data = {'data': {'status': 'success', 'order_id': 'BROKER-1'}}
+        latest.save(update_fields=['response_data'])
+        self.assertFalse(self.recover())
