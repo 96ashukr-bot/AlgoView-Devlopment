@@ -33,6 +33,11 @@ app.conf.beat_schedule = {
         "schedule": 60.0,
         "options": {"queue": "priority_entry", "priority": 7},
     },
+    "expire-pending-buy-and-sell-orders": {
+        "task": "main.tasks.discover_pending_order_timeouts_task",
+        "schedule": 5.0,
+        "options": {"queue": "pending_order_timeout", "expires": 5},
+    },
     "reconcile-durable-exit-intents": {
         "task": "main.tasks.reconcile_exit_intents_task",
         "schedule": 10.0,

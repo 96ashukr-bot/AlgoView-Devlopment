@@ -66,3 +66,6 @@ env/
 */migrations/*
 !*/migrations/__init__.py
 !main/migrations/0001_add_order_type_and_buffer_to_client_trade_setting.py
+
+# Required schema for pending BUY/SELL timeout monitoring.
+!main/migrations/0032_pending_order_timeouts.py

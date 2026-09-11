@@ -1809,3 +1809,28 @@ class Payment(models.Model):
 
     def __str__(self):
         return f"Payment {self.razorpay_order_id} - {'Success' if self.payment_status else 'Pending'}"
+
+
+class PendingOrderTimeout(models.Model):
+    """Persistent deadline/lease for one system-owned broker order, both sides."""
+    trade = models.ForeignKey(Tradeorderhistory, on_delete=models.SET_NULL, null=True, related_name="pending_order_timeouts")
+    client = models.ForeignKey('User', on_delete=models.CASCADE)
+    broker = models.CharField(max_length=40)
+    broker_order_id = models.CharField(max_length=255)
+    side = models.CharField(max_length=4)
+    state = models.CharField(max_length=24, default="WAITING")
+    first_seen_at = models.DateTimeField()
+    pending_since = models.DateTimeField(null=True, blank=True)
+    next_check_at = models.DateTimeField()
+    last_checked_at = models.DateTimeField(null=True, blank=True)
+    cancel_requested_at = models.DateTimeField(null=True, blank=True)
+    cancel_attempts = models.PositiveIntegerField(default=0)
+    lease_token = models.CharField(max_length=36, default="", blank=True)
+    lease_until = models.DateTimeField(null=True, blank=True)
+    last_snapshot = models.JSONField(default=dict, blank=True)
+    last_error = models.TextField(default="", blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["client", "broker", "broker_order_id"], name="pending_timeout_order_unique")]
+        indexes = [models.Index(fields=["state", "next_check_at"], name="pending_timeout_due_idx")]

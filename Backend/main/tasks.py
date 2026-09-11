@@ -1260,3 +1260,15 @@ def send_password_reset_email(uid, email, username, token):
         print(f"Password reset email sent to {email}")
     except Exception as e:
         logger.error("Password reset email failed", extra={"error": str(e)})
+
+
+@shared_task(queue="pending_order_timeout", acks_late=True)
+def discover_pending_order_timeouts_task(limit=200):
+    from main.services.pending_order_timeout import discover_and_dispatch
+    return discover_and_dispatch(limit=limit)
+
+
+@shared_task(queue="pending_order_timeout", acks_late=True)
+def expire_pending_order_task(timeout_id):
+    from main.services.pending_order_timeout import process_timeout
+    return process_timeout(timeout_id)

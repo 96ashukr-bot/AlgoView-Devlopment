@@ -568,6 +568,8 @@ class OrdersLifecycleTests(TestCase):
             EntryQty=65,
             order_params={"product_type": "MIS", "expiry": "2026-07-28"},
         )
+        # auto_now_add overrides date passed to create().
+        Tradeorderhistory.objects.filter(pk=trade.pk).update(date=datetime(2026, 7, 10).date())
         now = timezone.make_aware(datetime(2026, 7, 28, 16, 0))
 
         result = close_expired_mis_trades(trade_id=trade.id, now=now)
@@ -589,6 +591,8 @@ class OrdersLifecycleTests(TestCase):
             LivePrice=Decimal("25000"),
             order_params={"product_type": "MIS"},
         )
+        # auto_now_add overrides date passed to create().
+        Tradeorderhistory.objects.filter(pk=trade.pk).update(date=datetime(2026, 7, 10).date())
         now = timezone.make_aware(datetime(2026, 7, 28, 16, 0))
 
         result = close_expired_mis_trades(trade_id=trade.id, now=now)
@@ -608,6 +612,8 @@ class OrdersLifecycleTests(TestCase):
             LivePrice=Decimal("25000"),
             order_params={"product_type": "MIS"},
         )
+        # auto_now_add overrides date passed to create().
+        Tradeorderhistory.objects.filter(pk=trade.pk).update(date=datetime(2026, 7, 10).date())
         now = timezone.make_aware(datetime(2026, 7, 28, 16, 0))
 
         result = close_expired_mis_trades(trade_id=trade.id, now=now)
@@ -631,6 +637,8 @@ class OrdersLifecycleTests(TestCase):
             LivePrice=Decimal("105"),
             order_params={"product_type": "MIS", "expiry": "2026-07-14"},
         )
+        # auto_now_add overrides date passed to create().
+        Tradeorderhistory.objects.filter(pk=trade.pk).update(date=datetime(2026, 7, 10).date())
         now = timezone.make_aware(datetime(2026, 7, 28, 16, 0))
 
         result = close_expired_mis_trades(trade_id=trade.id, now=now)

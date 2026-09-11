@@ -394,6 +394,13 @@ def refresh_trade_fill_from_broker(
     price = match["price"]
     quantity = match.get("quantity")
     status = match.get("status")
+    # A cancelled remainder can coexist with executed quantity. Keep that
+    # position available to exit and retain the broker's raw terminal status.
+    raw_broker_status = status
+    record = match.get("record") or {}
+    explicit_fill = next((record.get(key) for key in ("filled_quantity", "filledshares", "filledQuantity", "filledQty", "tradedQuantity") if record.get(key) not in (None, "")), None)
+    if status in TERMINAL_FAILURE_STATUSES and (_to_int(explicit_fill) or 0) > 0 and price is not None:
+        status = "partially_filled"
     execution_time = match.get("execution_time")
     changed = False
     update_fields = []
@@ -430,7 +437,7 @@ def refresh_trade_fill_from_broker(
             update_fields.append("sltp_metadata")
             changed = True
 
-        if status in SUCCESS_STATUSES and quantity:
+        if status in SUCCESS_STATUSES | {"partially_filled"} and quantity:
             from main.brokers.contract_snapshot import SNAPSHOT_KEY, build_snapshot, canonical_contract_fields
 
             fields = canonical_contract_fields(match.get("record") or {}, order_params, sltp_metadata)
@@ -469,6 +476,9 @@ def refresh_trade_fill_from_broker(
         changed = True
 
     broker_record = json.loads(json.dumps(match.get("record") or {}, cls=DjangoJSONEncoder))
+    if raw_broker_status != status:
+        broker_record["raw_broker_status"] = raw_broker_status
+        broker_record["filled_quantity"] = _to_int(explicit_fill)
     if broker_record and trade_order.response_data != broker_record:
         trade_order.response_data = broker_record
         update_fields.append("response_data")
@@ -484,7 +494,7 @@ def refresh_trade_fill_from_broker(
             trade_order.failure_reason = failure_reason
             update_fields.append("failure_reason")
             changed = True
-    elif status in SUCCESS_STATUSES and trade_order.failure_reason:
+    elif status in SUCCESS_STATUSES | {"partially_filled"} and trade_order.failure_reason:
         trade_order.failure_reason = None
         update_fields.append("failure_reason")
         changed = True

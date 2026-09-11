@@ -146,7 +146,8 @@ def _remaining_quantity(trade: Tradeorderhistory, snapshot: dict) -> int:
         exited = max(int(float(exited or 0)), 0)
     except (TypeError, ValueError):
         exited = 0
-    return max(entry - exited, 0)
+    from main.brokers.position_guard import remaining_open_quantity
+    return min(max(entry - exited, 0), remaining_open_quantity(trade))
 
 
 def reserve_exit_intent(

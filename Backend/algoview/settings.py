@@ -474,3 +474,8 @@ LOGGING = {
 
 RAZORPAY_KEY_ID = config('RAZORPAY_KEY_ID', default="")
 RAZORPAY_SECRET = config('RAZORPAY_SECRET', default="")
+
+
+# Explicitly enabled by the operator only after reviewing live cancellation scope.
+# The monitor covers both BUY and SELL; it never places a replacement order.
+PENDING_ORDER_TIMEOUT_ENABLED = config("PENDING_ORDER_TIMEOUT_ENABLED", default=False, cast=bool)

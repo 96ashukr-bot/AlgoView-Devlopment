@@ -4542,6 +4542,11 @@ class ClientGlobalKillSwitchAPIView(APIView):
         for trade_history in open_regular_trades:
             exit_intent = None
             try:
+                from main.services.pending_entry_kill_switch import handle_pending_entry_kill_switch
+                pending_result = handle_pending_entry_kill_switch(trade_history, initiated_by_id=user.id)
+                if pending_result is not None:
+                    exited_regular_ids.append(trade_history.id)
+                    continue
                 from main.services.exit_intents import reserve_exit_intent, reconcile_intent_from_trade
                 from main.services.order_streams import record_outcome
                 exit_intent, created = reserve_exit_intent(
@@ -4658,6 +4663,13 @@ class SuperadminForceKillSwitchAPIView(APIView):
                         "status": "failed",
                         "message": row_error,
                     })
+                    continue
+                from main.services.pending_entry_kill_switch import handle_pending_entry_kill_switch
+                pending_result = handle_pending_entry_kill_switch(
+                    trade_history, initiated_by_id=request.user.id,
+                )
+                if pending_result is not None:
+                    results.append(pending_result)
                     continue
                 if async_mode:
                     dispatch_token = acquire_force_kill_dispatch(trade_history.id)
@@ -4807,6 +4819,7 @@ class SuperadminForceKillSwitchAPIView(APIView):
                 "requested_count": len(trade_ids),
                 "sent_count": len(trade_ids) - failed_count,
                 "queued_count": queued_count,
+                "cancelled_entry_count": sum(item["status"] == "cancelled_entry" for item in results),
                 "failed_count": failed_count,
                 "results": results,
             },

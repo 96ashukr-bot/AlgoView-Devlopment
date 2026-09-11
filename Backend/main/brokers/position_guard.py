@@ -10,11 +10,11 @@ from main.brokers.utils import build_trade_symbol, common_order_kwargs, order_va
 from main.brokers.contract_snapshot import immutable_snapshot, snapshot_exit_fields
 from main.models import Tradeorderhistory
 
-OPEN_BUY_ORDER_STATUSES = {"complete", "completed", "success", "traded"}
+OPEN_BUY_ORDER_STATUSES = {"complete", "completed", "success", "traded", "partial", "partially_filled"}
 BROKER_ACCEPTED_OPEN_STATUSES = {"open", "placed", "accepted_by_node", "sent_to_node", "put order req received"}
 CLOSED_TRADE_STATUSES = {"close", "closed"}
 SUCCESS_CLOSE_STATUSES = {"completed", "complete", "success", "reconciled_closed"}
-SUCCESS_EXIT_ORDER_STATUSES = {"complete", "completed", "success", "executed", "traded"}
+SUCCESS_EXIT_ORDER_STATUSES = {"complete", "completed", "success", "executed", "traded", "partial", "partially_filled"}
 FAILED_EXIT_ORDER_STATUSES = {"failed", "failure", "rejected", "cancelled", "canceled", "error"}
 KNOWN_UNDERLYINGS = ("MIDCPNIFTY", "BANKNIFTY", "FINNIFTY", "SENSEX", "BANKEX", "NIFTY")
 
@@ -185,6 +185,8 @@ def _history_matches_open_buy(history, option_type):
     if order_status in {"open", "pending", "put order req received", "transit"}:
         if history_filled_quantity(history) <= 0:
             return False
+    if order_status in {"partial", "partially_filled"} and history_filled_quantity(history) <= 0:
+        return False
     if trade_status in CLOSED_TRADE_STATUSES:
         return False
     return history_option_type(history) == option_type
@@ -292,6 +294,8 @@ def _history_is_successful_exit(history):
     # the broker filled it. Broker failure/rejection must always win.
     if order_status in FAILED_EXIT_ORDER_STATUSES:
         return False
+    if order_status in {"partial", "partially_filled"}:
+        return history_filled_quantity(history) > 0 and int(getattr(history, "ExitQty", 0) or 0) > 0
     return trade_status in CLOSED_TRADE_STATUSES or order_status in SUCCESS_EXIT_ORDER_STATUSES
 
 
@@ -321,6 +325,9 @@ def _matching_exit_exists_after_open(open_history):
         exits = exits.filter(GroupService=group_service)
 
     for exit_history in exits:
+        # A cancelled remainder with a confirmed partial SELL leaves a position.
+        if str(exit_history.order_status or "").lower() in {"partial", "partially_filled"}:
+            continue
         if not _history_is_successful_exit(exit_history):
             continue
         if not _history_matches_underlying(exit_history, symbol):
