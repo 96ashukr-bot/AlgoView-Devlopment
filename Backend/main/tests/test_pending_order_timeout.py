@@ -102,6 +102,25 @@ class TimeoutDecisionTests(SimpleTestCase):
                 self.assertNotIn('place',args.args[1].lower())
                 self.assertNotIn('create',args.args[1].lower())
 
+    def test_disabled_monitor_is_not_scheduled_on_startup(self):
+        import os
+        import subprocess
+        import sys
+        from django.conf import settings
+        code = (
+            "from algoview.celery import app; from django.conf import settings; "
+            "assert ('expire-pending-buy-and-sell-orders' in app.conf.beat_schedule) "
+            "== settings.PENDING_ORDER_TIMEOUT_ENABLED"
+        )
+        for flag in ['False', 'True']:
+            with self.subTest(enabled=flag):
+                env = dict(os.environ, APP_ENV='test', PENDING_ORDER_TIMEOUT_ENABLED=flag,
+                           DB_ENGINE='django.db.backends.sqlite3', DB_NAME=':memory:',
+                           PYTHONDONTWRITEBYTECODE='1')
+                result = subprocess.run([sys.executable, '-c', code], cwd=settings.BASE_DIR,
+                                        env=env, capture_output=True, text=True, timeout=20)
+                self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_no_proxy_is_fail_closed(self):
         with self.assertRaisesRegex(ValueError,'proxy'):PendingOrderClient(None,None)
 

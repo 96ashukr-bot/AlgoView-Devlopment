@@ -46,6 +46,13 @@ app.conf.beat_schedule = {
 }
 
 
+# A disabled monitor has no consumer; do not accumulate expired sweep tasks.
+from django.conf import settings as django_settings
+
+if not getattr(django_settings, "PENDING_ORDER_TIMEOUT_ENABLED", False):
+    app.conf.beat_schedule.pop("expire-pending-buy-and-sell-orders", None)
+
+
 @worker_init.connect(dispatch_uid="sparkbridge.prewarm_angel_contract_master")
 def prewarm_angel_contract_master(**_kwargs):
     """Build Angel's shared in-memory index before worker pool processes fork."""
