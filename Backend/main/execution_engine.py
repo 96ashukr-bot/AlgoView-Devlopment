@@ -71,6 +71,7 @@ from main.brokers.contract_snapshot import SNAPSHOT_KEY, build_snapshot, canonic
 from main.brokers.utils import build_trade_symbol
 from main.risk_manager import get_risk_manager
 from main.services.execution_router import route_order_to_execution_node
+from main.services.demo_pricing import get_demo_option_premium
 from main.services.proxy_utils import build_requests_proxy_config
 from main.upstock import place_upstox_orders
 from main.zerodha import place_zerodha_orders
@@ -466,7 +467,7 @@ class ExecutionEngine:
                     self._idempotency_manager.remove_record(context["idempotency_key"])
                 return {
                     "status": "error",
-                    "message": "A valid live price is required to simulate a demo trade.",
+                    "message": "A fresh market premium for the exact option contract is required to simulate a Demo trade. Strike and previous entry prices cannot be used.",
                     "error_code": "INVALID_LTP",
                 }
             context.update(
@@ -1160,7 +1161,7 @@ class ExecutionEngine:
             fill_price = self._demo_fill_price(request)
             if fill_price is None:
                 return self._failed_response(
-                    "A valid live price is required to simulate a demo trade.",
+                    "A fresh market premium for the exact option contract is required to simulate a Demo trade. Strike and previous entry prices cannot be used.",
                     error_code="INVALID_LTP",
                 )
             return {
@@ -1184,7 +1185,21 @@ class ExecutionEngine:
         return routed_response
 
     def _demo_fill_price(self, request: ExecutionRequest) -> Optional[float]:
-        """Return the market reference used for a credential-free simulated fill."""
+        """Resolve fresh option premiums independently of caller price fallbacks."""
+        if request.option_type_value in {"CE", "PE"}:
+            params = request.order_params if isinstance(request.order_params, dict) else {}
+            expiry = request.resolved_expiry or params.get("expiry")
+            premium = get_demo_option_premium(
+                underlying=request.underlying_symbol,
+                expiry_date=expiry,
+                strike=request.strike_value,
+                option_type=request.option_type_value,
+            )
+            if premium is None:
+                return None
+            if isinstance(request.order_params, dict):
+                request.order_params.update({"ltp": premium, "demo_price_source": "exact_contract_live_premium"})
+            return round(premium, 2)
         candidates = (
             request.LivePrice,
             request.limit_price,

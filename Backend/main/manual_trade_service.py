@@ -26,6 +26,7 @@ from main.models import (
     User,
 )
 from main.permissions import get_accessible_clients_queryset, is_admin_or_superadmin, is_subadmin_user
+from main.services.demo_pricing import get_demo_option_premium
 from main.services.live_price_cache import get_live_price
 from main.services.trade_limit import successful_buy_count
 
@@ -102,6 +103,16 @@ def _local_expiry_date(expiry_date):
 
 def _manual_trade_live_price(batch: ManualTradeBatch, setting: ClientTradeSetting, option_type: str) -> tuple[Decimal, str]:
     """Use the shared WebSocket premium without adding a broker quote round trip."""
+    if normalize_broker_name(setting.broker) == "demo broker":
+        premium = get_demo_option_premium(
+            underlying=batch.symbol,
+            expiry_date=_local_expiry_date(setting.expiry_date),
+            strike=batch.strike_price,
+            option_type=option_type,
+        )
+        if premium is None:
+            raise ValueError("Live option premium is unavailable for Demo Broker. Please retry when a fresh quote is available.")
+        return Decimal(str(premium)).quantize(Decimal("0.01")), "demo_live_option_price"
     payload = get_live_price(
         underlying=batch.symbol,
         expiry_date=_local_expiry_date(setting.expiry_date),
@@ -382,7 +393,7 @@ def _build_execution_request(result: ManualTradeResult) -> ExecutionRequest:
         live_price = Decimal(str(shared_snapshot.get("ltp")))
     except (InvalidOperation, TypeError):
         live_price = Decimal("0")
-    if live_price > 0:
+    if live_price.is_finite() and live_price > 0 and normalize_broker_name(setting.broker) != "demo broker":
         live_price = live_price.quantize(Decimal("0.01"))
         live_price_source = str(shared_snapshot.get("source") or "manual_shared_snapshot")
     else:

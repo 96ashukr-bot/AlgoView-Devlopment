@@ -6202,9 +6202,12 @@ class ExecutionNodeManagerTests(TestCase):
         self.assertEqual(trade_order.sltp_status, "CLOSED")
         service._execution_engine.execute_order.assert_called_once()
 
-    def test_demo_broker_executes_buy_without_credentials_or_execution_node(self):
+    @mock.patch("main.execution_engine.get_demo_option_premium", side_effect=[118.25, 118.25, 130.50, 130.50])
+    def test_demo_broker_executes_buy_without_credentials_or_execution_node(self, demo_quote):
         from main.execution_engine import ExecutionEngine, ExecutionRequest
 
+        self.other_client.is_enable = True
+        self.other_client.save(update_fields=["is_enable"])
         trade_setting = ClientTradeSetting.objects.create(
             client=self.other_client,
             symbol="NIFTY",
@@ -6213,6 +6216,7 @@ class ExecutionNodeManagerTests(TestCase):
             product_type="MIS",
             order_type="LIMIT",
             quantity=65,
+            is_tread_status=True,
             group_service="DEMO",
             expiry_date=timezone.now() + timedelta(days=7),
             sl_type="POINTS",
