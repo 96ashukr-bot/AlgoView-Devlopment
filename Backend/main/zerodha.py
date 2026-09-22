@@ -1,5 +1,6 @@
 from django.http import JsonResponse
 from kiteconnect import KiteConnect
+import inspect
 from main.models import ClientBrokerdetails, CompanySmtpDetails
 from main.broker_order_utils import extract_ltp_from_quote_payload, is_option_symbol, normalize_order_type, resolve_limit_price, resolve_limit_reference_price, to_float
 from main.services.option_ltp_fallback import cache_option_ltp, fetch_nse_option_chain_ltp, get_cached_option_ltp
@@ -258,6 +259,25 @@ def fetch_zerodha_option_ltp(
             user=user,
         )
 
+def _place_zerodha_order(kite, order_params):
+    """Use broker-managed protection for market orders, including older SDKs.
+
+    Older Kite versions omit this argument from place_order, but their existing
+    authenticated/proxied transport supports the documented REST parameter.
+    Choose the transport before submission; never retry after an exception.
+    """
+    if str(order_params.get("order_type", "")).upper() in {"MARKET", "SL-M"}:
+        order_params["market_protection"] = -1
+        parameters = inspect.signature(kite.place_order).parameters.values()
+        supported = any(p.name == "market_protection" or p.kind == inspect.Parameter.VAR_KEYWORD
+                        for p in parameters)
+        if not supported:
+            params = {k: v for k, v in order_params.items() if v is not None}
+            return kite._post("order.place", url_args={"variety": kite.VARIETY_REGULAR},
+                              params=params)["order_id"]
+    return kite.place_order(variety=kite.VARIETY_REGULAR, **order_params)
+
+
 def place_zerodha_orders(
     LivePrice, group_service, access_token, Api_key, trade_symbol, transaction_type,
     symbol, quantity, strategy, ordertype, product_type, price, user, Lots, Entry_type,
@@ -379,7 +399,7 @@ def place_zerodha_orders(
                 if requested_order_type == "LIMIT"
                 else order_params
             )
-            order_response = kite.place_order(variety=kite.VARIETY_REGULAR, **order_params)
+            order_response = _place_zerodha_order(kite, order_params)
             log_timing("broker_submission")
             order_id = order_response  # Assuming it returns an order_id
             logger.info(f"[{user}] Order placed. Order ID: {order_id}")
