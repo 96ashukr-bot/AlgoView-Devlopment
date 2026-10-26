@@ -27,6 +27,7 @@ import { getAccessToken } from "../../../../Services/authStorage";
 import { H3 } from "../../../../AbstractElements";
 import { getTradeSymbolDisplay } from "../../../../Utils/tradeSymbolDisplay";
 import Swal from "sweetalert2";
+import Select from "react-select";
 import { useLocation } from "react-router-dom";
 import "./TradeDetails.css";
 
@@ -304,6 +305,16 @@ const Orders = () => {
     };
   }, [orderBucket, formData.clientId, formData.fromDate, formData.toDate, formData.broker, formData.indexSymbol, formData.groupService, searchQuery, visibleTradeIdsSignature]);
 
+  const clientOptions = useMemo(() => [
+    { value: "", label: "All clients", searchText: "all clients" },
+    ...clients.map((client) => ({
+      value: String(client.id),
+      label: client.fullName || client.full_name || client.email || `Client #${client.id}`,
+      searchText: [client.fullName, client.full_name, client.email, client.userName, client.username]
+        .filter(Boolean).join(" ").toLowerCase(),
+    })),
+  ], [clients]);
+
   const handleInputChange = (event) => {
     const { name, value } = event.target;
     setCurrentPage(1);
@@ -494,15 +505,21 @@ const Orders = () => {
                 {!isClientUser && (
                   <Col className="orders-filter-item orders-filter-item-wide">
                     <FormGroup className="orders-filter-group">
-                      <Label>Client</Label>
-                      <Input type="select" name="clientId" value={formData.clientId} onChange={handleInputChange}>
-                        <option value="">All</option>
-                        {clients.map((client) => (
-                          <option key={client.id} value={client.id}>
-                            {client.fullName || client.full_name || client.email || `Client #${client.id}`}
-                          </option>
-                        ))}
-                      </Input>
+                      <Label for="orders-client-filter">Client</Label>
+                      <Select
+                        inputId="orders-client-filter"
+                        name="clientId"
+                        options={clientOptions}
+                        value={clientOptions.find((option) => option.value === String(formData.clientId)) || clientOptions[0]}
+                        onChange={(option) => handleInputChange({ target: { name: "clientId", value: option?.value || "" } })}
+                        isSearchable
+                        isClearable
+                        placeholder="Search clients…"
+                        noOptionsMessage={() => "No matching clients"}
+                        filterOption={(option, input) => option.data.searchText.includes(input.trim().toLowerCase())}
+                        menuPortalTarget={document.body}
+                        styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
+                      />
                     </FormGroup>
                   </Col>
                 )}
