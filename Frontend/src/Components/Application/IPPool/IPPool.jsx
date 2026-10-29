@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Button, Card, CardBody, Col, Container, Form, FormGroup, Input, Label, Modal, ModalBody, ModalFooter, ModalHeader, Row, Table } from 'reactstrap';
 import { toast, ToastContainer } from 'react-toastify';
+import Select from 'react-select';
 import 'react-toastify/dist/ReactToastify.css';
 import {
   assignExecutionNodeToClient,
@@ -101,6 +102,10 @@ const IPPool = ({ mode = 'unassigned' }) => {
   }, [nodes]);
 
   const assignableClients = useMemo(() => clients.filter((client) => !client.has_execution_node), [clients]);
+  const clientOptions = useMemo(() => assignableClients.map((client) => ({
+    value: String(client.id),
+    label: `${client.fullName || `Client #${client.id}`}${client.email ? ` - ${client.email}` : ''}`,
+  })), [assignableClients]);
 
   const handleChange = (event) => {
     const { name, value, type, checked } = event.target;
@@ -522,20 +527,22 @@ const IPPool = ({ mode = 'unassigned' }) => {
                             >
                               {deletingId === node.id ? 'Deleting...' : 'Delete'}
                             </Button>
-                            <Input
-                              type="select"
-                              bsSize="sm"
-                              value={clientByNode[node.id] || ''}
-                              onChange={(event) => setClientByNode((previous) => ({ ...previous, [node.id]: event.target.value }))}
-                              style={{ width: '150px' }}
-                            >
-                              <option value="">Select client</option>
-                              {assignableClients.map((client) => (
-                                <option key={client.id} value={client.id}>
-                                  {client.fullName || `Client #${client.id}`}{client.email ? ` - ${client.email}` : ''}
-                                </option>
-                              ))}
-                            </Input>
+                            <div style={{ width: '240px' }}>
+                              <Select
+                                inputId={`assign-client-${node.id}`}
+                                aria-label="Select client to assign IP"
+                                options={clientOptions}
+                                value={clientOptions.find((option) => option.value === String(clientByNode[node.id] || '')) || null}
+                                onChange={(option) => setClientByNode((previous) => ({ ...previous, [node.id]: option?.value || '' }))}
+                                placeholder="Select or search client"
+                                noOptionsMessage={() => 'No matching clients'}
+                                isSearchable
+                                isClearable
+                                menuPortalTarget={document.body}
+                                menuPosition="fixed"
+                                styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
+                              />
+                            </div>
                             <Button size="sm" className="search-btn-clr" onClick={() => handleAssign(node.id)}>
                               Assign
                             </Button>
@@ -698,14 +705,20 @@ const IPPool = ({ mode = 'unassigned' }) => {
         <ModalHeader toggle={() => setAssignMoreNode(null)}>Assign IP to Additional Client</ModalHeader>
         <ModalBody>
           <Label>Client</Label>
-          <Input type="select" value={assignMoreClientId} onChange={(event) => setAssignMoreClientId(event.target.value)}>
-            <option value="">Select client</option>
-            {assignableClients.map((client) => (
-              <option key={client.id} value={client.id}>
-                {client.fullName || `Client #${client.id}`}{client.email ? ` - ${client.email}` : ''}
-              </option>
-            ))}
-          </Input>
+          <Select
+            inputId="assign-additional-client"
+            aria-label="Select additional client to assign IP"
+            options={clientOptions}
+            value={clientOptions.find((option) => option.value === String(assignMoreClientId || '')) || null}
+            onChange={(option) => setAssignMoreClientId(option?.value || '')}
+            placeholder="Select or search client"
+            noOptionsMessage={() => 'No matching clients'}
+            isSearchable
+            isClearable
+            menuPortalTarget={document.body}
+            menuPosition="fixed"
+            styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
+          />
         </ModalBody>
         <ModalFooter>
           <Button color="secondary" outline onClick={() => setAssignMoreNode(null)}>Cancel</Button>
