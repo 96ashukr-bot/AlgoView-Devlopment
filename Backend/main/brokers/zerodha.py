@@ -8,6 +8,7 @@ from main.brokers.base import BaseBroker
 from main.brokers.position_guard import mark_open_position_closed, prepare_close_order_from_open_position
 from main.brokers.utils import broker_order_exchange, build_trade_symbol, common_order_kwargs, get_access_token, get_order_payload
 from main.zerodha import place_zerodha_orders
+from main.services.zerodha_instruments import resolve_zerodha_option_contract
 
 
 class ZerodhaBroker(BaseBroker):
@@ -66,12 +67,25 @@ class ZerodhaBroker(BaseBroker):
             order["trading_symbol"] = live_position.get("tradingsymbol")
             order["tradingsymbol"] = live_position.get("tradingsymbol")
         values = common_order_kwargs(order)
+        exchange = broker_order_exchange(order, self.broker_name)
+        trade_symbol = build_trade_symbol(order, self.broker_name)
+        contract = None
+        # Existing exits keep the broker-confirmed held contract above.
+        if (exchange == "NFO"
+                and str(order.get("option_type") or order.get("Type") or "").upper() in {"CE", "PE"}
+                and str(values["transaction_type"] or "").upper() == "BUY"):
+            try:
+                contract = resolve_zerodha_option_contract(order, exchange="NFO")
+            except ValueError as exc:
+                return {"data": {"status": "Failed", "message": str(exc),
+                                 "error_code": "INSTRUMENT_CONTRACT_MISMATCH"}}
+            trade_symbol = contract["tradingsymbol"]
         response = place_zerodha_orders(
             values["LivePrice"],
             values["group_service"],
             get_access_token(self.broker_details),
             self.broker_details.broker_API_KEY,
-            build_trade_symbol(order, self.broker_name),
+            trade_symbol,
             values["transaction_type"],
             values["symbol"],
             values["quantity"],
@@ -97,6 +111,10 @@ class ZerodhaBroker(BaseBroker):
             proxy_config=proxy_config,
             buffer_percentage=values["buffer_percentage"],
         )
+        if contract and isinstance(response, dict) and isinstance(response.get("data"), dict):
+            response["data"].update({"resolved_trading_symbol": contract["tradingsymbol"],
+                                     "resolved_expiry": contract["expiry"],
+                                     "instrument_token": contract["instrument_token"]})
         mark_open_position_closed(open_position, response)
         return response
 
